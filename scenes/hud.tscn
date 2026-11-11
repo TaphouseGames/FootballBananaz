@@ -1,0 +1,180 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="bar_style"]
+bg_color = Color(0.05, 0.06, 0.09, 0.85)
+content_margin_left = 24.0
+content_margin_top = 8.0
+content_margin_right = 24.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="panel_style"]
+bg_color = Color(0.05, 0.06, 0.09, 0.92)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.85, 0.1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="turbo_back"]
+bg_color = Color(0.05, 0.06, 0.09, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="turbo_fill"]
+bg_color = Color(1, 0.8, 0.1, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 1)
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="PanelContainer" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 52.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("bar_style")
+
+[node name="Row" type="HBoxContainer" parent="TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 56
+alignment = 1
+
+[node name="ScoreLabel" type="Label" parent="TopBar/Row"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "BANANAZ  0  -  0  COCONUTS"
+
+[node name="DownLabel" type="Label" parent="TopBar/Row"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.1, 1)
+theme_override_font_sizes/font_size = 26
+text = "1ST & 30   |   OWN 25"
+
+[node name="ClockLabel" type="Label" parent="TopBar/Row"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "2:00"
+
+[node name="Banner" type="Label" parent="."]
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -296.0
+offset_bottom = -206.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 68
+text = "TOUCHDOWN!"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SubBanner" type="Label" parent="."]
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -206.0
+offset_bottom = -166.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 28
+text = "Bayside Bananaz"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Hint" type="Label" parent="."]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -44.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 18
+text = "Hint"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TurboBox" type="VBoxContainer" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -112.0
+offset_right = 264.0
+offset_bottom = -60.0
+grow_vertical = 0
+
+[node name="TurboLabel" type="Label" parent="TurboBox"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 18
+text = "TURBO"
+
+[node name="TurboBar" type="ProgressBar" parent="TurboBox"]
+custom_minimum_size = Vector2(240, 18)
+layout_mode = 2
+theme_override_styles/background = SubResource("turbo_back")
+theme_override_styles/fill = SubResource("turbo_fill")
+max_value = 1.0
+step = 0.01
+value = 1.0
+show_percentage = false
+
+[node name="PlaySelect" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -170.0
+offset_right = 300.0
+offset_bottom = 170.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("panel_style")
+
+[node name="Margin" type="MarginContainer" parent="PlaySelect"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
+
+[node name="Column" type="VBoxContainer" parent="PlaySelect/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="PlaySelect/Margin/Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.1, 1)
+theme_override_font_sizes/font_size = 30
+text = "OFFENSE  -  1ST & 30"
+horizontal_alignment = 1
+
+[node name="PlayList" type="VBoxContainer" parent="PlaySelect/Margin/Column"]
+layout_mode = 2
+theme_override_constants/separation = 10

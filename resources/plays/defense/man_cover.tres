@@ -1,0 +1,57 @@
+[gd_resource type="Resource" script_class="DefensePlay" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="1_play"]
+[ext_resource type="Script" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
+
+[sub_resource type="Resource" id="dl_l"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, -1.9)
+
+[sub_resource type="Resource" id="dl_c"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, 0)
+
+[sub_resource type="Resource" id="dl_r"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, 1.9)
+
+[sub_resource type="Resource" id="cb_0"]
+script = ExtResource("2_assign")
+label = "CB"
+job = 1
+start = Vector2(5, -14)
+man_target = 0
+
+[sub_resource type="Resource" id="cb_1"]
+script = ExtResource("2_assign")
+label = "CB"
+job = 1
+start = Vector2(5, 14)
+man_target = 1
+
+[sub_resource type="Resource" id="lb"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 1
+start = Vector2(5, 3)
+man_target = 2
+
+[sub_resource type="Resource" id="safety"]
+script = ExtResource("2_assign")
+label = "S"
+job = 2
+start = Vector2(15, 0)
+zone_center = Vector2(15, 0)
+zone_radius = 13.0
+
+[resource]
+script = ExtResource("1_play")
+play_name = "Man Cover 1"
+description = "Three rush, man-to-man outside, one safety deep."
+assignments = Array[ExtResource("2_assign")]([SubResource("dl_l"), SubResource("dl_c"), SubResource("dl_r"), SubResource("cb_0"), SubResource("cb_1"), SubResource("lb"), SubResource("safety")])

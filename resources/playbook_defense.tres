@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DefensePlaybook" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/defense_playbook.gd" id="1_book"]
+[ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="2_play"]
+[ext_resource type="Resource" path="res://resources/plays/defense/man_cover.tres" id="3_man"]
+[ext_resource type="Resource" path="res://resources/plays/defense/zone_cover.tres" id="4_zone"]
+[ext_resource type="Resource" path="res://resources/plays/defense/all_out_blitz.tres" id="5_blitz"]
+
+[resource]
+script = ExtResource("1_book")
+plays = Array[ExtResource("2_play")]([ExtResource("3_man"), ExtResource("4_zone"), ExtResource("5_blitz")])

@@ -1,0 +1,99 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="Resource" path="res://resources/tuning.tres" id="2_tuning"]
+[ext_resource type="Resource" path="res://resources/playbook_offense.tres" id="3_offense"]
+[ext_resource type="Resource" path="res://resources/playbook_defense.tres" id="4_defense"]
+[ext_resource type="PackedScene" path="res://scenes/field.tscn" id="5_field"]
+[ext_resource type="PackedScene" path="res://scenes/team.tscn" id="6_team"]
+[ext_resource type="PackedScene" path="res://scenes/ball.tscn" id="7_ball"]
+[ext_resource type="Script" path="res://scripts/play_controller.gd" id="8_pc"]
+[ext_resource type="Script" path="res://scripts/state/state_machine.gd" id="9_machine"]
+[ext_resource type="Script" path="res://scripts/state/play_select_state.gd" id="10_select"]
+[ext_resource type="Script" path="res://scripts/state/pre_snap_state.gd" id="11_presnap"]
+[ext_resource type="Script" path="res://scripts/state/live_state.gd" id="12_live"]
+[ext_resource type="Script" path="res://scripts/state/dead_state.gd" id="13_dead"]
+[ext_resource type="Script" path="res://scripts/state/scored_state.gd" id="14_scored"]
+[ext_resource type="Script" path="res://scripts/state/turnover_state.gd" id="15_turnover"]
+[ext_resource type="Script" path="res://scripts/state/game_over_state.gd" id="16_gameover"]
+[ext_resource type="Script" path="res://scripts/human_controller.gd" id="17_human"]
+[ext_resource type="Script" path="res://scripts/camera_rig.gd" id="18_camera"]
+[ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="19_hud"]
+
+[sub_resource type="Environment" id="environment"]
+background_mode = 1
+background_color = Color(0.06, 0.08, 0.12, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.8, 0.85, 0.95, 1)
+ambient_light_energy = 0.55
+
+[node name="Game" type="Node3D"]
+script = ExtResource("1_game")
+tuning = ExtResource("2_tuning")
+offense_playbook = ExtResource("3_offense")
+defense_playbook = ExtResource("4_defense")
+
+[node name="Field" parent="." instance=ExtResource("5_field")]
+
+[node name="HomeTeam" parent="." instance=ExtResource("6_team")]
+team_name = "Bayside Bananaz"
+short_name = "BANANAZ"
+team_color = Color(0.98, 0.8, 0.1, 1)
+attack_dir = 1
+is_human = true
+
+[node name="AwayTeam" parent="." instance=ExtResource("6_team")]
+team_name = "Iron Coconuts"
+short_name = "COCONUTS"
+team_color = Color(0.82, 0.16, 0.2, 1)
+attack_dir = -1
+
+[node name="Ball" parent="." instance=ExtResource("7_ball")]
+
+[node name="PlayController" type="Node" parent="."]
+script = ExtResource("8_pc")
+
+[node name="StateMachine" type="Node" parent="PlayController"]
+script = ExtResource("9_machine")
+
+[node name="PlaySelect" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("10_select")
+
+[node name="PreSnap" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("11_presnap")
+
+[node name="Live" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("12_live")
+
+[node name="Dead" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("13_dead")
+
+[node name="Scored" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("14_scored")
+
+[node name="Turnover" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("15_turnover")
+
+[node name="GameOver" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("16_gameover")
+
+[node name="HumanController" type="Node" parent="."]
+script = ExtResource("17_human")
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("18_camera")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0.6, 0, -0.6, 0.8, 0, 27, 36)
+current = true
+fov = 40.0
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 30, 0)
+shadow_enabled = true
+directional_shadow_max_distance = 140.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("environment")
+
+[node name="HUD" parent="." instance=ExtResource("19_hud")]

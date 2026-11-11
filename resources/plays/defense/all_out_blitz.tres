@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="DefensePlay" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="1_play"]
+[ext_resource type="Script" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
+
+[sub_resource type="Resource" id="dl_l"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, -1.9)
+
+[sub_resource type="Resource" id="dl_c"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, 0)
+
+[sub_resource type="Resource" id="dl_r"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, 1.9)
+
+[sub_resource type="Resource" id="blitz_l"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 0
+start = Vector2(2, -5)
+
+[sub_resource type="Resource" id="blitz_r"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 0
+start = Vector2(2, 5)
+
+[sub_resource type="Resource" id="cb_0"]
+script = ExtResource("2_assign")
+label = "CB"
+job = 1
+start = Vector2(3, -14)
+man_target = 0
+
+[sub_resource type="Resource" id="cb_1"]
+script = ExtResource("2_assign")
+label = "CB"
+job = 1
+start = Vector2(3, 14)
+man_target = 1
+
+[resource]
+script = ExtResource("1_play")
+play_name = "All-Out Blitz"
+description = "Five rush, press man outside. Nobody deep, third man is open."
+assignments = Array[ExtResource("2_assign")]([SubResource("dl_l"), SubResource("dl_c"), SubResource("dl_r"), SubResource("blitz_l"), SubResource("blitz_r"), SubResource("cb_0"), SubResource("cb_1")])

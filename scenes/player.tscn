@@ -1,0 +1,65 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+
+[sub_resource type="CapsuleMesh" id="body_mesh"]
+radius = 0.45
+height = 1.9
+
+[sub_resource type="BoxMesh" id="visor_mesh"]
+size = Vector3(0.3, 0.22, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="visor_mat"]
+albedo_color = Color(0.08, 0.08, 0.1, 1)
+
+[sub_resource type="TorusMesh" id="ring_mesh"]
+inner_radius = 0.8
+outer_radius = 1.05
+
+[sub_resource type="StandardMaterial3D" id="ring_mat"]
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 1)
+
+[sub_resource type="CylinderMesh" id="marker_mesh"]
+top_radius = 0.5
+bottom_radius = 0.0
+height = 0.8
+
+[sub_resource type="StandardMaterial3D" id="marker_mat"]
+shading_mode = 0
+albedo_color = Color(1, 0.25, 0.2, 1)
+
+[node name="Player" type="Node3D"]
+script = ExtResource("1_player")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+mesh = SubResource("body_mesh")
+
+[node name="Visor" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.55, 0)
+mesh = SubResource("visor_mesh")
+surface_material_override/0 = SubResource("visor_mat")
+
+[node name="ControlRing" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.3, 0, 0, 0, 1, 0, 0.06, 0)
+visible = false
+cast_shadow = 0
+mesh = SubResource("ring_mesh")
+surface_material_override/0 = SubResource("ring_mat")
+
+[node name="TargetMarker" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.4, 0)
+visible = false
+cast_shadow = 0
+mesh = SubResource("marker_mesh")
+surface_material_override/0 = SubResource("marker_mat")
+
+[node name="NameLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.45, 0)
+pixel_size = 0.012
+billboard = 1
+no_depth_test = true
+text = "WR"
+font_size = 56
+outline_size = 14
