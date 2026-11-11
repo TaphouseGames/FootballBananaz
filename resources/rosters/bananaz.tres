@@ -1,0 +1,99 @@
+[gd_resource type="Resource" script_class="Roster" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+
+[sub_resource type="Resource" id="player_0"]
+script = ExtResource("1_ratings")
+display_name = "Dash Plantain"
+position = "QB"
+coverage = 45
+get_open = 40
+blocking = 30
+tackling = 40
+speed = 62
+endurance = 65
+strength = 40
+catching = 30
+juke = 65
+security = 40
+power = 45
+accuracy = 58
+agility = 85
+
+[sub_resource type="Resource" id="player_1"]
+script = ExtResource("1_ratings")
+display_name = "Moe Peel"
+position = "LINE"
+coverage = 35
+get_open = 25
+blocking = 62
+tackling = 55
+
+[sub_resource type="Resource" id="player_2"]
+script = ExtResource("1_ratings")
+display_name = "Big Bunch"
+position = "LINE"
+coverage = 30
+get_open = 20
+blocking = 72
+tackling = 62
+speed = 45
+strength = 65
+
+[sub_resource type="Resource" id="player_3"]
+script = ExtResource("1_ratings")
+display_name = "Lou Ripe"
+position = "LINE"
+coverage = 40
+get_open = 25
+blocking = 55
+tackling = 68
+
+[sub_resource type="Resource" id="player_4"]
+script = ExtResource("1_ratings")
+display_name = "Zip Cavendish"
+position = "WR"
+coverage = 62
+get_open = 85
+blocking = 30
+tackling = 40
+speed = 88
+endurance = 70
+strength = 30
+catching = 58
+juke = 70
+security = 45
+
+[sub_resource type="Resource" id="player_5"]
+script = ExtResource("1_ratings")
+display_name = "Sticky Fingers"
+position = "WR"
+coverage = 55
+get_open = 68
+blocking = 45
+tackling = 55
+speed = 55
+endurance = 55
+catching = 90
+juke = 45
+security = 70
+
+[sub_resource type="Resource" id="player_6"]
+script = ExtResource("1_ratings")
+display_name = "Slip Chiquita"
+position = "RB"
+coverage = 50
+get_open = 72
+blocking = 45
+tackling = 45
+speed = 70
+endurance = 60
+strength = 55
+catching = 40
+juke = 88
+security = 42
+
+[resource]
+script = ExtResource("2_roster")
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])

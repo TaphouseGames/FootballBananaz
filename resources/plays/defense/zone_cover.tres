@@ -3,58 +3,63 @@
 [ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="1_play"]
 [ext_resource type="Script" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
 
-[sub_resource type="Resource" id="dl_l"]
-script = ExtResource("2_assign")
-label = "DL"
-job = 0
-start = Vector2(1, -1.9)
-
-[sub_resource type="Resource" id="dl_c"]
-script = ExtResource("2_assign")
-label = "DL"
-job = 0
-start = Vector2(1, 0)
-
-[sub_resource type="Resource" id="dl_r"]
-script = ExtResource("2_assign")
-label = "DL"
-job = 0
-start = Vector2(1, 1.9)
-
-[sub_resource type="Resource" id="flat_l"]
-script = ExtResource("2_assign")
-label = "CB"
-job = 2
-start = Vector2(6, -12)
-zone_center = Vector2(7, -12)
-zone_radius = 8.0
-
-[sub_resource type="Resource" id="flat_r"]
-script = ExtResource("2_assign")
-label = "CB"
-job = 2
-start = Vector2(6, 12)
-zone_center = Vector2(7, 12)
-zone_radius = 8.0
-
-[sub_resource type="Resource" id="deep_l"]
+[sub_resource type="Resource" id="d0"]
 script = ExtResource("2_assign")
 label = "S"
 job = 2
 start = Vector2(14, -8)
 zone_center = Vector2(18, -9)
-zone_radius = 12.0
+zone_radius = 12
+deep = true
 
-[sub_resource type="Resource" id="deep_r"]
+[sub_resource type="Resource" id="d1"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, -1.9)
+
+[sub_resource type="Resource" id="d2"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, 0)
+
+[sub_resource type="Resource" id="d3"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, 1.9)
+
+[sub_resource type="Resource" id="d4"]
+script = ExtResource("2_assign")
+label = "CB"
+job = 2
+start = Vector2(6, -10)
+zone_center = Vector2(7, -10)
+zone_radius = 9.5
+
+[sub_resource type="Resource" id="d5"]
+script = ExtResource("2_assign")
+label = "CB"
+job = 2
+start = Vector2(6, 10)
+zone_center = Vector2(7, 10)
+zone_radius = 9.5
+
+[sub_resource type="Resource" id="d6"]
 script = ExtResource("2_assign")
 label = "S"
 job = 2
 start = Vector2(14, 8)
 zone_center = Vector2(18, 9)
-zone_radius = 12.0
+zone_radius = 12
+deep = true
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Zone Cover 2"
 description = "Three rush, two flats, two deep halves. Soft in the middle."
-assignments = Array[ExtResource("2_assign")]([SubResource("dl_l"), SubResource("dl_c"), SubResource("dl_r"), SubResource("flat_l"), SubResource("flat_r"), SubResource("deep_l"), SubResource("deep_r")])
+run_fit = 0.67
+short_fit = 0.5
+deep_fit = 0.11
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])

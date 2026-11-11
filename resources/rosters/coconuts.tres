@@ -1,0 +1,99 @@
+[gd_resource type="Resource" script_class="Roster" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+
+[sub_resource type="Resource" id="player_0"]
+script = ExtResource("1_ratings")
+display_name = "Rocket Husk"
+position = "QB"
+coverage = 40
+get_open = 30
+blocking = 45
+tackling = 55
+speed = 38
+endurance = 40
+strength = 70
+catching = 30
+juke = 25
+security = 65
+power = 92
+accuracy = 75
+agility = 30
+
+[sub_resource type="Resource" id="player_1"]
+script = ExtResource("1_ratings")
+display_name = "Stone Palm"
+position = "LINE"
+coverage = 35
+get_open = 25
+blocking = 68
+tackling = 70
+speed = 45
+strength = 70
+
+[sub_resource type="Resource" id="player_2"]
+script = ExtResource("1_ratings")
+display_name = "Rex Shell"
+position = "LINE"
+coverage = 40
+get_open = 25
+blocking = 58
+tackling = 55
+
+[sub_resource type="Resource" id="player_3"]
+script = ExtResource("1_ratings")
+display_name = "Tank Copra"
+position = "LINE"
+coverage = 30
+get_open = 20
+blocking = 72
+tackling = 62
+strength = 65
+
+[sub_resource type="Resource" id="player_4"]
+script = ExtResource("1_ratings")
+display_name = "Miles Frond"
+position = "WR"
+coverage = 68
+get_open = 65
+blocking = 45
+tackling = 50
+speed = 76
+endurance = 60
+strength = 55
+catching = 72
+juke = 55
+security = 60
+
+[sub_resource type="Resource" id="player_5"]
+script = ExtResource("1_ratings")
+display_name = "Hands Kernel"
+position = "WR"
+coverage = 62
+get_open = 60
+blocking = 50
+tackling = 55
+speed = 68
+endurance = 65
+strength = 60
+catching = 80
+security = 65
+
+[sub_resource type="Resource" id="player_6"]
+script = ExtResource("1_ratings")
+display_name = "Bruno Drupe"
+position = "RB"
+coverage = 55
+get_open = 45
+blocking = 65
+tackling = 65
+speed = 55
+endurance = 75
+strength = 95
+catching = 35
+security = 80
+
+[resource]
+script = ExtResource("2_roster")
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])

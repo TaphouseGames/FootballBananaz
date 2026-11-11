@@ -42,7 +42,7 @@ job = 1
 start = Vector2(-0.6, 15)
 route = PackedVector2Array(14, 0, 40, -12)
 
-[sub_resource type="Resource" id="slot"]
+[sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "SL"
 job = 1
@@ -53,4 +53,5 @@ route = PackedVector2Array(8, 0, 10, -16)
 script = ExtResource("1_play")
 play_name = "Deep Bomb"
 description = "Go route and a deep post. Slot crosses underneath."
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("slot")])
+category = 2
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

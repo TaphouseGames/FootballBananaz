@@ -42,15 +42,16 @@ job = 1
 start = Vector2(-0.6, 14)
 route = PackedVector2Array(4, 0, 16, -11)
 
-[sub_resource type="Resource" id="rb"]
+[sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
 job = 1
 start = Vector2(-5, 3)
-route = PackedVector2Array(1, 5, 5, 12)
+route = PackedVector2Array(1, 5, 4, 10, 9, 12)
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Quick Slants"
-description = "Both wideouts cut inside. Back leaks to the flat."
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("rb")])
+description = "Both wideouts cut inside. Back leaks out and turns upfield."
+category = 1
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

@@ -16,3 +16,6 @@ enum Job { RUSH, MAN, ZONE }
 ## ZONE: centre and radius of the area to guard.
 @export var zone_center: Vector2 = Vector2(10.0, 0.0)
 @export var zone_radius: float = 9.0
+## ZONE: a deep defender stays over the top of the deepest receiver in his area
+## instead of sitting on him.
+@export var deep: bool = false

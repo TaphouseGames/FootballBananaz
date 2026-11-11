@@ -13,7 +13,7 @@ func enter() -> void:
 		game.hud.set_hint("")
 	elif game.human.is_active():
 		game.hud.show_banner("", "%s  -  get ready" % pc.def_play.play_name)
-		game.hud.set_hint("Space / (A): pick another defender")
+		game.hud.set_hint("Q / (B): pick another defender")
 	else:
 		game.hud.set_hint("AUTOPLAY")
 
@@ -26,7 +26,7 @@ func physics_update(_delta: float) -> void:
 	game.human.update_pre_snap()
 	var snap_now: bool = false
 	if _human_snaps:
-		snap_now = time_in_state >= game.tuning.pre_snap_delay and Input.is_action_just_pressed(&"pass_switch")
+		snap_now = time_in_state >= game.tuning.pre_snap_delay and Input.is_action_just_pressed(&"confirm")
 	else:
 		snap_now = time_in_state >= _cpu_delay
 	if snap_now:

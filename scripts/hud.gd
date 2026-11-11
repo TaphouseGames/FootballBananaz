@@ -3,13 +3,21 @@ extends CanvasLayer
 ## Scoreboard, down and distance, clock, turbo meter, banners and the
 ## play-select panel. Reads everything it shows from Game each frame.
 
-const SELECTED_COLOR: Color = Color(1.0, 0.9, 0.2)
-const NORMAL_COLOR: Color = Color(0.85, 0.85, 0.85)
+const GRID_COLUMNS: int = 3
+const CARD_COLOR: Color = Color(0.09, 0.16, 0.13, 0.96)
+const CARD_SELECTED_COLOR: Color = Color(0.14, 0.27, 0.2, 1.0)
+const CARD_BORDER: Color = Color(0.32, 0.38, 0.35)
+const CARD_SELECTED_BORDER: Color = Color(1.0, 1.0, 1.0)
+const NAME_COLOR: Color = Color(0.82, 0.84, 0.82)
+const NAME_SELECTED_COLOR: Color = Color(1.0, 0.9, 0.2)
 
 var game: Game
 
-var _play_rows: Array[Label] = []
-var _play_names: PackedStringArray = PackedStringArray()
+var _cards: Array[PanelContainer] = []
+var _card_names: Array[Label] = []
+var _descriptions: PackedStringArray = PackedStringArray()
+var _card_style: StyleBoxFlat
+var _card_selected_style: StyleBoxFlat
 
 @onready var score_label: Label = $TopBar/Row/ScoreLabel
 @onready var down_label: Label = $TopBar/Row/DownLabel
@@ -21,7 +29,8 @@ var _play_names: PackedStringArray = PackedStringArray()
 @onready var turbo_bar: ProgressBar = $TurboBox/TurboBar
 @onready var play_select: Control = $PlaySelect
 @onready var play_title: Label = $PlaySelect/Margin/Column/Title
-@onready var play_list: VBoxContainer = $PlaySelect/Margin/Column/PlayList
+@onready var play_grid: GridContainer = $PlaySelect/Margin/Column/PlayGrid
+@onready var play_description: Label = $PlaySelect/Margin/Column/Description
 
 
 func setup(p_game: Game) -> void:
@@ -41,7 +50,7 @@ func _process(_delta: float) -> void:
 	clock_label.text = game.clock_text()
 
 	var controlled: Player = game.human.controlled
-	turbo_box.visible = controlled != null
+	turbo_box.visible = controlled != null and not play_select.visible
 	if controlled != null:
 		turbo_bar.value = controlled.turbo
 		turbo_bar.modulate = Color(1.0, 0.4, 0.3) if controlled.turbo_locked else Color.WHITE
@@ -64,29 +73,74 @@ func set_hint(text: String) -> void:
 	hint.visible = text != ""
 
 
-func show_play_select(title: String, names: PackedStringArray, descriptions: PackedStringArray) -> void:
-	for row: Label in _play_rows:
-		row.queue_free()
-	_play_rows.clear()
-	_play_names = names
+## `plays` holds OffensePlay or DefensePlay resources, shown as a grid of cards
+## in playbook order.
+func show_play_select(title: String, plays: Array[Resource]) -> void:
+	for card: PanelContainer in _cards:
+		card.queue_free()
+	_cards.clear()
+	_card_names.clear()
+	_descriptions.clear()
+	if _card_style == null:
+		_card_style = _make_card_style(CARD_COLOR, CARD_BORDER, 2)
+		_card_selected_style = _make_card_style(CARD_SELECTED_COLOR, CARD_SELECTED_BORDER, 4)
 	play_title.text = title
-	for i: int in names.size():
-		var row: Label = Label.new()
-		row.add_theme_font_size_override(&"font_size", 22)
-		row.set_meta(&"description", descriptions[i])
-		play_list.add_child(row)
-		_play_rows.append(row)
+	for i: int in plays.size():
+		var card: PanelContainer = PanelContainer.new()
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		var column: VBoxContainer = VBoxContainer.new()
+		column.add_theme_constant_override(&"separation", 2)
+		card.add_child(column)
+
+		var name_label: Label = Label.new()
+		name_label.add_theme_font_size_override(&"font_size", 21)
+		name_label.add_theme_color_override(&"font_outline_color", Color.BLACK)
+		name_label.add_theme_constant_override(&"outline_size", 6)
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		column.add_child(name_label)
+
+		var diagram: PlayDiagram = PlayDiagram.new()
+		diagram.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		column.add_child(diagram)
+
+		var offense_play: OffensePlay = plays[i] as OffensePlay
+		var defense_play: DefensePlay = plays[i] as DefensePlay
+		if offense_play != null:
+			name_label.text = "%d  %s" % [i + 1, offense_play.play_name.to_upper()]
+			_descriptions.append(offense_play.description)
+			diagram.show_offense(offense_play)
+		elif defense_play != null:
+			name_label.text = "%d  %s" % [i + 1, defense_play.play_name.to_upper()]
+			_descriptions.append(defense_play.description)
+			diagram.show_defense(defense_play)
+		else:
+			_descriptions.append("")
+
+		play_grid.add_child(card)
+		_cards.append(card)
+		_card_names.append(name_label)
 	play_select.visible = true
 	set_play_cursor(0)
 
 
 func set_play_cursor(index: int) -> void:
-	for i: int in _play_rows.size():
-		var row: Label = _play_rows[i]
+	for i: int in _cards.size():
 		var selected: bool = i == index
-		var description: String = row.get_meta(&"description", "")
-		row.text = "%s %d. %s\n      %s" % [">" if selected else "  ", i + 1, _play_names[i], description]
-		row.modulate = SELECTED_COLOR if selected else NORMAL_COLOR
+		_cards[i].add_theme_stylebox_override(&"panel", _card_selected_style if selected else _card_style)
+		_card_names[i].add_theme_color_override(&"font_color", NAME_SELECTED_COLOR if selected else NAME_COLOR)
+	play_description.text = _descriptions[index] if index >= 0 and index < _descriptions.size() else ""
+
+
+func _make_card_style(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(6)
+	# Thinner borders get more padding, so every card's contents line up.
+	style.set_content_margin_all(float(10 - border_width))
+	return style
 
 
 func hide_play_select() -> void:

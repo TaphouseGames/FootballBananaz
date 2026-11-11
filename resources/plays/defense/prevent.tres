@@ -1,0 +1,69 @@
+[gd_resource type="Resource" script_class="DefensePlay" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="1_play"]
+[ext_resource type="Script" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
+
+[sub_resource type="Resource" id="d0"]
+script = ExtResource("2_assign")
+label = "S"
+job = 2
+start = Vector2(18, -5)
+zone_center = Vector2(22, -5)
+zone_radius = 9
+deep = true
+
+[sub_resource type="Resource" id="d1"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, -1.9)
+
+[sub_resource type="Resource" id="d2"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 2
+start = Vector2(3, 0)
+zone_center = Vector2(7, 0)
+zone_radius = 9
+
+[sub_resource type="Resource" id="d3"]
+script = ExtResource("2_assign")
+label = "DL"
+job = 0
+start = Vector2(1, 1.9)
+
+[sub_resource type="Resource" id="d4"]
+script = ExtResource("2_assign")
+label = "CB"
+job = 2
+start = Vector2(14, -14)
+zone_center = Vector2(20, -15)
+zone_radius = 8
+deep = true
+
+[sub_resource type="Resource" id="d5"]
+script = ExtResource("2_assign")
+label = "CB"
+job = 2
+start = Vector2(14, 14)
+zone_center = Vector2(20, 15)
+zone_radius = 8
+deep = true
+
+[sub_resource type="Resource" id="d6"]
+script = ExtResource("2_assign")
+label = "S"
+job = 2
+start = Vector2(18, 5)
+zone_center = Vector2(22, 5)
+zone_radius = 9
+deep = true
+
+[resource]
+script = ExtResource("1_play")
+play_name = "Prevent"
+description = "Two rush, four deep. Gives up everything underneath."
+run_fit = 0.61
+short_fit = 0.39
+deep_fit = 0.42
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])

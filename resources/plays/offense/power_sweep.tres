@@ -39,7 +39,7 @@ label = "WR"
 job = 2
 start = Vector2(-0.6, 9)
 
-[sub_resource type="Resource" id="rb"]
+[sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
 job = 3
@@ -50,6 +50,7 @@ route = PackedVector2Array(1, 6, 6, 13)
 script = ExtResource("1_play")
 play_name = "Power Sweep"
 description = "Handoff to the back running wide. Everyone blocks."
+category = 0
 is_run = true
 handoff_delay = 0.45
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("rb")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

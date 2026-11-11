@@ -7,11 +7,11 @@ func enter() -> void:
 		return
 	if game.human.team == game.offense:
 		if pc.off_play.is_run:
-			game.hud.set_hint("Move      Shift / RT: turbo      E / (X): juke")
+			game.hud.set_hint("Move      L / (B): spin      U O / (LB)(RB): stiff arm      K / (X): dive, down where you land      Space J / (Y)(A): jump      Shift / RT: turbo")
 		else:
-			game.hud.set_hint("Space / (A): pass (hold a direction to pick)      E / (X): next receiver, juke after the catch      Shift / RT: turbo")
+			game.hud.set_hint("J K L / (A)(X)(B): tap to lob, hold longer to throw harder      Hold Shift / RT: tuck and run, let go to throw      Running with the ball  -  (B): spin   (LB)(RB): stiff arm   (X): dive   (Y)(A): jump")
 	else:
-		game.hud.set_hint("Space / (A): switch to nearest defender      E / (X): dive or shove      Shift / RT: turbo")
+		game.hud.set_hint("Q / (B): switch defender      E / (X): dive      Space J / (Y)(A): jump      Shift / RT: turbo")
 
 
 func physics_update(delta: float) -> void:

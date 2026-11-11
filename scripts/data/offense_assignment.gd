@@ -12,3 +12,5 @@ enum Job { QB, ROUTE, BLOCK, RUNNER }
 ## Waypoints relative to `start`. For the QB this is the drop-back path.
 ## Receivers keep running in the direction of the last leg.
 @export var route: PackedVector2Array = PackedVector2Array()
+## Stop at the end of the route (curl, hitch, screen) instead of running on.
+@export var settle: bool = false

@@ -2,10 +2,16 @@
 
 [ext_resource type="Script" path="res://scripts/data/offense_playbook.gd" id="1_book"]
 [ext_resource type="Script" path="res://scripts/data/offense_play.gd" id="2_play"]
-[ext_resource type="Resource" path="res://resources/plays/offense/quick_slants.tres" id="3_slants"]
-[ext_resource type="Resource" path="res://resources/plays/offense/deep_bomb.tres" id="4_bomb"]
-[ext_resource type="Resource" path="res://resources/plays/offense/power_sweep.tres" id="5_sweep"]
+[ext_resource type="Resource" path="res://resources/plays/offense/hb_dive.tres" id="3_hb_dive"]
+[ext_resource type="Resource" path="res://resources/plays/offense/power_sweep.tres" id="4_power_sweep"]
+[ext_resource type="Resource" path="res://resources/plays/offense/counter.tres" id="5_counter"]
+[ext_resource type="Resource" path="res://resources/plays/offense/quick_slants.tres" id="6_quick_slants"]
+[ext_resource type="Resource" path="res://resources/plays/offense/curl_flat.tres" id="7_curl_flat"]
+[ext_resource type="Resource" path="res://resources/plays/offense/hb_screen.tres" id="8_hb_screen"]
+[ext_resource type="Resource" path="res://resources/plays/offense/crossfire.tres" id="9_crossfire"]
+[ext_resource type="Resource" path="res://resources/plays/offense/flood.tres" id="10_flood"]
+[ext_resource type="Resource" path="res://resources/plays/offense/deep_bomb.tres" id="11_deep_bomb"]
 
 [resource]
 script = ExtResource("1_book")
-plays = Array[ExtResource("2_play")]([ExtResource("3_slants"), ExtResource("4_bomb"), ExtResource("5_sweep")])
+plays = Array[ExtResource("2_play")]([ExtResource("3_hb_dive"), ExtResource("4_power_sweep"), ExtResource("5_counter"), ExtResource("6_quick_slants"), ExtResource("7_curl_flat"), ExtResource("8_hb_screen"), ExtResource("9_crossfire"), ExtResource("10_flood"), ExtResource("11_deep_bomb")])

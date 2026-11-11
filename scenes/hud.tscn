@@ -149,32 +149,41 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
-offset_top = -170.0
-offset_right = 300.0
-offset_bottom = 170.0
+offset_left = -490.0
+offset_top = -292.0
+offset_right = 490.0
+offset_bottom = 300.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("panel_style")
 
 [node name="Margin" type="MarginContainer" parent="PlaySelect"]
 layout_mode = 2
-theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 28
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 12
 
 [node name="Column" type="VBoxContainer" parent="PlaySelect/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="PlaySelect/Margin/Column"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.1, 1)
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 28
 text = "OFFENSE  -  1ST & 30"
 horizontal_alignment = 1
 
-[node name="PlayList" type="VBoxContainer" parent="PlaySelect/Margin/Column"]
+[node name="PlayGrid" type="GridContainer" parent="PlaySelect/Margin/Column"]
 layout_mode = 2
-theme_override_constants/separation = 10
+size_flags_vertical = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 3
+
+[node name="Description" type="Label" parent="PlaySelect/Margin/Column"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Description"
+horizontal_alignment = 1

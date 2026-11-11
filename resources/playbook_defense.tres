@@ -2,10 +2,16 @@
 
 [ext_resource type="Script" path="res://scripts/data/defense_playbook.gd" id="1_book"]
 [ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="2_play"]
-[ext_resource type="Resource" path="res://resources/plays/defense/man_cover.tres" id="3_man"]
-[ext_resource type="Resource" path="res://resources/plays/defense/zone_cover.tres" id="4_zone"]
-[ext_resource type="Resource" path="res://resources/plays/defense/all_out_blitz.tres" id="5_blitz"]
+[ext_resource type="Resource" path="res://resources/plays/defense/man_cover.tres" id="3_man_cover"]
+[ext_resource type="Resource" path="res://resources/plays/defense/man_robber.tres" id="4_man_robber"]
+[ext_resource type="Resource" path="res://resources/plays/defense/run_stuff.tres" id="5_run_stuff"]
+[ext_resource type="Resource" path="res://resources/plays/defense/zone_cover.tres" id="6_zone_cover"]
+[ext_resource type="Resource" path="res://resources/plays/defense/cover_3.tres" id="7_cover_3"]
+[ext_resource type="Resource" path="res://resources/plays/defense/prevent.tres" id="8_prevent"]
+[ext_resource type="Resource" path="res://resources/plays/defense/all_out_blitz.tres" id="9_all_out_blitz"]
+[ext_resource type="Resource" path="res://resources/plays/defense/zone_blitz.tres" id="10_zone_blitz"]
+[ext_resource type="Resource" path="res://resources/plays/defense/corner_blitz.tres" id="11_corner_blitz"]
 
 [resource]
 script = ExtResource("1_book")
-plays = Array[ExtResource("2_play")]([ExtResource("3_man"), ExtResource("4_zone"), ExtResource("5_blitz")])
+plays = Array[ExtResource("2_play")]([ExtResource("3_man_cover"), ExtResource("4_man_robber"), ExtResource("5_run_stuff"), ExtResource("6_zone_cover"), ExtResource("7_cover_3"), ExtResource("8_prevent"), ExtResource("9_all_out_blitz"), ExtResource("10_zone_blitz"), ExtResource("11_corner_blitz")])

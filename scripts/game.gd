@@ -24,6 +24,8 @@ var clock: float = 0.0
 ## Message for the banner shown by the Turnover state.
 var banner_text: String = ""
 var stats: Dictionary[StringName, int] = {}
+## Calls the plays for whichever side the CPU runs.
+var play_caller: PlayCaller = PlayCaller.new()
 
 var _hit_stop_left: float = 0.0
 
@@ -49,8 +51,8 @@ func _ready() -> void:
 	clock = tuning.game_length
 	var first: Team = home if home.is_human or not away.is_human else away
 	start_drive(first, tuning.yard_to_x(first.attack_dir, tuning.drive_start_yard))
-	camera_rig.snap_to(_camera_target())
 	play_controller.state_machine.transition(&"PlaySelect")
+	camera_rig.snap_to(_camera_target(), _camera_facing())
 
 
 func _exit_tree() -> void:
@@ -58,7 +60,7 @@ func _exit_tree() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	camera_rig.follow(_camera_target(), delta)
+	camera_rig.follow(_camera_target(), _camera_facing(), delta)
 
 
 func _process(delta: float) -> void:
@@ -118,13 +120,13 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 			down += 1
 		PlayController.Result.TACKLED, PlayController.Result.OUT_OF_BOUNDS:
 			if final_team != offense:
-				# Interception return ended here.
+				# Interception or fumble return ended here.
 				var x: float = spot_x
 				if _in_own_end_zone(final_team, x):
 					x = tuning.yard_to_x(final_team.attack_dir, tuning.touchback_yard)
 				start_drive(final_team, x)
 				add_stat(&"turnovers")
-				banner_text = "INTERCEPTION!"
+				banner_text = "FUMBLE!" if play_controller.was_fumble else "INTERCEPTION!"
 				return &"Turnover"
 			if _in_own_end_zone(offense, spot_x):
 				var scorer: Team = defense
@@ -204,8 +206,12 @@ func _in_own_end_zone(team: Team, x: float) -> bool:
 	return (x - tuning.own_goal_x(team.attack_dir)) * float(team.attack_dir) <= 0.0
 
 
+## The camera always follows the ball.
 func _camera_target() -> Vector3:
-	var target: Vector3 = ball.flat_position()
-	if offense != null:
-		target.x += float(offense.attack_dir) * tuning.camera_lead
-	return target
+	return ball.flat_position()
+
+
+## The camera always sits behind the offense, looking the way it attacks, so on
+## defense the person plays toward the camera.
+func _camera_facing() -> float:
+	return float(offense.attack_dir) if offense != null else 1.0

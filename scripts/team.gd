@@ -9,6 +9,8 @@ extends Node3D
 @export_enum("Left:-1", "Right:1") var attack_dir: int = 1
 ## Controlled by the person at the keyboard (unless Game.autoplay is on).
 @export var is_human: bool = false
+## Ratings for each Player child, in order. Missing entries play as average.
+@export var roster: Roster
 
 var score: int = 0
 var opponent: Team
@@ -21,5 +23,9 @@ func setup(tuning: Tuning, p_opponent: Team) -> void:
 	for child: Node in get_children():
 		var player: Player = child as Player
 		if player != null:
-			player.setup(self, players.size(), tuning)
+			var slot: int = players.size()
+			var ratings: PlayerRatings = null
+			if roster != null and slot < roster.players.size():
+				ratings = roster.players[slot]
+			player.setup(self, slot, tuning, ratings if ratings != null else PlayerRatings.new())
 			players.append(player)

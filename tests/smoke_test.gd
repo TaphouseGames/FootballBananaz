@@ -12,7 +12,9 @@ const SPEED: float = 8.0
 const STUCK_FRAMES: int = 600
 const MONKEY_ACTIONS: Array[StringName] = [
 	&"move_left", &"move_right", &"move_up", &"move_down",
-	&"turbo", &"pass_switch", &"action", &"play_1", &"play_2", &"play_3",
+	&"turbo", &"jump", &"confirm", &"action", &"switch_player", &"pass_1", &"pass_2", &"pass_3",
+	&"jump_alt", &"spin", &"stiff_arm_left", &"stiff_arm_right",
+	&"play_1", &"play_2", &"play_3", &"play_4", &"play_5", &"play_6", &"play_7", &"play_8", &"play_9",
 ]
 
 var _game: Game
@@ -31,8 +33,13 @@ func _initialize() -> void:
 			_games_left = maxi(int(arg.trim_prefix("games=")), 1)
 		elif arg == "monkey":
 			_monkey = true
+	# Raising the time scale alone stretches every physics step to SPEED / 60 s,
+	# which changes the simulation (blocks stop holding). Raising the tick rate
+	# with it keeps each step at 1/60 s of game time.
 	Game.base_time_scale = SPEED
 	Engine.time_scale = SPEED
+	Engine.physics_ticks_per_second = roundi(60.0 * SPEED)
+	Engine.max_physics_steps_per_frame = roundi(SPEED)
 	_start_game()
 
 
@@ -88,7 +95,7 @@ func _finish_game() -> bool:
 
 
 func _report() -> bool:
-	for key: StringName in [&"snaps", &"passes", &"completions", &"tackles", &"handoffs", &"turnovers"]:
+	for key: StringName in [&"snaps", &"passes", &"completions", &"tackles", &"handoffs", &"turnovers", &"drags", &"fumbles"]:
 		var count: int = _totals.get(key, 0)
 		if count <= 0 and _failures.is_empty():
 			_failures.append("no '%s' happened in the whole run" % key)
