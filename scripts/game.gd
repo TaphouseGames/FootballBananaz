@@ -64,7 +64,7 @@ func _ready() -> void:
 	audio.setup(self)
 
 	clock = tuning.game_length * 0.5
-	opening_receiver = home if home.is_human or not away.is_human else away
+	opening_receiver = home if randf() < 0.5 else away
 	kickoff_to = opening_receiver
 	play_controller.state_machine.transition(&"Kickoff")
 	camera_rig.snap_to(_camera_target(), _camera_facing())

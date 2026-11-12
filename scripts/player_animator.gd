@@ -299,9 +299,11 @@ func _watch_ball(delta: float) -> void:
 			_hands_weight = 1.0
 			_off_hand_weight = smoothstep(0.0, 1.0, player.catch_timer / maxf(player.tuning.catch_blend_time, 0.01))
 		return
-	if not pc.ball_dead and pc.phase == PlayController.Phase.LOOSE:
+	var tipped: bool = pc.phase == PlayController.Phase.TIPPED
+	if not pc.ball_dead and (tipped or pc.phase == PlayController.Phase.LOOSE):
 		# A fumble: anyone who has seen it and is nearly on it goes down for it.
-		if (player.is_down() and player.dive_reach_timer <= 0.0) or not pc.sees_loose_ball(player):
+		# A tipped pass: anyone near it reaches for it.
+		if (player.is_down() and player.dive_reach_timer <= 0.0) or not (tipped or pc.sees_loose_ball(player)):
 			return
 		var to_ball: Vector3 = ball.global_position - player.position
 		to_ball.y = 0.0

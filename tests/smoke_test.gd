@@ -37,6 +37,9 @@ var _bad_kicks: int = 0
 var _loose_jumps: int = 0
 var _was_loose: bool = false
 var _last_ball: Vector3 = Vector3.ZERO
+## Incomplete passes whistled dead with the ball still in the air.
+var _early_whistles: int = 0
+var _incomplete_seen: bool = false
 ## More than this many yards in a frame (SPEED ticks) counts as a jump.
 const MAX_LOOSE_STEP: float = 5.0
 var _failures: PackedStringArray = PackedStringArray()
@@ -131,7 +134,14 @@ func _check_kick() -> void:
 ## time.
 func _check_loose_ball() -> void:
 	var pc: PlayController = _game.play_controller
-	var loose: bool = _state == &"Live" and pc.phase == PlayController.Phase.LOOSE
+	var loose: bool = _state == &"Live" and (pc.phase == PlayController.Phase.LOOSE or pc.phase == PlayController.Phase.TIPPED)
+	# A pass is not incomplete before it has touched the turf.
+	if pc.ball_dead and pc.result == PlayController.Result.INCOMPLETE and not _incomplete_seen:
+		_incomplete_seen = true
+		if not pc.ball.grounded:
+			_early_whistles += 1
+	elif not pc.ball_dead:
+		_incomplete_seen = false
 	if _was_loose and _state == &"Live" and pc.ball.position.distance_to(_last_ball) > MAX_LOOSE_STEP:
 		_loose_jumps += 1
 	_was_loose = loose
@@ -203,6 +213,8 @@ func _report() -> bool:
 
 	if _loose_jumps > 0 and _failures.is_empty():
 		_failures.append("a fumbled ball jumped instead of travelling, %d times" % _loose_jumps)
+	if _early_whistles > 0 and _failures.is_empty():
+		_failures.append("%d passes were called incomplete before the ball was down" % _early_whistles)
 	if _totals.get(&"fumbles_whistled_dead", 0) > 0 and _failures.is_empty():
 		_failures.append("%d fumbles were never recovered" % _totals.get(&"fumbles_whistled_dead", 0))
 
@@ -216,6 +228,7 @@ func _report() -> bool:
 	if _worst_overlap > MAX_OVERLAP and _failures.is_empty():
 		_failures.append("two players overlapped by %.2f yd" % _worst_overlap)
 
+	print("passes called incomplete before the ball was down: %d" % _early_whistles)
 	print("points: home %d, away %d (edge: %s)" % [_home_points, _away_points, _edge if _edge != "" else "both"])
 	print("totals: %s" % _totals)
 	if _failures.is_empty():

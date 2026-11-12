@@ -7,7 +7,8 @@ extends Node
 ## POCKET: QB holds the ball behind the line. AIR: pass in flight.
 ## RUN: someone is carrying the ball in the open field (any team).
 ## LOOSE: fumbled, on the turf, anybody's.
-enum Phase { POCKET, AIR, RUN, LOOSE }
+## TIPPED: a pass off somebody's hands (or past everybody), still in the air.
+enum Phase { POCKET, AIR, RUN, LOOSE, TIPPED }
 enum Result { NONE, TACKLED, OUT_OF_BOUNDS, INCOMPLETE, TOUCHDOWN }
 ## Where a pass is put: at the receiver, ahead of him to run on to, or short of
 ## him to come back for.
@@ -83,10 +84,21 @@ var qb_tuck_time: float = 0.0
 ## no pass) and whether the quarterback ran a pass play over the line himself.
 var _pass_target: int = -1
 var _qb_ran: bool = false
+## A pass was caught by the offense on this play.
+var _completed: bool = false
+## The tipped pass in the air has not been touched by anyone (nobody can catch
+## it), and which teams have already had their one try at coming down with it.
+var _tip_untouched: bool = false
+var _tip_tried: Array[Team] = []
+## When (live_time) it was last tipped, and whether no receiver ever got to it.
+var _tip_at: float = 0.0
+var _tip_bad_throw: bool = false
 ## For a CPU quarterback: how much the clock pushes him to look downfield
 ## (0..1), and whether this is a last-play heave. See GameSituation.
 var qb_urgency: float = 0.0
 var heave: bool = false
+## What the color commentator makes of the last touchdown, or nothing.
+var touchdown_quip: StringName = &""
 ## For the tests: only this team gets the CPU edge (null = the usual rule).
 var edge_team: Team
 
@@ -263,6 +275,9 @@ func _reset_play() -> void:
 	read_target = null
 	_pass_target = -1
 	_qb_ran = false
+	_completed = false
+	_tip_untouched = false
+	_tip_tried.clear()
 	qb_urgency = 0.0
 	heave = false
 	qb = null
@@ -533,6 +548,9 @@ func snap() -> void:
 	game.audio.say(&"qb_hut")
 	game.audio.play(&"snap")
 	game.audio.play(&"pads_clash", 0.6)
+	touchdown_quip = &""
+	if not kickoff and not game.conversion and (heave or (game.down == 4 and game.yards_to_go() >= 5)):
+		game.audio.quip(&"color_bold", AudioDirector.QUIP_BOLD)
 	_update_markers()
 
 
@@ -558,6 +576,8 @@ func simulate(delta: float) -> void:
 	if not ball_dead:
 		if arrived:
 			_resolve_pass_arrival()
+		else:
+			_check_tipped_ball()
 		_check_loose_ball(delta)
 		_check_carrier()
 	_update_markers()
@@ -734,6 +754,7 @@ func _check_carrier() -> void:
 			game.add_stat(&"touchdowns")
 		if kickoff:
 			game.add_stat(&"kick_return_touchdowns")
+		touchdown_quip = _pick_touchdown_quip(carrier, spot_x)
 		end_play(Result.TOUCHDOWN, spot_x)
 		return
 	var from_own_goal: float = (x - tuning.own_goal_x(dir)) * float(dir)
@@ -759,6 +780,26 @@ func _check_carrier() -> void:
 		if not off_play.is_run:
 			_qb_ran = true
 			game.add_stat(&"scrambles")
+			game.audio.quip(&"color_qb_run", AudioDirector.QUIP_QB_RUN)
+
+
+## The color commentator's line for `scorer` crossing the goal line at `spot_x`:
+## a walk-in with no defender near him, a long one, or just a score. Only an
+## untouched stroll is worth a word when it was not the offense that scored.
+func _pick_touchdown_quip(scorer: Player, spot_x: float) -> StringName:
+	if game.conversion:
+		return &""
+	var nearest: float = INF
+	for opponent: Player in scorer.team.opponent.players:
+		if not opponent.is_down():
+			nearest = minf(nearest, _flat_distance(opponent.position, scorer.position))
+	if nearest >= tuning.audio_walk_in_yards:
+		return &"color_td_walk"
+	if kickoff or scorer.team != offense:
+		return &""
+	if (spot_x - los_x) * off_dir >= tuning.audio_long_score_yards:
+		return &"color_td_long"
+	return &"color_td"
 
 
 ## Where the ball is spotted with `carrier` holding it: the furthest downfield
@@ -792,6 +833,8 @@ func end_play(p_result: Result, spot_x: float) -> void:
 		var gain: float = (spot_x - los_x) * off_dir if final_team == offense else 0.0
 		game.play_caller.record(offense, off_play, gain, live_time)
 		game.scout.record(offense, off_play, _pass_target, _qb_ran, gain)
+		if _completed and result != Result.TOUCHDOWN and gain >= tuning.audio_hot_pass_yards:
+			game.audio.quip(&"color_hot", AudioDirector.QUIP_HOT)
 		# For the tests: what a CPU quarterback's runs come to, by why he ran.
 		if qb != null and ball.carrier == qb and qb.brain.run_kind != &"":
 			var kind: String = qb.brain.run_kind
@@ -856,7 +899,9 @@ func pass_speed(power: float) -> float:
 ## A receiver still on his route is thrown to where the route has him by then,
 ## so a ball thrown before a curl comes down at the curl. A lead pass ignores
 ## the route: it goes on down the line he is running now, and he goes with it.
-## An underthrown one comes down short of the cut, toward the quarterback.
+## An underthrown one ignores the route and his run alike: it comes down short
+## of where he is as it is thrown, on the line back to the quarterback, and he
+## has to come back for it.
 func pass_spot(target: Player, speed: float, placement: Placement = Placement.NORMAL) -> Vector3:
 	var aim: PackedVector3Array = pass_aim(target, speed, placement)
 	return aim[0] + aim[1]
@@ -865,20 +910,23 @@ func pass_spot(target: Player, speed: float, placement: Placement = Placement.NO
 ## The two parts of pass_spot(): the spot the placement starts from, and how far
 ## the placement moves it. Also sets `aim_cuts` and `aim_dir`.
 func pass_aim(target: Player, speed: float, placement: Placement) -> PackedVector3Array:
+	if placement == Placement.UNDER:
+		aim_cuts = false
+		aim_dir = Vector3(target.velocity.x, 0.0, target.velocity.z).normalized()
+		var here: Vector3 = target.position
+		var home: Vector3 = qb.position - here
+		home.y = 0.0
+		var dist: float = home.length()
+		if dist < 0.01:
+			return PackedVector3Array([here, Vector3.ZERO])
+		var back: float = target.max_speed() * (dist / speed) * tuning.pass_under_share
+		back = minf(clampf(back, tuning.pass_under_min, tuning.pass_under_max), dist * 0.5)
+		return PackedVector3Array([here, home / dist * back])
 	var on_route: Vector3 = _route_spot(target, speed)
-	if not aim_cuts or placement == Placement.LEAD:
-		var base: Vector3 = on_route if placement == Placement.NORMAL else _run_spot(target, speed)
-		return PackedVector3Array([base, placement_shift(target, base, speed, placement)])
-	if placement == Placement.NORMAL:
+	if aim_cuts and placement == Placement.NORMAL:
 		return PackedVector3Array([on_route, Vector3.ZERO])
-	var home: Vector3 = qb.position - on_route
-	home.y = 0.0
-	var dist: float = home.length()
-	if dist < 0.01:
-		return PackedVector3Array([on_route, Vector3.ZERO])
-	var back: float = target.max_speed() * (dist / speed) * tuning.pass_under_share
-	back = minf(clampf(back, tuning.pass_under_route_min, tuning.pass_under_max), dist * 0.5)
-	return PackedVector3Array([on_route, home / dist * back])
+	var base: Vector3 = on_route if placement == Placement.NORMAL else _run_spot(target, speed)
+	return PackedVector3Array([base, placement_shift(target, base, speed, placement)])
 
 
 ## Where the receiver's run, kept up as it is now, meets a pass at `speed`.
@@ -904,12 +952,12 @@ func _route_spot(target: Player, speed: float) -> Vector3:
 	return spot
 
 
-## How far a lead pass or an underthrown one is moved from `point`, the regular
-## spot: along the receiver's run, by an amount that depends on how fast and how
-## steadily he is running, how long the ball is in the air and where the
-## nearest defender is.
+## How far a lead pass is moved from `point`, the regular spot: along the
+## receiver's run, by an amount that depends on how fast and how steadily he is
+## running, how long the ball is in the air and where the nearest defender is.
+## (An underthrown pass is placed by pass_aim() and does not come through here.)
 func placement_shift(target: Player, point: Vector3, speed: float, placement: Placement) -> Vector3:
-	if placement == Placement.NORMAL:
+	if placement != Placement.LEAD:
 		return Vector3.ZERO
 	var run: Vector3 = Vector3(target.velocity.x, 0.0, target.velocity.z)
 	var pace: float = run.length()
@@ -939,14 +987,10 @@ func placement_shift(target: Player, point: Vector3, speed: float, placement: Pl
 			nearest = dist
 			cover = offset.dot(dir) / dist * (1.0 - dist / tuning.pass_place_cover_range)
 	var flight: float = _flat_distance(qb.position, point) / speed
-	if placement == Placement.LEAD:
-		var headroom: float = maxf(target.max_speed() * tuning.turbo_speed_multiplier - pace, 0.0) * flight
-		var ahead: float = (headroom * tuning.pass_lead_share + tuning.pass_lead_base) * moving * steady
-		ahead *= 1.0 - tuning.pass_place_cover_scale * cover
-		return dir * minf(ahead, tuning.pass_lead_max)
-	var back: float = pace * flight * tuning.pass_under_share * moving * steady
-	back *= 1.0 + tuning.pass_place_cover_scale * cover
-	return -dir * minf(back, tuning.pass_under_max)
+	var headroom: float = maxf(target.max_speed() * tuning.turbo_speed_multiplier - pace, 0.0) * flight
+	var ahead: float = (headroom * tuning.pass_lead_share + tuning.pass_lead_base) * moving * steady
+	ahead *= 1.0 - tuning.pass_place_cover_scale * cover
+	return dir * minf(ahead, tuning.pass_lead_max)
 
 
 ## `power` runs from 0 (slow, high lob) to 1 (fast, flat bullet). `placement`
@@ -1020,7 +1064,10 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	ball.throw_to(qb, target, point, speed, tuning)
 	# How far short of his run the ball comes down, whatever the reason.
 	pass_short = 0.0
-	if run.length() > 0.5:
+	if placement == Placement.UNDER:
+		# Short of him whichever way he is going, or standing still.
+		pass_short = _flat_distance(target.position + run * ball.flight_time, ball.target_point)
+	elif run.length() > 0.5:
 		pass_short = maxf((target.position + run * ball.flight_time - ball.target_point).dot(run.normalized()), 0.0)
 	_pick_ball_coverer(target)
 	_remember_target(target)
@@ -1084,18 +1131,7 @@ func _resolve_pass_arrival() -> void:
 				game.add_stat(&"jump_catches")
 			elif receiver.dive_reach_timer > 0.0:
 				game.add_stat(&"dive_catches")
-			_take_pass(receiver)
-			receiver.jolt(receiver.position - ball.thrower.position, 0.5)
-			phase = Phase.RUN
-			game.add_stat(&"completions")
-			if receiver.is_airborne() or receiver.dive_reach_timer > 0.0:
-				game.audio.remark(&"announcer_catch", AudioDirector.REMARK_CATCH)
-			elif (ball.target_point.x - los_x) * off_dir >= tuning.audio_deep_throw_yards:
-				game.audio.remark(&"announcer_throw", AudioDirector.REMARK_THROW)
-			game.audio.play(&"catch")
-			game.audio.crowd_react(receiver.team, 0.35)
-			_add_placement_stat("completions")
-			human.on_carrier_changed(receiver)
+			_complete_pass(receiver)
 			return
 		if defender != null and randf() < tuning.interception_chance * _catch_scale(defender):
 			_intercept(defender)
@@ -1104,11 +1140,125 @@ func _resolve_pass_arrival() -> void:
 		_intercept(defender)
 		return
 
-	ball.drop()
-	game.add_stat(&"incompletions")
-	game.audio.play(&"incomplete")
-	game.audio.crowd_react(defense, 0.5)
-	end_play(Result.INCOMPLETE, los_x)
+	# Nobody held on to it. It is not incomplete until it lands: off somebody's
+	# hands it is up for grabs on the way down.
+	_tip_tried.clear()
+	_tip_bad_throw = receiver == null
+	var pace: Vector3 = ball.flight_velocity_now()
+	pace.y = 0.0
+	if defender != null:
+		# Batted: up, and anywhere.
+		var away: Vector3 = _away_from(defender).rotated(Vector3.UP, randf_range(-1.5, 1.5))
+		var bat: Vector3 = away * randf_range(tuning.tip_bat_speed_min, tuning.tip_bat_speed_max)
+		bat.y = randf_range(tuning.tip_bat_up_min, tuning.tip_bat_up_max)
+		game.add_stat(&"batted_passes")
+		_tip_pass(defender, bat)
+	elif receiver != null:
+		# Dropped: through his hands and on, more or less the way it was going.
+		var drop: Vector3 = pace.rotated(Vector3.UP, randf_range(-0.6, 0.6)) * tuning.tip_drop_speed_share
+		drop.y = randf_range(tuning.tip_drop_up_min, tuning.tip_drop_up_max)
+		game.add_stat(&"drops")
+		_tip_pass(receiver, drop)
+	else:
+		_tip_pass(null, ball.flight_velocity_now())
+
+
+## An offensive player has caught the pass, at its spot or off a tip.
+func _complete_pass(receiver: Player) -> void:
+	_take_pass(receiver)
+	receiver.jolt(receiver.position - ball.thrower.position, 0.5)
+	phase = Phase.RUN
+	_completed = true
+	game.add_stat(&"completions")
+	if receiver.is_airborne() or receiver.dive_reach_timer > 0.0:
+		game.audio.remark(&"announcer_catch", AudioDirector.REMARK_CATCH)
+	elif (ball.target_point.x - los_x) * off_dir >= tuning.audio_deep_throw_yards:
+		game.audio.remark(&"announcer_throw", AudioDirector.REMARK_THROW)
+	game.audio.play(&"catch")
+	game.audio.crowd_react(receiver.team, 0.35)
+	_add_placement_stat("completions")
+	human.on_carrier_changed(receiver)
+
+
+## Flat direction from `player` to the ball, or the way he faces when he is under it.
+func _away_from(player: Player) -> Vector3:
+	var away: Vector3 = ball.flat_position() - player.position
+	away.y = 0.0
+	return away.normalized() if away.length_squared() > 0.01 else player.facing
+
+
+## The pass goes on through the air at `velocity`: off `toucher`'s hands, or
+## (null) having got to its spot with nobody there.
+func _tip_pass(toucher: Player, velocity: Vector3) -> void:
+	ball.tip(velocity)
+	phase = Phase.TIPPED
+	_tip_untouched = toucher == null
+	_tip_at = live_time
+	if toucher == null:
+		return
+	toucher.jolt(-_away_from(toucher), 0.3)
+	game.audio.play(&"ball_bounce", 0.8)
+	for player: Player in players:
+		player.brain.on_tip()
+
+
+## Whether `player` can get a hand on the tipped ball where it is now.
+func reaches_tip(player: Player) -> bool:
+	if player.is_down() and player.dive_reach_timer <= 0.0:
+		return false
+	var spot: Vector3 = ball.flat_position()
+	var height: float = tuning.tip_catch_height
+	if player.is_airborne():
+		height *= tuning.jump_catch_radius_scale
+	return ball.position.y <= height and _flat_distance(player.position, spot) <= catch_reach(player, spot)
+
+
+## A tipped pass is incomplete the moment it touches the turf. Until then
+## each team has one try at coming down with it: whoever of its men gets a hand
+## to it first.
+func _check_tipped_ball() -> void:
+	if phase != Phase.TIPPED:
+		return
+	if ball.grounded:
+		game.add_stat(&"incompletions")
+		game.audio.play(&"incomplete")
+		if _tip_bad_throw:
+			# Nobody on his own team could get a hand on it.
+			game.audio.quip(&"color_bad_throw", AudioDirector.QUIP_BAD_THROW)
+		game.audio.crowd_react(defense, 0.5)
+		end_play(Result.INCOMPLETE, los_x)
+		return
+	if _tip_untouched or live_time - _tip_at < tuning.tip_retry_time:
+		return
+	var spot: Vector3 = ball.flat_position()
+	var near: Array[Player] = []
+	for candidate: Player in players:
+		if candidate == ball.thrower or _tip_tried.has(candidate.team) or absf(candidate.position.z) > tuning.half_width():
+			continue
+		if reaches_tip(candidate):
+			near.append(candidate)
+	if near.is_empty():
+		return
+	# Shuffled first so that neither team wins a dead heat by being listed first.
+	near.shuffle()
+	near.sort_custom(func(a: Player, b: Player) -> bool: return _flat_distance(a.position, spot) < _flat_distance(b.position, spot))
+	var player: Player = near[0]
+	_tip_tried.append(player.team)
+	var chance: float = (tuning.tip_catch_chance if player.team == offense else tuning.tip_intercept_chance) * _catch_scale(player)
+	if randf() < clampf(chance, 0.0, 0.95):
+		if player.team == offense:
+			game.add_stat(&"tip_catches")
+			_complete_pass(player)
+		else:
+			game.add_stat(&"tip_interceptions")
+			_intercept(player)
+		return
+	# Off his hands too, and on it goes.
+	var knock: Vector3 = _away_from(player).rotated(Vector3.UP, randf_range(-1.5, 1.5)) * randf_range(0.5, 1.0) * tuning.tip_bat_speed_min
+	knock += Vector3(player.velocity.x, 0.0, player.velocity.z) * tuning.fumble_carry_share
+	knock.y = randf_range(tuning.tip_drop_up_min, tuning.tip_drop_up_max)
+	game.add_stat(&"tip_bobbles")
+	_tip_pass(player, knock)
 
 
 func _catch_scale(player: Player) -> float:
@@ -1179,6 +1329,7 @@ func _intercept(defender: Player) -> void:
 	game.audio.play(&"catch")
 	game.audio.play(&"crowd_gasp", 0.8)
 	game.audio.shout(&"announcer_interception")
+	game.audio.quip(&"color_interception", AudioDirector.QUIP_INTERCEPTION)
 	game.audio.crowd_react(defender.team, 0.9)
 	_add_placement_stat("interceptions")
 	human.on_carrier_changed(defender)
@@ -1213,7 +1364,7 @@ func do_jump(player: Player) -> void:
 	game.audio.action(player, &"jump")
 	# Going up for a pass that comes down nearby: the jump carries him to it.
 	var gap: Vector3 = _gap_to_pass(player)
-	var left: float = ball.flight_time - ball.flight_elapsed
+	var left: float = ball.air_time_left()
 	if gap != Vector3.INF and gap.length() <= tuning.jump_ball_range and left <= tuning.jump_time + 0.15:
 		var top: float = player.max_speed() * tuning.turbo_speed_multiplier
 		player.velocity = (gap / maxf(left, 0.15)).limit_length(top)
@@ -1224,7 +1375,10 @@ func do_jump(player: Player) -> void:
 ## From `player` to where the pass in the air comes down, flat. Vector3.INF when
 ## there is no pass for him to go for.
 func _gap_to_pass(player: Player) -> Vector3:
-	if ball_dead or phase != Phase.AIR or ball.state != Ball.State.FLIGHT or player.has_ball:
+	if ball_dead or player.has_ball:
+		return Vector3.INF
+	var in_flight: bool = phase == Phase.AIR and ball.state == Ball.State.FLIGHT
+	if not in_flight and (phase != Phase.TIPPED or _tip_untouched):
 		return Vector3.INF
 	var gap: Vector3 = ball.target_point - player.position
 	gap.y = 0.0
@@ -1262,7 +1416,7 @@ func _ball_dive_speed(player: Player, dir: Vector3) -> float:
 		return -1.0
 	if gap.length_squared() > 0.01 and gap.normalized().dot(dir) < 0.7:
 		return -1.0
-	var left: float = ball.flight_time - ball.flight_elapsed
+	var left: float = ball.air_time_left()
 	return clampf(gap.length() / clampf(left, 0.1, tuning.dive_time), tuning.dive_ball_min_speed, tuning.dive_speed)
 
 
@@ -1500,6 +1654,7 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 	game.audio.hit(tackler, carrier, big)
 	if big:
 		game.audio.remark(&"announcer_hit", AudioDirector.REMARK_HIT)
+		game.audio.quip(&"color_lawn_chair", AudioDirector.QUIP_LAWN_CHAIR)
 	game.impact(tuning.tackle_shake, 1.0)
 	game.field.fx.blood_burst(carrier.position, dir, tuning.blood_drops_tackle, true)
 	if _try_fumble(carrier, dir, kind, carried):
@@ -1542,6 +1697,7 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 	ball.fumble(pop)
 	carrier.flash(Color(1.0, 0.1, 0.1), tuning.fumble_flash)
 	game.audio.shout(&"announcer_fumble")
+	game.audio.quip(&"color_confused", AudioDirector.QUIP_CONFUSED)
 	fumbler = carrier
 	phase = Phase.LOOSE
 	loose_time = 0.0
@@ -1649,6 +1805,7 @@ func _break_tackle(tackler: Player, carrier: Player, dir: Vector3) -> void:
 	carrier.jolt(dir, 0.8)
 	game.add_stat(&"broken_tackles")
 	game.audio.remark(&"announcer_break", AudioDirector.REMARK_BREAK)
+	game.audio.quip(&"color_dog", AudioDirector.QUIP_DOG)
 	game.audio.play(&"broken_tackle")
 	game.audio.play(&"body_fall", 0.6)
 	game.audio.crowd_react(carrier.team, 0.3)
@@ -1725,6 +1882,7 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 		rusher.block_pancake_time = -1.0
 		game.add_stat(&"pancakes")
 		game.audio.remark(&"announcer_pancake", AudioDirector.REMARK_PANCAKE)
+		game.audio.quip(&"color_lawn_chair", AudioDirector.QUIP_LAWN_CHAIR * 0.5)
 		game.audio.play(&"big_hit", 0.6)
 		game.audio.play(&"body_fall", 0.6)
 		return

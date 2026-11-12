@@ -270,7 +270,8 @@ func _pass_placement() -> PlayController.Placement:
 
 
 func _switch_to_nearest() -> void:
-	var point: Vector3 = pc.ball.target_point if pc.phase == PlayController.Phase.AIR else pc.ball.flat_position()
+	var in_air: bool = pc.phase == PlayController.Phase.AIR or pc.phase == PlayController.Phase.TIPPED
+	var point: Vector3 = pc.ball.target_point if in_air else pc.ball.flat_position()
 	var best: Player = null
 	var best_dist: float = INF
 	for candidate: Player in team.players:

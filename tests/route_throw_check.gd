@@ -3,7 +3,8 @@ extends SceneTree
 ## wideout is thrown to while still on his way up the field, once with every
 ## placement:
 ##   normal  the ball comes down where the curl ends, and he is there for it
-##   under   it comes down short of that, toward the quarterback
+##   under   it comes down short of where he was as it was thrown, on the line
+##           back to the quarterback, and he comes back for it
 ##   lead    it goes on up the field past the curl
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/route_throw_check.gd
@@ -24,6 +25,7 @@ var _route_end: Vector3 = Vector3.ZERO
 var _thrown: bool = false
 var _landing: Vector3 = Vector3.ZERO
 var _qb_at_throw: Vector3 = Vector3.ZERO
+var _receiver_at_throw: Vector3 = Vector3.ZERO
 var _failed: bool = false
 
 
@@ -73,6 +75,7 @@ func _tick() -> void:
 		if downfield >= _throw_at and _pc.can_pass():
 			_thrown = true
 			_qb_at_throw = _pc.qb.position
+			_receiver_at_throw = _receiver.position
 			@warning_ignore("integer_division")
 			_pc.throw_ball(_receiver, 0.5, _placement(_case / 2))
 			_landing = _pc.ball.target_point
@@ -103,10 +106,16 @@ func _judge() -> void:
 		"normal":
 			ok = from_end <= 1.5 and gap <= 2.0
 		"under":
-			ok = closer >= _game.tuning.pass_under_route_min - 0.1 and gap <= 2.5
+			# Between where he was and the quarterback, whatever the route does.
+			var line: float = _flat(_qb_at_throw, _receiver_at_throw)
+			var nearer: float = line - _flat(_qb_at_throw, _landing)
+			var off_line: float = _flat(_qb_at_throw, _landing) + _flat(_landing, _receiver_at_throw) - line
+			ok = nearer >= _game.tuning.pass_under_min - 0.1 and off_line <= 0.1 and gap <= 2.5
+			_report(ok, "%.1f yd short of where he was, toward the QB; receiver %.1f yd from the ball when it came down" % [nearer, gap])
+			return
 		"lead":
 			ok = deeper >= 1.0
-	_report(ok, "%.1f yd from the route end, %.1f deeper, %.1f nearer the QB; receiver %.1f yd from the ball when it came down" % [from_end, deeper, closer, gap])
+	_report(ok,"%.1f yd from the route end, %.1f deeper, %.1f nearer the QB; receiver %.1f yd from the ball when it came down" % [from_end, deeper, closer, gap])
 
 
 func _report(ok: bool, text: String) -> void:

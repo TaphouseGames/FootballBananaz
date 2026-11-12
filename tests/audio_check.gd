@@ -65,6 +65,7 @@ func _report() -> bool:
 	for sound: StringName in names:
 		print("  %-26s %d" % [sound, audio.play_counts[sound]])
 	print("Remarks asked for (before chance and gap): %s" % str(audio.remark_asks))
+	print("Quips asked for (before chance and gap): %s" % str(audio.quip_asks))
 	var quiet: PackedStringArray = PackedStringArray()
 	for sound: StringName in named:
 		if not audio.play_counts.has(sound):
@@ -85,7 +86,7 @@ func _report() -> bool:
 ## Every sound name passed to the audio director anywhere in the game scripts.
 func _sounds_in_scripts() -> Array[StringName]:
 	var pattern: RegEx = RegEx.new()
-	pattern.compile("(?:\\bplay|\\bsay|\\bshout|\\bremark|\\baction|_make_loop)\\((?:\\w+, )?&\"(\\w+)\"|&\"((?:crowd|ui|huddle)_\\w+)\"")
+	pattern.compile("(?:\\bplay|\\bsay|\\bshout|\\bremark|\\baction|_make_loop)\\((?:\\w+, )?&\"(\\w+)\"|&\"((?:crowd|ui|huddle|color)_\\w+)\"")
 	var found: Dictionary[StringName, bool] = {}
 	for dir: String in SCRIPT_DIRS:
 		for file: String in DirAccess.get_files_at(dir):

@@ -184,6 +184,54 @@ func think(pc: PlayController, delta: float) -> void:
 				_pursue(pc, carrier)
 		PlayController.Phase.LOOSE:
 			_think_loose(pc)
+		PlayController.Phase.TIPPED:
+			_think_tipped(pc)
+
+
+# --- Tipped pass ---------------------------------------------------------------
+
+## The pass has come off somebody's hands: whether to leave his feet for it is
+## decided afresh.
+func on_tip() -> void:
+	_contest_decided = false
+
+
+## The ball is in the air off a tip. The few nearest where it comes down go and
+## get under it, and leave their feet for it if that is what it takes; the rest
+## come over and get in the way.
+func _think_tipped(pc: PlayController) -> void:
+	var landing: Vector3 = pc.ball.target_point
+	var dist: float = _flat_distance(player.position, landing)
+	if pc.ball.thrower == player:
+		return
+	var closer: int = 0
+	for mate: Player in player.team.players:
+		if mate != player and mate.can_act() and _flat_distance(mate.position, landing) < dist:
+			closer += 1
+	if closer >= tuning.ai_tip_chasers:
+		# Enough of his side are under it: he comes over and keeps the others
+		# off, with his body only (as round a fumble).
+		_block(pc, landing)
+		player.is_blocking = false
+		player.wants_turbo = dist > 4.0
+		return
+	_seek(landing)
+	player.wants_turbo = dist > 1.0
+	if _contest_decided:
+		return
+	var time_left: float = pc.ball.air_time_left()
+	var reach: float = pc.catch_reach(player, landing)
+	if dist <= reach:
+		# Under it: go up and meet it once it is nearly down to where a jump gets.
+		if time_left <= tuning.jump_time * 0.6 and not pc.reaches_tip(player):
+			_contest_decided = true
+			pc.do_jump(player)
+		return
+	# He will not get there on his feet: dive for it at the last moment.
+	var short: float = _flat_distance(player.position + player.velocity * time_left, landing)
+	if short > reach and time_left <= tuning.dive_time and dist <= tuning.dive_ball_range:
+		_contest_decided = true
+		pc.do_dive(player, _direction_to(landing))
 
 
 # --- Fumble ------------------------------------------------------------------
@@ -621,41 +669,66 @@ func choose_pass(pc: PlayController, target: Player, open: float, pressured: boo
 ## and neither is the throw that follows.
 func choose_placement(pc: PlayController, target: Player, power: float) -> PlayController.Placement:
 	var speed: float = pc.pass_speed(power)
+	var noise: float = tuning.ai_qb_placement_noise * PlayerRatings.blend(player.ratings.accuracy, tuning.accuracy_overlead_scale_low, tuning.accuracy_overlead_scale_high)
+	var under_gain: float = _underthrow_gain(pc, target, speed, noise)
+	var under: PlayController.Placement = PlayController.Placement.UNDER if under_gain >= tuning.ai_qb_under_margin else PlayController.Placement.NORMAL
 	var normal: Vector3 = pc.pass_spot(target, speed)
-	# About to cut or stop: he throws the route.
+	# About to cut or stop: no leading him past it.
 	if pc.aim_cuts:
-		return PlayController.Placement.NORMAL
+		return under
 	var flight: float = _flat_distance(player.position, normal) / speed
 	var run: Vector3 = Vector3(target.velocity.x, 0.0, target.velocity.z)
 	if run.length() < tuning.run_speed * 0.5:
-		return PlayController.Placement.NORMAL
-	var dir: Vector3 = run.normalized()
-	var noise: float = tuning.ai_qb_placement_noise * PlayerRatings.blend(player.ratings.accuracy, tuning.accuracy_overlead_scale_low, tuning.accuracy_overlead_scale_high)
-	var base: float = _open_at_spot(target, normal, flight)
-	var choice: PlayController.Placement = PlayController.Placement.NORMAL
-	var lead_gain: float = 0.0
+		return under
 
 	# Lead him only if he has the legs left to run on to it.
 	var ahead: Vector3 = pc.pass_spot(target, speed, PlayController.Placement.LEAD)
 	if _flat_distance(ahead, normal) >= 1.0 and not target.turbo_locked and target.turbo >= tuning.ai_qb_lead_min_turbo:
-		var gain: float = _open_at_spot(target, ahead, flight) - base + randf_range(-noise, noise)
-		if gain >= tuning.ai_qb_lead_margin:
-			lead_gain = gain
-			choice = PlayController.Placement.LEAD
+		var gain: float = _open_at_spot(target, ahead, flight) - _open_at_spot(target, normal, flight) + randf_range(-noise, noise)
+		if gain >= tuning.ai_qb_lead_margin and gain >= under_gain:
+			return PlayController.Placement.LEAD
+	return under
 
-	# Underthrow him only with nobody trailing: slowing down brings that man in.
+
+## How many yards more open the spot of an underthrown pass to `target` looks
+## than the regular one, or -INF when he does not think of throwing one: it has
+## to be a throw of some length, with the nearest defender on the far side of
+## the receiver (who then comes back to the ball with that man behind him) and
+## nobody underneath to step in front of it.
+func _underthrow_gain(pc: PlayController, target: Player, speed: float, noise: float) -> float:
+	var home: Vector3 = player.position - target.position
+	home.y = 0.0
+	if home.length() < tuning.ai_qb_under_min_distance:
+		return -INF
+	if randf() >= _sharp(tuning.ai_qb_under_chance, tuning.ai_edge_under_chance):
+		return -INF
 	var short: Vector3 = pc.pass_spot(target, speed, PlayController.Placement.UNDER)
-	if _flat_distance(short, normal) >= 1.0:
-		var trailed: bool = false
-		for opponent: Player in target.team.opponent.players:
-			var offset: Vector3 = opponent.position - target.position
-			offset.y = 0.0
-			if not opponent.is_down() and offset.dot(dir) < 0.0 and offset.length() < tuning.ai_qb_under_trail_range:
-				trailed = true
-		var gain: float = _open_at_spot(target, short, flight) - base + randf_range(-noise, noise)
-		if not trailed and gain >= tuning.ai_qb_under_margin and gain > lead_gain:
-			choice = PlayController.Placement.UNDER
-	return choice
+	var flight: float = _flat_distance(player.position, short) / speed
+	var path: Vector3 = short - player.position
+	path.y = 0.0
+	var length: float = path.length()
+	var nearest: Player = null
+	var nearest_dist: float = INF
+	for opponent: Player in target.team.opponent.players:
+		if opponent.is_down():
+			continue
+		var dist: float = _flat_distance(opponent.position, target.position)
+		if dist < nearest_dist:
+			nearest_dist = dist
+			nearest = opponent
+		# Anyone near the last stretch of the ball's path can get a hand on it.
+		var soon: Vector3 = opponent.position + opponent.velocity * minf(flight, 0.4) - player.position
+		soon.y = 0.0
+		var along: float = soon.dot(path) / maxf(length, 0.01)
+		if along >= length * 0.5 and (soon - path / maxf(length, 0.01) * minf(along, length)).length() < tuning.ai_qb_under_lane:
+			return -INF
+	if nearest != null:
+		var offset: Vector3 = nearest.position - target.position
+		offset.y = 0.0
+		if offset.dot(home) >= 0.0:
+			return -INF
+	var normal: Vector3 = pc.pass_spot(target, speed)
+	return _open_at_spot(target, short, flight) - _open_at_spot(target, normal, flight) + randf_range(-noise, noise)
 
 
 ## Distance from `spot` to the nearest defender, each judged by where he will be

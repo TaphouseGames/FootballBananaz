@@ -149,20 +149,18 @@ extends Resource
 ## short by up to this share of the extra lead (long twice as far as short).
 @export var pass_lead_overlead_scale: float = 2.6
 @export var pass_lead_error: float = 0.6
-## Underthrown pass: the ball comes down short of the receiver's run, by this
-## share of the ground he would cover while it is in the air, and never more
-## than `max` yards. He has to slow down and come back for it.
-@export var pass_under_share: float = 0.22
+## Underthrown pass: whatever his route, the ball comes down short of where the
+## receiver is as it is thrown, on the line from him to the quarterback, by this
+## share of the ground he could cover while it is in the air: at least `min`
+## yards, never more than `max`. He has to stop and come back for it.
+@export var pass_under_share: float = 0.3
+@export var pass_under_min: float = 2.0
 @export var pass_under_max: float = 4.0
-## Underthrown to a receiver whose route cuts or stops before the ball arrives:
-## it comes down at least this many yards short of that spot, toward the
-## quarterback.
-@export var pass_under_route_min: float = 2.0
 ## An underthrown pass can come up shorter still, by up to this share of that.
 @export var pass_under_error: float = 0.4
-## Both placements look at the nearest defender within `range` yards of the
-## receiver: one ahead of him on his run shortens a lead and deepens an
-## underthrow by up to this share, one trailing him does the opposite.
+## A lead looks at the nearest defender within `range` yards of the receiver:
+## one ahead of him on his run shortens it by up to this share, one trailing
+## him lengthens it.
 @export var pass_place_cover_range: float = 5.0
 @export var pass_place_cover_scale: float = 0.35
 ## Reach of a receiver on his feet. Jumping and diving reach further.
@@ -188,6 +186,26 @@ extends Resource
 @export var interception_chance_open: float = 0.5
 ## Chance removed by each defender in the air within reach of the ball.
 @export var contest_penalty: float = 0.15
+## A pass nobody held on to stays in the air, and live, until it lands. Dropped
+## by the receiver it keeps this share of its flat speed and pops up a little...
+@export var tip_drop_speed_share: float = 0.25
+@export var tip_drop_up_min: float = 2.5
+@export var tip_drop_up_max: float = 4.5
+## ...batted by a defender it goes up higher, and anywhere.
+@export var tip_bat_speed_min: float = 2.0
+@export var tip_bat_speed_max: float = 6.0
+@export var tip_bat_up_min: float = 4.0
+@export var tip_bat_up_max: float = 7.0
+## Chance that a man within reach of a tipped ball comes down with it (on the
+## offense, on the defense), and how high it can be for a man on his feet to
+## get a hand on it. One try a team.
+@export var tip_catch_chance: float = 0.35
+@export var tip_intercept_chance: float = 0.12
+@export var tip_catch_height: float = 2.2
+## Seconds after a tip before anyone can get a hand on it again.
+@export var tip_retry_time: float = 0.3
+## How many of each team go for a tipped ball.
+@export var ai_tip_chasers: int = 2
 
 ## Run plays: a runner within `handoff_reach` yards of the quarterback is handed
 ## the ball, which takes `handoff_time` seconds to change hands. Further away it
@@ -430,6 +448,20 @@ extends Resource
 ## between two of them, and a scale on how often he makes one (0 = never).
 @export var audio_remark_gap: float = 8.0
 @export var audio_remark_scale: float = 1.0
+## The color commentator: her linear volume, the real seconds she waits between
+## two quips and before saying the same line again, a scale on how often she
+## has one (0 = never), and the chance of idle chatter while a play is picked.
+@export var audio_color_level: float = 1.0
+@export var audio_color_gap: float = 12.0
+@export var audio_color_repeat_gap: float = 120.0
+@export var audio_color_scale: float = 1.0
+@export var audio_color_idle_chance: float = 0.12
+## A touchdown is a walk-in when no defender on his feet is within this many
+## yards of the scorer, and a long one when the play gained at least this many.
+@export var audio_walk_in_yards: float = 6.0
+@export var audio_long_score_yards: float = 25.0
+## A completed pass play gaining at least this many yards lights the defense up.
+@export var audio_hot_pass_yards: float = 20.0
 ## A completion thrown at least this far past the line is a great throw.
 @export var audio_deep_throw_yards: float = 25.0
 ## Crowd excitement lost per second once nothing is happening.
@@ -513,12 +545,18 @@ extends Resource
 ## each spot is off by up to `noise` yards (before his accuracy rating), so he
 ## is sometimes wrong.
 @export var ai_qb_lead_margin: float = 1.6
-@export var ai_qb_under_margin: float = 0.8
+@export var ai_qb_under_margin: float = 1.5
 @export var ai_qb_placement_noise: float = 0.8
-## A lead also needs the receiver to have this much turbo left, and an
-## underthrow needs no defender trailing him within this many yards.
+## A lead also needs the receiver to have this much turbo left.
 @export var ai_qb_lead_min_turbo: float = 0.3
-@export var ai_qb_under_trail_range: float = 2.5
+## An underthrow brings the receiver back to the ball with his man behind him.
+## The CPU quarterback throws one only at least this many yards long, with the
+## nearest defender on the far side of the receiver, and with nobody within
+## `lane` yards of the path of the ball or the spot it comes down. Even then he
+## thinks of it only this share of the time (the sharper CPU team: `ai_edge_under_chance`).
+@export var ai_qb_under_min_distance: float = 8.0
+@export var ai_qb_under_lane: float = 4.5
+@export var ai_qb_under_chance: float = 0.3
 ## Seconds after the snap before pass rushers start using turbo.
 @export var ai_rush_turbo_delay: float = 0.7
 ## Seconds a coverage defender takes to read a change in his receiver's movement.
@@ -701,6 +739,8 @@ extends Resource
 @export var ai_edge_keeper_chance: float = 0.28
 @export var ai_edge_rush_turbo_delay: float = 0.35
 @export var ai_edge_ball_react_time: float = 0.15
+## In place of ai_qb_under_chance.
+@export var ai_edge_under_chance: float = 0.6
 ## Defenders going for a pass in the air, in place of ai_ball_breakers.
 @export var ai_edge_ball_breakers: int = 3
 ## A quarterback with nobody open and an unblocked defender within

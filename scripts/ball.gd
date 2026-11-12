@@ -37,6 +37,11 @@ var _gravity: float = 20.0
 var _loose_velocity: Vector3 = Vector3.ZERO
 ## A fumbled ball: it hops off line on every bounce and rolls on afterwards.
 var _wild: bool = false
+## A ball on the loose has touched the turf since it came out.
+var grounded: bool = false
+## A tipped pass: how long it is in the air for, and how much of that is gone.
+var _tip_time: float = 0.0
+var _tip_elapsed: float = 0.0
 ## How fast the ball is moving right now, whatever it is doing.
 var velocity: Vector3 = Vector3.ZERO
 
@@ -175,6 +180,7 @@ func _launch(p_thrower: Player, p_intended: Player, from: Vector3, point: Vector
 	intended = p_intended
 	state = State.FLIGHT
 	_wild = false
+	grounded = false
 	_gravity = tuning.pass_gravity
 	_flight_start = from
 	target_point = Vector3(point.x, 0.0, point.z)
@@ -239,13 +245,35 @@ func settle_position(anchor: Vector3, share: float) -> Vector3:
 	return anchor.lerp(carrier.hold_frame() * _settle_local, share)
 
 
-## Incomplete pass: the ball falls to the turf.
-func drop() -> void:
+## How fast the pass in flight is moving right now, drop included.
+func flight_velocity_now() -> Vector3:
+	var t: float = minf(flight_elapsed, flight_time)
+	return _flight_velocity + Vector3(0.0, _flight_vy - _gravity * t, 0.0)
+
+
+## A pass that is off somebody's hands, or past everybody: it leaves from where
+## it is at `p_velocity` and is in the air until it lands. `target_point` and
+## the landing marker move to where that will be.
+func tip(p_velocity: Vector3) -> void:
 	_release()
 	state = State.LOOSE
-	_loose_velocity = _flight_velocity * 0.35 + Vector3(0.0, 3.0, 0.0)
+	_loose_velocity = p_velocity
 	_wild = false
-	landing_marker.visible = false
+	grounded = false
+	var height: float = maxf(position.y - GROUND_HEIGHT, 0.0)
+	_tip_time = (p_velocity.y + sqrt(p_velocity.y * p_velocity.y + 2.0 * _gravity * height)) / _gravity
+	_tip_elapsed = 0.0
+	target_point = flat_position() + Vector3(p_velocity.x, 0.0, p_velocity.z) * _tip_time
+	landing_marker.visible = true
+	landing_marker.global_position = target_point + Vector3(0.0, 0.06, 0.0)
+	landing_marker.reset_physics_interpolation()
+
+
+## Seconds until the pass in flight gets to its spot, or a tipped one lands.
+func air_time_left() -> float:
+	if state == State.FLIGHT:
+		return maxf(flight_time - flight_elapsed, 0.0)
+	return maxf(_tip_time - _tip_elapsed, 0.0)
 
 
 ## Knocked out of the carrier's hands (or off somebody's fingers): it leaves from
@@ -255,6 +283,7 @@ func fumble(p_velocity: Vector3) -> void:
 	state = State.LOOSE
 	_loose_velocity = p_velocity
 	_wild = true
+	grounded = false
 	landing_marker.visible = false
 
 
@@ -264,6 +293,7 @@ func spike(p_velocity: Vector3) -> void:
 	state = State.LOOSE
 	_loose_velocity = p_velocity
 	_wild = false
+	grounded = false
 	landing_marker.visible = false
 
 
@@ -303,8 +333,11 @@ func integrate(delta: float) -> bool:
 		State.LOOSE:
 			_loose_velocity.y -= _gravity * delta
 			position += _loose_velocity * delta
+			_tip_elapsed += delta
 			if position.y <= GROUND_HEIGHT:
 				position.y = GROUND_HEIGHT
+				grounded = true
+				landing_marker.visible = false
 				if _wild:
 					_bounce_wild(delta)
 				else:

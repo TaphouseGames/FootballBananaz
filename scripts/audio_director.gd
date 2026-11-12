@@ -29,6 +29,21 @@ const REMARK_BREAK: float = 0.25
 const REMARK_HURDLE: float = 0.7
 const REMARK_ROOM: float = 0.5
 const REMARK_PANCAKE: float = 0.25
+## Chance the color commentator has something to say about each kind of moment.
+const QUIP_BOLD: float = 0.6
+const QUIP_DOG: float = 0.2
+const QUIP_QB_RUN: float = 0.6
+const QUIP_INTERCEPTION: float = 0.8
+const QUIP_CONFUSED: float = 0.6
+const QUIP_HOT: float = 0.6
+const QUIP_BAD_THROW: float = 0.6
+const QUIP_TOUCHDOWN: float = 0.75
+const QUIP_LAWN_CHAIR: float = 0.2
+## Real seconds a quip waits for the announcer before it is too late to say it.
+const QUIP_STALE: float = 8.0
+## Real seconds of quiet between one voice finishing and the next starting.
+const BOOTH_BREATH: float = 0.25
+const QUIP_IDLE: StringName = &"color_idle"
 const BREAKAWAY_YARDS: float = 20.0
 const BREAKAWAY_RETURN_YARDS: float = 40.0
 
@@ -41,6 +56,8 @@ var play_counts: Dictionary[StringName, int] = {}
 var missing: Dictionary[StringName, bool] = {}
 ## Times a remark was asked for, before the dice and the gap had their say.
 var remark_asks: Dictionary[StringName, int] = {}
+## The same for the color commentator's quips.
+var quip_asks: Dictionary[StringName, int] = {}
 
 var _streams: Dictionary[StringName, Array] = {}
 var _last_played: Dictionary[StringName, int] = {}
@@ -55,6 +72,17 @@ var _announcer: AudioStreamPlayer
 ## Announcer clips waiting for the one before them to finish.
 var _announcer_queue: Array[StringName] = []
 var _last_remark: int = -1000000
+var _color: AudioStreamPlayer
+## The quip she is holding until the announcer is done, and when it came up.
+var _quip_pending: StringName = &""
+var _quip_asked: int = 0
+var _last_quip: int = -1000000
+## Real seconds since either of the two voices was last heard.
+var _booth_quiet: float = 1.0
+## Lines of each quip not said yet this time round, so none comes up twice in a row.
+var _quip_bags: Dictionary[StringName, Array] = {}
+## When she last said a line of each quip.
+var _quip_said: Dictionary[StringName, int] = {}
 ## The run in progress has already been called a breakaway (or passed over).
 var _breakaway_called: bool = false
 var _roar_level: float = 0.0
@@ -79,6 +107,7 @@ func setup(p_game: Game) -> void:
 	_chant = _make_player(BUS_CROWD)
 	_voice = _make_player(BUS_VOICE)
 	_announcer = _make_player(BUS_VOICE)
+	_color = _make_player(BUS_VOICE)
 	_bed.volume_linear = tuning.audio_crowd_bed_level
 	_roar.volume_linear = SILENT
 	_huddle.volume_linear = SILENT
@@ -123,7 +152,7 @@ func announce(sounds: Array[StringName]) -> void:
 ## already talking or has just made one, so it never gets in the way of a call.
 func remark(sound: StringName, chance: float) -> void:
 	remark_asks[sound] = remark_asks.get(sound, 0) + 1
-	if _announcer.playing or not _announcer_queue.is_empty():
+	if _announcer.playing or not _announcer_queue.is_empty() or _color.playing:
 		return
 	var now: int = Time.get_ticks_msec()
 	if now - _last_remark < int(tuning.audio_remark_gap * 1000.0):
@@ -134,10 +163,79 @@ func remark(sound: StringName, chance: float) -> void:
 	_speak(sound)
 
 
-## The announcer drops everything and shouts `sound`.
+## The announcer shouts `sound` next, ahead of anything else he had lined up.
+## Whoever is talking finishes the sentence first.
 func shout(sound: StringName) -> void:
 	_announcer_queue.clear()
-	_speak(sound)
+	_announcer_queue.append(sound)
+
+
+## The color commentator has a thought about the play, `chance` of the time.
+## She waits for the announcer to finish and never says two in a row; a newer
+## thought replaces one she is still holding, but idle chatter replaces nothing.
+func quip(sound: StringName, chance: float) -> void:
+	quip_asks[sound] = quip_asks.get(sound, 0) + 1
+	if _color.playing or (sound == QUIP_IDLE and _quip_pending != &""):
+		return
+	var now: int = Time.get_ticks_msec()
+	if now - _last_quip < int(tuning.audio_color_gap * 1000.0):
+		return
+	# A moment with one line comes round again slowly; one with seven, sooner.
+	var lines: int = maxi((_streams.get(sound, []) as Array).size(), 1)
+	if now - _quip_said.get(sound, -100000000) < int(tuning.audio_color_repeat_gap * 1000.0 / float(lines)):
+		return
+	if randf() >= chance * tuning.audio_color_scale:
+		return
+	_quip_pending = sound
+	_quip_asked = now
+
+
+## The two voices share one microphone: nobody starts until the other has
+## finished and a breath has passed. The announcer's calls go before her quips.
+func _update_booth(delta: float) -> void:
+	var now: int = Time.get_ticks_msec()
+	if _quip_pending != &"" and now - _quip_asked > int(QUIP_STALE * 1000.0):
+		_quip_pending = &""
+	if _announcer.playing or _color.playing:
+		_booth_quiet = 0.0
+		return
+	_booth_quiet += delta
+	if _booth_quiet < BOOTH_BREATH:
+		return
+	if not _announcer_queue.is_empty():
+		_speak(_announcer_queue.pop_front())
+	elif _quip_pending != &"":
+		_say_quip()
+
+
+## Says the quip she is holding.
+func _say_quip() -> void:
+	var now: int = Time.get_ticks_msec()
+	var sound: StringName = _quip_pending
+	_quip_pending = &""
+	_last_quip = now
+	_quip_said[sound] = now
+	play_counts[sound] = play_counts.get(sound, 0) + 1
+	var stream: AudioStream = _pick_fresh(sound)
+	if stream == null or not tuning.audio_enabled:
+		return
+	_color.stream = stream
+	_color.volume_linear = tuning.audio_color_level
+	_color.play()
+
+
+## A line of `sound` she has not said since she last went through them all.
+func _pick_fresh(sound: StringName) -> AudioStream:
+	if not _streams.has(sound):
+		missing[sound] = true
+		return null
+	var bag: Array = _quip_bags.get(sound, [])
+	if bag.is_empty():
+		bag = _streams[sound].duplicate()
+		bag.shuffle()
+	var stream: AudioStream = bag.pop_back()
+	_quip_bags[sound] = bag
+	return stream
 
 
 ## Down and distance for the play being lined up: "Second down. Seven to go."
@@ -233,8 +331,7 @@ func _process(_delta: float) -> void:
 		_chant_in -= delta
 		if _chant_in < 0.0:
 			_start_chant()
-	if not _announcer_queue.is_empty() and not _announcer.playing:
-		_speak(_announcer_queue.pop_front())
+	_update_booth(delta)
 	if _chant_fading and _chant.playing:
 		_chant.volume_linear = move_toward(_chant.volume_linear, 0.0, delta / FADE_TIME)
 		if _chant.volume_linear <= SILENT:
@@ -250,7 +347,7 @@ func _live_excitement() -> float:
 	match pc.phase:
 		PlayController.Phase.AIR:
 			return 0.35
-		PlayController.Phase.LOOSE:
+		PlayController.Phase.LOOSE, PlayController.Phase.TIPPED:
 			return 0.75
 		PlayController.Phase.RUN:
 			var carrier: Player = game.ball.carrier
@@ -273,6 +370,7 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 	match to:
 		&"PlaySelect":
 			announce_down()
+			quip(QUIP_IDLE, tuning.audio_color_idle_chance)
 			if game.human.is_active():
 				_huddle_on = true
 				if not _huddle.playing and tuning.audio_enabled:
@@ -287,6 +385,8 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 		&"Scored":
 			var scorer: Team = game.play_controller.final_team
 			shout(&"announcer_touchdown")
+			if game.play_controller.touchdown_quip != &"":
+				quip(game.play_controller.touchdown_quip, QUIP_TOUCHDOWN)
 			if scorer == game.home:
 				play(&"air_horn", 0.8)
 			crowd_react(scorer, 1.0)

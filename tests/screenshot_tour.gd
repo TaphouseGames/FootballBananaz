@@ -16,6 +16,11 @@ func _initialize() -> void:
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	_game = scene.instantiate() as Game
 	root.add_child(_game)
+	# The opening kickoff is a coin toss; the tour needs the person to receive it.
+	if _game.human.team != null and _game.opening_receiver != _game.human.team:
+		_game.opening_receiver = _game.human.team
+		_game.kickoff_to = _game.human.team
+		_game.play_controller.state_machine.transition(&"Kickoff")
 	_tour()
 
 
