@@ -4,6 +4,8 @@ extends CanvasLayer
 ## play-select panel. Reads everything it shows from Game each frame.
 
 const GRID_COLUMNS: int = 3
+## Plays on one page of the play-select grid.
+const PAGE_SIZE: int = 9
 const CARD_COLOR: Color = Color(0.09, 0.16, 0.13, 0.96)
 const CARD_SELECTED_COLOR: Color = Color(0.14, 0.27, 0.2, 1.0)
 const CARD_BORDER: Color = Color(0.32, 0.38, 0.35)
@@ -15,7 +17,7 @@ var game: Game
 
 var _cards: Array[PanelContainer] = []
 var _card_names: Array[Label] = []
-var _descriptions: PackedStringArray = PackedStringArray()
+var _diagrams: Array[PlayDiagram] = []
 var _card_style: StyleBoxFlat
 var _card_selected_style: StyleBoxFlat
 
@@ -30,7 +32,6 @@ var _card_selected_style: StyleBoxFlat
 @onready var play_select: Control = $PlaySelect
 @onready var play_title: Label = $PlaySelect/Margin/Column/Title
 @onready var play_grid: GridContainer = $PlaySelect/Margin/Column/PlayGrid
-@onready var play_description: Label = $PlaySelect/Margin/Column/Description
 
 
 func setup(p_game: Game) -> void:
@@ -46,7 +47,11 @@ func _process(_delta: float) -> void:
 	var home_marker: String = "> " if game.offense == game.home else ""
 	var away_marker: String = " <" if game.offense == game.away else ""
 	score_label.text = "%s%s  %d  -  %d  %s%s" % [home_marker, game.home.short_name, game.home.score, game.away.score, game.away.short_name, away_marker]
-	down_label.text = "%s   |   %s" % [game.down_text(), game.ball_on_text()]
+	# A kickoff has no spot yet.
+	if game.play_controller.kickoff:
+		down_label.text = game.down_text()
+	else:
+		down_label.text = "%s   |   %s" % [game.down_text(), game.ball_on_text()]
 	clock_label.text = game.clock_text()
 
 	var controlled: Player = game.human.controlled
@@ -77,10 +82,12 @@ func set_hint(text: String) -> void:
 ## in playbook order.
 func show_play_select(title: String, plays: Array[Resource]) -> void:
 	for card: PanelContainer in _cards:
+		# Out of the grid at once, so a page change never shows both pages.
+		play_grid.remove_child(card)
 		card.queue_free()
 	_cards.clear()
 	_card_names.clear()
-	_descriptions.clear()
+	_diagrams.clear()
 	if _card_style == null:
 		_card_style = _make_card_style(CARD_COLOR, CARD_BORDER, 2)
 		_card_selected_style = _make_card_style(CARD_SELECTED_COLOR, CARD_SELECTED_BORDER, 4)
@@ -107,21 +114,24 @@ func show_play_select(title: String, plays: Array[Resource]) -> void:
 		var offense_play: OffensePlay = plays[i] as OffensePlay
 		var defense_play: DefensePlay = plays[i] as DefensePlay
 		if offense_play != null:
-			name_label.text = "%d  %s" % [i + 1, offense_play.play_name.to_upper()]
-			_descriptions.append(offense_play.description)
+			name_label.text = offense_play.play_name.to_upper()
 			diagram.show_offense(offense_play)
 		elif defense_play != null:
-			name_label.text = "%d  %s" % [i + 1, defense_play.play_name.to_upper()]
-			_descriptions.append(defense_play.description)
+			name_label.text = defense_play.play_name.to_upper()
 			diagram.show_defense(defense_play)
-		else:
-			_descriptions.append("")
 
 		play_grid.add_child(card)
 		_cards.append(card)
 		_card_names.append(name_label)
+		_diagrams.append(diagram)
 	play_select.visible = true
 	set_play_cursor(0)
+
+
+## Draws every offensive play mirrored left to right, or as designed.
+func set_play_flipped(flipped: bool) -> void:
+	for diagram: PlayDiagram in _diagrams:
+		diagram.set_flipped(flipped)
 
 
 func set_play_cursor(index: int) -> void:
@@ -129,7 +139,6 @@ func set_play_cursor(index: int) -> void:
 		var selected: bool = i == index
 		_cards[i].add_theme_stylebox_override(&"panel", _card_selected_style if selected else _card_style)
 		_card_names[i].add_theme_color_override(&"font_color", NAME_SELECTED_COLOR if selected else NAME_COLOR)
-	play_description.text = _descriptions[index] if index >= 0 and index < _descriptions.size() else ""
 
 
 func _make_card_style(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:

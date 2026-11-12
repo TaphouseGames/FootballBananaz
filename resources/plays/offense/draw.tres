@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="OffensePlay" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/offense_play.gd" id="1_play"]
+[ext_resource type="Script" path="res://scripts/data/offense_assignment.gd" id="2_assign"]
+
+[sub_resource type="Resource" id="qb"]
+script = ExtResource("2_assign")
+label = "QB"
+job = 0
+start = Vector2(-4.5, 0)
+route = PackedVector2Array(-1.5, 0)
+
+[sub_resource type="Resource" id="c"]
+script = ExtResource("2_assign")
+label = "C"
+job = 2
+start = Vector2(-0.6, 0)
+
+[sub_resource type="Resource" id="lg"]
+script = ExtResource("2_assign")
+label = "G"
+job = 2
+start = Vector2(-0.9, -1.7)
+
+[sub_resource type="Resource" id="rg"]
+script = ExtResource("2_assign")
+label = "G"
+job = 2
+start = Vector2(-0.9, 1.7)
+
+[sub_resource type="Resource" id="wr_l"]
+script = ExtResource("2_assign")
+label = "WR"
+job = 1
+start = Vector2(-0.6, -14)
+route = PackedVector2Array(40, 0)
+
+[sub_resource type="Resource" id="wr_r"]
+script = ExtResource("2_assign")
+label = "WR"
+job = 1
+start = Vector2(-0.6, 14)
+route = PackedVector2Array(40, 0)
+
+[sub_resource type="Resource" id="back"]
+script = ExtResource("2_assign")
+label = "RB"
+job = 3
+start = Vector2(-7.5, 0.6)
+route = PackedVector2Array(1.2, 0, 9, -0.6, 16, -0.6)
+
+[resource]
+script = ExtResource("1_play")
+play_name = "Draw"
+description = "Looks like a pass: wideouts run deep, then a delayed handoff up the middle."
+category = 0
+is_run = true
+handoff_delay = 0.5
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

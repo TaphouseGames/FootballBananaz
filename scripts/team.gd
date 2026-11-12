@@ -7,7 +7,7 @@ extends Node3D
 @export var team_color: Color = Color.WHITE
 ## +1 attacks toward +X (right on screen), -1 toward -X.
 @export_enum("Left:-1", "Right:1") var attack_dir: int = 1
-## Controlled by the person at the keyboard (unless Game.autoplay is on).
+## Controlled by the person with the gamepad (unless Game.autoplay is on).
 @export var is_human: bool = false
 ## Ratings for each Player child, in order. Missing entries play as average.
 @export var roster: Roster

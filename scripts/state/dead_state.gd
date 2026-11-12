@@ -6,7 +6,7 @@ extends GameState
 func enter() -> void:
 	game.hud.show_banner(pc.result_text())
 	if game.human.is_active():
-		game.hud.set_hint("Whistle!  E / (X): late hit")
+		game.hud.set_hint("Whistle!  (X): late hit")
 
 
 func exit() -> void:

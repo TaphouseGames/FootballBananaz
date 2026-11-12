@@ -39,6 +39,16 @@ func record(team: Team, play: OffensePlay, gain: float) -> void:
 	_history[team] = history
 
 
+## Share of `team`'s recent calls that were runs (0..1). A third before it has
+## called anything.
+func run_share(team: Team) -> float:
+	var calls: PackedFloat32Array = _row(_calls, team)
+	var seen: float = calls[0] + calls[1] + calls[2]
+	if seen <= 0.0:
+		return 1.0 / 3.0
+	return calls[OffensePlay.Category.RUN] / seen
+
+
 func pick_defense(plays: Array[DefensePlay], game: Game) -> DefensePlay:
 	var expect: PackedFloat32Array = _situation(game)
 	var calls: PackedFloat32Array = _row(_calls, game.offense)
@@ -69,9 +79,14 @@ func pick_defense(plays: Array[DefensePlay], game: Game) -> DefensePlay:
 func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 	var want: PackedFloat32Array = _situation(game)
 	var history: Array = _history.get(game.offense, [])
+	# Shared out over the plays of a category, so a playbook with more runs than
+	# deep passes does not run more often for it.
+	var per_category: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
+	for play: OffensePlay in plays:
+		per_category[play.category] += 1.0
 	var weights: PackedFloat32Array = PackedFloat32Array()
 	for play: OffensePlay in plays:
-		var weight: float = want[play.category] + 0.05
+		var weight: float = (want[play.category] + 0.05) / per_category[play.category]
 		# Do not call the same play three times in a row.
 		var repeats: int = 0
 		for i: int in range(history.size() - 1, -1, -1):

@@ -181,9 +181,3 @@ size_flags_vertical = 3
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 3
-
-[node name="Description" type="Label" parent="PlaySelect/Margin/Column"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Description"
-horizontal_alignment = 1

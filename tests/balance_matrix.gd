@@ -7,10 +7,18 @@ extends SceneTree
 ##   mode=matrix   CPU quarterback reads the field (default)
 ##   mode=spam     the test throws to one fixed receiver at one fixed time, for
 ##                 every receiver and several times: the "same throw every down" case
-##   mode=all      both
+##   mode=scramble the quarterback tucks the ball and runs at a fixed time
+##   mode=all      matrix and spam
+##   rollout       scramble probe: the quarterback runs out wide first
+##   rollout=<width>/<forward>   the same, this many yards out and this much
+##                 upfield for every yard across (default 9/0.35)
+##   scout         leave the defense's memory of earlier plays on (off by default,
+##                 so every snap is defended as if seen for the first time)
 ##   snaps=<n>     snaps per cell (default 120 for matrix, 40 for spam)
 ##   off=<text>    only offensive plays whose name contains the text
 ##   detail        also print yards, completion, turnover and sack rates per cell
+##   place=normal|lead|under|cpu   spam probe: how the throw is placed (cpu lets
+##                 the CPU quarterback choose; default normal)
 ##   times=<a>/<b>/...   release times for the spam probe (default 0.8/1.4/2.0/2.6)
 ##   set=<name>:<value>[,<name>:<value>...]   override Tuning values for this run
 ##
@@ -31,6 +39,21 @@ var _off_filter: String = ""
 var _detail: bool = false
 var _spam_times: PackedFloat64Array = PackedFloat64Array([0.8, 1.4, 2.0, 2.6])
 var _overrides: Dictionary[String, float] = {}
+var _scout: bool = false
+## Spam probe: how the fixed throw is placed (normal, lead, under, or cpu to let
+## the CPU quarterback choose).
+var _place: String = "normal"
+## Scramble probe: +1 runs the quarterback out wide before he turns upfield.
+var _rollout: float = 0.0
+var _rollout_width: float = 9.0
+var _rollout_forward: float = 0.35
+## Slot value of a job in which the quarterback runs instead of throwing.
+const SCRAMBLE: int = -2
+## When the receivers are judged for how open they are, and how much room
+## counts as wide open.
+const OPEN_SAMPLE_TIME: float = 1.8
+const WIDE_OPEN: float = 6.0
+var _sampled: bool = false
 
 ## One job: an offensive play against a defensive play, optionally with a fixed
 ## throw (slot >= 0) at a fixed time.
@@ -51,8 +74,19 @@ func _initialize() -> void:
 			_snaps = maxi(int(arg.trim_prefix("snaps=")), 1)
 		elif arg.begins_with("off="):
 			_off_filter = arg.trim_prefix("off=").to_lower()
+		elif arg.begins_with("place="):
+			_place = arg.trim_prefix("place=")
 		elif arg == "detail":
 			_detail = true
+		elif arg == "rollout":
+			_rollout = 1.0
+		elif arg.begins_with("rollout="):
+			var shape: PackedFloat64Array = arg.trim_prefix("rollout=").split_floats("/")
+			_rollout = 1.0
+			_rollout_width = shape[0]
+			_rollout_forward = shape[1] if shape.size() > 1 else _rollout_forward
+		elif arg == "scout":
+			_scout = true
 		elif arg.begins_with("times="):
 			_spam_times = arg.trim_prefix("times=").split_floats("/")
 		elif arg.begins_with("set="):
@@ -80,6 +114,8 @@ func _begin() -> void:
 	for key: String in _overrides:
 		_game.tuning.set(key, _overrides[key])
 		print("tuning.%s = %s" % [key, _game.tuning.get(key)])
+	if not _scout and not _overrides.has("ai_scout_strength"):
+		_game.tuning.set("ai_scout_strength", 0.0)
 	_build_jobs()
 	_next_job()
 
@@ -93,6 +129,10 @@ func _build_jobs() -> void:
 		if _mode == "matrix" or _mode == "all":
 			for d: int in defs.size():
 				_jobs.append(_new_job(o, d, -1, 0.0))
+		if _mode == "scramble" and not offs[o].is_run:
+			for time: float in _spam_times:
+				for d: int in defs.size():
+					_jobs.append(_new_job(o, d, SCRAMBLE, time))
 		if (_mode == "spam" or _mode == "all") and not offs[o].is_run:
 			for slot: int in 3:
 				for time: float in _spam_times:
@@ -101,7 +141,7 @@ func _build_jobs() -> void:
 
 
 func _new_job(o: int, d: int, slot: int, time: float) -> Dictionary:
-	return {"off": o, "def": d, "slot": slot, "time": time, "n": 0, "gain": 0.0, "value": 0.0, "comp": 0, "turnover": 0, "sack": 0, "big": 0, "time_sum": 0.0}
+	return {"off": o, "def": d, "slot": slot, "time": time, "n": 0, "gain": 0.0, "value": 0.0, "comp": 0, "turnover": 0, "sack": 0, "big": 0, "time_sum": 0.0, "open": 0, "open_sum": 0.0}
 
 
 func _next_job() -> void:
@@ -109,7 +149,7 @@ func _next_job() -> void:
 	if _job_index >= _jobs.size():
 		_report()
 		return
-	var spam: bool = int(_jobs[_job_index]["slot"]) >= 0
+	var spam: bool = int(_jobs[_job_index]["slot"]) != -1
 	_snaps_left = _snaps if _snaps > 0 else (40 if spam else 120)
 	# In spam mode the test is the quarterback: the CPU one never decides.
 	_game.tuning.ai_qb_min_time = 1.0e9 if spam else _overrides.get("ai_qb_min_time", Tuning.new().ai_qb_min_time)
@@ -133,12 +173,35 @@ func _tick() -> void:
 		_pc.end_play(PlayController.Result.TACKLED, _pc.ball.flat_position().x)
 		return
 	var slot: int = job["slot"]
+	if not _sampled and _pc.live_time >= OPEN_SAMPLE_TIME and _pc.phase == PlayController.Phase.POCKET and not _pc.off_play.is_run:
+		# How open the most open receiver downfield is at a fixed moment.
+		_sampled = true
+		var best: float = 0.0
+		for receiver: Player in _pc.eligible:
+			if (receiver.position.x - _pc.los_x) * _pc.off_dir >= 3.0 and not receiver.is_down():
+				best = maxf(best, minf(_pc.nearest_opponent_distance(receiver), 15.0))
+		job["open_sum"] = float(job["open_sum"]) + best
+		job["open_n"] = int(job.get("open_n", 0)) + 1
+		if best >= WIDE_OPEN:
+			job["open"] = int(job["open"]) + 1
+	if slot == SCRAMBLE and not _thrown and _pc.live_time >= float(job["time"]) and _pc.ball.carrier == _pc.qb:
+		_thrown = true
+		_pc.qb.brain.start_scramble(_rollout, true, _rollout_width, _rollout_forward)
 	if slot >= 0 and not _thrown and _pc.live_time >= float(job["time"]) and _pc.can_pass():
 		_thrown = true
 		var target: Player = _pc.eligible[mini(slot, _pc.eligible.size() - 1)]
 		# The same choice of lob, regular pass or bullet the CPU quarterback makes.
 		var open: float = minf(_pc.nearest_opponent_distance(target), 10.0)
-		_pc.throw_ball(target, _pc.qb.brain.choose_pass(_pc, target, open, false))
+		var power: float = _pc.qb.brain.choose_pass(_pc, target, open, false)
+		var placement: PlayController.Placement = PlayController.Placement.NORMAL
+		match _place:
+			"lead":
+				placement = PlayController.Placement.LEAD
+			"under":
+				placement = PlayController.Placement.UNDER
+			"cpu":
+				placement = _pc.qb.brain.choose_placement(_pc, target, power)
+		_pc.throw_ball(target, power, placement)
 
 
 func _start_play() -> void:
@@ -154,6 +217,7 @@ func _start_play() -> void:
 	_pc.state_machine.transition(&"Live")
 	_completions_before = _game.get_stat(&"completions")
 	_thrown = false
+	_sampled = false
 	_live = true
 
 
@@ -198,13 +262,13 @@ func _report() -> void:
 	var offs: Array[OffensePlay] = _game.offense_playbook.plays
 	var defs: Array[DefensePlay] = _game.defense_playbook.plays
 
-	var matrix: Array[Dictionary] = _jobs.filter(func(job: Dictionary) -> bool: return int(job["slot"]) < 0)
+	var matrix: Array[Dictionary] = _jobs.filter(func(job: Dictionary) -> bool: return int(job["slot"]) == -1)
 	if not matrix.is_empty():
 		print("\nVALUE per snap (yards capped at %d, turnover = -%d). Rows: offense. Columns: defense." % [int(CAP), int(TURNOVER_COST)])
 		var header: String = "%-14s" % ""
 		for def_play: DefensePlay in defs:
 			header += "%8s" % def_play.play_name.substr(0, 7)
-		print(header + "     mean   min   max  comp%  to%  sack%  big%")
+		print(header + "     mean   min   max  comp%  to%  sack%  big%  open  wide%")
 		var column_sum: PackedFloat32Array = PackedFloat32Array()
 		column_sum.resize(defs.size())
 		var rows: int = 0
@@ -221,7 +285,13 @@ func _report() -> void:
 			var turnover: float = 0.0
 			var sack: float = 0.0
 			var big: float = 0.0
+			var open_sum: float = 0.0
+			var open_wide: float = 0.0
+			var open_n: float = 0.0
 			for cell: Dictionary in cells:
+				open_sum += float(cell["open_sum"])
+				open_wide += float(cell["open"])
+				open_n += float(cell.get("open_n", 0))
 				var value: float = _mean(cell, "value")
 				line += "%8.1f" % value
 				var d: int = cell["def"]
@@ -234,7 +304,7 @@ func _report() -> void:
 				sack += _mean(cell, "sack")
 				big += _mean(cell, "big")
 			var count: float = float(cells.size())
-			print(line + "   %6.1f %5.1f %5.1f  %5.0f %4.0f  %5.0f %5.0f" % [total / count, low, high, 100.0 * comp / count, 100.0 * turnover / count, 100.0 * sack / count, 100.0 * big / count])
+			print(line + "   %6.1f %5.1f %5.1f  %5.0f %4.0f  %5.0f %5.0f %5.1f %5.0f" % [total / count, low, high, 100.0 * comp / count, 100.0 * turnover / count, 100.0 * sack / count, 100.0 * big / count, open_sum / maxf(open_n, 1.0), 100.0 * open_wide / maxf(open_n, 1.0)])
 			if _detail:
 				for key: String in ["gain", "comp", "turnover", "sack", "time_sum"]:
 					var detail: String = "%14s" % ("  " + key)
@@ -246,9 +316,9 @@ func _report() -> void:
 			footer += "%8.1f" % (column_sum[d] / float(maxi(rows, 1)))
 		print(footer)
 
-	var spam: Array[Dictionary] = _jobs.filter(func(job: Dictionary) -> bool: return int(job["slot"]) >= 0)
+	var spam: Array[Dictionary] = _jobs.filter(func(job: Dictionary) -> bool: return int(job["slot"]) != -1)
 	if not spam.is_empty():
-		print("\nSPAM PROBE: always throw to one receiver at one time. Value per snap across the nine defenses.")
+		print("\nPROBE: always throw to one receiver at one time, or (slot %d) keep the ball and run. Value per snap across the defenses." % SCRAMBLE)
 		print("%-14s slot  time    mean  best-counter  worst-counter  comp%%  to%%  sack%%  secs" % "")
 		var index: int = 0
 		while index < spam.size():

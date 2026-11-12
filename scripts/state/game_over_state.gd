@@ -10,7 +10,7 @@ func enter() -> void:
 		var winner: Team = home if home.score > away.score else away
 		headline = "%s WIN!" % winner.short_name
 	game.hud.show_banner(headline, "Final:  %s %d  -  %d %s" % [home.short_name, home.score, away.score, away.short_name])
-	game.hud.set_hint("Enter / Start: play again")
+	game.hud.set_hint("Start: play again")
 
 
 func physics_update(delta: float) -> void:

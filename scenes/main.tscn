@@ -16,6 +16,8 @@
 [ext_resource type="Script" path="res://scripts/state/scored_state.gd" id="14_scored"]
 [ext_resource type="Script" path="res://scripts/state/turnover_state.gd" id="15_turnover"]
 [ext_resource type="Script" path="res://scripts/state/game_over_state.gd" id="16_gameover"]
+[ext_resource type="Script" path="res://scripts/state/kickoff_state.gd" id="22_kickoff"]
+[ext_resource type="Script" path="res://scripts/state/halftime_state.gd" id="23_halftime"]
 [ext_resource type="Script" path="res://scripts/human_controller.gd" id="17_human"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="18_camera"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="19_hud"]
@@ -92,6 +94,12 @@ script = ExtResource("15_turnover")
 
 [node name="GameOver" type="Node" parent="PlayController/StateMachine"]
 script = ExtResource("16_gameover")
+
+[node name="Kickoff" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("22_kickoff")
+
+[node name="Halftime" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("23_halftime")
 
 [node name="HumanController" type="Node" parent="."]
 script = ExtResource("17_human")

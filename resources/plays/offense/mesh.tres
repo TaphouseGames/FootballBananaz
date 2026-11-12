@@ -1,0 +1,57 @@
+[gd_resource type="Resource" script_class="OffensePlay" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/offense_play.gd" id="1_play"]
+[ext_resource type="Script" path="res://scripts/data/offense_assignment.gd" id="2_assign"]
+
+[sub_resource type="Resource" id="qb"]
+script = ExtResource("2_assign")
+label = "QB"
+job = 0
+start = Vector2(-5, 0)
+route = PackedVector2Array(-2, 0)
+
+[sub_resource type="Resource" id="c"]
+script = ExtResource("2_assign")
+label = "C"
+job = 2
+start = Vector2(-0.6, 0)
+
+[sub_resource type="Resource" id="lg"]
+script = ExtResource("2_assign")
+label = "G"
+job = 2
+start = Vector2(-0.9, -1.7)
+
+[sub_resource type="Resource" id="rg"]
+script = ExtResource("2_assign")
+label = "G"
+job = 2
+start = Vector2(-0.9, 1.7)
+
+[sub_resource type="Resource" id="wr_l"]
+script = ExtResource("2_assign")
+label = "WR"
+job = 1
+start = Vector2(-0.6, -12)
+route = PackedVector2Array(3, 0, 7, 22)
+
+[sub_resource type="Resource" id="wr_r"]
+script = ExtResource("2_assign")
+label = "WR"
+job = 1
+start = Vector2(-0.6, 12)
+route = PackedVector2Array(3, 0, 8.5, -22)
+
+[sub_resource type="Resource" id="back"]
+script = ExtResource("2_assign")
+label = "RB"
+job = 1
+start = Vector2(-5, 3)
+route = PackedVector2Array(1, 5, 5, 8, 9, 3)
+
+[resource]
+script = ExtResource("1_play")
+play_name = "Mesh"
+description = "Wideouts cross shallow over the middle. Back angles in behind them."
+category = 1
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

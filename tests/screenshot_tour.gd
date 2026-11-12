@@ -1,5 +1,5 @@
 extends SceneTree
-## Plays the first snap with simulated button presses and saves screenshots along
+## Plays the opening kickoff and the first snap with simulated button presses and saves screenshots along
 ## the way. Needs a window (no --headless), since headless does not render.
 ##
 ## Run:  godot --path . --script res://tests/screenshot_tour.gd -- out=<folder>
@@ -20,6 +20,19 @@ func _initialize() -> void:
 
 
 func _tour() -> void:
+	# The game opens with a kickoff: the line-up, the kick in the air, the return.
+	await _wait(0.6)
+	await _shot("0_kickoff")
+	await _wait(2.6)
+	await _shot("0b_kick_in_air")
+	Input.action_press(&"move_up")
+	await _wait(2.6)
+	await _shot("0c_return")
+	Input.action_release(&"move_up")
+	for i: int in 200:
+		if _game.play_controller.state_machine.current_name() == &"PlaySelect":
+			break
+		await _wait(0.1)
 	await _wait(0.6)
 	await _shot("1_play_select")
 	# Around the grid and down to the first pass play (second row, first card).

@@ -21,11 +21,21 @@ var los_x: float = 0.0
 var first_down_x: float = 0.0
 var goal_to_go: bool = false
 var clock: float = 0.0
+## 1 or 2. `clock` counts down the half being played.
+var half: int = 1
+## The play being lined up or run is the try after a touchdown.
+var conversion: bool = false
+## Team that receives the kickoff that is due, or null when none is.
+var kickoff_to: Team
+## Team that received the opening kickoff. The other one gets the second half's.
+var opening_receiver: Team
 ## Message for the banner shown by the Turnover state.
 var banner_text: String = ""
 var stats: Dictionary[StringName, int] = {}
 ## Calls the plays for whichever side the CPU runs.
 var play_caller: PlayCaller = PlayCaller.new()
+## What each defense has seen the other offense do.
+var scout: Scout = Scout.new()
 
 var _hit_stop_left: float = 0.0
 
@@ -48,10 +58,10 @@ func _ready() -> void:
 	play_controller.setup(self)
 	hud.setup(self)
 
-	clock = tuning.game_length
-	var first: Team = home if home.is_human or not away.is_human else away
-	start_drive(first, tuning.yard_to_x(first.attack_dir, tuning.drive_start_yard))
-	play_controller.state_machine.transition(&"PlaySelect")
+	clock = tuning.game_length * 0.5
+	opening_receiver = home if home.is_human or not away.is_human else away
+	kickoff_to = opening_receiver
+	play_controller.state_machine.transition(&"Kickoff")
 	camera_rig.snap_to(_camera_target(), _camera_facing())
 
 
@@ -69,6 +79,11 @@ func _process(delta: float) -> void:
 		_hit_stop_left -= delta / maxf(Engine.time_scale, 0.0001) * base_time_scale
 		if _hit_stop_left <= 0.0:
 			Engine.time_scale = base_time_scale
+
+
+## Puts the camera where it belongs at once, without the pan.
+func snap_camera() -> void:
+	camera_rig.snap_to(_camera_target(), _camera_facing())
 
 
 # --- Feel ------------------------------------------------------------------------
@@ -94,8 +109,10 @@ func start_drive(team: Team, x: float) -> void:
 	add_stat(&"drives")
 
 
+## The try after a touchdown is untimed.
 func tick_clock(delta: float) -> void:
-	clock = maxf(clock - delta, 0.0)
+	if not conversion:
+		clock = maxf(clock - delta, 0.0)
 
 
 func is_time_up() -> bool:
@@ -106,15 +123,55 @@ func award_touchdown(team: Team) -> void:
 	team.score += tuning.touchdown_points
 
 
-## After a touchdown the other team gets the ball.
-func start_drive_after_score(scoring_team: Team) -> void:
-	var next: Team = scoring_team.opponent
-	start_drive(next, tuning.yard_to_x(next.attack_dir, tuning.drive_start_yard))
+## After a touchdown the scoring team gets one play from close in for two more.
+func start_conversion(team: Team) -> void:
+	conversion = true
+	offense = team
+	defense = team.opponent
+	var dir: int = team.attack_dir
+	los_x = tuning.goal_x(dir) - float(dir) * tuning.conversion_distance
+	down = 1
+	_set_first_down_target()
+	add_stat(&"conversion_tries")
+
+
+## Puts `receiving` in possession for a kickoff. The drive starts where the
+## return ends.
+func start_kickoff(receiving: Team) -> void:
+	offense = receiving
+	defense = receiving.opponent
+	down = 1
+	goal_to_go = false
+
+
+func start_second_half() -> void:
+	half = 2
+	clock = tuning.game_length * 0.5
+	kickoff_to = opening_receiver.opponent
 
 
 ## Applies the result of a finished play and returns the next state.
 func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team) -> StringName:
 	banner_text = ""
+	if conversion:
+		conversion = false
+		if result == PlayController.Result.TOUCHDOWN:
+			# The defense can run a turnover all the way back for two of its own.
+			final_team.score += tuning.conversion_points
+			add_stat(&"conversions_made")
+		kickoff_to = defense
+		return next_play_state()
+	if play_controller.kickoff:
+		var x: float = spot_x
+		if _in_own_end_zone(final_team, x):
+			x = tuning.yard_to_x(final_team.attack_dir, tuning.touchback_yard)
+		var lost: bool = final_team != offense
+		start_drive(final_team, x)
+		if lost:
+			add_stat(&"turnovers")
+			banner_text = "FUMBLE!"
+			return &"Turnover"
+		return next_play_state()
 	match result:
 		PlayController.Result.INCOMPLETE:
 			down += 1
@@ -129,9 +186,12 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 				banner_text = "FUMBLE!" if play_controller.was_fumble else "INTERCEPTION!"
 				return &"Turnover"
 			if _in_own_end_zone(offense, spot_x):
+				# The team that gave it up kicks off to the team that scored.
 				var scorer: Team = defense
 				scorer.score += tuning.safety_points
-				start_drive(scorer, tuning.yard_to_x(scorer.attack_dir, tuning.drive_start_yard))
+				start_kickoff(scorer)
+				kickoff_to = scorer
+				add_stat(&"safeties")
 				banner_text = "SAFETY!"
 				return &"Turnover"
 			los_x = clampf(spot_x, 1.0, tuning.field_length - 1.0)
@@ -151,13 +211,20 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 	return next_play_state()
 
 
+## A half ends once its clock has run out and the play (and any try) is over.
 func next_play_state() -> StringName:
-	return &"GameOver" if is_time_up() else &"PlaySelect"
+	if is_time_up():
+		return &"Halftime" if half == 1 else &"GameOver"
+	return &"Kickoff" if kickoff_to != null else &"PlaySelect"
 
 
 # --- Text for the HUD ------------------------------------------------------------
 
 func down_text() -> String:
+	if conversion:
+		return "2-POINT TRY"
+	if play_controller.kickoff:
+		return "KICKOFF"
 	var ordinal: String = DOWN_NAMES[clampi(down - 1, 0, DOWN_NAMES.size() - 1)]
 	if goal_to_go:
 		return "%s & GOAL" % ordinal
@@ -179,12 +246,12 @@ func clock_text() -> String:
 	var seconds: int = ceili(clock)
 	@warning_ignore("integer_division")
 	var minutes: int = seconds / 60
-	return "%d:%02d" % [minutes, seconds % 60]
+	return "%s  %d:%02d" % ["1ST" if half == 1 else "2ND", minutes, seconds % 60]
 
 
-func add_stat(key: StringName) -> void:
+func add_stat(key: StringName, amount: int = 1) -> void:
 	var current: int = stats.get(key, 0)
-	stats[key] = current + 1
+	stats[key] = current + amount
 
 
 func get_stat(key: StringName) -> int:
@@ -206,8 +273,12 @@ func _in_own_end_zone(team: Team, x: float) -> bool:
 	return (x - tuning.own_goal_x(team.attack_dir)) * float(team.attack_dir) <= 0.0
 
 
-## The camera always follows the ball.
+## The camera follows the ball, except on a kickoff: there it waits behind the
+## returner while the kick is in the air.
 func _camera_target() -> Vector3:
+	var pc: PlayController = play_controller
+	if pc.kickoff and pc.returner != null and ball.carrier == null and pc.result == PlayController.Result.NONE:
+		return Vector3(pc.returner.position.x, 0.0, pc.returner.position.z)
 	return ball.flat_position()
 
 

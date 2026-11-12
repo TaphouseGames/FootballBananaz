@@ -9,11 +9,12 @@ func enter() -> void:
 	_human_snaps = game.human.is_active() and game.human.team == game.offense
 	_cpu_delay = randf_range(game.tuning.cpu_snap_delay_min, game.tuning.cpu_snap_delay_max)
 	if _human_snaps:
-		game.hud.show_banner("", "%s  -  press Space / (A) to snap" % pc.off_play.play_name)
+		var flipped: String = " (flipped)" if pc.off_flipped else ""
+		game.hud.show_banner("", "%s%s  -  press (A) to snap" % [pc.off_play.play_name, flipped])
 		game.hud.set_hint("")
 	elif game.human.is_active():
 		game.hud.show_banner("", "%s  -  get ready" % pc.def_play.play_name)
-		game.hud.set_hint("Q / (B): pick another defender")
+		game.hud.set_hint("(B): pick another defender")
 	else:
 		game.hud.set_hint("AUTOPLAY")
 

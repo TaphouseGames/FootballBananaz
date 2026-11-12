@@ -11,4 +11,8 @@ enum Category { RUN, SHORT, DEEP }
 ## Run play: the ball is handed to the RUNNER after `handoff_delay` seconds.
 @export var is_run: bool = false
 @export var handoff_delay: float = 0.5
+## Pass play that starts with a faked handoff to the RUNNER, who then runs his
+## route as a receiver. The fake lasts `handoff_delay` seconds: the quarterback
+## cannot throw until it is over, and coverage defenders may come up for the run.
+@export var play_action: bool = false
 @export var assignments: Array[OffenseAssignment] = []

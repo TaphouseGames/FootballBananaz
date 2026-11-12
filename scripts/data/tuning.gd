@@ -14,10 +14,30 @@ extends Resource
 @export_group("Rules")
 @export var downs_per_series: int = 4
 @export var yards_to_gain: float = 30.0
-## Game clock in seconds. Only runs while the ball is live.
-@export var game_length: float = 120.0
+## Game clock in seconds, played as two halves. Only runs while the ball is live.
+@export var game_length: float = 360.0
 @export var touchdown_points: int = 6
 @export var safety_points: int = 2
+## After a touchdown: one untimed play from this many yards out, worth this much.
+@export var conversion_points: int = 2
+@export var conversion_distance: float = 3.0
+
+@export_group("Kickoff")
+## Yard line (from the kicking team's own goal) the ball is kicked from.
+@export var kickoff_yard: float = 35.0
+## The kick comes down between these two, in yards from the receiving team's
+## goal line (negative = in its end zone)...
+@export var kickoff_land_min: float = -5.0
+@export var kickoff_land_max: float = 20.0
+## ...and within this share of the field's width, around the middle.
+@export var kickoff_land_width: float = 0.6
+## Seconds the kick is in the air.
+@export var kickoff_hang_time: float = 3.4
+## Seconds between the line-up and the kick.
+@export var kickoff_delay: float = 1.5
+## The kicking team lines up this far behind the ball.
+@export var kickoff_run_up: float = 2.0
+@export var halftime_banner_time: float = 4.0
 
 @export_group("Movement")
 @export var run_speed: float = 7.6
@@ -28,6 +48,12 @@ extends Resource
 @export var line_depth: float = 1.25
 @export var carrier_speed_scale: float = 0.97
 @export var player_radius: float = 0.5
+## Opponents who are not blocking each other keep this much room each, so they
+## can brush shoulders but never stand in the same spot.
+@export var body_radius: float = 0.4
+## Share of the speed two such opponents run into each other with that turns
+## into sliding past each other.
+@export var body_slip: float = 1.0
 
 @export_group("Turbo")
 @export var turbo_speed_multiplier: float = 1.35
@@ -69,6 +95,19 @@ extends Resource
 @export var jump_cooldown: float = 0.35
 ## Catch and interception radius multiplier for a player in the air.
 @export var jump_catch_radius_scale: float = 1.5
+## A jump for a pass that comes down within this many yards carries the player
+## toward it.
+@export var jump_ball_range: float = 3.5
+
+@export_group("Diving catch")
+## Catch and interception radius multiplier for a player diving at the ball.
+@export var dive_catch_radius_scale: float = 2.2
+## Seconds after hitting the turf that a dive still counts for the catch.
+@export var dive_catch_grace: float = 0.2
+## A dive at a pass that comes down within this many yards is aimed at it.
+@export var dive_ball_range: float = 6.0
+## Slowest such dive: a short lunge at a ball that is close.
+@export var dive_ball_min_speed: float = 5.0
 
 @export_group("Passing")
 ## Pass power runs from 0 (lob) to 1 (bullet) and sets the flat speed between
@@ -88,7 +127,41 @@ extends Resource
 @export var pass_scramble_error: float = 0.18
 ## Seconds after letting go of turbo before the QB's feet are set again. 0 = at once.
 @export var pass_set_feet_time: float = 0.25
-@export var catch_radius: float = 2.1
+## Chance that a pass to a receiver on the move is led too far, and by how many
+## yards past the furthest he could sprint to. He has to jump or dive to get
+## there.
+@export var pass_overlead_chance: float = 0.15
+@export var pass_overlead_min: float = 2.0
+@export var pass_overlead_max: float = 5.0
+## Lead pass: the ball goes further along the receiver's run, by this share of
+## the ground he can make up by sprinting while it is in the air plus `base`
+## yards, and never more than `max`. He has to speed up to get there.
+@export var pass_lead_share: float = 0.5
+@export var pass_lead_base: float = 0.3
+@export var pass_lead_max: float = 5.0
+## A lead pass multiplies pass_overlead_chance by this, and can miss long or
+## short by up to this share of the extra lead (long twice as far as short).
+@export var pass_lead_overlead_scale: float = 2.6
+@export var pass_lead_error: float = 0.6
+## Underthrown pass: the ball comes down short of the receiver's run, by this
+## share of the ground he would cover while it is in the air, and never more
+## than `max` yards. He has to slow down and come back for it.
+@export var pass_under_share: float = 0.22
+@export var pass_under_max: float = 4.0
+## An underthrown pass can come up shorter still, by up to this share of that.
+@export var pass_under_error: float = 0.4
+## Both placements look at the nearest defender within `range` yards of the
+## receiver: one ahead of him on his run shortens a lead and deepens an
+## underthrow by up to this share, one trailing him does the opposite.
+@export var pass_place_cover_range: float = 5.0
+@export var pass_place_cover_scale: float = 0.35
+## Reach of a receiver on his feet. Jumping and diving reach further.
+@export var catch_radius: float = 1.6
+## Over the last part of its flight the ball bends toward the hands of whoever
+## is about to make a play on it. Looks only: the catch is decided as before.
+@export var catch_guide_time: float = 0.3
+## Seconds the hands take to bring a caught ball in.
+@export var catch_blend_time: float = 0.18
 @export var catch_base_chance: float = 0.96
 ## Defenders closer than this to the receiver reduce the catch chance.
 @export var cover_radius: float = 3.0
@@ -105,6 +178,15 @@ extends Resource
 @export var interception_chance_open: float = 0.5
 ## Chance removed by each defender in the air within reach of the ball.
 @export var contest_penalty: float = 0.15
+
+## Run plays: a runner within `handoff_reach` yards of the quarterback is handed
+## the ball, which takes `handoff_time` seconds to change hands. Further away it
+## is tossed to him at `toss_speed`, on an arc `toss_height` yards high for
+## every yard it travels.
+@export var handoff_reach: float = 1.8
+@export var handoff_time: float = 0.12
+@export var toss_speed: float = 13.0
+@export var toss_height: float = 0.12
 
 @export_group("Tackling")
 @export var tackle_radius: float = 1.1
@@ -147,6 +229,9 @@ extends Resource
 ## Yards a pass can miss by per yard thrown, even with the feet set.
 @export var accuracy_error_low: float = 0.08
 @export var accuracy_error_high: float = 0.0
+## Multiplies pass_overlead_chance.
+@export var accuracy_overlead_scale_low: float = 1.5
+@export var accuracy_overlead_scale_high: float = 0.5
 ## Multiplies pass_scramble_error and pass_set_feet_time.
 @export var agility_scale_low: float = 1.6
 @export var agility_scale_high: float = 0.4
@@ -168,6 +253,17 @@ extends Resource
 @export var pancake_blocking_scale_high: float = 1.6
 @export var pancake_strength_scale_low: float = 1.6
 @export var pancake_strength_scale_high: float = 0.4
+## Multiplies ai_move_mistime_chance and ai_move_wrong_side_chance (juke rating).
+@export var move_mistime_scale_low: float = 1.6
+@export var move_mistime_scale_high: float = 0.4
+## Speed multiplier for a quarterback running with the ball tucked or past the
+## line: he is not built like a running back.
+@export var qb_run_speed_scale: float = 0.94
+## A CPU quarterback's taste for running, from the average of his speed and
+## agility: multiplies ai_qb_keeper_chance. A pocket passer
+## hardly ever goes; a quick one goes often. Below zero counts as never.
+@export var qb_mobility_scale_low: float = -1.0
+@export var qb_mobility_scale_high: float = 3.0
 ## Multiply ai_cover_lag and ai_cover_cut_slow: the defender's coverage rating...
 @export var coverage_scale_low: float = 1.4
 @export var coverage_scale_high: float = 0.6
@@ -197,15 +293,68 @@ extends Resource
 @export var shake_off_chance_high: float = 0.35
 
 ## Chance that a tackle knocks the ball loose.
-@export var fumble_chance_low: float = 0.11
-@export var fumble_chance_high: float = 0.01
+@export var fumble_chance_low: float = 0.17
+@export var fumble_chance_high: float = 0.03
 
 @export_group("Fumbles")
 ## Multiplies the fumble chance on a dive or shove tackle.
 @export var fumble_big_hit_scale: float = 1.5
-## A fumble goes to a random player on his feet this close to the ball. With
-## nobody there, the carrier falls on it and the play ends as a tackle.
-@export var fumble_recover_radius: float = 4.0
+## Flat speed the ball leaves the carrier at, and how fast it pops upward.
+@export var fumble_pop_speed_min: float = 3.0
+@export var fumble_pop_speed_max: float = 8.0
+@export var fumble_pop_up_min: float = 2.5
+@export var fumble_pop_up_max: float = 6.0
+## How much of the carrier's own speed the ball keeps.
+@export var fumble_carry_share: float = 0.5
+## Degrees either side of the direction of the hit the ball can come out at: a
+## standing big hit, a diving one, and a ball that comes out as he is wrestled
+## down.
+@export var fumble_spread_high: float = 70.0
+@export var fumble_spread_low: float = 35.0
+@export var fumble_spread_wrap: float = 150.0
+## Nobody can get hold of the ball for this long after it comes out or is
+## bobbled, nor while it is higher off the turf than this.
+@export var fumble_pickup_delay: float = 0.3
+@export var fumble_pickup_height: float = 1.4
+## How close a player on his feet has to be to scoop it up, and one diving to
+## fall on it.
+@export var fumble_scoop_radius: float = 1.0
+@export var fumble_dive_radius: float = 1.6
+## Chance that a scoop comes off (times his catching), less this much for every
+## yard per second the ball is moving. Falling on it is surer.
+@export var fumble_scoop_chance: float = 0.6
+@export var fumble_scoop_speed_penalty: float = 0.05
+@export var fumble_dive_chance: float = 0.85
+## A miss knocks the ball away at up to this speed, and he cannot try again for
+## this long.
+@export var fumble_bobble_speed: float = 5.0
+@export var fumble_retry_time: float = 0.5
+## A ball nobody has got hold of after this long is whistled dead where it lies.
+@export var fumble_dead_time: float = 8.0
+## Seconds before a CPU player right there and looking at it sees the ball is
+## out...
+@export var ai_fumble_notice_min: float = 0.1
+@export var ai_fumble_notice_max: float = 0.35
+## ...plus up to this much for one who is ai_fumble_notice_range yards away or
+## has his back to it.
+@export var ai_fumble_notice_far: float = 1.2
+@export var ai_fumble_notice_range: float = 20.0
+## Chance that he has no idea (more likely with his back to it), and how much
+## longer it then takes him.
+@export var ai_fumble_clueless_chance: float = 0.3
+@export var ai_fumble_clueless_time_min: float = 1.2
+@export var ai_fumble_clueless_time_max: float = 2.8
+## A ball this close in front of him he sees whatever else he was doing.
+@export var ai_fumble_wake_range: float = 3.5
+## How many on each team go for the ball; the rest who have seen it come over
+## and block.
+@export var ai_fumble_chasers: int = 3
+## This close to the ball he decides once whether to dive on it: the chance with
+## room to pick it up, and with an opponent as close as ai_fumble_contest_range.
+@export var ai_fumble_dive_range: float = 2.4
+@export var ai_fumble_dive_chance: float = 0.3
+@export var ai_fumble_dive_contested: float = 0.6
+@export var ai_fumble_contest_range: float = 3.5
 
 @export_group("Dragging")
 ## Drags shorter than this do not happen: the carrier just goes down.
@@ -277,6 +426,17 @@ extends Resource
 ## Out of time with every receiver covered this tightly, the CPU quarterback
 ## tucks the ball and runs instead of forcing a throw.
 @export var ai_qb_scramble_open: float = 2.0
+## Chance (before his mobility) that a CPU quarterback keeps the ball by design
+## on a pass play: between `time_min` and `time_max` seconds after the snap he
+## runs around one side, `width` yards out before he turns upfield, going
+## `forward` yards upfield for every yard across on the way.
+@export var ai_qb_keeper_chance: float = 0.08
+@export var ai_qb_keeper_time_min: float = 0.4
+@export var ai_qb_keeper_time_max: float = 0.8
+@export var ai_qb_keeper_width: float = 9.0
+@export var ai_qb_keeper_forward: float = 0.35
+## Running behind the line, he still pulls up and throws to a receiver this open.
+@export var ai_qb_run_throw_open: float = 6.0
 ## An open receiver at least this far away gets a lob to run under.
 @export var ai_qb_lob_distance: float = 22.0
 ## ...as long as he is running downfield at least this fast and no defender
@@ -289,10 +449,21 @@ extends Resource
 @export var ai_qb_bullet_power: float = 1.0
 ## Pass power for a long throw that is not safe to lob.
 @export var ai_qb_drive_power: float = 0.85
+## The CPU quarterback leads or underthrows a receiver only when that spot looks
+## at least this many yards more open than the regular one. His judgment of
+## each spot is off by up to `noise` yards (before his accuracy rating), so he
+## is sometimes wrong.
+@export var ai_qb_lead_margin: float = 1.6
+@export var ai_qb_under_margin: float = 0.8
+@export var ai_qb_placement_noise: float = 0.8
+## A lead also needs the receiver to have this much turbo left, and an
+## underthrow needs no defender trailing him within this many yards.
+@export var ai_qb_lead_min_turbo: float = 0.3
+@export var ai_qb_under_trail_range: float = 2.5
 ## Seconds after the snap before pass rushers start using turbo.
 @export var ai_rush_turbo_delay: float = 0.7
 ## Seconds a coverage defender takes to read a change in his receiver's movement.
-@export var ai_cover_lag: float = 0.35
+@export var ai_cover_lag: float = 0.42
 ## Share of his speed a coverage defender loses for a moment when his receiver
 ## makes a full change of direction (less for a gentler cut).
 @export var ai_cover_cut_slow: float = 0.8
@@ -307,7 +478,7 @@ extends Resource
 @export var ai_cover_beaten_gap: float = 4.0
 ## Chance that a coverage defender bites on a sharp cut by his receiver, before
 ## the ratings of the two are applied.
-@export var ai_cover_bust_chance: float = 0.16
+@export var ai_cover_bust_chance: float = 0.2
 ## Seconds he chases the wrong way, and his speed multiplier while he does.
 @export var ai_cover_bust_time: float = 1.0
 @export var ai_cover_bust_speed: float = 0.6
@@ -318,9 +489,18 @@ extends Resource
 @export var ai_cover_bust_cooldown: float = 1.2
 @export var ai_cover_bust_min_time: float = 0.6
 ## Seconds a receiver waits at the end of his route before he goes looking for
-## open space, and how far away he looks.
-@export var ai_get_open_delay: float = 2.0
+## open space (each receiver rolls his own), and how far away he looks.
+@export var ai_get_open_delay_min: float = 0.3
+@export var ai_get_open_delay_max: float = 1.1
 @export var ai_get_open_radius: float = 5.0
+## With the nearest defender at least this far away he is in no hurry to leave:
+## the wait runs down at `stay_scale` of its normal speed and he holds his spot.
+@export var ai_get_open_stay_distance: float = 5.0
+@export var ai_get_open_stay_scale: float = 0.35
+## A receiver calls for the ball once the nearest defender is this much further
+## away than `ai_qb_open_distance`, and stops once he is this much closer.
+@export var ai_call_open_margin: float = 0.4
+@export var ai_call_close_margin: float = 0.3
 ## He keeps this far from other receivers, and avoids spots with a defender
 ## within `lane_width` yards of the line from the quarterback.
 @export var ai_get_open_spacing: float = 6.0
@@ -343,8 +523,50 @@ extends Resource
 @export var ai_hot_memory: int = 5
 @export var ai_hot_zone_scale: float = 1.5
 @export var ai_hot_bonus: float = 6.0
+## How much the defense makes of what it has seen the offense do (0 = nothing,
+## 1 = normal): recognising a play it keeps seeing, and spying a quarterback who
+## keeps running. See Scout. Only a defense the CPU calls the plays for adjusts.
+@export var ai_scout_strength: float = 1.0
+## Recognised play: multiplies how late and slow the defender covering its
+## favourite receiver is on his cuts (fully recognised; less in between).
+@export var ai_scout_cover_scale: float = 0.45
+## Recognised play: chance (when fully recognised) that a second defender leaves
+## his own job to sit in front of the favourite receiver. Whoever he left is
+## open.
+@export var ai_scout_bracket_chance: float = 0.6
+## Recognised play: share of ai_ball_react_time and ai_run_read_time the defense
+## saves.
+@export var ai_scout_react_saving: float = 0.7
+## A spy waits this many yards past the line, across from the quarterback, and
+## goes for him once he has tucked the ball for `react_time` seconds or comes
+## within `trigger_depth` yards of the line.
+@export var ai_spy_depth: float = 4.5
+@export var ai_spy_react_time: float = 0.2
+@export var ai_spy_trigger_depth: float = 1.5
+## Underneath zone defenders come up for a quarterback who has had the ball
+## tucked this long and is running at the line, within this many yards of them.
+@export var ai_scramble_read_time: float = 0.45
+@export var ai_scramble_read_range: float = 14.0
+## Chance per coverage defender (before his coverage rating) that he blows his
+## assignment at the snap: for a random time between the two below he stands
+## flat-footed, then has to catch up. About one play in ten has one.
+@export var ai_blown_coverage_chance: float = 0.04
+@export var ai_blown_coverage_time_min: float = 1.3
+@export var ai_blown_coverage_time_max: float = 2.2
 ## Seconds coverage defenders keep covering after a handoff before they read run.
 @export var ai_run_read_time: float = 0.4
+## Play action: chance per coverage defender (before his coverage rating, how
+## much the offense has been running and how well the play is recognised) that
+## he comes up for the faked handoff. A deep zone bites `deep_scale` as often.
+## He keeps coming for a random time between the two below after the fake ends.
+@export var ai_play_action_bite_chance: float = 0.2
+@export var ai_play_action_deep_scale: float = 0.2
+@export var ai_play_action_bite_time_min: float = 0.2
+@export var ai_play_action_bite_time_max: float = 0.5
+## Play action: the bite chance is multiplied by `low` for an offense that never
+## runs and `high` for one that only runs.
+@export var ai_play_action_run_scale_low: float = 0.3
+@export var ai_play_action_run_scale_high: float = 1.5
 ## Delay before defenders break on a thrown ball.
 @export var ai_ball_react_time: float = 0.25
 @export var ai_ball_react_radius: float = 14.0
@@ -356,11 +578,23 @@ extends Resource
 @export var ai_ball_break_radius: float = 9.0
 ## Yards downfield of the landing spot the others aim for.
 @export var ai_ball_cut_off: float = 4.0
+## The defender covering the intended receiver plays a short ball tighter: on a
+## pass this many yards short of the receiver's run he aims ai_cover_cushion
+## yards past the landing spot instead (in between for less).
+@export var ai_ball_short_full: float = 3.0
 ## A defender this close to the landing spot, this long before the ball arrives,
 ## may jump for it.
 @export var ai_contest_range: float = 2.6
 @export var ai_contest_time: float = 0.3
 @export var ai_contest_chance: float = 0.6
+## Chance that a CPU player who cannot reach the ball on his feet jumps or dives
+## for it. Decided once per pass, this long before the ball arrives.
+@export var ai_catch_effort_chance: float = 0.4
+## Multiplies that chance on the person's team: there the jump and the dive are
+## mostly left to the person.
+@export var ai_catch_effort_human_scale: float = 0.6
+## Shorter than dive_time, so a dive is still in the air when the ball gets there.
+@export var ai_catch_effort_time: float = 0.26
 ## Max seconds ahead of the carrier a pursuer aims.
 @export var ai_pursuit_max_lead: float = 1.5
 @export var ai_turbo_range: float = 9.0
@@ -372,6 +606,20 @@ extends Resource
 @export var ai_stiff_arm_chance: float = 0.45
 ## How far to the side the tackler must be (0 = straight ahead, 1 = level with him).
 @export var ai_stiff_arm_side_dot: float = 0.6
+## A CPU carrier starts a well-timed move this many seconds before the tackler
+## gets to him, and never looks at a tackler further away than `range`.
+@export var ai_move_lead: float = 0.2
+@export var ai_move_range: float = 7.0
+## Chance (before his juke rating) that he gets the timing wrong: half the time
+## too early, by starting this many seconds before contact, so the move is over
+## when the tackler arrives; half the time too late, by this many seconds.
+@export var ai_move_mistime_chance: float = 0.4
+@export var ai_move_early_min: float = 0.55
+@export var ai_move_early_max: float = 0.95
+@export var ai_move_late_min: float = 0.15
+@export var ai_move_late_max: float = 0.4
+## Chance (before his juke rating) that a stiff arm goes out on the wrong side.
+@export var ai_move_wrong_side_chance: float = 0.12
 ## A CPU carrier dives when the goal line or the first-down marker is this close
 ## and a defender is nearer than the matching pressure distance.
 @export var ai_dive_reach: float = 3.0

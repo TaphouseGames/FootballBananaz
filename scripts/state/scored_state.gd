@@ -1,6 +1,6 @@
 extends GameState
 ## Touchdown. Points go up, the celebration (and late hits) play out, then the
-## other team gets the ball.
+## scoring team lines up for its two-point try.
 
 var _scorer: Team
 
@@ -20,5 +20,6 @@ func exit() -> void:
 func physics_update(delta: float) -> void:
 	pc.simulate_dead(delta)
 	if time_in_state >= game.tuning.scored_banner_time:
-		game.start_drive_after_score(_scorer)
-		machine.transition(game.next_play_state())
+		# The try is played even when the clock has run out.
+		game.start_conversion(_scorer)
+		machine.transition(&"PlaySelect")

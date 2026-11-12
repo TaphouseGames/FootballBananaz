@@ -11,7 +11,16 @@
 [ext_resource type="Resource" path="res://resources/plays/offense/crossfire.tres" id="9_crossfire"]
 [ext_resource type="Resource" path="res://resources/plays/offense/flood.tres" id="10_flood"]
 [ext_resource type="Resource" path="res://resources/plays/offense/deep_bomb.tres" id="11_deep_bomb"]
+[ext_resource type="Resource" path="res://resources/plays/offense/off_tackle.tres" id="12_off_tackle"]
+[ext_resource type="Resource" path="res://resources/plays/offense/hb_toss.tres" id="13_hb_toss"]
+[ext_resource type="Resource" path="res://resources/plays/offense/draw.tres" id="14_draw"]
+[ext_resource type="Resource" path="res://resources/plays/offense/end_around.tres" id="15_end_around"]
+[ext_resource type="Resource" path="res://resources/plays/offense/pa_post.tres" id="16_pa_post"]
+[ext_resource type="Resource" path="res://resources/plays/offense/bootleg.tres" id="17_bootleg"]
+[ext_resource type="Resource" path="res://resources/plays/offense/mesh.tres" id="18_mesh"]
+[ext_resource type="Resource" path="res://resources/plays/offense/smash.tres" id="19_smash"]
+[ext_resource type="Resource" path="res://resources/plays/offense/sluggo.tres" id="20_sluggo"]
 
 [resource]
 script = ExtResource("1_book")
-plays = Array[ExtResource("2_play")]([ExtResource("3_hb_dive"), ExtResource("4_power_sweep"), ExtResource("5_counter"), ExtResource("6_quick_slants"), ExtResource("7_curl_flat"), ExtResource("8_hb_screen"), ExtResource("9_crossfire"), ExtResource("10_flood"), ExtResource("11_deep_bomb")])
+plays = Array[ExtResource("2_play")]([ExtResource("3_hb_dive"), ExtResource("4_power_sweep"), ExtResource("5_counter"), ExtResource("6_quick_slants"), ExtResource("7_curl_flat"), ExtResource("8_hb_screen"), ExtResource("9_crossfire"), ExtResource("10_flood"), ExtResource("11_deep_bomb"), ExtResource("12_off_tackle"), ExtResource("13_hb_toss"), ExtResource("14_draw"), ExtResource("15_end_around"), ExtResource("16_pa_post"), ExtResource("17_bootleg"), ExtResource("18_mesh"), ExtResource("19_smash"), ExtResource("20_sluggo")])

@@ -22,9 +22,17 @@ const RUSH_COLOR: Color = Color(1.0, 0.36, 0.3)
 const MAN_COLOR: Color = Color(0.45, 0.9, 0.45)
 const ZONE_COLOR: Color = Color(0.4, 0.7, 1.0)
 const DEEP_COLOR: Color = Color(0.75, 0.6, 1.0)
+const SPY_COLOR: Color = Color(1.0, 0.7, 0.25)
 
 var _offense: OffensePlay
 var _defense: DefensePlay
+## Offense only: drawn mirrored left to right.
+var _flipped: bool = false
+
+
+func set_flipped(flipped: bool) -> void:
+	_flipped = flipped
+	queue_redraw()
 
 
 func show_offense(play: OffensePlay) -> void:
@@ -100,7 +108,8 @@ func _draw_path(assignment: OffenseAssignment, color: Color, width: float, arrow
 
 
 func _off_point(play_point: Vector2) -> Vector2:
-	var u: float = (play_point.y + LATERAL) / (2.0 * LATERAL)
+	var lateral: float = -play_point.y if _flipped else play_point.y
+	var u: float = (lateral + LATERAL) / (2.0 * LATERAL)
 	var v: float = (OFFENSE_AHEAD - play_point.x) / (OFFENSE_AHEAD + OFFENSE_BEHIND)
 	return Vector2(u * size.x, v * size.y)
 
@@ -136,6 +145,10 @@ func _draw_defense() -> void:
 				if start.distance_to(center) > 5.0:
 					draw_line(start, center, color, 1.5, true)
 				draw_circle(start, 4.0, color, true, -1.0, true)
+			DefenseAssignment.Job.SPY:
+				# A spy: a dashed line at the quarterback.
+				draw_dashed_line(start, _def_point(assignment.start.lerp(qb_spot, 0.6)), SPY_COLOR, 1.5, 3.0, true, true)
+				draw_circle(start, 4.0, SPY_COLOR, true, -1.0, true)
 
 
 func _draw_zone(center: Vector2, radius: float, color: Color) -> void:

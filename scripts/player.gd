@@ -55,6 +55,8 @@ var feet_set: float = 1.0
 
 ## Set each tick by the AI while this player is trying to block.
 var is_blocking: bool = false
+## Set each tick by the AI while this receiver is open and wants the ball.
+var calling_for_ball: bool = false
 var block_slow_timer: float = 0.0
 var block_engaged_time: float = 0.0
 var block_shed_time: float = 0.0
@@ -67,6 +69,14 @@ var spin_evade_timer: float = 0.0
 var move_cooldown: float = 0.0
 var jump_cooldown: float = 0.0
 var tackle_cooldown: float = 0.0
+## Above 0 during a dive and for a moment after landing: the dive still reaches
+## for a pass.
+var dive_reach_timer: float = 0.0
+## Counts down from tuning.catch_blend_time after a catch, while the hands bring
+## the ball in.
+var catch_timer: float = 0.0
+## Above 0 after he failed to get hold of a loose ball: he cannot try again yet.
+var ball_grab_cooldown: float = 0.0
 ## Side of the current spin or stiff arm: +1 is the player's own left,
 ## -1 his right.
 var move_side: float = 1.0
@@ -107,6 +117,7 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	turbo_active = false
 	feet_set = 1.0
 	is_blocking = false
+	calling_for_ball = false
 	block_slow_timer = 0.0
 	block_engaged_time = 0.0
 	block_pancake_time = -1.0
@@ -116,6 +127,9 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	move_side = 1.0
 	jump_cooldown = 0.0
 	tackle_cooldown = 0.0
+	dive_reach_timer = 0.0
+	catch_timer = 0.0
+	ball_grab_cooldown = 0.0
 	drag_partner = null
 	set_pass_icon("", Color.WHITE)
 	_update_visual(0.0, true)
@@ -146,6 +160,13 @@ func ball_anchor() -> Vector3:
 	if animator == null:
 		return position + facing * 0.4 + Vector3(0.0, 1.15 + air_height(), 0.0)
 	return animator.ball_anchor()
+
+
+## The frame his upper body is in: it leans, jumps and dives with him.
+func hold_frame() -> Transform3D:
+	if animator == null:
+		return global_transform
+	return animator.skeleton.global_transform
 
 
 func set_controlled(value: bool) -> void:
@@ -189,18 +210,53 @@ func max_speed() -> float:
 	speed *= PlayerRatings.blend(ratings.speed, tuning.speed_scale_low, tuning.speed_scale_high)
 	if has_ball:
 		speed *= tuning.carrier_speed_scale
+		if play != null and play.qb == self and (is_tucked() or play.phase == PlayController.Phase.RUN):
+			speed *= tuning.qb_run_speed_scale
 	if state == State.STIFF_ARM:
 		speed *= tuning.stiff_arm_speed_scale
 	return speed
 
 
-func start_dive(dir: Vector3) -> void:
+## `speed` below 0 means the full tuning.dive_speed.
+func start_dive(dir: Vector3, speed: float = -1.0) -> void:
 	if not can_act():
 		return
 	state = State.DIVING
 	state_timer = tuning.dive_time
+	dive_reach_timer = tuning.dive_time + tuning.dive_catch_grace
 	facing = dir
-	velocity = dir * tuning.dive_speed
+	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed)
+
+
+## Where he will be `time` seconds from now if he keeps doing what he is doing.
+func position_in(time: float) -> Vector3:
+	match state:
+		State.DOWN, State.HOLDING:
+			return position
+		State.DIVING:
+			return position + velocity * minf(time, maxf(state_timer, 0.0))
+	return position + velocity * time
+
+
+## Where his hands meet a ball that would otherwise end its flight at `ball_end`,
+## `time` seconds from now: as close to it as his arms reach.
+func catch_point(ball_end: Vector3, time: float) -> Vector3:
+	if animator == null:
+		return ball_end
+	# His shoulders stay where they are on his body: upright, in the air or
+	# stretched out in a dive.
+	var shift: Vector3 = position_in(time) - position
+	var shoulders: Vector3 = animator.shoulders() + shift
+	var reach: float = animator.hands_reach()
+	var offset: Vector3 = ball_end - shoulders
+	if state == State.JUMPING:
+		# He went up for it: taken overhead, not down at his waist.
+		offset.y = maxf(offset.y, reach * 0.6)
+	# In front of him, never in his chest or behind his back.
+	var ahead: float = offset.dot(facing)
+	if ahead < reach * 0.5:
+		offset += facing * (reach * 0.5 - ahead)
+	return animator.nearest_reach(shoulders + offset, shift)
 
 
 func start_shove(dir: Vector3) -> void:
@@ -288,6 +344,7 @@ func knock_down(impulse: Vector3, duration: float, kind: PlayerFall.Kind = Playe
 	var before: Vector3 = velocity
 	state = State.DOWN
 	state_timer = duration
+	dive_reach_timer = 0.0
 	velocity = impulse
 	velocity.y = 0.0
 	turbo_active = false
@@ -417,6 +474,9 @@ func _tick_timers(delta: float) -> void:
 	move_cooldown = maxf(move_cooldown - delta, 0.0)
 	jump_cooldown = maxf(jump_cooldown - delta, 0.0)
 	tackle_cooldown = maxf(tackle_cooldown - delta, 0.0)
+	dive_reach_timer = maxf(dive_reach_timer - delta, 0.0)
+	catch_timer = maxf(catch_timer - delta, 0.0)
+	ball_grab_cooldown = maxf(ball_grab_cooldown - delta, 0.0)
 	block_immune_timer = maxf(block_immune_timer - delta, 0.0)
 	if block_slow_timer > 0.0:
 		block_slow_timer -= delta

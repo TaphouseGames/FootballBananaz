@@ -6,7 +6,6 @@ extends Node
 const PASS_ACTIONS: Array[StringName] = [&"pass_1", &"pass_2", &"pass_3"]
 const PAD_LABELS: Array[String] = ["A", "X", "B"]
 const PAD_COLORS: Array[Color] = [Color(0.3, 0.85, 0.35), Color(0.25, 0.55, 1.0), Color(1.0, 0.3, 0.25)]
-const KEY_LABELS: Array[String] = ["J", "K", "L"]
 
 var game: Game
 var pc: PlayController
@@ -16,8 +15,6 @@ var controlled: Player
 ## True on ticks where the controlled player should run on AI instead
 ## (a targeted receiver with the stick at rest runs to the ball by himself).
 var assist: bool = false
-## Last device touched; decides which prompts the pass icons show.
-var using_gamepad: bool = false
 ## Pass button being held while the QB winds up (-1 = none), and when it went down.
 var _pass_slot: int = -1
 var _pass_press_time: float = 0.0
@@ -48,22 +45,21 @@ func set_controlled(player: Player) -> void:
 		controlled.set_controlled(true)
 
 
-func _input(event: InputEvent) -> void:
-	if event is InputEventJoypadButton:
-		using_gamepad = true
-	elif event is InputEventJoypadMotion:
-		if absf((event as InputEventJoypadMotion).axis_value) > 0.5:
-			using_gamepad = true
-	elif event is InputEventKey:
-		using_gamepad = false
-
-
 func pass_label(slot: int) -> String:
-	return PAD_LABELS[slot] if using_gamepad else KEY_LABELS[slot]
+	return PAD_LABELS[slot]
 
 
 func pass_color(slot: int) -> Color:
-	return PAD_COLORS[slot] if using_gamepad else Color.WHITE
+	return PAD_COLORS[slot]
+
+
+## True when the other team has the ball right now (or had it at the whistle),
+## whichever side the person started the play on.
+func is_defending() -> bool:
+	if pc.ball_dead and pc.result != PlayController.Result.NONE:
+		return team != pc.final_team
+	var carrier: Player = pc.ball.carrier
+	return carrier.team != team if carrier != null else team != pc.offense
 
 
 ## Stick input turned into field directions for the behind-the-player camera:
@@ -96,6 +92,15 @@ func on_carrier_changed(carrier: Player) -> void:
 		set_controlled(carrier)
 
 
+## The ball is out. If the person's player is on the turf or nowhere near it,
+## they get the teammate closest to the ball instead.
+func on_fumble() -> void:
+	if not is_active():
+		return
+	if controlled == null or not controlled.can_act() or _flat_distance(controlled.position, pc.ball.flat_position()) > 8.0:
+		_switch_to_nearest()
+
+
 # --- Per-tick updates ------------------------------------------------------------
 
 ## Before the snap on defense: the switch button steps through the defenders.
@@ -111,10 +116,16 @@ func update_live() -> void:
 	assist = false
 	if not is_active() or controlled == null:
 		return
+	# The receiving team gets under a kickoff by itself; the person takes over
+	# at the catch.
+	if pc.kickoff and pc.phase == PlayController.Phase.AIR and team == pc.offense:
+		assist = true
+		return
 	var player: Player = controlled
 	var move: Vector3 = read_move()
 	var moving: bool = move.length_squared() > 0.04
 	player.is_blocking = false
+	player.calling_for_ball = false
 	player.ai_speed_scale = 1.0
 	player.move_input = move
 	player.wants_turbo = Input.is_action_pressed(&"turbo")
@@ -141,7 +152,7 @@ func update_live() -> void:
 			if not Input.is_action_pressed(PASS_ACTIONS[_pass_slot]) or held >= tuning.pass_charge_time:
 				var target: Player = pc.eligible[_pass_slot]
 				_pass_slot = -1
-				pc.throw_ball(target, pc.pass_power(held))
+				pc.throw_ball(target, pc.pass_power(held), _pass_placement())
 				return
 	else:
 		_pass_slot = -1
@@ -168,8 +179,19 @@ func update_live() -> void:
 		return
 	if not Input.is_action_just_pressed(&"action"):
 		return
-	if team != pc.offense:
-		# On defense the action is always a dive, aimed at the carrier when he is close.
+	# With a pass in the air the action is a dive at the ball, for either side.
+	var at_ball: Vector3 = pc.ball_dive_direction(player)
+	if at_ball != Vector3.ZERO:
+		pc.do_dive(player, at_ball)
+	elif pc.phase == PlayController.Phase.LOOSE:
+		# A fumble: the action is a dive on the ball, whichever side he is on.
+		var at_loose: Vector3 = pc.loose_dive_direction(player)
+		if at_loose == Vector3.ZERO:
+			at_loose = move.normalized() if moving else player.facing
+		pc.do_dive(player, at_loose)
+	elif is_defending():
+		# On defense (from the snap or after a turnover) the action is always a
+		# dive, aimed at the carrier when he is close.
 		var target: Player = carrier if carrier != null and carrier.team != team else null
 		pc.do_dive(player, _dive_direction(player, move, moving, target))
 	else:
@@ -200,12 +222,13 @@ func update_dead() -> void:
 	var move: Vector3 = read_move()
 	var moving: bool = move.length_squared() > 0.04
 	player.is_blocking = false
+	player.calling_for_ball = false
 	player.ai_speed_scale = 1.0
 	player.move_input = move
 	player.wants_turbo = Input.is_action_pressed(&"turbo")
 	if not Input.is_action_just_pressed(&"action") or not player.can_act():
 		return
-	var on_defense: bool = team != pc.offense
+	var on_defense: bool = is_defending()
 	var victim: Player = null
 	var best: float = tuning.dive_trigger_range if on_defense else tuning.shove_radius
 	for opponent: Player in team.opponent.players:
@@ -225,6 +248,18 @@ func update_dead() -> void:
 
 
 # --- Helpers -----------------------------------------------------------------
+
+## A bumper held as the pass leaves: left leads the receiver, right underthrows
+## him. Both together cancel out.
+func _pass_placement() -> PlayController.Placement:
+	var lead: bool = Input.is_action_pressed(&"pass_lead")
+	var under: bool = Input.is_action_pressed(&"pass_under")
+	if lead and not under:
+		return PlayController.Placement.LEAD
+	if under and not lead:
+		return PlayController.Placement.UNDER
+	return PlayController.Placement.NORMAL
+
 
 func _switch_to_nearest() -> void:
 	var point: Vector3 = pc.ball.target_point if pc.phase == PlayController.Phase.AIR else pc.ball.flat_position()
