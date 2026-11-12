@@ -6,6 +6,12 @@ extends Node
 ##
 ## Sounds are files in assets/audio named `<sound>_<n>.<ext>`; every numbered
 ## take of a sound is a variation picked at random.
+##
+## The booth is Jim, who calls the play (`announcer_*`), and Tony, who has
+## opinions about it (`color_*`). An exchange between the two is a set of files
+## `chat_<moment>_<t|j><k>_<part>.<ext>`: the letter is who speaks first (Tony
+## or Jim), the parts alternate, and it comes up as one of the lines of
+## `color_<moment>`.
 
 const AUDIO_DIR: String = "res://assets/audio"
 const EXTENSIONS: Array[String] = ["wav", "ogg", "mp3"]
@@ -39,11 +45,23 @@ const QUIP_HOT: float = 0.6
 const QUIP_BAD_THROW: float = 0.6
 const QUIP_TOUCHDOWN: float = 0.75
 const QUIP_LAWN_CHAIR: float = 0.2
+const QUIP_SACK: float = 0.5
+const QUIP_HURDLE: float = 0.6
+const QUIP_CATCH: float = 0.4
+const QUIP_DOWNS: float = 0.6
+const QUIP_HALF: float = 0.9
+const QUIP_FINAL: float = 0.9
 ## Real seconds a quip waits for the announcer before it is too late to say it.
 const QUIP_STALE: float = 8.0
 ## Real seconds of quiet between one voice finishing and the next starting.
 const BOOTH_BREATH: float = 0.25
+## Idle chatter: the usual kind, and the kinds for a rout and for a tight
+## second half. All of them start with the first name.
 const QUIP_IDLE: StringName = &"color_idle"
+const QUIP_IDLE_BLOWOUT: StringName = &"color_idle_blowout"
+const QUIP_IDLE_CLOSE: StringName = &"color_idle_close"
+const CHAT_PREFIX: String = "chat_"
+const QUIP_PREFIX: String = "color_"
 const BREAKAWAY_YARDS: float = 20.0
 const BREAKAWAY_RETURN_YARDS: float = 40.0
 
@@ -58,6 +76,10 @@ var missing: Dictionary[StringName, bool] = {}
 var remark_asks: Dictionary[StringName, int] = {}
 ## The same for the color commentator's quips.
 var quip_asks: Dictionary[StringName, int] = {}
+## Exchanges between the two that started, got to the last line, or were cut
+## short by a call, and the `chat_*` sets left out for a missing part.
+var exchange_counts: Dictionary[StringName, int] = {&"started": 0, &"finished": 0, &"cut": 0}
+var broken_exchanges: PackedStringArray = PackedStringArray()
 
 var _streams: Dictionary[StringName, Array] = {}
 var _last_played: Dictionary[StringName, int] = {}
@@ -73,16 +95,21 @@ var _announcer: AudioStreamPlayer
 var _announcer_queue: Array[StringName] = []
 var _last_remark: int = -1000000
 var _color: AudioStreamPlayer
-## The quip she is holding until the announcer is done, and when it came up.
+## The quip Tony is holding until Jim is done, and when it came up.
 var _quip_pending: StringName = &""
 var _quip_asked: int = 0
 var _last_quip: int = -1000000
 ## Real seconds since either of the two voices was last heard.
 var _booth_quiet: float = 1.0
-## Lines of each quip not said yet this time round, so none comes up twice in a row.
-var _quip_bags: Dictionary[StringName, Array] = {}
-## When she last said a line of each quip.
+## Lines of each sound not said yet this time round, so none comes up twice in
+## a row. A line is a stream, or for a quip an exchange.
+var _bags: Dictionary[StringName, Array] = {}
+## When Tony last said a line of each quip.
 var _quip_said: Dictionary[StringName, int] = {}
+## The exchanges of each quip. One is {tony_first: bool, parts: Array[AudioStream]}.
+var _exchanges: Dictionary[StringName, Array] = {}
+## The lines still to come of the exchange going on: [by Tony, stream] each.
+var _exchange_parts: Array[Array] = []
 ## The run in progress has already been called a breakaway (or passed over).
 var _breakaway_called: bool = false
 var _roar_level: float = 0.0
@@ -152,7 +179,7 @@ func announce(sounds: Array[StringName]) -> void:
 ## already talking or has just made one, so it never gets in the way of a call.
 func remark(sound: StringName, chance: float) -> void:
 	remark_asks[sound] = remark_asks.get(sound, 0) + 1
-	if _announcer.playing or not _announcer_queue.is_empty() or _color.playing:
+	if _announcer.playing or not _announcer_queue.is_empty() or _color.playing or not _exchange_parts.is_empty():
 		return
 	var now: int = Time.get_ticks_msec()
 	if now - _last_remark < int(tuning.audio_remark_gap * 1000.0):
@@ -164,24 +191,30 @@ func remark(sound: StringName, chance: float) -> void:
 
 
 ## The announcer shouts `sound` next, ahead of anything else he had lined up.
-## Whoever is talking finishes the sentence first.
+## Whoever is talking finishes the sentence first, and the rest of an exchange
+## between the two is dropped.
 func shout(sound: StringName) -> void:
+	if not _exchange_parts.is_empty():
+		_exchange_parts.clear()
+		exchange_counts[&"cut"] += 1
 	_announcer_queue.clear()
 	_announcer_queue.append(sound)
 
 
-## The color commentator has a thought about the play, `chance` of the time.
-## She waits for the announcer to finish and never says two in a row; a newer
-## thought replaces one she is still holding, but idle chatter replaces nothing.
+## Tony has a thought about the play, `chance` of the time. He waits for Jim to
+## finish and never says two in a row; a newer thought replaces one he is still
+## holding, but idle chatter replaces nothing.
 func quip(sound: StringName, chance: float) -> void:
 	quip_asks[sound] = quip_asks.get(sound, 0) + 1
-	if _color.playing or (sound == QUIP_IDLE and _quip_pending != &""):
+	if _color.playing or not _exchange_parts.is_empty():
+		return
+	if String(sound).begins_with(String(QUIP_IDLE)) and _quip_pending != &"":
 		return
 	var now: int = Time.get_ticks_msec()
 	if now - _last_quip < int(tuning.audio_color_gap * 1000.0):
 		return
 	# A moment with one line comes round again slowly; one with seven, sooner.
-	var lines: int = maxi((_streams.get(sound, []) as Array).size(), 1)
+	var lines: int = maxi(_line_count(sound), 1)
 	if now - _quip_said.get(sound, -100000000) < int(tuning.audio_color_repeat_gap * 1000.0 / float(lines)):
 		return
 	if randf() >= chance * tuning.audio_color_scale:
@@ -191,7 +224,8 @@ func quip(sound: StringName, chance: float) -> void:
 
 
 ## The two voices share one microphone: nobody starts until the other has
-## finished and a breath has passed. The announcer's calls go before her quips.
+## finished and a breath has passed. An exchange under way carries on first,
+## then Jim's calls, then Tony's quips.
 func _update_booth(delta: float) -> void:
 	var now: int = Time.get_ticks_msec()
 	if _quip_pending != &"" and now - _quip_asked > int(QUIP_STALE * 1000.0):
@@ -202,13 +236,16 @@ func _update_booth(delta: float) -> void:
 	_booth_quiet += delta
 	if _booth_quiet < BOOTH_BREATH:
 		return
-	if not _announcer_queue.is_empty():
+	if not _exchange_parts.is_empty():
+		_say_part()
+	elif not _announcer_queue.is_empty():
 		_speak(_announcer_queue.pop_front())
 	elif _quip_pending != &"":
 		_say_quip()
 
 
-## Says the quip she is holding.
+## Says the quip Tony is holding: a line of his own, or with the ball dead
+## perhaps the start of an exchange with Jim.
 func _say_quip() -> void:
 	var now: int = Time.get_ticks_msec()
 	var sound: StringName = _quip_pending
@@ -216,26 +253,70 @@ func _say_quip() -> void:
 	_last_quip = now
 	_quip_said[sound] = now
 	play_counts[sound] = play_counts.get(sound, 0) + 1
-	var stream: AudioStream = _pick_fresh(sound)
-	if stream == null or not tuning.audio_enabled:
+	var line: Variant = _pick_fresh(sound, not game.play_controller.ball_dead)
+	if line == null or not tuning.audio_enabled:
 		return
-	_color.stream = stream
+	if line is Dictionary:
+		var tony: bool = line[&"tony_first"]
+		for stream: AudioStream in line[&"parts"]:
+			_exchange_parts.append([tony, stream])
+			tony = not tony
+		exchange_counts[&"started"] += 1
+		_say_part()
+		return
+	_color.stream = line as AudioStream
 	_color.volume_linear = tuning.audio_color_level
 	_color.play()
 
 
-## A line of `sound` she has not said since she last went through them all.
-func _pick_fresh(sound: StringName) -> AudioStream:
-	if not _streams.has(sound):
+## The next line of the exchange going on.
+func _say_part() -> void:
+	var part: Array = _exchange_parts.pop_front()
+	var player: AudioStreamPlayer = _color if part[0] else _announcer
+	player.stream = part[1] as AudioStream
+	player.volume_linear = tuning.audio_color_level if part[0] else tuning.audio_announcer_level
+	player.play()
+	# The wait before Tony's next thought counts from the end of the exchange.
+	_last_quip = Time.get_ticks_msec()
+	if _exchange_parts.is_empty():
+		exchange_counts[&"finished"] += 1
+
+
+## A line of `sound` not said since the last time through them all: a stream,
+## or an exchange (see _exchanges) unless only a `solo` line will do.
+func _pick_fresh(sound: StringName, solo: bool = false) -> Variant:
+	if _line_count(sound) == 0:
 		missing[sound] = true
 		return null
-	var bag: Array = _quip_bags.get(sound, [])
+	var bag: Array = _bags.get(sound, [])
 	if bag.is_empty():
-		bag = _streams[sound].duplicate()
+		bag = (_streams.get(sound, []) as Array).duplicate()
+		bag.append_array(_exchanges.get(sound, []))
 		bag.shuffle()
-	var stream: AudioStream = bag.pop_back()
-	_quip_bags[sound] = bag
-	return stream
+	_bags[sound] = bag
+	if not solo:
+		return bag.pop_back()
+	for i: int in range(bag.size() - 1, -1, -1):
+		if bag[i] is AudioStream:
+			return bag.pop_at(i)
+	return null
+
+
+## How many different lines there are for `sound`, exchanges included.
+func _line_count(sound: StringName) -> int:
+	return (_streams.get(sound, []) as Array).size() + (_exchanges.get(sound, []) as Array).size()
+
+
+## The idle chatter that fits the score: a rout, a tight second half, or any
+## old thing. Falls back on the usual kind where the other has no lines.
+func _idle_quip() -> StringName:
+	var margin: int = absi(game.home.score - game.home.opponent.score)
+	var sound: StringName = QUIP_IDLE
+	if margin >= tuning.audio_blowout_points:
+		sound = QUIP_IDLE_BLOWOUT
+	elif game.half >= 2 and margin <= tuning.audio_close_points:
+		sound = QUIP_IDLE_CLOSE
+	return sound if has_sound(sound) else QUIP_IDLE
 
 
 ## Down and distance for the play being lined up: "Second down. Seven to go."
@@ -252,7 +333,8 @@ func announce_down() -> void:
 
 func _speak(sound: StringName) -> void:
 	play_counts[sound] = play_counts.get(sound, 0) + 1
-	var stream: AudioStream = _pick(sound)
+	# In turn, so a remark with several takes does not repeat itself.
+	var stream: AudioStream = _pick_fresh(sound, true) as AudioStream
 	if stream == null or not tuning.audio_enabled:
 		return
 	_announcer.stream = stream
@@ -370,7 +452,7 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 	match to:
 		&"PlaySelect":
 			announce_down()
-			quip(QUIP_IDLE, tuning.audio_color_idle_chance)
+			quip(_idle_quip(), tuning.audio_color_idle_chance)
 			if game.human.is_active():
 				_huddle_on = true
 				if not _huddle.playing and tuning.audio_enabled:
@@ -397,15 +479,18 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 					crowd_react(game.offense, 1.0)
 				"TURNOVER ON DOWNS":
 					shout(&"announcer_downs")
+					quip(&"color_downs", QUIP_DOWNS)
 					crowd_react(game.offense, 0.7)
 				_:
 					crowd_react(game.offense, 0.5)
 		&"Halftime":
 			play(&"buzzer")
 			shout(&"announcer_half")
+			quip(&"color_half", QUIP_HALF)
 		&"GameOver":
 			play(&"buzzer")
 			shout(&"announcer_final")
+			quip(&"color_final", QUIP_FINAL)
 			var mine: Team = game.human.team if game.human.is_active() and game.human.team != null else game.home
 			if mine.score > mine.opponent.score:
 				crowd_react(mine, 1.0)
@@ -444,7 +529,13 @@ func _start_chant() -> void:
 
 ## There is at least one file for `sound`.
 func has_sound(sound: StringName) -> bool:
-	return _streams.has(sound)
+	return _line_count(sound) > 0
+
+
+## A take of `sound` for somebody who plays it on a player of their own (the
+## pause menu: everything here stops while the game is paused).
+func stream_for(sound: StringName) -> AudioStream:
+	return _pick(sound) if tuning.audio_enabled else null
 
 
 func _pick(sound: StringName) -> AudioStream:
@@ -516,6 +607,8 @@ func _make_buses() -> void:
 ## Finds every take in the audio folder. An exported game lists the imported
 ## files as `name.ext.import`, so that ending is ignored.
 func _load_streams() -> void:
+	# The parts of each exchange by number, under its `chat_...` name.
+	var chats: Dictionary[String, Dictionary] = {}
 	var seen: Dictionary[String, bool] = {}
 	for file: String in DirAccess.get_files_at(AUDIO_DIR):
 		var path: String = file.trim_suffix(".import")
@@ -529,7 +622,34 @@ func _load_streams() -> void:
 		var stream: AudioStream = load(AUDIO_DIR.path_join(path)) as AudioStream
 		if stream == null:
 			continue
-		var sound: StringName = StringName(base.substr(0, cut))
+		var key: String = base.substr(0, cut)
+		if key.begins_with(CHAT_PREFIX):
+			if not chats.has(key):
+				chats[key] = {}
+			chats[key][base.substr(cut + 1).to_int()] = stream
+			continue
+		var sound: StringName = StringName(key)
 		if not _streams.has(sound):
 			_streams[sound] = []
 		_streams[sound].append(stream)
+	for chat: String in chats:
+		_add_exchange(chat, chats[chat])
+
+
+## Files `chat_<moment>_<t|j><k>_<part>` make one exchange of `color_<moment>`:
+## Tony or Jim first, then turn about. One with a part missing is left out.
+func _add_exchange(chat: String, parts: Dictionary) -> void:
+	var cut: int = chat.rfind("_")
+	var who: String = chat.substr(cut + 1, 1)
+	var moment: String = chat.substr(CHAT_PREFIX.length(), cut - CHAT_PREFIX.length())
+	var streams: Array[AudioStream] = []
+	for part: int in range(1, parts.size() + 1):
+		if parts.has(part):
+			streams.append(parts[part])
+	if streams.size() != parts.size() or streams.size() < 2 or moment.is_empty() or not (who == "t" or who == "j"):
+		broken_exchanges.append(chat)
+		return
+	var sound: StringName = StringName(QUIP_PREFIX + moment)
+	if not _exchanges.has(sound):
+		_exchanges[sound] = []
+	_exchanges[sound].append({&"tony_first": who == "t", &"parts": streams})

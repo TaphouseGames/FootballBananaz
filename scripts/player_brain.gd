@@ -744,6 +744,9 @@ func _open_at_spot(target: Player, spot: Vector3, flight: float) -> float:
 
 func _run_route(pc: PlayController) -> void:
 	_call_for_ball(pc)
+	if player == pc.runner and pc.selling_run():
+		# Play action: he hits the hole like a man with the ball.
+		player.wants_turbo = true
 	if route_index < route.size():
 		var target: Vector3 = route[route_index]
 		if _flat_distance(player.position, target) < 0.9:
@@ -856,6 +859,7 @@ func _work_open(pc: PlayController) -> void:
 ## that stops him, so he does not flicker with a defender on the edge of it.
 func _call_for_ball(pc: PlayController) -> void:
 	if pc.phase != PlayController.Phase.POCKET or not pc.qb.has_ball or pc.faking() \
+			or (player == pc.runner and pc.selling_run()) \
 			or not _is_receiver(pc) \
 			or (player.position.x - pc.los_x) * pc.off_dir < 1.0:
 		_calling = false

@@ -32,10 +32,12 @@ var _card_selected_style: StyleBoxFlat
 @onready var play_select: Control = $PlaySelect
 @onready var play_title: Label = $PlaySelect/Margin/Column/Title
 @onready var play_grid: GridContainer = $PlaySelect/Margin/Column/PlayGrid
+@onready var pause_menu: PauseMenu = $PauseMenu
 
 
 func setup(p_game: Game) -> void:
 	game = p_game
+	pause_menu.setup(p_game)
 	hide_banner()
 	hide_play_select()
 	set_hint("")

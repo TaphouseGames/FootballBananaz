@@ -10,10 +10,9 @@ func enter() -> void:
 		var winner: Team = home if home.score > away.score else away
 		headline = "%s WIN!" % winner.short_name
 	game.hud.show_banner(headline, "Final:  %s %d  -  %d %s" % [home.short_name, home.score, away.score, away.short_name])
-	game.hud.set_hint("Start: play again")
+	# Start opens the pause menu, which offers the rematch here (see PauseMenu).
+	game.hud.set_hint("Start: play again, box score, team stats, roster")
 
 
 func physics_update(delta: float) -> void:
 	pc.simulate_dead(delta)
-	if time_in_state > 0.5 and Input.is_action_just_pressed(&"restart"):
-		get_tree().reload_current_scene()

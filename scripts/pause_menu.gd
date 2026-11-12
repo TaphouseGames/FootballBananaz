@@ -1,0 +1,513 @@
+class_name PauseMenu
+extends Control
+## Start pauses the game and opens this: resume, the box score, the team stats
+## and the rosters with a card for each player. It keeps running while the tree
+## is paused; everything else stops.
+
+enum Screen { MENU, BOX_SCORE, TEAM_STATS, ROSTER }
+
+const MENU_ITEMS: Array[String] = ["RESUME", "BOX SCORE", "TEAM STATS", "VIEW ROSTER"]
+const BOX_PAGES: Array[String] = ["OFFENSE", "DEFENSE"]
+const PANEL_SIZE: Vector2 = Vector2(1080.0, 624.0)
+const GOLD: Color = Color(1.0, 0.85, 0.1)
+const TEXT: Color = Color(0.86, 0.88, 0.86)
+const DIM_TEXT: Color = Color(0.6, 0.64, 0.62)
+const ROW_COLOR: Color = Color(1.0, 1.0, 1.0, 0.05)
+const HEAD_COLOR: Color = Color(1.0, 1.0, 1.0, 0.12)
+const BAR_BACK: Color = Color(0.0, 0.0, 0.0, 0.5)
+const BAR_COLOR: Color = Color(0.45, 0.62, 0.52)
+## Width of a number column and of the name column in a box-score table.
+const STAT_WIDTH: float = 56.0
+const NAME_WIDTH: float = 150.0
+const SCROLL_SPEED: float = 500.0
+## Buttons that close or pick something: the game stays paused until all of
+## them are let go, so the press cannot also snap the ball or throw a pass.
+const HELD_ACTIONS: Array[StringName] = [&"pause", &"confirm", &"back"]
+
+var game: Game
+var screen: Screen = Screen.MENU
+
+var _open: bool = false
+## Closing, and waiting for the buttons to be released.
+var _closing: bool = false
+var _reload: bool = false
+var _cursor: int = 0
+var _box_page: int = 0
+var _roster_team: int = 0
+var _roster_cursor: int = 0
+
+var _title: Label
+var _body: MarginContainer
+var _scroll: ScrollContainer
+var _hint: Label
+var _sound: AudioStreamPlayer
+var _item_style: StyleBoxFlat
+var _item_selected_style: StyleBoxFlat
+
+
+func setup(p_game: Game) -> void:
+	game = p_game
+	if _title == null:
+		_build()
+	visible = false
+
+
+func is_open() -> bool:
+	return _open
+
+
+func _process(delta: float) -> void:
+	if game == null:
+		return
+	if _closing:
+		for action: StringName in HELD_ACTIONS:
+			if Input.is_action_pressed(action):
+				return
+		_finish_close()
+		return
+	if not _open:
+		if Input.is_action_just_pressed(&"pause"):
+			open()
+		return
+	if Input.is_action_just_pressed(&"pause"):
+		close()
+		return
+	match screen:
+		Screen.MENU:
+			_update_menu()
+		Screen.ROSTER:
+			_update_roster()
+		_:
+			_update_table(delta)
+
+
+# --- Opening and closing -------------------------------------------------------------
+
+func open() -> void:
+	if _open or game == null:
+		return
+	_open = true
+	_closing = false
+	_reload = false
+	_cursor = 0
+	get_tree().paused = true
+	visible = true
+	# The game's own prompt would show through under the panel.
+	game.hud.hint.modulate.a = 0.0
+	show_screen(Screen.MENU)
+	_play(&"ui_page")
+
+
+## Hides the menu. The game starts again once the buttons are let go.
+func close(reload: bool = false) -> void:
+	if not _open:
+		return
+	_open = false
+	_closing = true
+	_reload = reload
+	visible = false
+	game.hud.hint.modulate.a = 1.0
+
+
+func _finish_close() -> void:
+	_closing = false
+	get_tree().paused = false
+	if _reload:
+		get_tree().reload_current_scene()
+
+
+func show_screen(to: Screen, page: int = 0) -> void:
+	screen = to
+	if to == Screen.BOX_SCORE:
+		_box_page = posmod(page, BOX_PAGES.size())
+	elif to == Screen.ROSTER:
+		_roster_team = posmod(page, 2)
+		_roster_cursor = 0
+	_refresh()
+
+
+## The game is over: the first entry starts another one.
+func _game_over() -> bool:
+	return game.play_controller.state_machine.current_name() == &"GameOver"
+
+
+# --- Input ---------------------------------------------------------------------------
+
+func _update_menu() -> void:
+	var step: int = int(Input.is_action_just_pressed(&"move_down")) - int(Input.is_action_just_pressed(&"move_up"))
+	if step != 0:
+		_cursor = posmod(_cursor + step, MENU_ITEMS.size())
+		_refresh()
+		_play(&"ui_move")
+	if Input.is_action_just_pressed(&"back"):
+		close()
+	elif Input.is_action_just_pressed(&"confirm"):
+		_play(&"ui_confirm")
+		match _cursor:
+			0:
+				close(_game_over())
+			1:
+				show_screen(Screen.BOX_SCORE)
+			2:
+				show_screen(Screen.TEAM_STATS)
+			3:
+				show_screen(Screen.ROSTER)
+
+
+func _update_table(delta: float) -> void:
+	if Input.is_action_just_pressed(&"back"):
+		_back()
+		return
+	_scroll.scroll_vertical += roundi(Input.get_axis(&"move_up", &"move_down") * SCROLL_SPEED * delta)
+	if screen != Screen.BOX_SCORE:
+		return
+	var turn: int = int(Input.is_action_just_pressed(&"page_next")) - int(Input.is_action_just_pressed(&"page_prev"))
+	if turn != 0:
+		_box_page = posmod(_box_page + turn, BOX_PAGES.size())
+		_refresh()
+		_play(&"ui_page")
+
+
+func _update_roster() -> void:
+	if Input.is_action_just_pressed(&"back"):
+		_back()
+		return
+	var turn: int = int(Input.is_action_just_pressed(&"page_next")) - int(Input.is_action_just_pressed(&"page_prev"))
+	if turn != 0:
+		_roster_team = posmod(_roster_team + turn, 2)
+		_roster_cursor = 0
+		_refresh()
+		_play(&"ui_page")
+		return
+	var step: int = int(Input.is_action_just_pressed(&"move_down")) - int(Input.is_action_just_pressed(&"move_up"))
+	if step != 0:
+		_roster_cursor = posmod(_roster_cursor + step, _roster().players.size())
+		_refresh()
+		_play(&"ui_move")
+
+
+func _back() -> void:
+	_play(&"ui_flip")
+	show_screen(Screen.MENU)
+
+
+func _play(sound: StringName) -> void:
+	var stream: AudioStream = game.audio.stream_for(sound)
+	if stream != null:
+		_sound.stream = stream
+		_sound.play()
+
+
+# --- Screens -------------------------------------------------------------------------
+
+func _refresh() -> void:
+	for child: Node in _body.get_children():
+		_body.remove_child(child)
+		child.queue_free()
+	_scroll.scroll_vertical = 0
+	match screen:
+		Screen.MENU:
+			_title.text = "GAME OVER" if _game_over() else "PAUSED"
+			_hint.text = "Stick / D-pad: choose      (A): select      (B) / Start: %s" % ("close" if _game_over() else "resume")
+			_body.add_child(_menu_view())
+		Screen.BOX_SCORE:
+			_title.text = "BOX SCORE  -  %s" % BOX_PAGES[_box_page]
+			_hint.text = "(LB) / (RB): offense, defense      Stick: scroll      (B): back      Start: resume"
+			_body.add_child(_box_score_view())
+		Screen.TEAM_STATS:
+			_title.text = "TEAM STATS"
+			_hint.text = "Stick: scroll      (B): back      Start: resume"
+			_body.add_child(_team_stats_view())
+		Screen.ROSTER:
+			_title.text = "ROSTER  -  %s" % _roster().team_name.to_upper()
+			_hint.text = "Stick / D-pad: choose a player      (LB) / (RB): other team      (B): back      Start: resume"
+			_body.add_child(_roster_view())
+
+
+func _score_line() -> String:
+	return "%s  %d  -  %d  %s          %s" % [game.home.short_name, game.home.score, game.away.score, game.away.short_name, game.clock_text()]
+
+
+func _menu_view() -> Control:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override(&"separation", 12)
+	column.add_child(_label(_score_line(), 24, TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_spacer(18.0))
+	for i: int in MENU_ITEMS.size():
+		var selected: bool = i == _cursor
+		var item: PanelContainer = PanelContainer.new()
+		item.custom_minimum_size = Vector2(380.0, 58.0)
+		item.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		item.add_theme_stylebox_override(&"panel", _item_selected_style if selected else _item_style)
+		var text: String = "PLAY AGAIN" if i == 0 and _game_over() else MENU_ITEMS[i]
+		var label: Label = _label(text, 26, HUD.NAME_SELECTED_COLOR if selected else HUD.NAME_COLOR, HORIZONTAL_ALIGNMENT_CENTER)
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		item.add_child(label)
+		column.add_child(item)
+	return column
+
+
+## Both teams side by side, a table for each part of the game.
+func _box_score_view() -> Control:
+	var book: StatBook = game.stat_book
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 28)
+	for team: Team in [game.home, game.away]:
+		var column: VBoxContainer = VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_theme_constant_override(&"separation", 3)
+		if _box_page == 0:
+			_add_table(column, team, "PASSING", StatBook.PASSING_HEAD, book.passing_rows(team))
+			_add_table(column, team, "RUSHING", StatBook.RUSHING_HEAD, book.rushing_rows(team))
+			_add_table(column, team, "RECEIVING", StatBook.RECEIVING_HEAD, book.receiving_rows(team))
+		else:
+			_add_table(column, team, "DEFENSE", StatBook.DEFENSE_HEAD, book.defense_rows(team))
+		row.add_child(column)
+	return row
+
+
+func _add_table(column: VBoxContainer, team: Team, what: String, head: PackedStringArray, rows: Array[PackedStringArray]) -> void:
+	if column.get_child_count() > 0:
+		column.add_child(_spacer(8.0))
+	column.add_child(_label("%s %s" % [team.short_name, what], 19, _team_tint(team)))
+	column.add_child(_table_row(head, HEAD_COLOR, DIM_TEXT, 13))
+	for i: int in rows.size():
+		var team_row: bool = i == rows.size() - 1
+		var fill: Color = ROW_COLOR if i % 2 == 1 else Color(0.0, 0.0, 0.0, 0.0)
+		column.add_child(_table_row(rows[i], fill, Color.WHITE if team_row else TEXT, 15))
+
+
+## One line of a table: the name on the left, the numbers in columns of the
+## same width on the right.
+func _table_row(cells: PackedStringArray, fill: Color, color: Color, font_size: int) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.add_theme_stylebox_override(&"panel", _flat(fill, 6.0, 1.0))
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 0)
+	panel.add_child(row)
+	for i: int in cells.size():
+		var cell: Label = _label(cells[i], font_size, color, HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT)
+		if i == 0:
+			cell.custom_minimum_size.x = NAME_WIDTH
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cell.clip_text = true
+		else:
+			cell.custom_minimum_size.x = STAT_WIDTH
+		row.add_child(cell)
+	return panel
+
+
+func _team_stats_view() -> Control:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override(&"separation", 0)
+	column.add_child(_stats_row("", game.home.short_name, game.away.short_name, false, HEAD_COLOR, _team_tint(game.home), _team_tint(game.away)))
+	var rows: Array[Array] = game.stat_book.team_rows()
+	for i: int in rows.size():
+		var cells: Array = rows[i]
+		var label: String = cells[0]
+		var indented: bool = cells[3]
+		var fill: Color = ROW_COLOR if i % 2 == 1 else Color(0.0, 0.0, 0.0, 0.0)
+		column.add_child(_stats_row(label, cells[1], cells[2], indented, fill, TEXT, TEXT))
+	var centered: CenterContainer = CenterContainer.new()
+	column.custom_minimum_size.x = 640.0
+	centered.add_child(column)
+	centered.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return centered
+
+
+func _stats_row(label: String, home: String, away: String, indented: bool, fill: Color, home_color: Color, away_color: Color) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.add_theme_stylebox_override(&"panel", _flat(fill, 10.0, 0.0))
+	var row: HBoxContainer = HBoxContainer.new()
+	panel.add_child(row)
+	var name_label: Label = _label(("      " if indented else "") + label, 14, DIM_TEXT if indented else Color.WHITE)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(name_label)
+	for cell: Array in [[home, home_color], [away, away_color]]:
+		var text: String = cell[0]
+		var color: Color = cell[1]
+		var value: Label = _label(text, 14, color, HORIZONTAL_ALIGNMENT_RIGHT)
+		value.custom_minimum_size.x = 130.0
+		row.add_child(value)
+	return panel
+
+
+func _roster() -> Team:
+	return game.home if _roster_team == 0 else game.away
+
+
+## The team's players down the left, the chosen one's card on the right.
+func _roster_view() -> Control:
+	var team: Team = _roster()
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 24)
+	var list: VBoxContainer = VBoxContainer.new()
+	list.custom_minimum_size.x = 400.0
+	list.add_theme_constant_override(&"separation", 6)
+	row.add_child(list)
+	for i: int in team.players.size():
+		var player: Player = team.players[i]
+		var selected: bool = i == _roster_cursor
+		var item: PanelContainer = PanelContainer.new()
+		item.add_theme_stylebox_override(&"panel", _item_selected_style if selected else _item_style)
+		var line: HBoxContainer = HBoxContainer.new()
+		item.add_child(line)
+		var color: Color = HUD.NAME_SELECTED_COLOR if selected else HUD.NAME_COLOR
+		var who: Label = _label(StatBook.label_of(player), 19, color)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who.clip_text = true
+		line.add_child(who)
+		var role: Label = _label(player.ratings.position, 16, DIM_TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
+		role.custom_minimum_size.x = 56.0
+		line.add_child(role)
+		var overall: Label = _label(str(player.ratings.overall()), 19, color, HORIZONTAL_ALIGNMENT_RIGHT)
+		overall.custom_minimum_size.x = 44.0
+		line.add_child(overall)
+		list.add_child(item)
+	row.add_child(_player_card(team.players[_roster_cursor]))
+	return row
+
+
+func _player_card(player: Player) -> Control:
+	var ratings: PlayerRatings = player.ratings
+	var card: PanelContainer = PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style: StyleBoxFlat = _flat(HUD.CARD_COLOR, 18.0, 12.0)
+	style.border_color = _team_tint(player.team)
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(8)
+	card.add_theme_stylebox_override(&"panel", style)
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override(&"separation", 3)
+	card.add_child(column)
+
+	var head: HBoxContainer = HBoxContainer.new()
+	column.add_child(head)
+	var who: VBoxContainer = VBoxContainer.new()
+	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	who.add_theme_constant_override(&"separation", -2)
+	head.add_child(who)
+	var display: String = ratings.display_name if ratings.display_name != "" else "%s %d" % [ratings.position, player.index + 1]
+	who.add_child(_label(display.to_upper(), 28, Color.WHITE))
+	var number: String = "#%d   " % ratings.number if ratings.number > 0 else ""
+	who.add_child(_label("%s%s   %s" % [number, ratings.position, player.team.team_name], 16, _team_tint(player.team)))
+	var overall: VBoxContainer = VBoxContainer.new()
+	overall.add_theme_constant_override(&"separation", -6)
+	head.add_child(overall)
+	overall.add_child(_label(str(ratings.overall()), 38, GOLD, HORIZONTAL_ALIGNMENT_CENTER))
+	overall.add_child(_label("OVERALL", 12, DIM_TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_spacer(6.0))
+
+	for rating: Array in ratings.card_ratings():
+		var text: String = rating[0]
+		var value: int = rating[1]
+		var key: bool = rating[2]
+		var line: HBoxContainer = HBoxContainer.new()
+		line.add_theme_constant_override(&"separation", 12)
+		var name_label: Label = _label(text, 15, Color.WHITE if key else DIM_TEXT)
+		name_label.custom_minimum_size.x = 170.0
+		line.add_child(name_label)
+		var bar: ProgressBar = ProgressBar.new()
+		bar.max_value = 100.0
+		bar.value = value
+		bar.show_percentage = false
+		bar.custom_minimum_size.y = 12.0
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.add_theme_stylebox_override(&"background", _flat(BAR_BACK, 0.0, 0.0))
+		bar.add_theme_stylebox_override(&"fill", _flat(GOLD if key else BAR_COLOR, 0.0, 0.0))
+		line.add_child(bar)
+		var number_label: Label = _label(str(value), 16, Color.WHITE if key else TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
+		number_label.custom_minimum_size.x = 34.0
+		line.add_child(number_label)
+		column.add_child(line)
+
+	column.add_child(_spacer(6.0))
+	column.add_child(_label("THIS GAME", 13, DIM_TEXT))
+	for line: String in game.stat_book.player_summary(player):
+		column.add_child(_label(line, 15, TEXT))
+	return card
+
+
+# --- Building blocks -----------------------------------------------------------------
+
+func _build() -> void:
+	_item_style = _flat(HUD.CARD_COLOR, 14.0, 8.0)
+	_item_style.border_color = HUD.CARD_BORDER
+	_item_style.set_border_width_all(2)
+	_item_style.set_corner_radius_all(6)
+	_item_selected_style = _flat(HUD.CARD_SELECTED_COLOR, 14.0, 8.0)
+	_item_selected_style.border_color = HUD.CARD_SELECTED_BORDER
+	_item_selected_style.set_border_width_all(2)
+	_item_selected_style.set_corner_radius_all(6)
+
+	var dim: ColorRect = ColorRect.new()
+	dim.color = Color(0.0, 0.0, 0.0, 0.6)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dim)
+
+	var panel: PanelContainer = PanelContainer.new()
+	var style: StyleBoxFlat = _flat(Color(0.05, 0.06, 0.09, 0.96), 22.0, 12.0)
+	style.border_color = GOLD
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(8)
+	panel.add_theme_stylebox_override(&"panel", style)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -PANEL_SIZE.x * 0.5
+	panel.offset_right = PANEL_SIZE.x * 0.5
+	panel.offset_top = -PANEL_SIZE.y * 0.5 + 20.0
+	panel.offset_bottom = PANEL_SIZE.y * 0.5 + 20.0
+	add_child(panel)
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override(&"separation", 8)
+	panel.add_child(column)
+	_title = _label("PAUSED", 28, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
+	column.add_child(_title)
+	_scroll = ScrollContainer.new()
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(_scroll)
+	_body = MarginContainer.new()
+	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_body.add_theme_constant_override(&"margin_right", 10)
+	_scroll.add_child(_body)
+	_hint = _label("", 15, DIM_TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	column.add_child(_hint)
+
+	_sound = AudioStreamPlayer.new()
+	_sound.bus = AudioDirector.BUS_UI
+	add_child(_sound)
+
+
+func _label(text: String, font_size: int, color: Color, align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+	var label: Label = Label.new()
+	label.text = text
+	label.horizontal_alignment = align
+	label.add_theme_font_size_override(&"font_size", font_size)
+	label.add_theme_color_override(&"font_color", color)
+	return label
+
+
+func _spacer(height: float) -> Control:
+	var spacer: Control = Control.new()
+	spacer.custom_minimum_size.y = height
+	return spacer
+
+
+func _flat(fill: Color, margin_x: float, margin_y: float) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.content_margin_left = margin_x
+	style.content_margin_right = margin_x
+	style.content_margin_top = margin_y
+	style.content_margin_bottom = margin_y
+	return style
+
+
+## The team's colour, lightened enough to read on the dark panel.
+func _team_tint(team: Team) -> Color:
+	return team.team_color.lerp(Color.WHITE, 0.45)

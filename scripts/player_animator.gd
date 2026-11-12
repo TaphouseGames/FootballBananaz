@@ -600,7 +600,10 @@ func _build_pose(delta: float) -> void:
 
 	if player.has_ball:
 		# A quarterback sprinting on turbo tucks it until his feet are set again.
-		if player == pc.qb and pc.phase == PlayController.Phase.POCKET and not pc.ball_dead and player.feet_set >= 1.0 and not player.is_tucked():
+		if player == pc.qb and pc.faking() and not pc.ball_dead and not player.is_tucked():
+			_mode = 4
+			_fake_handoff()
+		elif player == pc.qb and pc.phase == PlayController.Phase.POCKET and not pc.ball_dead and player.feet_set >= 1.0 and not player.is_tucked():
 			_mode = 2
 			_qb_cocked()
 		else:
@@ -609,6 +612,9 @@ func _build_pose(delta: float) -> void:
 	elif _throw_timer > 0.0:
 		_mode = 3
 		_throw_follow_through()
+	elif player == pc.runner and pc.selling_run():
+		_mode = 5
+		_fake_carry()
 	elif pc.ball_dead:
 		pass
 	elif ball.state == Ball.State.FLIGHT and _reach_for_pass(ball):
@@ -788,6 +794,24 @@ func _tuck_ball() -> void:
 	_ball_hand = B.HAND_L
 	_pose[B.ARM_L] = Vector3(-18.0, -35.0, -72.0)
 	_pose[B.FORE_L] = Vector3(0.0, -112.0, 0.0)
+	_pose[B.CHEST].y *= 0.4
+
+
+## Play action, the quarterback: the ball held out low in front of him for the
+## back to run over.
+func _fake_handoff() -> void:
+	_ball_hand = B.HAND_R
+	_pose[B.SPINE].x = 14.0
+	_pose[B.HEAD].x = -8.0
+	_set_arms(Vector3(-42.0, 0.0, -78.0), Vector3(0.0, -38.0, 0.0))
+
+
+## Play action, the back: both arms folded over a ball that is not there, head
+## down for the hole.
+func _fake_carry() -> void:
+	_set_arms(Vector3(-18.0, -35.0, -72.0), Vector3(0.0, -112.0, 0.0))
+	_pose[B.SPINE].x += 14.0
+	_pose[B.HEAD].x -= 8.0
 	_pose[B.CHEST].y *= 0.4
 
 

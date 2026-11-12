@@ -6,6 +6,8 @@ extends Resource
 
 @export var display_name: String = ""
 @export_enum("QB", "LINE", "WR", "RB") var position: String = "LINE"
+## Jersey number. 0 = none.
+@export_range(0, 99) var number: int = 0
 
 @export_group("Everyone")
 ## Run speed, with and without turbo.
@@ -43,6 +45,53 @@ extends Resource
 @export_range(0, 100) var accuracy: int = 50
 ## How well he throws without his feet set.
 @export_range(0, 100) var agility: int = 50
+
+
+## The ratings that make a player at each position, best described first.
+const KEY_RATINGS: Dictionary[String, Array] = {
+	"QB": [&"accuracy", &"power", &"agility", &"speed"],
+	"WR": [&"get_open", &"catching", &"speed", &"juke"],
+	"RB": [&"speed", &"juke", &"strength", &"security"],
+	"LINE": [&"blocking", &"tackling", &"strength"],
+}
+## Every rating a player card shows, in order, with the name it goes by there.
+## The last three only mean something for a quarterback.
+const CARD_ORDER: Array[StringName] = [
+	&"speed", &"endurance", &"strength", &"blocking", &"tackling", &"coverage",
+	&"get_open", &"catching", &"juke", &"security", &"power", &"accuracy", &"agility",
+]
+const CARD_LABELS: Dictionary[StringName, String] = {
+	&"speed": "SPEED", &"endurance": "ENDURANCE", &"strength": "STRENGTH",
+	&"blocking": "BLOCKING", &"tackling": "TACKLING", &"coverage": "COVERAGE",
+	&"get_open": "GET OPEN", &"catching": "CATCHING", &"juke": "JUKE",
+	&"security": "BALL SECURITY", &"power": "THROW POWER", &"accuracy": "THROW ACCURACY",
+	&"agility": "THROW ON THE RUN",
+}
+const QB_ONLY: Array[StringName] = [&"power", &"accuracy", &"agility"]
+
+
+## One number for how good he is at his position: the mean of its key ratings.
+func overall() -> int:
+	var keys: Array = KEY_RATINGS.get(position, KEY_RATINGS["LINE"])
+	var sum: int = 0
+	for key: StringName in keys:
+		var value: int = get(key)
+		sum += value
+	return roundi(float(sum) / float(keys.size()))
+
+
+## [label, value, is a key rating] for each rating on his card: the ones his
+## position lives on first, then the rest.
+func card_ratings() -> Array[Array]:
+	var keys: Array = KEY_RATINGS.get(position, KEY_RATINGS["LINE"])
+	var rows: Array[Array] = []
+	for key: StringName in keys:
+		rows.append([CARD_LABELS[key], get(key), true])
+	for key: StringName in CARD_ORDER:
+		if keys.has(key) or (position != "QB" and QB_ONLY.has(key)):
+			continue
+		rows.append([CARD_LABELS[key], get(key), false])
+	return rows
 
 
 ## What a rating is worth: `low` for a player rated 0, `high` for one rated 100.

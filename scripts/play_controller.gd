@@ -39,6 +39,19 @@ var final_team: Team
 var was_sack: bool = false
 ## The last change of possession in this play was a recovered fumble.
 var was_fumble: bool = false
+## For the box score (StatBook): who threw the pass and to whom, who came down
+## with it, who made the tackle that ended the play, and who knocked the ball
+## out, where, and who got it back.
+var passer: Player
+var pass_intended: Player
+var catcher: Player
+var interceptor: Player
+var tackled_by: Player
+var fumble_forcer: Player
+var fumble_recoverer: Player
+var fumble_x: float = 0.0
+## Where the returner fielded the kickoff.
+var return_from_x: float = 0.0
 ## Who last lost the ball in this play (null = nobody has), how long it has now
 ## been loose, and how long since anyone last touched it.
 var fumbler: Player
@@ -97,7 +110,7 @@ var _tip_bad_throw: bool = false
 ## (0..1), and whether this is a last-play heave. See GameSituation.
 var qb_urgency: float = 0.0
 var heave: bool = false
-## What the color commentator makes of the last touchdown, or nothing.
+## What Tony, the color commentator, makes of the last touchdown, or nothing.
 var touchdown_quip: StringName = &""
 ## For the tests: only this team gets the CPU edge (null = the usual rule).
 var edge_team: Team
@@ -262,6 +275,15 @@ func _reset_play() -> void:
 	was_sack = false
 	was_fumble = false
 	fumbler = null
+	passer = null
+	pass_intended = null
+	catcher = null
+	interceptor = null
+	tackled_by = null
+	fumble_forcer = null
+	fumble_recoverer = null
+	fumble_x = 0.0
+	return_from_x = 0.0
 	loose_time = 0.0
 	_loose_untouched = 0.0
 	was_dive = false
@@ -511,6 +533,12 @@ func faking() -> bool:
 	return off_play != null and off_play.play_action and live_time < off_play.handoff_delay
 
 
+## Play action: the back is still running as if he had been given the ball.
+func selling_run() -> bool:
+	return off_play != null and off_play.play_action and runner != null and not ball_dead \
+			and phase == Phase.POCKET and live_time < off_play.handoff_delay + tuning.play_action_sell_time
+
+
 ## Play action: decides at the line-up which coverage defenders will come up
 ## for the faked handoff. An offense that has been running sells it better; a
 ## play the defense recognises sells it worse.
@@ -562,6 +590,8 @@ func simulate(delta: float) -> void:
 	# On a kickoff the clock starts at the catch.
 	if not (kickoff and phase == Phase.AIR):
 		game.tick_clock(delta)
+		if not game.conversion:
+			game.stat_book.add_possession(offense, delta)
 	_try_handoff()
 	human.update_live()
 	_think_and_move(delta)
@@ -702,7 +732,12 @@ func _aim_quarterback() -> void:
 	qb.look_dir = Vector3.ZERO
 	if phase == Phase.POCKET and ball.carrier == qb:
 		# Tucked and running, he faces the way he runs like any other carrier.
-		if not qb.is_tucked():
+		if faking() and runner != null and runner != qb:
+			# He turns to the back to put the ball in his belly.
+			var to_back: Vector3 = runner.position - qb.position
+			to_back.y = 0.0
+			qb.look_dir = to_back
+		elif not qb.is_tucked():
 			qb.look_dir = Vector3(off_dir, 0.0, 0.0)
 	elif phase == Phase.AIR and ball.thrower == qb:
 		var to_target: Vector3 = ball.target_point - qb.position
@@ -844,6 +879,7 @@ func end_play(p_result: Result, spot_x: float) -> void:
 				game.add_stat(StringName(kind + "_sacks"))
 	if ball.carrier != null:
 		ball.carrier.release_drag()
+	game.stat_book.record_play(game)
 	if result == Result.TOUCHDOWN:
 		_start_celebration()
 	_update_markers()
@@ -1078,6 +1114,8 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	_pick_ball_breakers()
 	phase = Phase.AIR
 	throw_time = live_time
+	passer = qb
+	pass_intended = target
 	game.add_stat(&"passes")
 	game.audio.play(&"throw", 0.45, lerpf(0.9, 1.15, power))
 	human.on_throw(target)
@@ -1087,6 +1125,7 @@ func _resolve_pass_arrival() -> void:
 	if kickoff:
 		# The returner always fields it.
 		_take_pass(returner)
+		return_from_x = returner.position.x
 		phase = Phase.RUN
 		game.add_stat(&"kick_returns")
 		game.audio.play(&"catch")
@@ -1101,32 +1140,7 @@ func _resolve_pass_arrival() -> void:
 	var defender: Player = _best_catcher(defense.players, point, null)
 
 	if receiver != null:
-		# Every defender crowding the receiver makes the catch harder.
-		var chance: float = tuning.catch_base_chance
-		var incoming: Vector3 = receiver.position - ball.thrower.position
-		incoming.y = 0.0
-		incoming = incoming.normalized()
-		# 1 when he waits for the ball or comes back to it, 0 running away from it.
-		var facing_ball: float = clampf(1.0 - receiver.velocity.dot(incoming) / tuning.run_speed, 0.0, 1.0)
-		for opponent: Player in defense.players:
-			if opponent.is_down():
-				continue
-			var offset: Vector3 = opponent.position - receiver.position
-			offset.y = 0.0
-			var dist: float = offset.length()
-			if dist < tuning.cover_radius:
-				var penalty: float = (1.0 - dist / tuning.cover_radius) * tuning.cover_penalty
-				# A defender on the far side of the receiver has to play through him.
-				var behind: float = maxf(offset.normalized().dot(incoming), 0.0) if dist > 0.01 else 0.0
-				penalty *= 1.0 - tuning.cover_shield * behind * facing_ball
-				chance -= penalty
-		# So does one who went up for the ball.
-		for opponent: Player in defense.players:
-			if (opponent.is_airborne() or opponent.dive_reach_timer > 0.0) and _flat_distance(opponent.position, point) <= catch_reach(opponent, point):
-				chance -= tuning.contest_penalty
-		chance *= _catch_scale(receiver)
-		chance = clampf(chance, tuning.catch_min_chance, 1.0)
-		if randf() < chance:
+		if randf() < catch_chance(receiver, point):
 			if receiver.is_airborne():
 				game.add_stat(&"jump_catches")
 			elif receiver.dive_reach_timer > 0.0:
@@ -1163,15 +1177,58 @@ func _resolve_pass_arrival() -> void:
 		_tip_pass(null, ball.flight_velocity_now())
 
 
+## Chance that `receiver` holds on to the pass coming down at `point`. Every
+## defender crowding him makes the catch harder, and a diving catch much more
+## so: stretched out he cannot shield the ball, and a second man close by
+## makes it a long shot.
+func catch_chance(receiver: Player, point: Vector3) -> float:
+	var chance: float = tuning.catch_base_chance
+	var diving: bool = receiver.dive_reach_timer > 0.0 and not receiver.is_airborne()
+	var incoming: Vector3 = receiver.position - ball.thrower.position
+	incoming.y = 0.0
+	incoming = incoming.normalized()
+	# 1 when he waits for the ball or comes back to it, 0 running away from it.
+	var facing_ball: float = clampf(1.0 - receiver.velocity.dot(incoming) / tuning.run_speed, 0.0, 1.0)
+	var crowd: int = 0
+	for opponent: Player in defense.players:
+		if opponent.is_down():
+			continue
+		var offset: Vector3 = opponent.position - receiver.position
+		offset.y = 0.0
+		var dist: float = offset.length()
+		if diving:
+			# The dive took him away from his man: one at the ball counts as well.
+			dist = minf(dist, _flat_distance(opponent.position, point))
+			if dist < tuning.dive_cover_radius:
+				chance -= (1.0 - dist / tuning.dive_cover_radius) * tuning.dive_cover_penalty
+			if dist < tuning.dive_crowd_radius:
+				crowd += 1
+		elif dist < tuning.cover_radius:
+			var penalty: float = (1.0 - dist / tuning.cover_radius) * tuning.cover_penalty
+			# A defender on the far side of the receiver has to play through him.
+			var behind: float = maxf(offset.normalized().dot(incoming), 0.0) if dist > 0.01 else 0.0
+			penalty *= 1.0 - tuning.cover_shield * behind * facing_ball
+			chance -= penalty
+	chance -= maxi(crowd - 1, 0) * tuning.dive_crowd_penalty
+	# So does one who went up for the ball.
+	for opponent: Player in defense.players:
+		if (opponent.is_airborne() or opponent.dive_reach_timer > 0.0) and _flat_distance(opponent.position, point) <= catch_reach(opponent, point):
+			chance -= tuning.contest_penalty
+	chance *= _catch_scale(receiver)
+	return clampf(chance, tuning.catch_min_chance, 1.0)
+
+
 ## An offensive player has caught the pass, at its spot or off a tip.
 func _complete_pass(receiver: Player) -> void:
 	_take_pass(receiver)
 	receiver.jolt(receiver.position - ball.thrower.position, 0.5)
 	phase = Phase.RUN
 	_completed = true
+	catcher = receiver
 	game.add_stat(&"completions")
 	if receiver.is_airborne() or receiver.dive_reach_timer > 0.0:
 		game.audio.remark(&"announcer_catch", AudioDirector.REMARK_CATCH)
+		game.audio.quip(&"color_catch", AudioDirector.QUIP_CATCH)
 	elif (ball.target_point.x - los_x) * off_dir >= tuning.audio_deep_throw_yards:
 		game.audio.remark(&"announcer_throw", AudioDirector.REMARK_THROW)
 	game.audio.play(&"catch")
@@ -1324,6 +1381,7 @@ func _guide_pass() -> void:
 func _intercept(defender: Player) -> void:
 	was_fumble = false
 	_take_pass(defender)
+	interceptor = defender
 	phase = Phase.RUN
 	game.add_stat(&"interceptions")
 	game.audio.play(&"catch")
@@ -1572,6 +1630,7 @@ func _check_hit(attacker: Player, victim: Player, offset: Vector3, dist: float) 
 					attacker.tackle_cooldown = tuning.tackle_retry_time
 					game.add_stat(&"hurdles")
 					game.audio.remark(&"announcer_hurdle", AudioDirector.REMARK_HURDLE)
+					game.audio.quip(&"color_hurdle", AudioDirector.QUIP_HURDLE)
 					return
 			_attempt_tackle(attacker, victim, true)
 		elif attacker.has_ball:
@@ -1649,6 +1708,8 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 ## The carrier goes down and the play is over.
 func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackler: Player = null, big: bool = false) -> void:
 	var carried: Vector3 = carrier.velocity
+	# A drag that ends with him going down is the tackle of the man hanging on.
+	tackled_by = tackler if tackler != null else carrier.drag_partner
 	carrier.knock_down(dir * tuning.tackle_knockdown_impulse, tuning.knockdown_time, kind)
 	game.add_stat(&"tackles")
 	game.audio.hit(tackler, carrier, big)
@@ -1663,6 +1724,7 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 	if was_sack:
 		game.add_stat(&"sacks")
 		game.audio.shout(&"announcer_sack")
+		game.audio.quip(&"color_sack", AudioDirector.QUIP_SACK)
 		game.audio.crowd_react(carrier.team.opponent, 0.7)
 	end_play(Result.TACKLED, _carrier_spot_x(carrier))
 
@@ -1699,6 +1761,10 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 	game.audio.shout(&"announcer_fumble")
 	game.audio.quip(&"color_confused", AudioDirector.QUIP_CONFUSED)
 	fumbler = carrier
+	fumble_forcer = tackled_by
+	fumble_recoverer = null
+	fumble_x = carrier.position.x
+	tackled_by = null
 	phase = Phase.LOOSE
 	loose_time = 0.0
 	_loose_untouched = 0.0
@@ -1786,6 +1852,7 @@ func _grab_loose_ball(player: Player) -> void:
 		game.audio.play(&"ball_bounce", 0.8)
 		return
 	_take_pass(player)
+	fumble_recoverer = player
 	phase = Phase.RUN
 	game.hud.hide_banner()
 	game.add_stat(&"fumble_recoveries")

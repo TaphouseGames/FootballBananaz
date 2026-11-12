@@ -55,6 +55,8 @@ func _report() -> bool:
 			_failures.append("no file for '%s'" % sound)
 	for sound: StringName in audio.missing:
 		_failures.append("asked for '%s', which has no file" % sound)
+	for chat: String in audio.broken_exchanges:
+		_failures.append("exchange '%s' has a part missing or a bad name" % chat)
 	for sound: StringName in EXPECTED:
 		if audio.play_counts.get(sound, 0) == 0:
 			_failures.append("'%s' never played" % sound)
@@ -66,6 +68,7 @@ func _report() -> bool:
 		print("  %-26s %d" % [sound, audio.play_counts[sound]])
 	print("Remarks asked for (before chance and gap): %s" % str(audio.remark_asks))
 	print("Quips asked for (before chance and gap): %s" % str(audio.quip_asks))
+	print("Exchanges between the two: %s" % str(audio.exchange_counts))
 	var quiet: PackedStringArray = PackedStringArray()
 	for sound: StringName in named:
 		if not audio.play_counts.has(sound):

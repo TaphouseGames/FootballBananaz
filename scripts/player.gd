@@ -13,6 +13,10 @@ const JERSEY_SHADER: Shader = preload("res://assets/player/player_jersey.gdshade
 ## A fall that has gone on this long counts as landed whatever it looks like, so
 ## a play can never be left waiting for one.
 const GROUNDED_TIMEOUT: float = 0.4
+## World size of one pixel of the name under the control ring, and how far below
+## the ring's centre the name starts, in yards on screen.
+const NAME_TAG_PIXEL: float = 0.0125
+const NAME_TAG_DROP: float = 1.35
 
 ## Which part of the model's texture is repainted in the team colour: the grey
 ## cloth (true) or the green jersey (false). Set per model in the player scene.
@@ -92,6 +96,8 @@ var _flash_material: StandardMaterial3D
 var _flash_color: Color = Color.WHITE
 var _flash_strength: float = 0.0
 var _flash_left: float = 0.0
+## Made the first time the person takes this player over.
+var _name_tag: Label3D
 
 @onready var body: Node3D = $Body
 @onready var control_ring: MeshInstance3D = $ControlRing
@@ -211,6 +217,30 @@ func hold_frame() -> Transform3D:
 
 func set_controlled(value: bool) -> void:
 	control_ring.visible = value
+	if value and _name_tag == null and ratings != null and ratings.display_name != "":
+		_name_tag = _make_name_tag()
+	if _name_tag != null:
+		_name_tag.visible = value
+
+
+## His name in small letters, just below the ring on screen whichever way the
+## camera looks.
+func _make_name_tag() -> Label3D:
+	var tag: Label3D = Label3D.new()
+	tag.text = ratings.display_name.to_upper()
+	tag.position = control_ring.position
+	tag.pixel_size = NAME_TAG_PIXEL
+	tag.offset = Vector2(0.0, -NAME_TAG_DROP / NAME_TAG_PIXEL)
+	tag.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.no_depth_test = true
+	tag.render_priority = 4
+	tag.outline_render_priority = 3
+	tag.font_size = 44
+	tag.outline_size = 14
+	tag.outline_modulate = Color(0.05, 0.05, 0.08)
+	add_child(tag)
+	return tag
 
 
 ## Button prompt above the head for "throw to this receiver". Empty text hides it.

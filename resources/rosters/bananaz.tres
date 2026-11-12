@@ -6,6 +6,7 @@
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Dash Plantain"
+number = 7
 position = "QB"
 coverage = 45
 get_open = 40
@@ -24,6 +25,7 @@ agility = 85
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")
 display_name = "Moe Peel"
+number = 61
 position = "LINE"
 coverage = 35
 get_open = 25
@@ -33,6 +35,7 @@ tackling = 55
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Big Bunch"
+number = 74
 position = "LINE"
 coverage = 30
 get_open = 20
@@ -44,6 +47,7 @@ strength = 65
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Lou Ripe"
+number = 55
 position = "LINE"
 coverage = 40
 get_open = 25
@@ -53,6 +57,7 @@ tackling = 68
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Zip Cavendish"
+number = 81
 position = "WR"
 coverage = 62
 get_open = 85
@@ -68,6 +73,7 @@ security = 45
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Sticky Fingers"
+number = 88
 position = "WR"
 coverage = 55
 get_open = 68
@@ -82,6 +88,7 @@ security = 70
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Slip Chiquita"
+number = 22
 position = "RB"
 coverage = 50
 get_open = 72

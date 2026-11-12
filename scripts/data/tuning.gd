@@ -114,6 +114,14 @@ extends Resource
 @export var dive_ball_range: float = 6.0
 ## Slowest such dive: a short lunge at a ball that is close.
 @export var dive_ball_min_speed: float = 5.0
+## Defenders within this many yards of a diving receiver, or of the spot the
+## ball comes down, reduce his catch chance (in place of cover_radius).
+@export var dive_cover_radius: float = 5.0
+## Chance removed by one defender right on him (in place of cover_penalty; no shielding).
+@export var dive_cover_penalty: float = 0.65
+## Each defender after the first inside this range takes off dive_crowd_penalty more.
+@export var dive_crowd_radius: float = 3.0
+@export var dive_crowd_penalty: float = 0.15
 
 @export_group("Passing")
 ## Pass power runs from 0 (lob) to 1 (bullet) and sets the flat speed between
@@ -448,14 +456,18 @@ extends Resource
 ## between two of them, and a scale on how often he makes one (0 = never).
 @export var audio_remark_gap: float = 8.0
 @export var audio_remark_scale: float = 1.0
-## The color commentator: her linear volume, the real seconds she waits between
-## two quips and before saying the same line again, a scale on how often she
-## has one (0 = never), and the chance of idle chatter while a play is picked.
+## Tony, the color commentator: his linear volume, the real seconds he waits
+## between two quips and before saying the same line again, a scale on how often
+## he has one (0 = never), and the chance of idle chatter while a play is picked.
 @export var audio_color_level: float = 1.0
-@export var audio_color_gap: float = 12.0
+@export var audio_color_gap: float = 10.0
 @export var audio_color_repeat_gap: float = 120.0
 @export var audio_color_scale: float = 1.0
-@export var audio_color_idle_chance: float = 0.12
+@export var audio_color_idle_chance: float = 0.25
+## His idle chatter is about a rout when the margin is at least this many
+## points, and about a tight one in the second half within this many.
+@export var audio_blowout_points: int = 17
+@export var audio_close_points: int = 7
 ## A touchdown is a walk-in when no defender on his feet is within this many
 ## yards of the scorer, and a long one when the play gained at least this many.
 @export var audio_walk_in_yards: float = 6.0
@@ -664,6 +676,9 @@ extends Resource
 ## runs and `high` for one that only runs.
 @export var ai_play_action_run_scale_low: float = 0.3
 @export var ai_play_action_run_scale_high: float = 1.5
+## Play action: seconds after the fake that the back keeps running as if he had
+## the ball.
+@export var play_action_sell_time: float = 0.6
 ## Delay before defenders break on a thrown ball.
 @export var ai_ball_react_time: float = 0.25
 @export var ai_ball_react_radius: float = 14.0

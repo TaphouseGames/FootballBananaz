@@ -36,6 +36,8 @@ var stats: Dictionary[StringName, int] = {}
 var play_caller: PlayCaller = PlayCaller.new()
 ## What each defense has seen the other offense do.
 var scout: Scout = Scout.new()
+## The box score: each team's and each player's numbers (see the pause menu).
+var stat_book: StatBook = StatBook.new()
 
 var _hit_stop_left: float = 0.0
 ## Team the camera sits behind, and the offense it was last set from.
@@ -56,6 +58,7 @@ var _camera_offense: Team
 func _ready() -> void:
 	home.setup(tuning, away)
 	away.setup(tuning, home)
+	stat_book.setup(home, away)
 	field.setup(tuning, home, away)
 	camera_rig.setup(tuning)
 	human.setup(self)
@@ -114,6 +117,7 @@ func start_drive(team: Team, x: float) -> void:
 	down = 1
 	_set_first_down_target()
 	add_stat(&"drives")
+	stat_book.begin_drive(team)
 
 
 ## The try after a touchdown is untimed.
