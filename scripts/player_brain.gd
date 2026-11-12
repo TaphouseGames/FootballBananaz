@@ -10,6 +10,9 @@ extends RefCounted
 const KICKOFF_WALL_DEPTH: float = 12.0
 const KICKOFF_BLOCK_RANGE: float = 9.0
 const KICKOFF_LANE_DEPTH: float = 18.0
+## A route has cut once its heading is further than this (as a dot product, about
+## 25 degrees) from the leg the receiver is on.
+const ROUTE_CUT_DOT: float = 0.9
 
 var player: Player
 var tuning: Tuning
@@ -22,6 +25,10 @@ var route: PackedVector3Array = PackedVector3Array()
 var route_index: int = 0
 var route_exit_dir: Vector3 = Vector3.ZERO
 var start_point: Vector3 = Vector3.ZERO
+## Set by route_ahead(): which way he is heading at that moment (zero if he has
+## stopped), and whether the route has turned him or stopped him by then.
+var route_ahead_dir: Vector3 = Vector3.ZERO
+var route_ahead_cut: bool = false
 
 var man_target: Player
 var zone_center: Vector3 = Vector3.ZERO
@@ -44,6 +51,13 @@ var _move_late: float = 0.0
 var _keeper_rolled: bool = false
 var _keeper_time: float = -1.0
 var _late_hit_used: bool = false
+## Set by PlayController at a score against his team: this long after the
+## whistle he goes for one of the players celebrating (negative = he does not),
+## and whether it is the scorer he is after or whoever is nearest.
+var cheap_shot_delay: float = -1.0
+var cheap_shot_scorer: bool = true
+## He has reached his place in the huddle round the scorer.
+var _at_party: bool = false
 var _delta: float = 0.0
 ## What a coverage defender believes his receiver is doing. It follows the real
 ## velocity with a short delay, so a sharp cut buys the receiver a step.
@@ -299,6 +313,10 @@ func _quarterback(pc: PlayController) -> void:
 	_seek(drop_point)
 	if pc.off_play.is_run:
 		return
+	if pc.heave:
+		if not pc.faking():
+			_heave(pc)
+		return
 	if not pc.faking() and _keeps_it(pc):
 		return
 	if pc.live_time < tuning.ai_qb_min_time or _decision_timer > 0.0:
@@ -321,11 +339,45 @@ func _quarterback(pc: PlayController) -> void:
 		pc.throw_ball(best, power, choose_placement(pc, best, power))
 
 
+## The last play, with the end zone a long way off: nothing short is any use
+## and neither is running. He waits until a lob would drop on his deepest man
+## in the end zone or at the end of his own range, then puts it up for him. A
+## rusher in his face or the wait getting too long makes him let go sooner.
+func _heave(pc: PlayController) -> void:
+	if pc.live_time < tuning.ai_qb_min_time or _decision_timer > 0.0 or not pc.can_pass():
+		return
+	_decision_timer = 0.1
+	var target: Player = null
+	var best_score: float = -INF
+	for receiver: Player in pc.eligible:
+		if receiver.is_down():
+			continue
+		# Depth first; how open he is only settles it between men at about the
+		# same depth.
+		var score: float = (receiver.position.x - pc.los_x) * pc.off_dir + _open_for(pc, receiver)
+		if score > best_score:
+			best_score = score
+			target = receiver
+	if target == null:
+		return
+	var pressured: bool = pc.nearest_opponent_distance(player) < tuning.ai_qb_pressure_radius
+	# Always put up high: the longer it hangs, the further he has run under it.
+	var power: float = tuning.ai_qb_lob_power
+	var spot: Vector3 = pc.pass_spot(target, pc.pass_speed(power))
+	var in_end_zone: bool = (spot.x - tuning.goal_x(player.team.attack_dir)) * pc.off_dir >= 2.0
+	var at_range: bool = _flat_distance(player.position, spot) >= pc.pass_range() - tuning.ai_qb_heave_range_margin
+	if pressured or in_end_zone or at_range or pc.live_time >= tuning.ai_qb_heave_max_time:
+		pc.game.add_stat(&"heaves")
+		pc.throw_ball(target, power, PlayController.Placement.NORMAL)
+
+
 ## The receiver most worth throwing to right now, or null. `checkdowns` also
 ## counts the ones short of ai_qb_min_depth.
 func _best_receiver(pc: PlayController, checkdowns: bool) -> Player:
 	var best: Player = null
 	var best_score: float = -INF
+	# Short of time, yards count for more next to how open a man is.
+	var depth_bonus: float = lerpf(tuning.ai_qb_depth_bonus, tuning.ai_qb_urgent_depth_bonus, pc.qb_urgency)
 	for receiver: Player in pc.eligible:
 		if receiver.is_down():
 			continue
@@ -335,7 +387,7 @@ func _best_receiver(pc: PlayController, checkdowns: bool) -> Player:
 		# No point throwing further than his arm reaches.
 		if _flat_distance(receiver.position, player.position) > pc.pass_range():
 			continue
-		var score: float = _open_for(pc, receiver) + downfield * 0.08
+		var score: float = _open_for(pc, receiver) + downfield * depth_bonus
 		if score > best_score:
 			best_score = score
 			best = receiver
@@ -395,8 +447,7 @@ func start_scramble(rollout: float = 0.0, keep: bool = false, width: float = 5.0
 ## would be thrown at.
 func _open_at_catch(pc: PlayController, receiver: Player) -> float:
 	var speed: float = lerpf(tuning.pass_lob_speed, tuning.pass_bullet_speed, tuning.ai_qb_normal_power)
-	var lead: float = minf(Ball.intercept_time(player.position, receiver.position, receiver.velocity, speed), tuning.pass_max_lead_time)
-	var spot: Vector3 = receiver.position + receiver.velocity * lead
+	var spot: Vector3 = pc.pass_spot(receiver, speed)
 	var best: float = INF
 	for opponent: Player in receiver.team.opponent.players:
 		if not opponent.is_down():
@@ -433,6 +484,9 @@ func choose_pass(pc: PlayController, target: Player, open: float, pressured: boo
 func choose_placement(pc: PlayController, target: Player, power: float) -> PlayController.Placement:
 	var speed: float = pc.pass_speed(power)
 	var normal: Vector3 = pc.pass_spot(target, speed)
+	# About to cut or stop: he throws the route.
+	if pc.aim_cuts:
+		return PlayController.Placement.NORMAL
 	var flight: float = _flat_distance(player.position, normal) / speed
 	var run: Vector3 = Vector3(target.velocity.x, 0.0, target.velocity.z)
 	if run.length() < tuning.run_speed * 0.5:
@@ -495,6 +549,67 @@ func _run_route(pc: PlayController) -> void:
 			return
 	if _is_receiver(pc):
 		_work_open(pc)
+
+
+## The CPU is still running him through the waypoints of his route.
+func on_route(pc: PlayController) -> bool:
+	return is_offense and off_assign != null and pc.phase == PlayController.Phase.POCKET \
+			and _is_receiver(pc) and route_index < route.size() \
+			and player != pc.human.controlled
+
+
+## Where his route has him `seconds` from now: along the waypoints still to
+## come, then stopped at the end or running on, as the route says. Off his route
+## (it is over, or a person has him) it is simply where his run takes him.
+## Also sets `route_ahead_dir` and `route_ahead_cut`.
+func route_ahead(pc: PlayController, seconds: float) -> Vector3:
+	var run: Vector3 = Vector3(player.velocity.x, 0.0, player.velocity.z)
+	route_ahead_cut = false
+	if not on_route(pc):
+		route_ahead_dir = run.normalized() if run.length() > 0.5 else Vector3.ZERO
+		return player.position + run * seconds
+	var left: float = maxf(run.length(), player.max_speed()) * maxf(seconds, 0.0)
+	var at: Vector3 = player.position
+	if off_assign.settle:
+		# A route that stops: if he can get to the end of it in time by
+		# sprinting, that is where he will be, not somewhere on the way.
+		var rest: float = 0.0
+		for i: int in range(route_index, route.size()):
+			rest += _flat_distance(at, route[i])
+			at = route[i]
+		if rest <= left * (1.0 if player.turbo_locked else tuning.turbo_speed_multiplier):
+			route_ahead_dir = Vector3.ZERO
+			route_ahead_cut = true
+			return Vector3(at.x, player.position.y, at.z)
+		at = player.position
+	var first_dir: Vector3 = Vector3.ZERO
+	for i: int in range(route_index, route.size()):
+		var leg: Vector3 = route[i] - at
+		leg.y = 0.0
+		var length: float = leg.length()
+		if length < 0.001:
+			continue
+		var dir: Vector3 = leg / length
+		if first_dir == Vector3.ZERO:
+			first_dir = dir
+		if left <= length:
+			route_ahead_dir = dir
+			route_ahead_cut = dir.dot(first_dir) < ROUTE_CUT_DOT
+			return at + dir * left
+		left -= length
+		at += leg
+	if off_assign.settle or route_exit_dir == Vector3.ZERO:
+		route_ahead_dir = Vector3.ZERO
+		route_ahead_cut = true
+		return at
+	route_ahead_dir = route_exit_dir
+	route_ahead_cut = first_dir != Vector3.ZERO and route_exit_dir.dot(first_dir) < ROUTE_CUT_DOT
+	var end: Vector3 = at + route_exit_dir * left
+	var limit_z: float = tuning.half_width() - 1.0
+	var back: float = tuning.end_zone_depth - 1.5
+	end.x = clampf(end.x, -back, tuning.field_length + back)
+	end.z = clampf(end.z, -limit_z, limit_z)
+	return end
 
 
 ## Running a route to be thrown to. On a play-action play that includes the back
@@ -692,9 +807,9 @@ func _carrier_move(pc: PlayController, opponent: Player) -> void:
 			pc.do_stiff_arm(player, side)
 		return
 
-	# Elusive carriers spin more.
+	# Elusive carriers spin more. The spin sidesteps away from the tackler.
 	if randf() < tuning.ai_spin_chance * float(player.ratings.juke) / 50.0:
-		pc.do_spin(player, -signf(left) if left != 0.0 else 1.0)
+		pc.do_spin(player, -signf(left) if left != 0.0 else 1.0, true)
 
 
 ## Get between the most dangerous nearby opponent and the thing being protected.
@@ -1013,6 +1128,13 @@ func _go_for_ball(pc: PlayController) -> void:
 
 
 func _think_dead(pc: PlayController, delta: float) -> void:
+	player.look_dir = Vector3.ZERO
+	if pc.result == PlayController.Result.TOUCHDOWN and pc.scorer != null:
+		if pc.is_celebrating(player):
+			_celebrate(pc)
+		else:
+			_sulk(pc)
+		return
 	if _late_hit_used or randf() > tuning.ai_late_hit_chance * delta:
 		return
 	for opponent: Player in player.team.opponent.players:
@@ -1022,6 +1144,69 @@ func _think_dead(pc: PlayController, delta: float) -> void:
 			_late_hit_used = true
 			pc.do_shove(player, _direction_to(opponent.position))
 			return
+
+
+## His team has scored. The scorer stays where he is and dances, facing back up
+## the field; everyone else runs to his place round him and joins in.
+func _celebrate(pc: PlayController) -> void:
+	var scorer: Player = pc.scorer
+	if player == scorer:
+		player.look_dir = Vector3(-float(player.team.attack_dir), 0.0, 0.0)
+		return
+	var slot: Vector3 = pc.celebration_slot(player)
+	var gap: float = _flat_distance(player.position, slot)
+	# Once he is there he only moves again if the party has drifted well away.
+	if gap <= 0.5:
+		_at_party = true
+	elif gap > 1.5:
+		_at_party = false
+	if _at_party:
+		player.look_dir = _direction_to(scorer.position)
+		return
+	player.move_input = _direction_to(slot)
+	player.wants_turbo = gap > 8.0
+	player.ai_speed_scale = clampf(gap / 3.0, 0.3, 1.0)
+
+
+## The other team has scored. Mostly he stands and takes it badly; one kind
+## wanders off with his head down, and the one who has had enough runs at
+## somebody celebrating and dives into him.
+func _sulk(pc: PlayController) -> void:
+	if cheap_shot_delay >= 0.0 and not _late_hit_used and pc.dead_time >= cheap_shot_delay:
+		var victim: Player = _cheap_shot_victim(pc)
+		if victim != null:
+			var dir: Vector3 = _direction_to(victim.position)
+			if _flat_distance(player.position, victim.position) <= tuning.cheap_shot_dive_range:
+				_late_hit_used = true
+				pc.do_dive(player, dir)
+			else:
+				player.move_input = dir
+				player.wants_turbo = true
+			return
+	# Nobody stands and sulks in the middle of the other team's party.
+	if _flat_distance(player.position, pc.scorer.position) < tuning.celebration_ring_radius + 2.0:
+		player.move_input = -_direction_to(pc.scorer.position)
+		player.ai_speed_scale = 0.35
+		return
+	if pc.celebration_variant(player, PlayerAnimator.SULKS) == PlayerAnimator.SULK_TRUDGE and pc.dead_time > 1.0:
+		var away: Vector3 = Vector3(-float(pc.scorer.team.attack_dir), 0.0, signf(player.position.z - pc.scorer.position.z) * 0.4)
+		player.move_input = away.normalized()
+		player.ai_speed_scale = 0.22
+
+
+func _cheap_shot_victim(pc: PlayController) -> Player:
+	if cheap_shot_scorer and not pc.scorer.is_down():
+		return pc.scorer
+	var victim: Player = null
+	var best: float = INF
+	for opponent: Player in player.team.opponent.players:
+		if opponent.is_down():
+			continue
+		var dist: float = _flat_distance(opponent.position, player.position)
+		if dist < best:
+			best = dist
+			victim = opponent
+	return victim
 
 
 # --- Helpers -----------------------------------------------------------------
@@ -1039,6 +1224,9 @@ func _reset() -> void:
 	_keeper_rolled = false
 	_keeper_time = -1.0
 	_late_hit_used = false
+	cheap_shot_delay = -1.0
+	cheap_shot_scorer = true
+	_at_party = false
 	_read_velocity = Vector3.ZERO
 	_contest_decided = false
 	_scrambling = false

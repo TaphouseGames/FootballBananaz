@@ -1,8 +1,9 @@
 class_name PlayerFall
 extends RefCounted
-## How a player's whole body tips over, tumbles, lands and gets back up. Purely
-## visual: the play only knows the player is DOWN for a while. Every knock-down
-## is simulated from the hit that caused it, so no two look the same.
+## How a player's whole body tips over, tumbles, lands and gets back up. Visual,
+## but for one thing: the play reads `landed` to know when a diving ball carrier
+## is on the turf. Every knock-down is simulated from the hit that caused it, so
+## no two look the same.
 ##
 ## Directions are in the Player node's own frame: +X is the way he faces, -Z is
 ## his left.
@@ -37,6 +38,9 @@ var airborne: bool = false
 var variant: int = 0
 var mirror: bool = false
 var elapsed: float = 0.0
+## The body has tipped all the way over and is lying on the turf. None of the
+## random parts of a fall decide when: the play can rely on it.
+var landed: bool = false
 ## 0 while still tumbling, 1 once flat on the turf.
 var settle: float = 0.0
 ## 0 while down, rising to 1 as the player gets back to his feet.
@@ -64,6 +68,7 @@ var _out_height: float = STAND_HEIGHT
 
 func reset() -> void:
 	active = false
+	landed = false
 	settle = 0.0
 	rise = 0.0
 	impact = 0.0
@@ -159,6 +164,7 @@ func _begin(p_kind: Kind, p_power: float, duration: float) -> void:
 	power = clampf(p_power, 0.0, 1.0)
 	flip = false
 	elapsed = 0.0
+	landed = false
 	settle = 0.0
 	rise = 0.0
 	impact = 0.0
@@ -260,6 +266,8 @@ func _simulate(delta: float) -> void:
 			_height_vel = -_height_vel * 0.28
 		else:
 			_height_vel = 0.0
+		if _tip >= _tip_end:
+			landed = true
 
 	_spin += spin_speed * delta
 	if grounded:

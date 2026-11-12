@@ -2,6 +2,9 @@ class_name Ball
 extends Node3D
 ## The football: carried, flying on a ballistic arc, or loose on the turf.
 
+## The ball hit the turf hard enough to hear. `strength` is 0..1.
+signal bounced(strength: float)
+
 enum State { HELD, FLIGHT, LOOSE }
 
 ## Nose-to-nose length in metres (a real ball is 0.28; this reads better from the
@@ -255,6 +258,15 @@ func fumble(p_velocity: Vector3) -> void:
 	landing_marker.visible = false
 
 
+## Thrown down after a score: it bounces where it lands and stays about there.
+func spike(p_velocity: Vector3) -> void:
+	_release()
+	state = State.LOOSE
+	_loose_velocity = p_velocity
+	_wild = false
+	landing_marker.visible = false
+
+
 ## How fast a ball on the loose is moving, bounce included.
 func loose_velocity() -> Vector3:
 	return _loose_velocity if state == State.LOOSE else Vector3.ZERO
@@ -265,6 +277,7 @@ func loose_velocity() -> Vector3:
 func _bounce_wild(delta: float) -> void:
 	var flat: Vector3 = Vector3(_loose_velocity.x, 0.0, _loose_velocity.z)
 	if _loose_velocity.y < -WILD_ROLL_SPEED:
+		bounced.emit(clampf(-_loose_velocity.y / 8.0, 0.0, 1.0))
 		var up: float = -_loose_velocity.y * randf_range(0.35, 0.65)
 		flat = flat.rotated(Vector3.UP, randf_range(-WILD_BOUNCE_TURN, WILD_BOUNCE_TURN)) * randf_range(0.55, 0.9)
 		_loose_velocity = flat + Vector3(0.0, up, 0.0)
@@ -295,6 +308,8 @@ func integrate(delta: float) -> bool:
 				if _wild:
 					_bounce_wild(delta)
 				else:
+					if _loose_velocity.y < -WILD_ROLL_SPEED:
+						bounced.emit(clampf(-_loose_velocity.y / 8.0, 0.0, 1.0))
 					_loose_velocity.y = -_loose_velocity.y * 0.4
 					_loose_velocity.x *= 0.6
 					_loose_velocity.z *= 0.6

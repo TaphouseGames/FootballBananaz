@@ -16,3 +16,14 @@ enum Category { RUN, SHORT, DEEP }
 ## cannot throw until it is over, and coverage defenders may come up for the run.
 @export var play_action: bool = false
 @export var assignments: Array[OffenseAssignment] = []
+
+
+## How many yards past the line the deepest route of the play is drawn.
+func deepest_route() -> float:
+	var deepest: float = 0.0
+	for assignment: OffenseAssignment in assignments:
+		if assignment.job == OffenseAssignment.Job.QB or assignment.job == OffenseAssignment.Job.BLOCK:
+			continue
+		for waypoint: Vector2 in assignment.route:
+			deepest = maxf(deepest, assignment.start.x + waypoint.x)
+	return deepest

@@ -40,7 +40,7 @@ script = ExtResource("2_assign")
 label = "WR"
 job = 1
 start = Vector2(-0.6, 15)
-route = PackedVector2Array(7, 0, 5.5, -1.5)
+route = PackedVector2Array(15, 0, 13.5, -1.5)
 settle = true
 
 [sub_resource type="Resource" id="back"]

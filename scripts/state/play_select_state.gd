@@ -70,6 +70,7 @@ func physics_update(_delta: float) -> void:
 	if turn != 0 and _page_count() > 1:
 		_page = posmod(_page + turn, _page_count())
 		_show_page()
+		game.audio.play(&"ui_page")
 	var moved: int = _cursor
 	if Input.is_action_just_pressed(&"move_right"):
 		moved = _step(_cursor, 1, 0)
@@ -82,11 +83,14 @@ func physics_update(_delta: float) -> void:
 	if moved != _cursor:
 		_cursor = moved
 		game.hud.set_play_cursor(_cursor)
+		game.audio.play(&"ui_move")
 
 	if _human_on_offense and Input.is_action_just_pressed(&"flip_play"):
 		_flipped = not _flipped
 		game.hud.set_play_flipped(_flipped)
+		game.audio.play(&"ui_flip")
 	if Input.is_action_just_pressed(&"confirm"):
+		game.audio.play(&"ui_confirm")
 		_confirm(_page * HUD.PAGE_SIZE + _cursor)
 
 

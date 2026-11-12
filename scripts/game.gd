@@ -38,6 +38,9 @@ var play_caller: PlayCaller = PlayCaller.new()
 var scout: Scout = Scout.new()
 
 var _hit_stop_left: float = 0.0
+## Team the camera sits behind, and the offense it was last set from.
+var _camera_team: Team
+var _camera_offense: Team
 
 @onready var field: Field = $Field
 @onready var home: Team = $HomeTeam
@@ -47,6 +50,7 @@ var _hit_stop_left: float = 0.0
 @onready var human: HumanController = $HumanController
 @onready var camera_rig: CameraRig = $CameraRig
 @onready var hud: HUD = $HUD
+@onready var audio: AudioDirector = $Audio
 
 
 func _ready() -> void:
@@ -57,6 +61,7 @@ func _ready() -> void:
 	human.setup(self)
 	play_controller.setup(self)
 	hud.setup(self)
+	audio.setup(self)
 
 	clock = tuning.game_length * 0.5
 	opening_receiver = home if home.is_human or not away.is_human else away
@@ -70,7 +75,9 @@ func _exit_tree() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	camera_rig.follow(_camera_target(), _camera_facing(), delta)
+	# A change of sides in the middle of a play (interception, lost fumble) swings
+	# the camera round; between plays it cuts.
+	camera_rig.follow(_camera_target(), _camera_facing(), delta, not play_controller.ball_dead)
 
 
 func _process(delta: float) -> void:
@@ -159,6 +166,11 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 			# The defense can run a turnover all the way back for two of its own.
 			final_team.score += tuning.conversion_points
 			add_stat(&"conversions_made")
+			audio.crowd_react(final_team, 0.8)
+			audio.shout(&"announcer_trygood")
+		else:
+			audio.crowd_react(defense, 0.6)
+			audio.shout(&"announcer_trymissed")
 		kickoff_to = defense
 		return next_play_state()
 	if play_controller.kickoff:
@@ -200,6 +212,7 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 				down = 1
 				_set_first_down_target()
 				add_stat(&"first_downs")
+				audio.crowd_react(offense, 0.5)
 			else:
 				down += 1
 
@@ -228,7 +241,12 @@ func down_text() -> String:
 	var ordinal: String = DOWN_NAMES[clampi(down - 1, 0, DOWN_NAMES.size() - 1)]
 	if goal_to_go:
 		return "%s & GOAL" % ordinal
-	return "%s & %d" % [ordinal, maxi(ceili(absf(first_down_x - los_x) - 0.01), 1)]
+	return "%s & %d" % [ordinal, yards_to_go()]
+
+
+## Whole yards to the first-down line, never less than one.
+func yards_to_go() -> int:
+	return maxi(ceili(absf(first_down_x - los_x) - 0.01), 1)
 
 
 func ball_on_text() -> String:
@@ -279,10 +297,22 @@ func _camera_target() -> Vector3:
 	var pc: PlayController = play_controller
 	if pc.kickoff and pc.returner != null and ball.carrier == null and pc.result == PlayController.Result.NONE:
 		return Vector3(pc.returner.position.x, 0.0, pc.returner.position.z)
+	# After a score it stays on the scorer, wherever the spiked ball bounces to.
+	if pc.ball_dead and pc.scorer != null:
+		return Vector3(pc.scorer.position.x, 0.0, pc.scorer.position.z)
 	return ball.flat_position()
 
 
-## The camera always sits behind the offense, looking the way it attacks, so on
-## defense the person plays toward the camera.
+## The camera sits behind the team with the ball, looking the way it attacks, so
+## on defense the person plays toward the camera. That is the offense until the
+## other team comes up with the ball in the middle of a play; from then on it is
+## that team, through the whistle and into its drive.
 func _camera_facing() -> float:
-	return float(offense.attack_dir) if offense != null else 1.0
+	if offense == null:
+		return 1.0
+	if offense != _camera_offense:
+		_camera_offense = offense
+		_camera_team = offense
+	if not play_controller.ball_dead and ball.carrier != null:
+		_camera_team = ball.carrier.team
+	return float(_camera_team.attack_dir)

@@ -33,6 +33,16 @@ const HANDS_TIME: float = 0.35
 const LOOSE_REACH: float = 2.5
 ## Half the gap between the two hands on the ball, in metres.
 const HANDS_APART: float = 0.11
+## How many dances a scorer has, ways his teammates cheer and ways the other
+## team sulks. The last sulk is the one who walks off.
+const DANCES: int = 4
+const CHEERS: int = 3
+const SULKS: int = 5
+const SULK_TRUDGE: int = 4
+const SPIKE_TIME: float = 0.4
+## Hands on hips, elbows out.
+const HIP_ARM: Vector3 = Vector3(18.0, -95.0, -58.0)
+const HIP_FORE: Vector3 = Vector3(0.0, -95.0, 0.0)
 
 var player: Player
 var skeleton: Skeleton3D
@@ -55,6 +65,7 @@ var _rate: float = 14.0
 var _phase: float = 0.0
 var _clock: float = 0.0
 var _throw_timer: float = 0.0
+var _spike_timer: float = 0.0
 var _was_thrower: bool = false
 var _ball_hand: int = B.HAND_L
 ## Above 0 while both hands follow the ball (a pass coming in, or one just
@@ -219,6 +230,7 @@ func _palm_world() -> Vector3:
 func update(delta: float, instant: bool) -> void:
 	_clock += delta
 	_throw_timer = maxf(_throw_timer - delta, 0.0)
+	_spike_timer = maxf(_spike_timer - delta, 0.0)
 	_ground = 1.0
 	_rate = 14.0
 	_cycle_rate = 0.0
@@ -579,6 +591,11 @@ func _build_pose(delta: float) -> void:
 		_throw_timer = 0.32
 	_was_thrower = is_thrower
 
+	if pc.ball_dead and pc.result == PlayController.Result.TOUCHDOWN and pc.final_team != null:
+		_wave = 0.0
+		_after_score(pc)
+		return
+
 	if player.has_ball:
 		# A quarterback sprinting on turbo tucks it until his feet are set again.
 		if player == pc.qb and pc.phase == PlayController.Phase.POCKET and not pc.ball_dead and player.feet_set >= 1.0 and not player.is_tucked():
@@ -591,8 +608,7 @@ func _build_pose(delta: float) -> void:
 		_mode = 3
 		_throw_follow_through()
 	elif pc.ball_dead:
-		_mode = 4
-		_after_whistle(pc)
+		pass
 	elif ball.state == Ball.State.FLIGHT and _reach_for_pass(ball):
 		pass
 	elif player.is_blocking or player.block_slow_timer > 0.0:
@@ -783,6 +799,11 @@ func _qb_cocked() -> void:
 	_pose[B.FORE_R] = Vector3(0.0, -105.0, 0.0)
 	_pose[B.ARM_L] = Vector3(-55.0, 0.0, -62.0)
 	_pose[B.FORE_L] = Vector3(0.0, -70.0, 0.0)
+
+
+## Plays the arm coming down as the scorer spikes the ball.
+func spike() -> void:
+	_spike_timer = SPIKE_TIME
 
 
 ## Plays the throwing motion for a toss to the running back.
@@ -1195,27 +1216,215 @@ func _gather(on_back: bool) -> void:
 		_set_arms(Vector3(-60.0, 0.0, -70.0), Vector3(0.0, -55.0, 0.0))
 
 
-## After the whistle: the scoring team celebrates, the other side hangs its head.
-func _after_whistle(pc: PlayController) -> void:
-	if pc.result != PlayController.Result.TOUCHDOWN or pc.final_team == null:
-		return
-	if player.team == pc.final_team:
-		var pump: float = sin(_clock * 9.0 + float(player.index))
-		_pose[B.SPINE].x = -6.0
-		_pose[B.HEAD].x = -18.0
-		_set_arms(Vector3(-150.0 + 14.0 * pump, 0.0, -70.0), Vector3(0.0, -30.0 - 20.0 * pump, 0.0))
-		# Bounce on the spot.
-		var bounce: float = 14.0 * maxf(pump, 0.0)
-		_pose[B.THIGH_L].x -= bounce
-		_pose[B.THIGH_R].x -= bounce
-		_pose[B.SHIN_L].x += bounce * 2.0
-		_pose[B.SHIN_R].x += bounce * 2.0
+## After a score: the scorer dances, his team celebrates round him, the other
+## side takes it badly.
+func _after_score(pc: PlayController) -> void:
+	var flat: Vector3 = Vector3(player.velocity.x, 0.0, player.velocity.z)
+	# All of it is done standing: on the move it gives way to the run.
+	var still: float = 1.0 - smoothstep(0.8, 2.6, flat.length())
+	if player.team != pc.final_team:
+		_sulk(pc, still)
+	elif player == pc.scorer:
+		_scorer_dance(pc, still)
 	else:
-		_pose[B.SPINE].x += 10.0
+		_cheer(pc, still)
+
+
+## The scorer: the ball held up, slammed down, then his dance.
+func _scorer_dance(pc: PlayController, still: float) -> void:
+	if player.has_ball:
+		_mode = 30
+		_tuck_ball()
+		_stash()
+		_rate = 16.0
+		_pose[B.SPINE] = Vector3(-8.0, 0.0, 0.0)
+		_pose[B.HEAD] = Vector3(-20.0, 0.0, 0.0)
+		_pose[B.ARM_L] = Vector3(-168.0, 0.0, -80.0)
+		_pose[B.FORE_L] = Vector3(0.0, -8.0, 0.0)
+		_pose[B.ARM_R] = Vector3(-150.0, 0.0, -66.0)
+		_pose[B.FORE_R] = Vector3(0.0, -70.0, 0.0)
+		_blend_from_stash(still)
+		return
+	if _spike_timer > 0.0:
+		# The arm that had the ball comes through hard, the body after it.
+		_mode = 31
+		_rate = 30.0
+		_pose[B.SPINE] = Vector3(34.0, 0.0, 0.0)
+		_pose[B.CHEST] = Vector3(14.0, 20.0, 0.0)
+		_pose[B.HEAD] = Vector3(10.0, 0.0, 0.0)
+		_pose[B.ARM_L] = Vector3(-28.0, 0.0, -76.0)
+		_pose[B.FORE_L] = Vector3(0.0, -6.0, 0.0)
+		_pose[B.ARM_R] = Vector3(40.0, 0.0, -60.0)
+		_pose[B.FORE_R] = Vector3(0.0, -50.0, 0.0)
+		_pose[B.THIGH_L] = Vector3(-40.0, 0.0, 0.0)
+		_pose[B.SHIN_L] = Vector3(50.0, 0.0, 0.0)
+		_pose[B.THIGH_R] = Vector3(10.0, 0.0, 0.0)
+		_pose[B.SHIN_R] = Vector3(24.0, 0.0, 0.0)
+		return
+
+	var style: int = posmod(pc.celebration_style, DANCES)
+	_mode = 32 + style
+	_stash()
+	_rate = 18.0
+	var t: float = _clock
+	match style:
+		0:
+			# Fists pumping overhead one after the other, hips going with them.
+			var s: float = sin(t * 10.0)
+			var bob: float = absf(s)
+			_pose[B.HIPS] = Vector3(0.0, 10.0 * s, 5.0 * s)
+			_pose[B.SPINE] = Vector3(-4.0, 0.0, -9.0 * s)
+			_pose[B.HEAD] = Vector3(-14.0, 0.0, 6.0 * s)
+			_pose[B.ARM_L] = Vector3(-150.0 + 30.0 * s, 0.0, -70.0)
+			_pose[B.FORE_L] = Vector3(0.0, -45.0 - 30.0 * s, 0.0)
+			_pose[B.ARM_R] = Vector3(-150.0 - 30.0 * s, 0.0, -70.0)
+			_pose[B.FORE_R] = Vector3(0.0, -45.0 + 30.0 * s, 0.0)
+			_set_legs(-20.0 * bob, 40.0 * bob)
+			_hop = 0.05 * (1.0 - bob)
+		1:
+			# The chicken: hands in the armpits, elbows flapping, knees going
+			# in and out, head pecking.
+			var flap: float = sin(t * 14.0)
+			var peck: float = sin(t * 7.0)
+			_pose[B.SPINE] = Vector3(16.0, 0.0, 0.0)
+			_pose[B.HEAD] = Vector3(-12.0 + 16.0 * peck, 0.0, 0.0)
+			_set_arms(Vector3(10.0, -90.0, -30.0 + 24.0 * flap), Vector3(0.0, -140.0, 0.0))
+			_set_legs(-38.0 - 8.0 * peck, 64.0 + 16.0 * peck)
+			_pose[B.THIGH_L].z = 12.0 + 12.0 * flap
+			_pose[B.THIGH_R].z = 12.0 + 12.0 * flap
+		2:
+			# Flexing both arms at the crowd and stamping from foot to foot.
+			var s: float = sin(t * 8.0)
+			_pose[B.SPINE] = Vector3(-8.0, 0.0, 0.0)
+			_pose[B.CHEST] = Vector3(-4.0, 22.0 * sin(t * 4.0), 0.0)
+			_pose[B.HEAD] = Vector3(-16.0, 0.0, 0.0)
+			_set_arms(Vector3(-90.0, 0.0, -12.0), Vector3(0.0, -65.0 - 30.0 * absf(s), 0.0))
+			var up_l: float = maxf(s, 0.0)
+			var up_r: float = maxf(-s, 0.0)
+			_pose[B.THIGH_L] = Vector3(-46.0 * up_l, 0.0, 8.0)
+			_pose[B.SHIN_L] = Vector3(66.0 * up_l, 0.0, 0.0)
+			_pose[B.THIGH_R] = Vector3(-46.0 * up_r, 0.0, 8.0)
+			_pose[B.SHIN_R] = Vector3(66.0 * up_r, 0.0, 0.0)
+		_:
+			# One hand on the hip, the other pointing at the sky, swapping
+			# sides on the beat.
+			var p: float = clampf(sin(t * 5.0) * 3.0, -1.0, 1.0)
+			var left: float = (p + 1.0) * 0.5
+			var bob: float = absf(sin(t * 10.0))
+			var sky: Vector3 = Vector3(-20.0, 0.0, 56.0)
+			var sky_fore: Vector3 = Vector3(0.0, -6.0, 0.0)
+			_pose[B.HIPS] = Vector3(0.0, 0.0, 8.0 * p)
+			_pose[B.SPINE] = Vector3(-2.0, 12.0 * p, -7.0 * p)
+			_pose[B.HEAD] = Vector3(-10.0, 20.0 * p, 0.0)
+			_pose[B.ARM_L] = HIP_ARM.lerp(sky, left)
+			_pose[B.FORE_L] = HIP_FORE.lerp(sky_fore, left)
+			_pose[B.ARM_R] = HIP_ARM.lerp(sky, 1.0 - left)
+			_pose[B.FORE_R] = HIP_FORE.lerp(sky_fore, 1.0 - left)
+			_set_legs(-16.0 * bob, 32.0 * bob)
+	_cycle_rate = 40.0
+	_blend_from_stash(still)
+
+
+## The scorer's teammates, once they have got to him.
+func _cheer(pc: PlayController, still: float) -> void:
+	var variant: int = pc.celebration_variant(player, CHEERS)
+	_mode = 40 + variant
+	_stash()
+	_rate = 18.0
+	var pump: float = sin(_clock * 9.0 + float(player.index) * 1.7)
+	var up: float = maxf(pump, 0.0)
+	match variant:
+		0:
+			# Jumping up and down with both arms in the air.
+			_pose[B.SPINE] = Vector3(-6.0, 0.0, 0.0)
+			_pose[B.HEAD] = Vector3(-18.0, 0.0, 0.0)
+			_set_arms(Vector3(-150.0 + 14.0 * pump, 0.0, -70.0), Vector3(0.0, -30.0 - 20.0 * pump, 0.0))
+			_set_legs(-22.0 * (1.0 - up), 44.0 * (1.0 - up))
+			_hop = 0.2 * up
+		1:
+			# Punching the air with one fist.
+			_pose[B.SPINE] = Vector3(-4.0, 0.0, 0.0)
+			_pose[B.CHEST] = Vector3(0.0, 14.0 * up, 0.0)
+			_pose[B.HEAD] = Vector3(-14.0, 0.0, 0.0)
+			_pose[B.ARM_L] = Vector3(-165.0, 0.0, -80.0)
+			_pose[B.FORE_L] = Vector3(0.0, -80.0 + 70.0 * up, 0.0)
+			_pose[B.ARM_R] = Vector3(-20.0, 0.0, -70.0)
+			_pose[B.FORE_R] = Vector3(0.0, -95.0, 0.0)
+			_set_legs(-14.0 * up, 28.0 * up)
+			if player.index % 2 == 1:
+				_mirror()
+		_:
+			# Pushing both palms at the sky.
+			_pose[B.SPINE] = Vector3(-5.0, 0.0, 6.0 * pump)
+			_pose[B.HEAD] = Vector3(-16.0, 0.0, 0.0)
+			_set_arms(Vector3(-90.0 - 24.0 * up, 0.0, -12.0), Vector3(0.0, -90.0 + 45.0 * up, 0.0))
+			_set_legs(-18.0 * (1.0 - up), 36.0 * (1.0 - up))
+			_hop = 0.06 * up
+	_cycle_rate = 36.0
+	_blend_from_stash(still)
+
+
+## The team that has just been scored on.
+func _sulk(pc: PlayController, still: float) -> void:
+	var variant: int = pc.celebration_variant(player, SULKS)
+	_mode = 50 + variant
+	var t: float = _clock + float(player.index) * 0.9
+	if variant == SULK_TRUDGE:
+		# Walking off, shoulders down, arms hanging: this one goes on top of
+		# the walk, not in place of it.
+		_pose[B.SPINE].x += 14.0
 		_pose[B.CHEST].x += 8.0
-		_pose[B.HEAD] = Vector3(26.0, 0.0, 0.0)
-		# Hands on hips.
-		_set_arms(Vector3(18.0, 40.0, -52.0), Vector3(0.0, -100.0, 0.0))
+		_pose[B.HEAD] = Vector3(28.0, 6.0 * sin(t * 1.3), 0.0)
+		_pose[B.ARM_L] = Vector3(_pose[B.ARM_L].x * 0.3, 0.0, ARM_DOWN)
+		_pose[B.ARM_R] = Vector3(_pose[B.ARM_R].x * 0.3, 0.0, ARM_DOWN)
+		_pose[B.FORE_L] = Vector3(0.0, -8.0, 0.0)
+		_pose[B.FORE_R] = Vector3(0.0, -8.0, 0.0)
+		return
+	_stash()
+	_rate = 7.0
+	match variant:
+		0:
+			# Hands on hips, shaking his head at the turf.
+			_pose[B.SPINE] = Vector3(12.0, 0.0, 0.0)
+			_pose[B.CHEST] = Vector3(8.0, 0.0, 0.0)
+			_pose[B.HEAD] = Vector3(26.0, 22.0 * sin(t * 3.2), 0.0)
+			_set_arms(HIP_ARM, HIP_FORE)
+		1:
+			# Hands on his helmet, staring at the sky.
+			_pose[B.SPINE] = Vector3(-10.0, 0.0, 3.0 * sin(t * 1.1))
+			_pose[B.HEAD] = Vector3(-24.0, 0.0, 0.0)
+			_set_arms(Vector3(-90.0, 0.0, -14.0), Vector3(0.0, -138.0, 0.0))
+		2:
+			# Down on one knee, head bowed, a hand on the other knee.
+			_pose[B.SPINE] = Vector3(22.0, 0.0, 0.0)
+			_pose[B.CHEST] = Vector3(10.0, 0.0, 0.0)
+			_pose[B.HEAD] = Vector3(30.0, 0.0, 0.0)
+			_pose[B.THIGH_L] = Vector3(-88.0, 0.0, 0.0)
+			_pose[B.SHIN_L] = Vector3(92.0, 0.0, 0.0)
+			_pose[B.FOOT_L] = Vector3(-4.0, 0.0, 0.0)
+			_pose[B.THIGH_R] = Vector3(8.0, 0.0, 0.0)
+			_pose[B.SHIN_R] = Vector3(96.0, 0.0, 0.0)
+			_pose[B.FOOT_R] = Vector3(45.0, 0.0, 0.0)
+			_pose[B.ARM_L] = Vector3(-50.0, 0.0, -70.0)
+			_pose[B.FORE_L] = Vector3(0.0, -30.0, 0.0)
+			_pose[B.ARM_R] = Vector3(0.0, 0.0, ARM_DOWN)
+			_pose[B.FORE_R] = Vector3(0.0, -10.0, 0.0)
+			if player.index % 2 == 1:
+				_mirror()
+		_:
+			# A tantrum: stamping his feet and throwing his arms down.
+			_rate = 20.0
+			_cycle_rate = 36.0
+			var u: float = sin(t * 11.0)
+			var slam: float = absf(u)
+			_pose[B.SPINE] = Vector3(16.0, 0.0, 0.0)
+			_pose[B.HEAD] = Vector3(18.0, 16.0 * sin(t * 5.0), 0.0)
+			_set_arms(Vector3(-55.0 + 75.0 * slam, 0.0, -62.0), Vector3(0.0, -75.0 + 60.0 * slam, 0.0))
+			_pose[B.THIGH_L] = Vector3(-55.0 * maxf(u, 0.0), 0.0, 0.0)
+			_pose[B.SHIN_L] = Vector3(80.0 * maxf(u, 0.0), 0.0, 0.0)
+			_pose[B.THIGH_R] = Vector3(-55.0 * maxf(-u, 0.0), 0.0, 0.0)
+			_pose[B.SHIN_R] = Vector3(80.0 * maxf(-u, 0.0), 0.0, 0.0)
+	_blend_from_stash(still)
 
 
 func _opponent_within(radius: float) -> bool:

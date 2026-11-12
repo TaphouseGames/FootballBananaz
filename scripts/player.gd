@@ -10,6 +10,9 @@ extends Node3D
 enum State { NORMAL, DIVING, DOWN, SHOVING, JUMPING, DRAGGING, HOLDING, SPINNING, STIFF_ARM }
 
 const JERSEY_SHADER: Shader = preload("res://assets/player/player_jersey.gdshader")
+## A fall that has gone on this long counts as landed whatever it looks like, so
+## a play can never be left waiting for one.
+const GROUNDED_TIMEOUT: float = 0.4
 
 ## Which part of the model's texture is repainted in the team colour: the grey
 ## cloth (true) or the green jersey (false). Set per model in the player scene.
@@ -83,6 +86,13 @@ var move_side: float = 1.0
 ## The other half of a drag: the tackler for the carrier and the other way round.
 var drag_partner: Player
 
+## Meshes of the model, and the tint laid over them while he flashes.
+var _meshes: Array[MeshInstance3D] = []
+var _flash_material: StandardMaterial3D
+var _flash_color: Color = Color.WHITE
+var _flash_strength: float = 0.0
+var _flash_left: float = 0.0
+
 @onready var body: Node3D = $Body
 @onready var control_ring: MeshInstance3D = $ControlRing
 @onready var pass_icon: Label3D = $PassIcon
@@ -136,6 +146,35 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	reset_physics_interpolation()
 
 
+## Tints the whole model `color` for a moment, fading out. `strength` is how
+## much of the tint shows at the start, 0..1.
+func flash(color: Color, strength: float) -> void:
+	if _flash_material == null:
+		_flash_material = StandardMaterial3D.new()
+		_flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_flash_color = color
+	_flash_strength = strength
+	_flash_left = tuning.flash_time
+	for mesh_instance: MeshInstance3D in _meshes:
+		mesh_instance.material_overlay = _flash_material
+	_process(0.0)
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	if _flash_material == null:
+		set_process(false)
+		return
+	_flash_left -= delta
+	var share: float = clampf(_flash_left / maxf(tuning.flash_time, 0.01), 0.0, 1.0)
+	_flash_material.albedo_color = Color(_flash_color, _flash_strength * share)
+	if _flash_left <= 0.0:
+		for mesh_instance: MeshInstance3D in _meshes:
+			mesh_instance.material_overlay = null
+		set_process(false)
+
+
 ## Dresses the model in the team colour and hooks up the procedural animator.
 func _setup_model() -> void:
 	for node: Node in body.find_children("*", "MeshInstance3D", true, false):
@@ -148,6 +187,7 @@ func _setup_model() -> void:
 		if source != null:
 			material.set_shader_parameter(&"albedo_tex", source.albedo_texture)
 		mesh_instance.material_override = material
+		_meshes.append(mesh_instance)
 	var skeletons: Array[Node] = body.find_children("*", "Skeleton3D", true, false)
 	if skeletons.is_empty():
 		push_error("Player model has no Skeleton3D")
@@ -186,6 +226,12 @@ func can_act() -> bool:
 
 func is_down() -> bool:
 	return state == State.DOWN
+
+
+## Down and actually lying on the turf: a dive counts as down from its first
+## tick after the leap, a moment before the body lands.
+func is_grounded() -> bool:
+	return state == State.DOWN and (fall.landed or not fall.active or fall.elapsed > GROUNDED_TIMEOUT)
 
 
 func is_airborne() -> bool:
@@ -280,7 +326,8 @@ func start_jump() -> bool:
 
 ## A full turn on the run: same line, a little slower, no steering.
 ## `side` is +1 to turn over the player's own left shoulder, -1 over his right.
-func start_spin(side: float) -> bool:
+## With `juke` he also sidesteps to that side while he turns.
+func start_spin(side: float, juke: bool = false) -> bool:
 	if not can_act() or move_cooldown > 0.0:
 		return false
 	state = State.SPINNING
@@ -290,6 +337,12 @@ func start_spin(side: float) -> bool:
 	move_side = 1.0 if side >= 0.0 else -1.0
 	turbo_active = false
 	velocity *= tuning.spin_speed_scale
+	if juke:
+		# He keeps facing down his running line (see integrate), so this slides
+		# him across it.
+		if velocity.length_squared() > 0.6:
+			facing = velocity.normalized()
+		velocity += Vector3.UP.cross(facing) * move_side * tuning.spin_juke_distance / maxf(tuning.spin_time, 0.05)
 	return true
 
 
@@ -431,7 +484,8 @@ func integrate(delta: float) -> void:
 	_clamp_to_field()
 	if (state == State.NORMAL or state == State.JUMPING) and look_dir.length_squared() > 0.01:
 		facing = look_dir.normalized()
-	elif state != State.DOWN and velocity.length_squared() > 0.6:
+	elif state != State.DOWN and state != State.SPINNING and velocity.length_squared() > 0.6:
+		# A spin keeps the facing it started with, sidestep or not.
 		facing = velocity.normalized()
 	_update_visual(delta, false)
 

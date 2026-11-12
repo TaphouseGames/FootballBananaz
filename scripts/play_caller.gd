@@ -12,6 +12,12 @@ const GOOD_GAIN: float = 8.0
 ## Higher = the best-fitting plays are picked more often.
 const SHARPNESS: float = 3.0
 const CATEGORIES: int = 3
+## Run, short and deep shares an offense out of time moves toward, and the ones
+## an offense running the clock down moves toward.
+const HURRY_MIX: Array[float] = [0.0, 0.25, 0.75]
+const KILL_MIX: Array[float] = [0.8, 0.18, 0.02]
+## Plays the starting guess of a play's length is worth. See situation().
+const TIME_PRIOR: float = 4.0
 
 ## Per offensive team: how often it has called each category lately, and the
 ## yards it made with it. Both decay by MEMORY every play.
@@ -19,10 +25,24 @@ var _calls: Dictionary[Team, PackedFloat32Array] = {}
 var _yards: Dictionary[Team, PackedFloat32Array] = {}
 ## Per offensive team: its last calls, newest last.
 var _history: Dictionary[Team, Array] = {}
+## Seconds of clock the plays so far have taken, and how many there were.
+var _time_sum: float = 0.0
+var _time_count: float = 0.0
 
 
-## Called at the whistle with the yards the offense made (0 on a turnover).
-func record(team: Team, play: OffensePlay, gain: float) -> void:
+## What the score and the clock ask of the offense on the next play.
+func situation(game: Game) -> GameSituation:
+	# The starting guess counts as a few plays, so one odd play does not swing it.
+	var play_time: float = (game.tuning.ai_call_play_time * TIME_PRIOR + _time_sum) / (TIME_PRIOR + _time_count)
+	return GameSituation.read(game, play_time)
+
+
+## Called at the whistle with the yards the offense made (0 on a turnover) and
+## the seconds the play took off the clock.
+func record(team: Team, play: OffensePlay, gain: float, seconds: float = -1.0) -> void:
+	if seconds >= 0.0:
+		_time_sum += seconds
+		_time_count += 1.0
 	var calls: PackedFloat32Array = _row(_calls, team)
 	var yards: PackedFloat32Array = _row(_yards, team)
 	for i: int in CATEGORIES:
@@ -57,6 +77,9 @@ func pick_defense(plays: Array[DefensePlay], game: Game) -> DefensePlay:
 	if seen > 0.0:
 		# The more that has been seen, the more the tendency counts (up to half).
 		var trust: float = minf(seen / 4.0, 1.0) * 0.5
+		# When the clock dictates the call, what they did earlier says little.
+		var now: GameSituation = situation(game)
+		trust *= 1.0 - (1.0 if now.heave else maxf(now.urgency, now.clock_kill))
 		var tendency: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
 		var total: float = 0.0
 		for i: int in CATEGORIES:
@@ -77,6 +100,19 @@ func pick_defense(plays: Array[DefensePlay], game: Game) -> DefensePlay:
 
 
 func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
+	if situation(game).heave:
+		# One play to reach the end zone: a deep pass, the deeper the better, and
+		# no time for a fake.
+		var deep: PackedFloat32Array = PackedFloat32Array()
+		var any: float = 0.0
+		for play: OffensePlay in plays:
+			var depth: float = play.deepest_route() if play.category == OffensePlay.Category.DEEP else 0.0
+			if play.play_action:
+				depth *= 0.5
+			deep.append(depth * depth)
+			any += depth
+		if any > 0.0:
+			return plays[_weighted(deep)]
 	var want: PackedFloat32Array = _situation(game)
 	var history: Array = _history.get(game.offense, [])
 	# Shared out over the plays of a category, so a playbook with more runs than
@@ -101,7 +137,8 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 	return plays[_weighted(weights)]
 
 
-## How likely each kind of play is from down and distance alone: run, short, deep.
+## How likely each kind of play is: run, short, deep. From down and distance
+## first, then moved by what the score and the clock ask for.
 func _situation(game: Game) -> PackedFloat32Array:
 	var tuning: Tuning = game.tuning
 	var to_go: float = absf(game.first_down_x - game.los_x)
@@ -116,6 +153,16 @@ func _situation(game: Game) -> PackedFloat32Array:
 	else:
 		var ahead: float = clampf((1.0 - need) / 0.7, 0.0, 1.0)
 		result = PackedFloat32Array([lerpf(0.3, 0.5, ahead), lerpf(0.4, 0.4, ahead), lerpf(0.3, 0.1, ahead)])
+
+	var now: GameSituation = situation(game)
+	if now.heave:
+		return PackedFloat32Array([0.0, 0.0, 1.0])
+	# With no punts a failed fourth down hands the ball over where it lies, so
+	# well behind schedule the first down still matters more than the clock.
+	var kill: float = now.clock_kill * (0.5 if need > 1.5 else 1.0)
+	for i: int in CATEGORIES:
+		result[i] = lerpf(result[i], HURRY_MIX[i], now.urgency)
+		result[i] = lerpf(result[i], KILL_MIX[i], kill)
 	return result
 
 

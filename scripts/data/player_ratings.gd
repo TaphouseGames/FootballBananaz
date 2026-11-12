@@ -12,8 +12,8 @@ extends Resource
 @export_range(0, 100) var speed: int = 50
 ## How long the turbo meter lasts.
 @export_range(0, 100) var endurance: int = 50
-## How hard he is to bring down once a defender has hold of him, and how fast
-## he fights through a block.
+## How hard he is to bring down once a defender has hold of him, how well his
+## stiff arm holds a tackler off, and how fast he fights through a block.
 @export_range(0, 100) var strength: int = 50
 
 @export_group("Contact")
@@ -31,7 +31,7 @@ extends Resource
 @export_group("Ball Skills")
 ## Chance to hold on to a pass (and to pick one off on defense).
 @export_range(0, 100) var catching: int = 50
-## How well a spin or a jump beats a tackle.
+## How well a spin or a jump beats a tackle (the stiff arm goes by strength).
 @export_range(0, 100) var juke: int = 50
 ## How well he holds on to the ball when he is tackled.
 @export_range(0, 100) var security: int = 50

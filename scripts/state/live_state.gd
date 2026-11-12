@@ -2,8 +2,8 @@ extends GameState
 ## The ball is live. Ends at the whistle.
 
 const DEFENSE_HINT: String = "(B): switch defender      (X): dive      (Y)(A): jump      RT: turbo"
-const RUN_HINT: String = "Stick: move      (B): spin      (LB)(RB): stiff arm      (X): dive, down where you land      (Y)(A): jump      RT: turbo"
-const RETURN_HINT: String = "Stick: move      (B): spin      (LB)(RB): stiff arm      (X): dive (in your own end zone: touchback)      (Y)(A): jump      RT: turbo"
+const RUN_HINT: String = "Stick: move      (B): spin, with the stick: juke      (LB)(RB): stiff arm      (X): dive, down where you land      (Y)(A): jump      RT: turbo"
+const RETURN_HINT: String = "Stick: move      (B): spin, with the stick: juke      (LB)(RB): stiff arm      (X): dive (in your own end zone: touchback)      (Y)(A): jump      RT: turbo"
 const PASS_HINT: String = "(A)(X)(B): tap to lob, hold longer to throw harder      Hold (LB): lead him   (RB): underthrow      Hold RT: tuck and run, let go to throw      Running with the ball  -  (B): spin   (LB)(RB): stiff arm   (X): dive   (Y)(A): jump"
 
 ## Which side's prompts are showing. A turnover swaps them mid-play.

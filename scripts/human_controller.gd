@@ -63,11 +63,13 @@ func is_defending() -> bool:
 
 
 ## Stick input turned into field directions for the behind-the-player camera:
-## up runs away from the camera, right runs to screen right.
+## up runs away from the camera, right runs to screen right. It goes by where
+## the camera is right now, so it holds while the camera swings round.
 func read_move() -> Vector3:
 	var stick: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	var facing: float = game.camera_rig.facing
-	return Vector3(-stick.y * facing, 0.0, stick.x * facing)
+	var rig: Basis = game.camera_rig.basis
+	var move: Vector3 = rig.x * stick.x + rig.z * stick.y
+	return Vector3(move.x, 0.0, move.z)
 
 
 # --- Events from PlayController --------------------------------------------------
@@ -206,9 +208,15 @@ func _carrier_moves(player: Player, move: Vector3, moving: bool) -> void:
 	elif Input.is_action_just_pressed(&"stiff_arm_right"):
 		pc.do_stiff_arm(player, -1.0)
 	elif Input.is_action_just_pressed(&"spin"):
-		# Turn away from the nearest defender, or the way the stick leans.
-		var away: Vector3 = _spin_direction(player, move)
-		pc.do_spin(player, 1.0 if away.dot(Vector3.UP.cross(player.facing)) >= 0.0 else -1.0)
+		# Stick leaned across his running line: spin and sidestep that way.
+		# Otherwise a plain spin, turning away from the nearest defender.
+		var line: Vector3 = player.velocity.normalized() if player.velocity.length_squared() > 0.6 else player.facing
+		var left: Vector3 = Vector3.UP.cross(line)
+		var lean: float = move.dot(left)
+		if absf(lean) > 0.3:
+			pc.do_spin(player, signf(lean), true)
+		else:
+			pc.do_spin(player, 1.0 if _spin_direction(player).dot(left) >= 0.0 else -1.0)
 	elif Input.is_action_just_pressed(&"action"):
 		pc.do_dive(player, move.normalized() if moving else player.facing)
 
@@ -300,9 +308,8 @@ func _dive_direction(player: Player, move: Vector3, moving: bool, target: Player
 	return move.normalized() if moving else player.facing
 
 
-func _spin_direction(player: Player, move: Vector3) -> Vector3:
-	if absf(move.z) > 0.3:
-		return Vector3(0.0, 0.0, signf(move.z))
+## Away from the nearest defender, across the field.
+func _spin_direction(player: Player) -> Vector3:
 	var nearest: float = INF
 	var side: float = 1.0
 	for opponent: Player in team.opponent.players:

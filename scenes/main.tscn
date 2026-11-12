@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://scripts/state/kickoff_state.gd" id="22_kickoff"]
 [ext_resource type="Script" path="res://scripts/state/halftime_state.gd" id="23_halftime"]
 [ext_resource type="Script" path="res://scripts/human_controller.gd" id="17_human"]
+[ext_resource type="Script" path="res://scripts/audio_director.gd" id="24_audio"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="18_camera"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="19_hud"]
 [ext_resource type="Resource" path="res://resources/rosters/bananaz.tres" id="20_bananaz"]
@@ -121,3 +122,6 @@ directional_shadow_max_distance = 140.0
 environment = SubResource("environment")
 
 [node name="HUD" parent="." instance=ExtResource("19_hud")]
+
+[node name="Audio" type="Node" parent="."]
+script = ExtResource("24_audio")

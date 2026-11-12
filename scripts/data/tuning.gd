@@ -46,6 +46,9 @@ extends Resource
 @export var line_speed_scale: float = 0.86
 ## Pass rushers lined up within this many yards of the ball count as linemen.
 @export var line_depth: float = 1.25
+## Near the goal line the defense is squeezed up so that its deepest man and
+## zone stay this many yards inside the back of the end zone.
+@export var def_back_margin: float = 1.5
 @export var carrier_speed_scale: float = 0.97
 @export var player_radius: float = 0.5
 ## Opponents who are not blocking each other keep this much room each, so they
@@ -77,8 +80,11 @@ extends Resource
 @export var shove_knockdown_impulse: float = 10.0
 ## Shared by spin and stiff arm: seconds before the next one of either kind.
 @export var move_cooldown: float = 0.9
-## A spin keeps the running line: no sidestep, no steering.
+## A spin keeps the running line and cannot be steered. Started with the stick
+## leaned to one side it also sidesteps that way (spin_juke_distance).
 @export var spin_time: float = 0.4
+## Yards a juking spin carries him sideways.
+@export var spin_juke_distance: float = 2.0
 ## Window in which tackles against a spinning carrier mostly slide off.
 @export var spin_evade_time: float = 0.45
 @export var spin_speed_scale: float = 0.85
@@ -148,6 +154,10 @@ extends Resource
 ## than `max` yards. He has to slow down and come back for it.
 @export var pass_under_share: float = 0.22
 @export var pass_under_max: float = 4.0
+## Underthrown to a receiver whose route cuts or stops before the ball arrives:
+## it comes down at least this many yards short of that spot, toward the
+## quarterback.
+@export var pass_under_route_min: float = 2.0
 ## An underthrown pass can come up shorter still, by up to this share of that.
 @export var pass_under_error: float = 0.4
 ## Both placements look at the nearest defender within `range` yards of the
@@ -212,8 +222,9 @@ extends Resource
 @export var catch_scale_low: float = 0.8
 @export var catch_scale_high: float = 1.1
 ## Tackle chance multiplier while the carrier's spin window is active (juke rating).
-@export var spin_tackle_scale_low: float = 0.4
-@export var spin_tackle_scale_high: float = 0.08
+## A little weaker than the stiff arm: the spin works on every side and can juke.
+@export var spin_tackle_scale_low: float = 0.7
+@export var spin_tackle_scale_high: float = 0.16
 ## Tackle chance multiplier for a tackler who runs into a stiff arm (strength rating).
 @export var stiff_arm_tackle_scale_low: float = 0.6
 @export var stiff_arm_tackle_scale_high: float = 0.1
@@ -391,6 +402,40 @@ extends Resource
 @export var shove_shake: float = 0.4
 @export var shake_decay: float = 2.2
 @export var shake_max_offset: float = 1.1
+## A player flashes for a moment when he gets the ball (white) and when he
+## loses it (red): seconds it lasts and how strong it starts, 0..1.
+@export var flash_time: float = 0.4
+@export var possession_flash: float = 0.4
+@export var fumble_flash: float = 0.55
+
+@export_group("Audio")
+## Off silences everything (the calls still count, for the tests).
+@export var audio_enabled: bool = true
+## Bus levels in dB: everything, hits and whooshes, the crowd, the quarterback
+## and the huddle, and the menu blips.
+@export var audio_master_db: float = 0.0
+@export var audio_sfx_db: float = 0.0
+@export var audio_crowd_db: float = -5.0
+@export var audio_voice_db: float = -2.0
+@export var audio_ui_db: float = -14.0
+## Linear volume (0..1) of the steady crowd murmur, of the roar at full
+## excitement, of a chant and of the huddle's muttering.
+@export var audio_crowd_bed_level: float = 0.45
+@export var audio_crowd_roar_level: float = 0.9
+@export var audio_chant_level: float = 0.7
+@export var audio_huddle_level: float = 0.6
+## Linear volume of the announcer.
+@export var audio_announcer_level: float = 1.0
+## The announcer's remarks on a play ("What a catch!"): real seconds he waits
+## between two of them, and a scale on how often he makes one (0 = never).
+@export var audio_remark_gap: float = 8.0
+@export var audio_remark_scale: float = 1.0
+## A completion thrown at least this far past the line is a great throw.
+@export var audio_deep_throw_yards: float = 25.0
+## Crowd excitement lost per second once nothing is happening.
+@export var audio_crowd_decay: float = 0.22
+## Chance the crowd starts a chant while a play is being picked.
+@export var audio_chant_chance: float = 0.35
 
 @export_group("Turf FX")
 @export var blood_enabled: bool = true
@@ -409,8 +454,22 @@ extends Resource
 @export var cpu_snap_delay_max: float = 1.8
 ## Seconds after the whistle during which late hits are allowed.
 @export var late_hit_window: float = 1.6
-@export var scored_banner_time: float = 3.0
+@export var scored_banner_time: float = 5.0
 @export var turnover_banner_time: float = 2.2
+
+@export_group("Celebration")
+## The scorer's teammates gather on a ring this far from him.
+@export var celebration_ring_radius: float = 2.4
+## Seconds after the whistle that the scorer spikes the ball.
+@export var celebration_spike_time: float = 0.5
+## Chance per score that one of the beaten team takes a run at a celebrating
+## player, how long he stews first, how close to the scorer he has to be at
+## the whistle to be the one, and how far out he leaves his feet.
+@export var cheap_shot_chance: float = 0.3
+@export var cheap_shot_delay_min: float = 1.2
+@export var cheap_shot_delay_max: float = 2.4
+@export var cheap_shot_range: float = 18.0
+@export var cheap_shot_dive_range: float = 3.2
 
 @export_group("AI")
 @export var ai_qb_min_time: float = 0.9
@@ -629,6 +688,36 @@ extends Resource
 ## Chance per second that a CPU player takes a cheap shot after the whistle.
 @export var ai_late_hit_chance: float = 0.1
 
+@export_group("CPU play calling")
+## The clock only runs while the ball is live, so the time left is really a
+## number of plays: the clock divided by how long a play lasts. This is the
+## starting guess, in seconds; the play caller corrects it as the game goes.
+@export var ai_call_play_time: float = 5.0
+## An offense that needs points before the clock runs out compares the yards it
+## needs per play it has left with a normal gain (yards_to_gain over
+## downs_per_series). Below `calm_pace` times normal it calls plays as usual;
+## at `urgent_pace` times normal it throws downfield almost every down.
+@export var ai_call_calm_pace: float = 0.6
+@export var ai_call_urgent_pace: float = 2.0
+## Share of that hurry a team keeps at the end of the first half when it leads.
+@export var ai_call_half_urgency_leading: float = 0.5
+## A team leading in the second half starts running the clock down with this
+## many plays left, more and more as they run out.
+@export var ai_call_kill_plays: float = 12.0
+## With no more than this many plays' worth of clock left, the play counts as
+## the last one. On it, a team that needs a touchdown from further out than
+## `heave_distance` calls its deepest pass and the quarterback heaves it.
+@export var ai_call_last_play: float = 1.2
+@export var ai_call_heave_distance: float = 15.0
+## How much each yard downfield is worth to a CPU quarterback choosing a
+## receiver (in yards of openness): normally, and when fully in a hurry.
+@export var ai_qb_depth_bonus: float = 0.08
+@export var ai_qb_urgent_depth_bonus: float = 0.25
+## A heave is thrown at the latest this long after the snap, or once it would
+## come down within `heave_range_margin` yards of the end of his range.
+@export var ai_qb_heave_max_time: float = 5.0
+@export var ai_qb_heave_range_margin: float = 4.0
+
 @export_group("Camera")
 ## The camera sits behind the followed player: this high and this far back.
 @export var camera_height: float = 19.5
@@ -639,6 +728,9 @@ extends Resource
 @export var camera_look_ahead: float = 9.0
 ## How much of the player's sideways position the camera follows (0..1).
 @export var camera_z_follow: float = 0.85
+## Seconds the camera takes to circle round behind the other team when the ball
+## changes sides in the middle of a play.
+@export var camera_swing_time: float = 0.8
 
 
 func half_width() -> float:

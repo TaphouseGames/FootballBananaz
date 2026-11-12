@@ -10,6 +10,10 @@ var trauma: float = 0.0
 var facing: float = 1.0
 
 var _shake_clock: float = 0.0
+## Swing round to the other side: yaw at its start and end, and progress (1 = done).
+var _swing_from: float = 0.0
+var _swing_to: float = 0.0
+var _swing_t: float = 1.0
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -26,18 +30,49 @@ func setup(p_tuning: Tuning) -> void:
 
 func snap_to(target: Vector3, p_facing: float) -> void:
 	facing = p_facing
-	rotation.y = -PI * 0.5 * facing
+	_swing_t = 1.0
+	rotation.y = _yaw_for(facing)
 	position = _goal(target)
 	reset_physics_interpolation()
 	camera.reset_physics_interpolation()
 
 
-## Called once per physics tick.
-func follow(target: Vector3, p_facing: float, delta: float) -> void:
+## Called once per physics tick. When the side changes the camera cuts to it,
+## or with `swing` circles round the followed spot to get there.
+func follow(target: Vector3, p_facing: float, delta: float, swing: bool = false) -> void:
 	if p_facing != facing:
-		snap_to(target, p_facing)
-		return
+		if not swing:
+			snap_to(target, p_facing)
+			return
+		_start_swing(target, p_facing)
+	if _swing_t < 1.0:
+		_swing_t = minf(_swing_t + delta / maxf(tuning.camera_swing_time, 0.01), 1.0)
+		if _swing_t >= 1.0:
+			rotation.y = _yaw_for(facing)
+		else:
+			rotation.y = lerpf(_swing_from, _swing_to, smoothstep(0.0, 1.0, _swing_t))
 	position = position.lerp(_goal(target), 1.0 - exp(-tuning.camera_follow_speed * delta))
+
+
+func is_swinging() -> bool:
+	return _swing_t < 1.0
+
+
+func _start_swing(target: Vector3, p_facing: float) -> void:
+	var old_facing: float = facing
+	facing = p_facing
+	_swing_from = rotation.y
+	var turn: float = angle_difference(_swing_from, _yaw_for(facing))
+	if absf(turn) > PI - 0.05:
+		# A full half circle: go round by the sideline nearer the ball, so the
+		# camera looks in across the field on its way and not out over the edge.
+		turn = PI * old_facing * (1.0 if target.z >= 0.0 else -1.0)
+	_swing_to = _swing_from + turn
+	_swing_t = 0.0
+
+
+func _yaw_for(p_facing: float) -> float:
+	return -PI * 0.5 * p_facing
 
 
 func add_trauma(amount: float) -> void:
