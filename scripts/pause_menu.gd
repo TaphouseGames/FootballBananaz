@@ -4,9 +4,52 @@ extends Control
 ## and the rosters with a card for each player. It keeps running while the tree
 ## is paused; everything else stops.
 
-enum Screen { MENU, BOX_SCORE, TEAM_STATS, ROSTER }
+enum Screen { MENU, BOX_SCORE, TEAM_STATS, ROSTER, CONTROLS }
 
-const MENU_ITEMS: Array[String] = ["RESUME", "BOX SCORE", "TEAM STATS", "VIEW ROSTER"]
+const MENU_ITEMS: Array[String] = ["RESUME", "BOX SCORE", "TEAM STATS", "VIEW ROSTER", "CONTROLS"]
+## The controls screen: a heading, then a button and what it does on each line.
+## The first half of the sections fills the left column, the rest the right.
+const CONTROLS: Array[Array] = [
+	["ANY TIME", [
+		["Stick / D-pad", "Move"],
+		["RT", "Turbo"],
+		["Start", "Pause"],
+	]],
+	["PASSING", [
+		["(A) (X) (B)", "Throw to that receiver: tap to lob, hold longer to throw harder"],
+		["Hold (LB)", "Lead him"],
+		["Hold (RB)", "Underthrow"],
+		["Hold RT", "Tuck and run, let go to throw again"],
+		["(Y)", "Jump"],
+	]],
+	["RUNNING WITH THE BALL", [
+		["(B)", "Spin. With the stick across: juke"],
+		["(LB) (RB)", "Stiff arm to the left, to the right"],
+		["(X)", "Dive, down where you land. On a kick return in your own end zone: touchback"],
+		["(Y) (A)", "Jump"],
+	]],
+	["DEFENSE", [
+		["(B)", "Switch defender. Before the snap: pick another one"],
+		["(X)", "Dive at the carrier, at a pass or on a loose ball"],
+		["(Y) (A)", "Jump"],
+	]],
+	["OFFENSE WITHOUT THE BALL", [
+		["(X)", "Shove. With a pass in the air: dive at it"],
+		["(B)", "Switch to the teammate nearest the ball"],
+		["(Y) (A)", "Jump"],
+	]],
+	["AFTER THE WHISTLE", [
+		["(X)", "Late hit"],
+	]],
+	["PLAY SELECT", [
+		["Stick / D-pad", "Choose"],
+		["(A)", "Confirm, then (A) again to snap"],
+		["(X)", "Flip the play"],
+		["(LB) (RB)", "Other page"],
+	]],
+]
+const CONTROLS_LEFT: int = 3
+const BUTTON_WIDTH: float = 120.0
 const BOX_PAGES: Array[String] = ["OFFENSE", "DEFENSE"]
 const PANEL_SIZE: Vector2 = Vector2(1080.0, 624.0)
 const GOLD: Color = Color(1.0, 0.85, 0.1)
@@ -152,11 +195,17 @@ func _update_menu() -> void:
 				show_screen(Screen.TEAM_STATS)
 			3:
 				show_screen(Screen.ROSTER)
+			4:
+				show_screen(Screen.CONTROLS)
 
 
 func _update_table(delta: float) -> void:
 	if Input.is_action_just_pressed(&"back"):
 		_back()
+		return
+	if screen == Screen.CONTROLS and Input.is_action_just_pressed(&"confirm"):
+		_play(&"ui_confirm")
+		show_screen(Screen.MENU)
 		return
 	_scroll.scroll_vertical += roundi(Input.get_axis(&"move_up", &"move_down") * SCROLL_SPEED * delta)
 	if screen != Screen.BOX_SCORE:
@@ -222,6 +271,47 @@ func _refresh() -> void:
 			_title.text = "ROSTER  -  %s" % _roster().team_name.to_upper()
 			_hint.text = "Stick / D-pad: choose a player      (LB) / (RB): other team      (B): back      Start: resume"
 			_body.add_child(_roster_view())
+		Screen.CONTROLS:
+			_title.text = "CONTROLS"
+			_hint.text = "(A): accept      Stick: scroll      (B): back      Start: resume"
+			_body.add_child(_controls_view())
+
+
+## What every button does, in two columns of sections.
+func _controls_view() -> Control:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 28)
+	var columns: Array[VBoxContainer] = []
+	for i: int in 2:
+		var column: VBoxContainer = VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_theme_constant_override(&"separation", 3)
+		row.add_child(column)
+		columns.append(column)
+	for i: int in CONTROLS.size():
+		var column: VBoxContainer = columns[0 if i < CONTROLS_LEFT else 1]
+		var heading: String = CONTROLS[i][0]
+		var lines: Array = CONTROLS[i][1]
+		if column.get_child_count() > 0:
+			column.add_child(_spacer(8.0))
+		column.add_child(_label(heading, 17, GOLD))
+		for j: int in lines.size():
+			var button: String = lines[j][0]
+			var what: String = lines[j][1]
+			var panel: PanelContainer = PanelContainer.new()
+			panel.add_theme_stylebox_override(&"panel", _flat(ROW_COLOR if j % 2 == 0 else Color(0.0, 0.0, 0.0, 0.0), 8.0, 2.0))
+			var line: HBoxContainer = HBoxContainer.new()
+			line.add_theme_constant_override(&"separation", 10)
+			panel.add_child(line)
+			var button_label: Label = _label(button, 15, HUD.NAME_SELECTED_COLOR)
+			button_label.custom_minimum_size.x = BUTTON_WIDTH
+			line.add_child(button_label)
+			var what_label: Label = _label(what, 15, TEXT)
+			what_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			what_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			line.add_child(what_label)
+			column.add_child(panel)
+	return row
 
 
 func _score_line() -> String:

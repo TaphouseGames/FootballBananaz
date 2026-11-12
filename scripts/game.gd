@@ -7,6 +7,9 @@ const DOWN_NAMES: Array[String] = ["1ST", "2ND", "3RD", "4TH"]
 
 ## Normal Engine.time_scale. Hit-stop returns to this (tests raise it).
 static var base_time_scale: float = 1.0
+## The next match opens with the pregame intro. The main menu sets it; a
+## restart from the pause menu and the tests go straight to the kickoff.
+static var show_intro: bool = false
 
 @export var tuning: Tuning
 @export var offense_playbook: OffensePlaybook
@@ -69,7 +72,9 @@ func _ready() -> void:
 	clock = tuning.game_length * 0.5
 	opening_receiver = home if randf() < 0.5 else away
 	kickoff_to = opening_receiver
-	play_controller.state_machine.transition(&"Kickoff")
+	var opening: StringName = &"Intro" if show_intro and tuning.intro_enabled and not autoplay else &"Kickoff"
+	show_intro = false
+	play_controller.state_machine.transition(opening)
 	camera_rig.snap_to(_camera_target(), _camera_facing())
 
 

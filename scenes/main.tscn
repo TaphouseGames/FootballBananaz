@@ -18,6 +18,7 @@
 [ext_resource type="Script" path="res://scripts/state/game_over_state.gd" id="16_gameover"]
 [ext_resource type="Script" path="res://scripts/state/kickoff_state.gd" id="22_kickoff"]
 [ext_resource type="Script" path="res://scripts/state/halftime_state.gd" id="23_halftime"]
+[ext_resource type="Script" path="res://scripts/state/intro_state.gd" id="25_intro"]
 [ext_resource type="Script" path="res://scripts/human_controller.gd" id="17_human"]
 [ext_resource type="Script" path="res://scripts/audio_director.gd" id="24_audio"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="18_camera"]
@@ -101,6 +102,9 @@ script = ExtResource("22_kickoff")
 
 [node name="Halftime" type="Node" parent="PlayController/StateMachine"]
 script = ExtResource("23_halftime")
+
+[node name="Intro" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("25_intro")
 
 [node name="HumanController" type="Node" parent="."]
 script = ExtResource("17_human")

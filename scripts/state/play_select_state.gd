@@ -29,12 +29,7 @@ func enter() -> void:
 	_page = 0
 	_flipped = false
 	_show_page()
-	var hint: String = "Stick / D-pad: choose      (A): confirm"
-	if _human_on_offense:
-		hint += "      (X): flip play"
-	if _page_count() > 1:
-		hint += "      (LB) / (RB): page"
-	game.hud.set_hint(hint)
+	game.hud.set_hint("")
 
 
 func exit() -> void:

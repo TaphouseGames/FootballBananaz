@@ -98,7 +98,9 @@ func _sounds_in_scripts() -> Array[StringName]:
 			var text: String = FileAccess.get_file_as_string(dir.path_join(file))
 			for hit: RegExMatch in pattern.search_all(text):
 				var sound: String = hit.get_string(1) if hit.get_string(1) != "" else hit.get_string(2)
-				found[StringName(sound)] = true
+				# `ui_accept` and its like are buttons, not sounds.
+				if not InputMap.has_action(sound):
+					found[StringName(sound)] = true
 	var sounds: Array[StringName] = found.keys()
 	sounds.sort()
 	return sounds

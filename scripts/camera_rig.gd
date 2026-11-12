@@ -14,6 +14,11 @@ var _shake_clock: float = 0.0
 var _swing_from: float = 0.0
 var _swing_to: float = 0.0
 var _swing_t: float = 1.0
+## The camera's place on the rig, and the shot it has been taken off it for.
+var _home: Transform3D
+var _shot: bool = false
+var _shot_eye: Vector3
+var _shot_aim: Vector3
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -24,8 +29,30 @@ func setup(p_tuning: Tuning) -> void:
 	# In rig space the camera sits at +Z and looks toward -Z.
 	var eye: Vector3 = Vector3(0.0, tuning.camera_height, tuning.camera_distance)
 	var aim: Vector3 = Vector3(0.0, 0.0, -tuning.camera_look_ahead)
-	camera.transform = Transform3D(Basis.looking_at(aim - eye, Vector3.UP), eye)
+	_home = Transform3D(Basis.looking_at(aim - eye, Vector3.UP), eye)
+	camera.transform = _home
 	camera.make_current()
+
+
+## A shot of its own (the pregame intro): the camera stands at `eye` in the
+## world and looks at `aim`, wherever the rig is, until end_shot(). Call it
+## every physics tick to move it; `cut` jumps there without gliding.
+func shot(eye: Vector3, aim: Vector3, cut: bool = false) -> void:
+	_shot = true
+	_shot_eye = eye
+	_shot_aim = aim
+	camera.look_at_from_position(eye, aim)
+	if cut:
+		camera.reset_physics_interpolation()
+
+
+## Back onto the rig, behind the play.
+func end_shot() -> void:
+	if not _shot:
+		return
+	_shot = false
+	camera.transform = _home
+	camera.reset_physics_interpolation()
 
 
 func snap_to(target: Vector3, p_facing: float) -> void:
@@ -33,6 +60,9 @@ func snap_to(target: Vector3, p_facing: float) -> void:
 	_swing_t = 1.0
 	rotation.y = _yaw_for(facing)
 	position = _goal(target)
+	if _shot:
+		# Moving the rig took the camera with it.
+		camera.look_at_from_position(_shot_eye, _shot_aim)
 	reset_physics_interpolation()
 	camera.reset_physics_interpolation()
 
@@ -40,6 +70,8 @@ func snap_to(target: Vector3, p_facing: float) -> void:
 ## Called once per physics tick. When the side changes the camera cuts to it,
 ## or with `swing` circles round the followed spot to get there.
 func follow(target: Vector3, p_facing: float, delta: float, swing: bool = false) -> void:
+	if _shot:
+		return
 	if p_facing != facing:
 		if not swing:
 			snap_to(target, p_facing)

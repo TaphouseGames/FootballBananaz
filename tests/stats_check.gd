@@ -178,6 +178,8 @@ func _check_menu() -> void:
 			var ratings: PlayerRatings = team.players[i].ratings
 			_expect(ratings.overall() > 0 and ratings.card_ratings().size() >= 10, "%s has no card" % StatBook.label_of(team.players[i]))
 			_expect(ratings.number > 0 and ratings.display_name != "", "player %d of %s has no name or number" % [i, team.short_name])
+	menu.show_screen(PauseMenu.Screen.CONTROLS)
+	_expect(menu.screen == PauseMenu.Screen.CONTROLS and menu._body.get_child_count() == 1, "the controls screen did not build")
 	menu.show_screen(PauseMenu.Screen.MENU)
 	menu.close()
 	_expect(not menu.visible, "closing the menu left it on screen")

@@ -14,7 +14,7 @@ func enter() -> void:
 		game.hud.set_hint("")
 	elif game.human.is_active():
 		game.hud.show_banner("", "%s  -  get ready" % pc.def_play.play_name)
-		game.hud.set_hint("(B): pick another defender")
+		game.hud.set_hint("")
 	else:
 		game.hud.set_hint("AUTOPLAY")
 

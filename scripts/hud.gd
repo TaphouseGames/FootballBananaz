@@ -21,6 +21,9 @@ var _diagrams: Array[PlayDiagram] = []
 var _card_style: StyleBoxFlat
 var _card_selected_style: StyleBoxFlat
 
+var _intro_card: IntroCard
+
+@onready var top_bar: Control = $TopBar
 @onready var score_label: Label = $TopBar/Row/ScoreLabel
 @onready var down_label: Label = $TopBar/Row/DownLabel
 @onready var clock_label: Label = $TopBar/Row/ClockLabel
@@ -57,7 +60,7 @@ func _process(_delta: float) -> void:
 	clock_label.text = game.clock_text()
 
 	var controlled: Player = game.human.controlled
-	turbo_box.visible = controlled != null and not play_select.visible
+	turbo_box.visible = controlled != null and not play_select.visible and _intro_card == null
 	if controlled != null:
 		turbo_bar.value = controlled.turbo
 		turbo_bar.modulate = Color(1.0, 0.4, 0.3) if controlled.turbo_locked else Color.WHITE
@@ -68,6 +71,24 @@ func show_banner(text: String, sub_text: String = "") -> void:
 	banner.visible = text != ""
 	sub_banner.text = sub_text
 	sub_banner.visible = sub_text != ""
+
+
+## The television graphics of the pregame intro, in place of the scoreboard.
+func show_intro() -> void:
+	hide_intro()
+	top_bar.visible = false
+	_intro_card = IntroCard.new()
+	add_child(_intro_card)
+	# Under the pause menu.
+	move_child(_intro_card, pause_menu.get_index())
+	_intro_card.setup(game)
+
+
+func hide_intro() -> void:
+	top_bar.visible = true
+	if _intro_card != null:
+		_intro_card.finish()
+		_intro_card = null
 
 
 func hide_banner() -> void:

@@ -481,6 +481,22 @@ extends Resource
 ## Chance the crowd starts a chant while a play is being picked.
 @export var audio_chant_chance: float = 0.35
 
+@export_group("Pregame intro")
+## The broadcast opening before the first kickoff of a match started from the
+## main menu. Off goes straight to the kickoff.
+@export var intro_enabled: bool = true
+## Seconds of fanfare before the booth starts talking.
+@export var intro_voice_delay: float = 0.7
+## The intro lasts at least this long, ends this long after the booth's last
+## word, and never runs past the maximum.
+@export var intro_min_time: float = 4.0
+@export var intro_tail: float = 0.45
+@export var intro_max_time: float = 12.0
+## How long it lasts when there is nothing to hear (audio off).
+@export var intro_silent_time: float = 5.0
+## Seconds the camera takes over its whole move.
+@export var intro_shot_time: float = 10.0
+
 @export_group("Turf FX")
 @export var blood_enabled: bool = true
 ## Drops sprayed by a tackle, and by a shove or dive that flattens someone.
@@ -791,14 +807,14 @@ extends Resource
 ## ai_move_wrong_side_chance, of both ai_spin_chance and ai_stiff_arm_chance,
 ## and of ai_dive_chance (a dive tackle is a big hit: it knocks the ball loose
 ## more often than wrapping up does).
-@export var ai_edge_move_mistime_chance: float = 0.1
+@export var ai_edge_move_mistime_chance: float = 0.17
 @export var ai_edge_move_wrong_side_chance: float = 0.02
 @export var ai_edge_move_chance: float = 0.85
 @export var ai_edge_dive_chance: float = 0.95
 ## A carrier jumps over a tackler who dives at him from within this range,
 ## with this chance (at full edge).
 @export var ai_edge_hurdle_range: float = 3.5
-@export var ai_edge_hurdle_chance: float = 0.4
+@export var ai_edge_hurdle_chance: float = 0.37
 ## At full edge these multiply ai_cover_bust_chance and ai_blown_coverage_chance.
 @export var ai_edge_bust_scale: float = 0.6
 @export var ai_edge_blown_scale: float = 0.5

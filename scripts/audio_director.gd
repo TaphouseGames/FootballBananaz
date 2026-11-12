@@ -60,10 +60,18 @@ const BOOTH_BREATH: float = 0.25
 const QUIP_IDLE: StringName = &"color_idle"
 const QUIP_IDLE_BLOWOUT: StringName = &"color_idle_blowout"
 const QUIP_IDLE_CLOSE: StringName = &"color_idle_close"
+## The exchanges that open the broadcast, before the first kickoff.
+const QUIP_INTRO: StringName = &"color_intro"
 const CHAT_PREFIX: String = "chat_"
 const QUIP_PREFIX: String = "color_"
 const BREAKAWAY_YARDS: float = 20.0
 const BREAKAWAY_RETURN_YARDS: float = 40.0
+
+## The openings not heard yet this time round, by their place among the
+## exchanges of QUIP_INTRO, and the one heard last. Kept from match to match:
+## the director itself is made again with every one.
+static var _intro_bag: Array[int] = []
+static var _last_intro: int = -1
 
 var game: Game
 var tuning: Tuning
@@ -124,7 +132,7 @@ var _last_tick: int = 0
 func setup(p_game: Game) -> void:
 	game = p_game
 	tuning = p_game.tuning
-	_make_buses()
+	make_buses(tuning)
 	_load_streams()
 	for i: int in POOL_SIZE:
 		_pool.append(_make_player(BUS_SFX))
@@ -221,6 +229,61 @@ func quip(sound: StringName, chance: float) -> void:
 		return
 	_quip_pending = sound
 	_quip_asked = now
+
+
+## Jim and Tony open the broadcast with one of their exchanges, a different one
+## every match until all have been heard. False if there is nothing to say.
+func intro() -> bool:
+	play_counts[QUIP_INTRO] = play_counts.get(QUIP_INTRO, 0) + 1
+	var openings: Array = _exchanges.get(QUIP_INTRO, [])
+	if openings.is_empty():
+		missing[QUIP_INTRO] = true
+		return false
+	if not tuning.audio_enabled:
+		return false
+	var opening: Dictionary = openings[next_intro(openings.size())]
+	var tony: bool = opening[&"tony_first"]
+	for stream: AudioStream in opening[&"parts"]:
+		_exchange_parts.append([tony, stream])
+		tony = not tony
+	exchange_counts[&"started"] += 1
+	return true
+
+
+## Which of `count` openings comes next: each once in a random order, and the
+## first of a new round is never the last of the one before.
+static func next_intro(count: int) -> int:
+	_intro_bag = _intro_bag.filter(func(index: int) -> bool: return index < count)
+	if _intro_bag.is_empty():
+		_intro_bag.assign(range(count))
+		_intro_bag.shuffle()
+		if count > 1 and _intro_bag.back() == _last_intro:
+			_intro_bag.push_front(_intro_bag.pop_back())
+	_last_intro = _intro_bag.pop_back()
+	return _last_intro
+
+
+## Somebody in the booth is talking or is about to.
+func booth_busy() -> bool:
+	return _announcer.playing or _color.playing or not _exchange_parts.is_empty() or not _announcer_queue.is_empty()
+
+
+## Who is talking right now: &"jim", &"tony" or nobody.
+func speaker() -> StringName:
+	if _color.playing:
+		return &"tony"
+	return &"jim" if _announcer.playing else &""
+
+
+## Both of them stop in the middle of the word and forget what came next.
+func hush() -> void:
+	if not _exchange_parts.is_empty():
+		exchange_counts[&"cut"] += 1
+	_exchange_parts.clear()
+	_announcer_queue.clear()
+	_quip_pending = &""
+	_announcer.stop()
+	_color.stop()
 
 
 ## The two voices share one microphone: nobody starts until the other has
@@ -586,7 +649,8 @@ func _make_loop(sound: StringName, bus: StringName) -> AudioStreamPlayer:
 
 
 ## The buses live in the AudioServer, which outlasts a reload of the scene.
-func _make_buses() -> void:
+## The main menu makes them too: it plays its sounds before any match has.
+static func make_buses(tuning: Tuning) -> void:
 	var levels: Dictionary[StringName, float] = {
 		BUS_SFX: tuning.audio_sfx_db,
 		BUS_CROWD: tuning.audio_crowd_db,
