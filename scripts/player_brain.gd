@@ -40,8 +40,26 @@ var blown_time: float = 0.0
 ## Set by PlayController at the line-up of a play-action play: until this long
 ## after the snap this coverage defender plays the faked run. 0 = he does not.
 var bite_time: float = 0.0
+## Set by PlayController at the line-up: this long after the snap this coverage
+## defender dives at his receiver to put him on the ground (negative = he does
+## not). `takeout_target` is the man he has gone for, until the dive lands.
+var takeout_time: float = -1.0
+var takeout_target: Player
 
 var _decision_timer: float = 0.0
+## The sharper quarterback rolls once per play for getting away from a rusher,
+## and once for running through an open lane.
+var _escape_rolled: bool = false
+var _bail_rolled: bool = false
+## Seconds until he looks at the empty side again, and until a carrier next
+## thinks about jumping a dive.
+var _lane_timer: float = 0.0
+var _hurdle_timer: float = 0.0
+## He is out of the pocket to get away from a rusher, still looking to throw.
+var _escaping: bool = false
+## Why the CPU quarterback took off, for the tests: keeper, escape, lane or
+## bail (out of time with nobody open). Empty while he has not.
+var run_kind: StringName = &""
 ## A carrier's next move against a tackler: how long before contact he starts
 ## it (negative = not rolled yet) and how long he then still hesitates.
 var _move_lead: float = -1.0
@@ -131,6 +149,8 @@ func think(pc: PlayController, delta: float) -> void:
 	player.ai_speed_scale = 1.0
 	_delta = delta
 	_decision_timer = maxf(_decision_timer - delta, 0.0)
+	_lane_timer = maxf(_lane_timer - delta, 0.0)
+	_hurdle_timer = maxf(_hurdle_timer - delta, 0.0)
 	# A stiff arm is done on the run, so the brain keeps steering through it.
 	if not player.can_act() and player.state != Player.State.STIFF_ARM:
 		return
@@ -299,8 +319,13 @@ func _quarterback(pc: PlayController) -> void:
 		if behind_line and not _keep_ball and not pc.off_play.is_run and _decision_timer <= 0.0:
 			# Still behind the line: a man running free is worth pulling up for.
 			_decision_timer = 0.15
-			var open_man: Player = _best_receiver(pc, false)
-			if open_man != null and _open_for(pc, open_man) >= tuning.ai_qb_run_throw_open:
+			# One who left the pocket to get away from a rusher is still looking
+			# to throw: any open man will do, and with the rusher about to get
+			# him anyway he gets rid of it.
+			var caught: bool = _escaping and pc.nearest_opponent_distance(player) < tuning.ai_edge_escape_dump_range
+			var open_man: Player = _best_receiver(pc, _escaping)
+			var needs: float = tuning.ai_qb_open_distance if _escaping else tuning.ai_qb_run_throw_open
+			if open_man != null and (caught or _open_for(pc, open_man) >= needs):
 				player.wants_turbo = false
 				pc.game.add_stat(&"qb_throws_on_the_run")
 				var run_power: float = choose_pass(pc, open_man, _open_for(pc, open_man), false)
@@ -329,14 +354,129 @@ func _quarterback(pc: PlayController) -> void:
 	var best: Player = _best_receiver(pc, checkdowns)
 	var best_open: float = _open_for(pc, best) if best != null else -1.0
 
+	if _takes_off(pc, pressured, best_open):
+		return
 	if best == null or (out_of_time and not pressured and best_open < tuning.ai_qb_scramble_open):
 		if out_of_time or pressured:
-			# Nobody to throw to: tuck it and run.
-			_scrambling = true
+			# Nobody to throw to: tuck it and run. The sharper one goes round
+			# the emptier side instead of straight into the rush.
+			if pc.cpu_edge(player) > 0.0:
+				_break_out(_open_side(pc, 99))
+			else:
+				_scrambling = true
+			run_kind = &"bail"
 		return
 	if best_open >= tuning.ai_qb_open_distance or pressured or out_of_time:
 		var power: float = choose_pass(pc, best, best_open, pressured)
 		pc.throw_ball(best, power, choose_placement(pc, best, power))
+
+
+## How much of a runner this quarterback is: 0 for a statue, 1 about average.
+func _mobility() -> float:
+	@warning_ignore("integer_division")
+	var legs: int = (player.ratings.speed + player.ratings.agility) / 2
+	return maxf(PlayerRatings.blend(legs, tuning.qb_mobility_scale_low, tuning.qb_mobility_scale_high), 0.0)
+
+
+## The sharper quarterback uses his legs. With nobody open and a free rusher
+## coming he leaves the pocket before the man gets there, round the side away
+## from him. With one side of the field empty he goes round it unless somebody
+## is clearly open, and with nobody open for long enough he goes round the
+## emptier side anyway. He can still pull up and throw to a man who comes
+## free. A quarterback short of time has no use for a few yards on the ground.
+func _takes_off(pc: PlayController, pressured: bool, best_open: float) -> bool:
+	var edge: float = pc.cpu_edge(player)
+	if edge <= 0.0:
+		return false
+	var covered: bool = best_open < tuning.ai_qb_open_distance
+	var want: float = edge * clampf(_mobility(), tuning.ai_edge_mobility_floor, 1.5) * (1.0 - pc.qb_urgency)
+	var rusher: Player = _free_rusher()
+	if rusher != null:
+		if not covered or _escape_rolled:
+			return false
+		_escape_rolled = true
+		if randf() >= tuning.ai_edge_escape_chance * want:
+			return false
+		var across: float = rusher.position.z - player.position.z
+		# Straight up the middle: whichever side has fewer people on it.
+		var side: float = -signf(across) if absf(across) > 0.5 else _open_side(pc, 99)
+		pc.game.add_stat(&"qb_escapes")
+		_break_out(side)
+		_escaping = true
+		run_kind = &"escape"
+		return true
+	if pressured or pc.live_time < tuning.ai_edge_lane_time:
+		return false
+	var empty: float = _open_side(pc, 0)
+	if empty != 0.0 and best_open < tuning.ai_edge_lane_open and _lane_timer <= 0.0:
+		_lane_timer = tuning.ai_edge_lane_retry
+		if randf() < tuning.ai_edge_lane_chance * want:
+			pc.game.add_stat(&"qb_lane_runs")
+			_break_out(empty)
+			run_kind = &"lane"
+			return true
+	if covered and not _bail_rolled and pc.live_time >= tuning.ai_edge_bail_time:
+		_bail_rolled = true
+		if randf() < tuning.ai_edge_bail_chance * want:
+			pc.game.add_stat(&"qb_bails")
+			_break_out(_open_side(pc, 99))
+			run_kind = &"bail"
+			return true
+	return false
+
+
+## Out of the pocket and round the line on that side, as on a designed keeper.
+func _break_out(side: float) -> void:
+	start_scramble(side, false, tuning.ai_qb_keeper_width, tuning.ai_qb_keeper_forward)
+
+
+## The nearest defender within ai_edge_escape_range whom nobody is blocking,
+## or null.
+func _free_rusher() -> Player:
+	var rusher: Player = null
+	var nearest: float = tuning.ai_edge_escape_range
+	for opponent: Player in player.team.opponent.players:
+		if opponent.is_down() or opponent.block_slow_timer > 0.0:
+			continue
+		var dist: float = _flat_distance(opponent.position, player.position)
+		if dist < nearest:
+			nearest = dist
+			rusher = opponent
+	return rusher
+
+
+## Which side to go round the line on: +1 or -1 for the one with fewer free
+## defenders between him and the corner (up to ai_edge_lane_depth yards ahead
+## and ai_edge_lane_width yards out), or 0 if even that one has more than
+## `limit` of them.
+func _open_side(pc: PlayController, limit: int) -> float:
+	var low: int = 0
+	var high: int = 0
+	for opponent: Player in player.team.opponent.players:
+		if opponent.is_down() or opponent.block_slow_timer > 0.0:
+			continue
+		var ahead: float = (opponent.position.x - player.position.x) * pc.off_dir
+		var across: float = opponent.position.z - player.position.z
+		if ahead < -3.0 or ahead > tuning.ai_edge_lane_depth or absf(across) > tuning.ai_edge_lane_width:
+			continue
+		if across < 0.0:
+			low += 1
+		else:
+			high += 1
+	if mini(low, high) > limit:
+		return 0.0
+	if low != high:
+		return -1.0 if low < high else 1.0
+	# Nothing in it: the side with more field.
+	if absf(player.position.z) > 1.0:
+		return -signf(player.position.z)
+	return 1.0 if randf() < 0.5 else -1.0
+
+
+## This player's value for something the sharper CPU team does differently:
+## `base` for the person's own teammates, `sharp` at full edge.
+func _sharp(base: float, sharp: float) -> float:
+	return lerpf(base, sharp, player.play.cpu_edge(player))
 
 
 ## The last play, with the end zone a long way off: nothing short is any use
@@ -407,10 +547,7 @@ func _open_for(pc: PlayController, receiver: Player) -> float:
 func _keeps_it(pc: PlayController) -> bool:
 	if not _keeper_rolled:
 		_keeper_rolled = true
-		@warning_ignore("integer_division")
-		var legs: int = (player.ratings.speed + player.ratings.agility) / 2
-		var mobility: float = maxf(PlayerRatings.blend(legs, tuning.qb_mobility_scale_low, tuning.qb_mobility_scale_high), 0.0)
-		if randf() < tuning.ai_qb_keeper_chance * mobility:
+		if randf() < _sharp(tuning.ai_qb_keeper_chance, tuning.ai_edge_keeper_chance) * maxf(_mobility(), _sharp(0.0, tuning.ai_edge_mobility_floor)):
 			_keeper_time = randf_range(tuning.ai_qb_keeper_time_min, tuning.ai_qb_keeper_time_max)
 	if _keeper_time < 0.0 or pc.live_time < _keeper_time:
 		return false
@@ -422,6 +559,7 @@ func _keeps_it(pc: PlayController) -> bool:
 		side = 1.0 if randf() < 0.5 else -1.0
 	pc.game.add_stat(&"qb_keepers")
 	start_scramble(side, false, tuning.ai_qb_keeper_width, tuning.ai_qb_keeper_forward)
+	run_kind = &"keeper"
 	return true
 
 
@@ -732,10 +870,35 @@ func _carry(pc: PlayController) -> void:
 	if _dive_for_the_line(pc, nearest):
 		pc.do_dive(player, forward)
 		return
+	if _hurdles(pc):
+		return
 	if _decision_timer <= 0.0 and _move_due(pc, nearest_opponent, nearest):
 		_decision_timer = 0.5
 		_move_lead = -1.0
 		_carrier_move(pc, nearest_opponent)
+
+
+## The sharper carrier goes over a tackler who dives at him. Only a dive: a
+## man on his feet wraps up a carrier in the air like any other.
+func _hurdles(pc: PlayController) -> bool:
+	var edge: float = pc.cpu_edge(player)
+	if edge <= 0.0 or _hurdle_timer > 0.0:
+		return false
+	for opponent: Player in player.team.opponent.players:
+		if opponent.state != Player.State.DIVING:
+			continue
+		var to: Vector3 = player.position - opponent.position
+		to.y = 0.0
+		var dist: float = to.length()
+		if dist > tuning.ai_edge_hurdle_range or dist < 0.01 or opponent.velocity.dot(to / dist) <= 0.0:
+			continue
+		_hurdle_timer = 0.5
+		if randf() < tuning.ai_edge_hurdle_chance * edge:
+			pc.game.add_stat(&"hurdle_jumps")
+			pc.do_jump(player)
+			return true
+		return false
+	return false
 
 
 ## True on the tick this carrier means to start his spin or stiff arm against
@@ -748,7 +911,7 @@ func _move_due(pc: PlayController, opponent: Player, dist: float) -> bool:
 	if _move_lead < 0.0:
 		_move_lead = tuning.ai_move_lead
 		_move_late = 0.0
-		if randf() < tuning.ai_move_mistime_chance * _mistime_scale():
+		if randf() < _sharp(tuning.ai_move_mistime_chance, tuning.ai_edge_move_mistime_chance) * _mistime_scale():
 			pc.game.add_stat(&"mistimed_moves")
 			if randf() < 0.5:
 				_move_lead = randf_range(tuning.ai_move_early_min, tuning.ai_move_early_max)
@@ -798,9 +961,9 @@ func _carrier_move(pc: PlayController, opponent: Player) -> void:
 
 	if absf(left) > tuning.ai_stiff_arm_side_dot and ahead > -0.5:
 		# Strong carriers use the stiff arm more.
-		if randf() < tuning.ai_stiff_arm_chance * float(player.ratings.strength) / 50.0:
+		if randf() < _sharp(tuning.ai_stiff_arm_chance, tuning.ai_edge_move_chance) * float(player.ratings.strength) / 50.0:
 			var side: float = signf(left)
-			if randf() < tuning.ai_move_wrong_side_chance * _mistime_scale():
+			if randf() < _sharp(tuning.ai_move_wrong_side_chance, tuning.ai_edge_move_wrong_side_chance) * _mistime_scale():
 				# The wrong arm: it does nothing for him.
 				side = -side
 				pc.game.add_stat(&"mistimed_moves")
@@ -808,7 +971,7 @@ func _carrier_move(pc: PlayController, opponent: Player) -> void:
 		return
 
 	# Elusive carriers spin more. The spin sidesteps away from the tackler.
-	if randf() < tuning.ai_spin_chance * float(player.ratings.juke) / 50.0:
+	if randf() < _sharp(tuning.ai_spin_chance, tuning.ai_edge_move_chance) * float(player.ratings.juke) / 50.0:
 		pc.do_spin(player, -signf(left) if left != 0.0 else 1.0, true)
 
 
@@ -846,10 +1009,12 @@ func _defense_pocket(pc: PlayController) -> void:
 		# Sold on the faked handoff: he comes up to stop the run.
 		_seek(pc.runner.position)
 		return
+	if _takes_out(pc):
+		return
 	match def_assign.job:
 		DefenseAssignment.Job.RUSH:
 			# Rushers hold their turbo at first so the QB gets a moment to read.
-			_pursue(pc, pc.qb, pc.live_time >= tuning.ai_rush_turbo_delay)
+			_pursue(pc, pc.qb, pc.live_time >= _sharp(tuning.ai_rush_turbo_delay, tuning.ai_edge_rush_turbo_delay))
 		DefenseAssignment.Job.MAN:
 			if man_target == null:
 				_cover_zone(pc)
@@ -864,6 +1029,39 @@ func _defense_pocket(pc: PlayController) -> void:
 		# Blown coverage: caught flat-footed, looking into the backfield.
 		player.move_input = Vector3.ZERO
 		player.wants_turbo = false
+
+
+## The defender picked to take a receiver or the back out goes for him once the
+## man is near: his own man in man coverage, whoever is nearest in a zone. Only
+## while the quarterback still has the ball, and he gives up on it after a while.
+func _takes_out(pc: PlayController) -> bool:
+	if takeout_time < 0.0 or pc.live_time < takeout_time or pc.phase != PlayController.Phase.POCKET:
+		return false
+	if pc.live_time > tuning.ai_takeout_give_up:
+		takeout_time = -1.0
+		return false
+	var victim: Player = man_target if def_assign.job == DefenseAssignment.Job.MAN else null
+	if victim == null:
+		var nearest: float = INF
+		for receiver: Player in pc.eligible:
+			var gap: float = _flat_distance(receiver.position, player.position)
+			if gap < nearest:
+				nearest = gap
+				victim = receiver
+	if victim == null or victim.is_down() or victim.is_blocking or victim.has_ball:
+		return false
+	var gap: float = _flat_distance(victim.position, player.position)
+	if gap > tuning.ai_takeout_close_range:
+		return false
+	if gap > tuning.ai_takeout_range:
+		# Close enough to go and get him: he leaves his coverage and runs at him.
+		player.move_input = _direction_to(victim.position + victim.velocity * 0.2)
+		player.wants_turbo = true
+		return true
+	takeout_time = -1.0
+	takeout_target = victim
+	pc.do_dive(player, _direction_to(victim.position + victim.velocity * 0.12))
+	return true
 
 
 ## An underneath zone defender has his eyes on the backfield: he comes up as
@@ -1005,6 +1203,7 @@ func _cover_spot(pc: PlayController, target: Player) -> Vector3:
 		chance *= PlayerRatings.blend(player.ratings.coverage, tuning.bust_coverage_scale_low, tuning.bust_coverage_scale_high)
 		if target == pc.read_target:
 			chance *= 1.0 - pc.read
+		chance *= _sharp(1.0, tuning.ai_edge_bust_scale)
 		if randf() < chance:
 			_bust_timer = tuning.ai_cover_bust_time
 			_bust_ghost = target.position
@@ -1051,7 +1250,9 @@ func _pursue(pc: PlayController, target: Player, allow_turbo: bool = true) -> vo
 	player.wants_turbo = allow_turbo and dist < tuning.ai_turbo_range
 	if dist < tuning.ai_dive_range and _decision_timer <= 0.0:
 		_decision_timer = 0.4
-		if randf() < tuning.ai_dive_chance:
+		# The sharper defender nearly always leaves his feet: a dive is a big hit,
+		# and big hits are what knock the ball loose.
+		if randf() < _sharp(tuning.ai_dive_chance, tuning.ai_edge_dive_chance):
 			pc.do_dive(player, _direction_to(target.position + target.velocity * 0.12))
 
 
@@ -1070,7 +1271,7 @@ func _think_air(pc: PlayController) -> void:
 			_run_route(pc)
 		return
 
-	var react_time: float = tuning.ai_ball_react_time
+	var react_time: float = _sharp(tuning.ai_ball_react_time, tuning.ai_edge_ball_react_time)
 	if pc.ball.intended == pc.read_target:
 		# The throw the defense was waiting for.
 		react_time *= 1.0 - tuning.ai_scout_react_saving * pc.read
@@ -1095,7 +1296,7 @@ func _think_air(pc: PlayController) -> void:
 	# Close enough as the ball comes down: go up for it.
 	if not _contest_decided and time_left <= tuning.ai_contest_time and dist <= tuning.ai_contest_range:
 		_contest_decided = true
-		if randf() < tuning.ai_contest_chance:
+		if randf() < _sharp(tuning.ai_contest_chance, tuning.ai_edge_contest_chance):
 			pc.do_jump(player)
 	_go_for_ball(pc)
 
@@ -1114,7 +1315,7 @@ func _go_for_ball(pc: PlayController) -> void:
 	if short <= reach:
 		return
 	_contest_decided = true
-	var effort: float = tuning.ai_catch_effort_chance * PlayerRatings.blend(player.ratings.catching, tuning.catch_scale_low, tuning.catch_scale_high)
+	var effort: float = _sharp(tuning.ai_catch_effort_chance, tuning.ai_edge_catch_effort_chance) * PlayerRatings.blend(player.ratings.catching, tuning.catch_scale_low, tuning.catch_scale_high)
 	if pc.human.team == player.team:
 		effort *= tuning.ai_catch_effort_human_scale
 	if randf() >= effort:
@@ -1218,6 +1419,14 @@ func _reset() -> void:
 	man_target = null
 	blown_time = 0.0
 	bite_time = 0.0
+	takeout_time = -1.0
+	takeout_target = null
+	_escape_rolled = false
+	_bail_rolled = false
+	_lane_timer = 0.0
+	_hurdle_timer = 0.0
+	_escaping = false
+	run_kind = &""
 	_decision_timer = 0.0
 	_move_lead = -1.0
 	_move_late = 0.0

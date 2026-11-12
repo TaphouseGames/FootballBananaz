@@ -688,6 +688,78 @@ extends Resource
 ## Chance per second that a CPU player takes a cheap shot after the whistle.
 @export var ai_late_hit_chance: float = 0.1
 
+@export_group("CPU edge")
+## How much sharper the team playing against the person is than the person's
+## own CPU teammates (0 = no different, 1 = everything below in full). With no
+## person playing, both teams get it. See PlayController.cpu_edge().
+@export_range(0.0, 1.0) var cpu_skill: float = 1.0
+## At full edge these take the place of ai_catch_effort_chance,
+## ai_contest_chance, ai_qb_keeper_chance, ai_rush_turbo_delay and
+## ai_ball_react_time.
+@export var ai_edge_catch_effort_chance: float = 0.9
+@export var ai_edge_contest_chance: float = 0.9
+@export var ai_edge_keeper_chance: float = 0.28
+@export var ai_edge_rush_turbo_delay: float = 0.35
+@export var ai_edge_ball_react_time: float = 0.15
+## Defenders going for a pass in the air, in place of ai_ball_breakers.
+@export var ai_edge_ball_breakers: int = 3
+## A quarterback with nobody open and an unblocked defender within
+## `escape_range` yards leaves the pocket round the other side, as on a keeper,
+## with this chance (times his mobility, at full edge). Rolled once per play.
+@export var ai_edge_escape_chance: float = 0.85
+@export var ai_edge_escape_range: float = 5.5
+## Out of the pocket like that, he throws to the first man who comes open, and
+## gets rid of the ball once a rusher is this close again.
+@export var ai_edge_escape_dump_range: float = 3.0
+## From this long after the snap a quarterback with nobody open looks at both
+## sides of the line: with no unblocked defender on one of them, up to
+## `lane_depth` yards ahead of him and `lane_width` yards out, he goes round
+## it, with this chance (times his mobility, at full edge). Rolled once per
+## play. Out of time with nobody open he goes round the emptier side anyway.
+@export var ai_edge_lane_time: float = 1.0
+@export var ai_edge_lane_depth: float = 10.0
+@export var ai_edge_lane_width: float = 11.0
+@export var ai_edge_lane_chance: float = 0.6
+## He takes the empty side unless a receiver is at least this open, and looks
+## again this many seconds after deciding against it.
+@export var ai_edge_lane_open: float = 4.0
+@export var ai_edge_lane_retry: float = 0.5
+## Nobody open and no empty side either: from this long after the snap he
+## breaks out round the emptier one, with this chance (times his mobility, at
+## full edge). Rolled once per play.
+@export var ai_edge_bail_time: float = 2.0
+@export var ai_edge_bail_chance: float = 0.5
+## The least mobility a quarterback's taste for running is worked out from at
+## full edge, so that a pocket passer runs now and then too.
+@export var ai_edge_mobility_floor: float = 0.6
+## At full edge these take the place of ai_move_mistime_chance and
+## ai_move_wrong_side_chance, of both ai_spin_chance and ai_stiff_arm_chance,
+## and of ai_dive_chance (a dive tackle is a big hit: it knocks the ball loose
+## more often than wrapping up does).
+@export var ai_edge_move_mistime_chance: float = 0.1
+@export var ai_edge_move_wrong_side_chance: float = 0.02
+@export var ai_edge_move_chance: float = 0.85
+@export var ai_edge_dive_chance: float = 0.95
+## A carrier jumps over a tackler who dives at him from within this range,
+## with this chance (at full edge).
+@export var ai_edge_hurdle_range: float = 3.5
+@export var ai_edge_hurdle_chance: float = 0.4
+## At full edge these multiply ai_cover_bust_chance and ai_blown_coverage_chance.
+@export var ai_edge_bust_scale: float = 0.6
+@export var ai_edge_blown_scale: float = 0.5
+## Chance per play (at full edge) that one coverage defender means to flatten
+## a receiver or the back before the ball is thrown, and that a second one
+## does too. He goes this long after the snap: from `takeout_close_range`
+## yards he runs at the man, from `takeout_range` he dives, and he gives it up
+## `takeout_give_up` seconds after the snap.
+@export var ai_takeout_chance: float = 0.45
+@export var ai_takeout_second_chance: float = 0.25
+@export var ai_takeout_close_range: float = 7.0
+@export var ai_takeout_time_min: float = 0.5
+@export var ai_takeout_time_max: float = 1.6
+@export var ai_takeout_range: float = 2.3
+@export var ai_takeout_give_up: float = 3.0
+
 @export_group("CPU play calling")
 ## The clock only runs while the ball is live, so the time left is really a
 ## number of plays: the clock divided by how long a play lasts. This is the

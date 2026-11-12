@@ -87,6 +87,8 @@ var _qb_ran: bool = false
 ## (0..1), and whether this is a last-play heave. See GameSituation.
 var qb_urgency: float = 0.0
 var heave: bool = false
+## For the tests: only this team gets the CPU edge (null = the usual rule).
+var edge_team: Team
 
 ## Defenders going for the pass in the air. Chosen at the throw.
 var ball_breakers: Array[Player] = []
@@ -210,6 +212,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false) ->
 		player.brain.assign_defense(assignment, start, target, to_world(_def_point(assignment.zone_center, deepest, room)))
 	_scout_defense()
 	_roll_blown_coverage()
+	_roll_takeout()
 	_roll_play_action()
 	var now: GameSituation = game.play_caller.situation(game)
 	qb_urgency = now.urgency
@@ -432,9 +435,60 @@ func _roll_blown_coverage() -> void:
 		var assignment: DefenseAssignment = defender.brain.def_assign
 		var covers: bool = assignment.job == DefenseAssignment.Job.MAN or (assignment.job == DefenseAssignment.Job.ZONE and not assignment.deep)
 		var chance: float = tuning.ai_blown_coverage_chance * PlayerRatings.blend(defender.ratings.coverage, tuning.bust_coverage_scale_low, tuning.bust_coverage_scale_high)
+		chance *= lerpf(1.0, tuning.ai_edge_blown_scale, team_edge(defense))
 		if covers and randf() < chance:
 			defender.brain.blown_time = randf_range(tuning.ai_blown_coverage_time_min, tuning.ai_blown_coverage_time_max)
 			game.add_stat(&"blown_coverages")
+
+
+## How much sharper `team`'s CPU players are than the plain ones (0..1). The
+## team playing against the person gets Tuning.cpu_skill and the person's own
+## teammates get none; with nobody playing, both teams get it.
+func team_edge(team: Team) -> float:
+	if edge_team != null:
+		return tuning.cpu_skill if team == edge_team else 0.0
+	if human.is_active() and human.team == team:
+		return 0.0
+	return tuning.cpu_skill
+
+
+func cpu_edge(player: Player) -> float:
+	return team_edge(player.team)
+
+
+## Now and then a coverage defender (sometimes two) means to take his man out
+## of the play before the ball is thrown: a dive that puts a receiver or the
+## back on the turf. The man the offense keeps going to comes first, then the
+## back. A dive that misses leaves the defender on the ground and his man free.
+func _roll_takeout() -> void:
+	if randf() >= tuning.ai_takeout_chance * team_edge(defense):
+		return
+	var hot: Player = hot_receiver()
+	var candidates: Array[Player] = []
+	var first: Player = null
+	for defender: Player in defense.players:
+		var assignment: DefenseAssignment = defender.brain.def_assign
+		if defender.brain.blown_time > 0.0:
+			continue
+		if assignment.job == DefenseAssignment.Job.MAN and defender.brain.man_target != null:
+			candidates.append(defender)
+			var target: Player = defender.brain.man_target
+			if hot != null and target == hot:
+				first = defender
+			elif target == runner and first == null and randf() < 0.5:
+				first = defender
+		elif assignment.job == DefenseAssignment.Job.ZONE and not assignment.deep:
+			candidates.append(defender)
+	if candidates.is_empty():
+		return
+	candidates.shuffle()
+	if first != null:
+		candidates.erase(first)
+		candidates.push_front(first)
+	var hitters: int = 2 if randf() < tuning.ai_takeout_second_chance else 1
+	for i: int in mini(hitters, candidates.size()):
+		candidates[i].brain.takeout_time = randf_range(tuning.ai_takeout_time_min, tuning.ai_takeout_time_max)
+		game.add_stat(&"takeout_plans")
 
 
 ## Play action: the handoff is still being faked.
@@ -738,6 +792,13 @@ func end_play(p_result: Result, spot_x: float) -> void:
 		var gain: float = (spot_x - los_x) * off_dir if final_team == offense else 0.0
 		game.play_caller.record(offense, off_play, gain, live_time)
 		game.scout.record(offense, off_play, _pass_target, _qb_ran, gain)
+		# For the tests: what a CPU quarterback's runs come to, by why he ran.
+		if qb != null and ball.carrier == qb and qb.brain.run_kind != &"":
+			var kind: String = qb.brain.run_kind
+			game.add_stat(StringName(kind + "_runs"))
+			game.add_stat(StringName(kind + "_run_feet"), roundi(gain * 3.0))
+			if was_sack:
+				game.add_stat(StringName(kind + "_sacks"))
 	if ball.carrier != null:
 		ball.carrier.release_drag()
 	if result == Result.TOUCHDOWN:
@@ -1362,9 +1423,13 @@ func _check_hit(attacker: Player, victim: Player, offset: Vector3, dist: float) 
 		elif attacker.has_ball:
 			# A carrier's dive is for yards: it knocks nobody over.
 			pass
-		elif ball_dead or attacker == human.controlled:
-			# Bystanders only get flattened by the person's dives and by late
-			# hits. CPU dives during the play go for the ball carrier alone.
+		elif ball_dead or attacker == human.controlled or attacker.brain.takeout_target == victim:
+			# Bystanders only get flattened by the person's dives, by late hits
+			# and by a defender who set out to take his receiver out. Other CPU
+			# dives during the play go for the ball carrier alone.
+			if attacker.brain.takeout_target == victim:
+				attacker.brain.takeout_target = null
+				game.add_stat(&"takeouts")
 			_knock_over(attacker, victim, offset.normalized() if dist > 0.01 else attacker.facing)
 	elif is_carrier and attacker.state == Player.State.NORMAL and dist <= tuning.tackle_radius:
 		_attempt_tackle(attacker, victim, false)
@@ -1482,6 +1547,8 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 	loose_time = 0.0
 	_loose_untouched = 0.0
 	game.add_stat(&"fumbles")
+	# For the tests: which team lost it.
+	game.add_stat(StringName("fumbles_lost_" + carrier.team.short_name.to_lower()))
 	game.audio.play(&"crowd_gasp")
 	game.hud.show_banner("FUMBLE!")
 	for player: Player in players:
@@ -1696,7 +1763,8 @@ func _pick_ball_breakers() -> void:
 		if dist <= tuning.ai_ball_break_radius and dist <= reach:
 			candidates.append(defender)
 	candidates.sort_custom(func(a: Player, b: Player) -> bool: return _flat_distance(a.position, point) < _flat_distance(b.position, point))
-	for i: int in mini(candidates.size(), tuning.ai_ball_breakers):
+	var breakers: int = roundi(lerpf(float(tuning.ai_ball_breakers), float(tuning.ai_edge_ball_breakers), team_edge(defense)))
+	for i: int in mini(candidates.size(), breakers):
 		ball_breakers.append(candidates[i])
 
 

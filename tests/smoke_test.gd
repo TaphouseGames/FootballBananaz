@@ -24,6 +24,10 @@ var _state_frames: int = 0
 var _games_left: int = 1
 ## The person's team is driven by random button presses instead of the CPU.
 var _monkey: bool = false
+## "home" or "away": only that team gets the CPU edge (see Tuning.cpu_skill).
+var _edge: String = ""
+var _home_points: int = 0
+var _away_points: int = 0
 var _overrides: Dictionary[String, float] = {}
 ## Kickoffs looked at in this game, and how many in the run were wrong.
 var _kick_seen: int = 0
@@ -52,6 +56,8 @@ func _initialize() -> void:
 			_games_left = maxi(int(arg.trim_prefix("games=")), 1)
 		elif arg == "monkey":
 			_monkey = true
+		elif arg.begins_with("edge="):
+			_edge = arg.trim_prefix("edge=")
 		elif arg.begins_with("set="):
 			for pair: String in arg.trim_prefix("set=").split(","):
 				var parts: PackedStringArray = pair.split(":")
@@ -82,6 +88,9 @@ func _start_game() -> void:
 func _process(_delta: float) -> bool:
 	if _game == null:
 		return true
+	# The first game is not in the tree yet when it is made, so this waits.
+	if _edge != "" and _game.play_controller != null and _game.play_controller.edge_team == null:
+		_game.play_controller.edge_team = _game.home if _edge == "home" else _game.away
 	var now: StringName = _game.play_controller.state_machine.current_name()
 	if now != _state:
 		_state = now
@@ -161,6 +170,8 @@ func _finish_game() -> bool:
 	for key: StringName in _game.stats:
 		var so_far: int = _totals.get(key, 0)
 		_totals[key] = so_far + _game.stats[key]
+	_home_points += _game.home.score
+	_away_points += _game.away.score
 	_games_left -= 1
 	if _games_left > 0:
 		_game.free()
@@ -205,6 +216,7 @@ func _report() -> bool:
 	if _worst_overlap > MAX_OVERLAP and _failures.is_empty():
 		_failures.append("two players overlapped by %.2f yd" % _worst_overlap)
 
+	print("points: home %d, away %d (edge: %s)" % [_home_points, _away_points, _edge if _edge != "" else "both"])
 	print("totals: %s" % _totals)
 	if _failures.is_empty():
 		print("SMOKE TEST PASSED")
