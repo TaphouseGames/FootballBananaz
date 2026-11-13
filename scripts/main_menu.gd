@@ -4,12 +4,15 @@ extends Node3D
 ## three buttons. Start brings up the team select, where the person picks the
 ## two teams of the league and their own side, and which fades to the match and
 ## its intro; Exit quits, Options does nothing yet.
+## Jim and Tony talk over all of it (MenuBooth).
 ## The buttons take the D-pad or stick and (A), the arrow keys and Enter, or
 ## the mouse, all through Godot's own ui_* actions.
 
 const GAME_SCENE: String = "res://scenes/main.tscn"
 const MOVE_SOUND: AudioStream = preload("res://assets/audio/ui_move_1.wav")
 const CONFIRM_SOUND: AudioStream = preload("res://assets/audio/ui_confirm_1.wav")
+## The broadcast theme, looped under the title. Silence when the file is missing.
+const THEME_MUSIC: String = "res://assets/audio/music_theme_1.ogg"
 const BLUE: Color = Color(0.16, 0.42, 0.85)
 const GOLD: Color = Color(0.93, 0.76, 0.3)
 const OUTLINE: Color = Color(0.04, 0.08, 0.2)
@@ -42,10 +45,21 @@ var _buttons: Control
 var _game_scene: PackedScene
 var _time: float = 0.0
 var _starting: bool = false
+## EXIT was pressed and the booth is having its last word.
+var _leaving: bool = false
 ## Off until the first button has its focus, so that does not make a sound.
 var _sounds_on: bool = false
 var _sound: AudioStreamPlayer
+var music: AudioStreamPlayer
+## The theme's fade in and out (0..1), and how far it is ducked under the booth.
+var _music_gain: float = 0.0
+var _music_duck: float = 1.0
+## Jim and Tony.
+var booth: MenuBooth
 var _font: SystemFont
+
+## The menu has been up before since the game was started: they say welcome back.
+static var _visited: bool = false
 
 @onready var field: Field = $Field
 @onready var camera: Camera3D = $Camera3D
@@ -66,6 +80,13 @@ func _ready() -> void:
 	_sound = AudioStreamPlayer.new()
 	_sound.bus = AudioDirector.BUS_UI
 	add_child(_sound)
+	_start_music()
+	booth = MenuBooth.new()
+	add_child(booth)
+	booth.setup(tuning)
+	var welcome: StringName = &"welcome_back" if _visited and booth.has(&"welcome_back") else &"welcome"
+	_visited = true
+	booth.consider(welcome, 1.0, tuning.menu_voice_welcome_delay, 0.0, false, true)
 
 	_build_title()
 	_build_buttons()
@@ -81,6 +102,13 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_time += delta
 	_place_camera()
+	_update_music(delta)
+
+
+## Any key, button or click: somebody is there.
+func _input(event: InputEvent) -> void:
+	if booth != null and event.is_pressed():
+		booth.touch()
 
 
 ## Godot's ui_accept has no gamepad button on it, so (A) comes in through the
@@ -105,9 +133,10 @@ func _place_camera() -> void:
 
 ## On to the team select, in place of the title and the buttons.
 func _on_start() -> void:
-	if _starting:
+	if _starting or _leaving:
 		return
 	_play(CONFIRM_SOUND)
+	booth.react(&"start_pick")
 	if team_select == null:
 		team_select = TeamSelect.new()
 		# Loaded here, so the fade into the match does not have to wait for it.
@@ -116,6 +145,8 @@ func _on_start() -> void:
 		team_select.chosen.connect(_start_match)
 		team_select.cancelled.connect(_on_select_cancelled)
 		team_select.moved.connect(_play.bind(MOVE_SOUND))
+		team_select.team_changed.connect(_remark_select.bind(&"team"))
+		team_select.side_changed.connect(_remark_select.bind(&"side"))
 		ui.add_child(team_select)
 	ScreenFade.pop(_title, false)
 	ScreenFade.pop(_buttons, false)
@@ -125,6 +156,7 @@ func _on_start() -> void:
 
 ## Back to the title. START GAME taking the focus makes the sound.
 func _on_select_cancelled() -> void:
+	booth.react(&"back")
 	team_select.close()
 	ScreenFade.pop(_title, true)
 	ScreenFade.pop(_buttons, true)
@@ -141,16 +173,86 @@ func _start_match(team: int) -> void:
 	Game.team_picks = PackedInt32Array(team_select.picks)
 	# The match opens with the broadcast's intro, which comes up out of black.
 	Game.show_intro = true
+	_fade_music()
+	# Their send-off first, if it is short; the fade cuts off a long one.
+	if booth.react(&"go"):
+		await _last_word(tuning.menu_voice_go_wait)
 	ScreenFade.of(get_tree()).change_scene(GAME_SCENE)
 
 
 ## Nothing to set yet.
 func _on_options() -> void:
+	if _leaving:
+		return
 	_play(CONFIRM_SOUND)
+	booth.react(&"options_pick")
 
 
+## The booth signs off, briefly, and the game quits. A second press quits at once.
 func _on_exit() -> void:
+	if _leaving or _starting or not booth.react(&"exit_pick"):
+		get_tree().quit()
+		return
+	_leaving = true
+	await _last_word(tuning.menu_voice_exit_wait)
 	get_tree().quit()
+
+
+## Waits for the booth to finish its line, but no longer than `limit` seconds.
+func _last_word(limit: float) -> void:
+	var until: float = _time + limit
+	while booth.busy() and _time < until:
+		await get_tree().process_frame
+
+
+## A button got the highlight: the click, and what the booth makes of it.
+func _on_button_focused(button: Button) -> void:
+	_play(MOVE_SOUND)
+	if not _sounds_on or _starting or _leaving:
+		return
+	if button == exit_button:
+		booth.consider(&"exit", 1.0, tuning.menu_voice_exit_dwell, tuning.menu_voice_exit_gap, true)
+	elif button == start_button:
+		booth.consider(&"start", tuning.menu_voice_highlight_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
+	else:
+		booth.consider(&"options", tuning.menu_voice_highlight_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
+
+
+## The person changed side or team in the team select.
+func _remark_select(moment: StringName) -> void:
+	if not _starting:
+		booth.consider(moment, tuning.menu_voice_select_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
+
+
+func _start_music() -> void:
+	music = AudioStreamPlayer.new()
+	music.bus = AudioDirector.BUS_MUSIC
+	add_child(music)
+	if not tuning.audio_enabled or not ResourceLoader.exists(THEME_MUSIC):
+		return
+	var stream: AudioStreamOggVorbis = load(THEME_MUSIC) as AudioStreamOggVorbis
+	if stream == null:
+		return
+	stream.loop = true
+	music.stream = stream
+	music.volume_linear = AudioDirector.SILENT
+	music.play()
+	create_tween().tween_property(self, ^"_music_gain", 1.0, tuning.audio_music_fade)
+
+
+## Out with the screen, on the way into the match.
+func _fade_music() -> void:
+	if music.playing:
+		create_tween().tween_property(self, ^"_music_gain", 0.0, tuning.audio_music_fade)
+
+
+## The theme at its level, faded in or out, and down under the booth.
+func _update_music(delta: float) -> void:
+	if not music.playing:
+		return
+	var duck: float = tuning.audio_music_duck if booth != null and booth.busy() else 1.0
+	_music_duck = move_toward(_music_duck, duck, delta / maxf(tuning.audio_music_fade, 0.01))
+	music.volume_linear = maxf(tuning.audio_music_level * _music_gain * _music_duck, AudioDirector.SILENT)
 
 
 func _play(stream: AudioStream) -> void:
@@ -253,7 +355,7 @@ func _button(text: String, action: Callable) -> Button:
 	# Drawn over the others on the button that has the focus.
 	button.add_theme_stylebox_override(&"focus", _button_style(Color(1.0, 1.0, 1.0, 0.14), Color.WHITE, false))
 	button.pressed.connect(action)
-	button.focus_entered.connect(_play.bind(MOVE_SOUND))
+	button.focus_entered.connect(_on_button_focused.bind(button))
 	button.mouse_entered.connect(button.grab_focus)
 	return button
 

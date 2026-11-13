@@ -12,6 +12,7 @@ const SCRIPT_DIRS: Array[String] = ["res://scripts", "res://scripts/state"]
 const EXPECTED: Array[StringName] = [
 	&"kick", &"catch", &"whistle", &"qb_cadence", &"qb_hut", &"snap", &"throw",
 	&"tackle", &"body_fall", &"pads_clash", &"buzzer", &"announcer_down1",
+	&"music_final",
 ]
 
 var _game: Game
@@ -57,6 +58,13 @@ func _report() -> bool:
 		_failures.append("asked for '%s', which has no file" % sound)
 	for chat: String in audio.broken_exchanges:
 		_failures.append("exchange '%s' has a part missing or a bad name" % chat)
+	if AudioServer.get_bus_index(AudioDirector.BUS_MUSIC) < 0:
+		_failures.append("no Music bus")
+	for sound: StringName in [&"music_theme", &"music_open", &"music_halftime", &"music_final"]:
+		if audio._bus_of(sound) != AudioDirector.BUS_MUSIC:
+			_failures.append("'%s' is not on the Music bus" % sound)
+		if not audio.has_sound(sound):
+			_failures.append("no file for '%s'" % sound)
 	for sound: StringName in EXPECTED:
 		if audio.play_counts.get(sound, 0) == 0:
 			_failures.append("'%s' never played" % sound)

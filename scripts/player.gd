@@ -101,6 +101,9 @@ var tackle_cooldown: float = 0.0
 ## Above 0 during a dive and for a moment after landing: the dive still reaches
 ## for a pass.
 var dive_reach_timer: float = 0.0
+## Set when a dive lands; counts down once he is back on his feet and is
+## running. While above 0 he picks up speed more slowly.
+var dive_get_up_timer: float = 0.0
 ## Counts down from tuning.catch_blend_time after a catch, while the hands bring
 ## the ball in.
 var catch_timer: float = 0.0
@@ -166,6 +169,7 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	jump_cooldown = 0.0
 	tackle_cooldown = 0.0
 	dive_reach_timer = 0.0
+	dive_get_up_timer = 0.0
 	catch_timer = 0.0
 	ball_grab_cooldown = 0.0
 	drag_partner = null
@@ -547,6 +551,7 @@ func integrate(delta: float) -> void:
 			if state_timer <= 0.0:
 				state = State.DOWN
 				state_timer = tuning.dive_recover_time
+				dive_get_up_timer = tuning.dive_get_up_time
 				fall.start_dive_landing(state_timer)
 		State.SPINNING:
 			state_timer -= delta
@@ -629,6 +634,11 @@ func _move_normal(delta: float) -> void:
 		speed *= tuning.block_slow_factor
 
 	var rate: float = tuning.acceleration if moving else tuning.deceleration
+	# Fresh up off the turf after a dive: legs come back slowly.
+	if moving and dive_get_up_timer > 0.0 and tuning.dive_get_up_time > 0.0:
+		var t: float = 1.0 - dive_get_up_timer / tuning.dive_get_up_time
+		rate *= lerpf(tuning.dive_get_up_accel_scale, 1.0, t)
+		dive_get_up_timer = maxf(dive_get_up_timer - delta, 0.0)
 	velocity = velocity.move_toward(input * speed, rate * delta)
 
 

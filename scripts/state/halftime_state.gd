@@ -22,6 +22,7 @@ func enter() -> void:
 	_exchange = {}
 	_asked = false
 	game.add_stat(&"halftimes")
+	game.audio.play_music(&"music_halftime")
 	game.hud.set_hint("")
 	if not game.has_halftime_show():
 		game.hud.show_banner("HALFTIME", "%s %d  -  %d %s" % [home.short_name, home.score, away.score, away.short_name])
@@ -32,6 +33,7 @@ func enter() -> void:
 
 
 func exit() -> void:
+	game.audio.stop_music()
 	game.hud.hide_banner()
 	game.hud.hide_halftime()
 	_card = null

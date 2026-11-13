@@ -290,6 +290,7 @@ func _reset_play() -> void:
 	scorer = null
 	dead_time = 0.0
 	_party_angles.clear()
+	game.field.reset_pylons()
 	live_time = 0.0
 	handoff_done = false
 	qb_tuck_time = 0.0
@@ -620,13 +621,14 @@ func simulate(delta: float) -> void:
 	_update_drag()
 	_guide_pass()
 	var arrived: bool = ball.integrate(delta)
+	var hit_pylon: Pylon = game.field.touch_pylons_with_ball(ball.position, ball.velocity)
 	if not ball_dead:
 		if arrived:
 			_resolve_pass_arrival()
 		else:
 			_check_tipped_ball()
 		_check_loose_ball(delta)
-		_check_carrier()
+		_check_carrier(hit_pylon)
 	_update_markers()
 
 
@@ -638,6 +640,7 @@ func simulate_dead(delta: float) -> void:
 	_resolve_contacts(delta)
 	_spike_ball()
 	ball.integrate(delta)
+	game.field.touch_pylons_with_ball(ball.position, ball.velocity)
 
 
 # --- Celebration -----------------------------------------------------------------
@@ -738,6 +741,7 @@ func _think_and_move(delta: float) -> void:
 	for player: Player in players:
 		player.integrate(delta)
 	game.field.fx.track(players)
+	game.field.touch_pylons(players)
 
 
 ## The quarterback looks downfield while he holds the ball in the pocket, even
@@ -792,7 +796,8 @@ func _try_handoff() -> void:
 	human.on_carrier_changed(runner)
 
 
-func _check_carrier() -> void:
+## `hit_pylon` is the pylon the ball touched this tick, or null.
+func _check_carrier(hit_pylon: Pylon = null) -> void:
 	var carrier: Player = ball.carrier
 	if carrier == null:
 		return
@@ -802,12 +807,15 @@ func _check_carrier() -> void:
 	# hands or with him in the air, and the spot wherever it is when he is down.
 	var spot_x: float = _carrier_spot_x(carrier)
 	if (dir > 0 and spot_x >= tuning.field_length) or (dir < 0 and spot_x <= 0.0):
-		if not game.conversion:
-			game.add_stat(&"touchdowns")
-		if kickoff:
-			game.add_stat(&"kick_return_touchdowns")
-		touchdown_quip = _pick_touchdown_quip(carrier, spot_x)
-		end_play(Result.TOUCHDOWN, spot_x)
+		_score_touchdown(carrier, spot_x)
+		return
+	# The ball in his hands touched the pylon on the goal line he is going for:
+	# that is in the end zone. Checked before out of bounds, so a carrier going
+	# out on the same tick still scores.
+	if hit_pylon != null and hit_pylon.front and is_equal_approx(hit_pylon.line_x, tuning.goal_x(dir)):
+		game.add_stat(&"pylon_touchdowns")
+		game.audio.play(&"ball_bounce", 0.6)
+		_score_touchdown(carrier, hit_pylon.line_x)
 		return
 	var from_own_goal: float = (x - tuning.own_goal_x(dir)) * float(dir)
 	was_touchback = kickoff and carrier.team == offense and from_own_goal <= 0.0
@@ -833,6 +841,15 @@ func _check_carrier() -> void:
 			_qb_ran = true
 			game.add_stat(&"scrambles")
 			game.audio.quip(&"color_qb_run", AudioDirector.QUIP_QB_RUN)
+
+
+func _score_touchdown(carrier: Player, spot_x: float) -> void:
+	if not game.conversion:
+		game.add_stat(&"touchdowns")
+	if kickoff:
+		game.add_stat(&"kick_return_touchdowns")
+	touchdown_quip = _pick_touchdown_quip(carrier, spot_x)
+	end_play(Result.TOUCHDOWN, spot_x)
 
 
 ## The color commentator's line for `scorer` crossing the goal line at `spot_x`:
@@ -1711,12 +1728,15 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 	chance *= RubberBand.bad(carrier.team, game)
 
 	if randf() >= chance:
+		var move: StringName = &""
 		if stiff_armed:
+			move = &"stiff_arm"
 			game.add_stat(&"stiff_arms")
 			game.audio.play(&"stiff_arm")
 		elif spinning:
+			move = &"spin"
 			game.add_stat(&"spins")
-		_break_tackle(tackler, carrier, dir)
+		_break_tackle(tackler, carrier, dir, move)
 		return
 	# Wrapped up. A strong carrier stays on his feet and drags the tackler along.
 	var drag_time: float = PlayerRatings.blend(skills.strength, tuning.drag_time_low, tuning.drag_time_high)
@@ -1744,6 +1764,10 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 	if big:
 		game.audio.remark(&"announcer_hit", AudioDirector.REMARK_HIT)
 		game.audio.quip(&"color_lawn_chair", AudioDirector.QUIP_LAWN_CHAIR)
+	elif not (phase == Phase.POCKET and carrier == qb):
+		# An ordinary tackle now and then gets a word; a sack has its own call.
+		game.audio.remark(&"announcer_tackle", AudioDirector.REMARK_TACKLE)
+		game.audio.quip(&"color_tackle", AudioDirector.QUIP_TACKLE)
 	game.impact(tuning.tackle_shake, 1.0)
 	game.field.fx.blood_burst(carrier.position, dir, tuning.blood_drops_tackle, true)
 	if _try_fumble(carrier, dir, kind, carried):
@@ -1898,12 +1922,11 @@ func _grab_loose_ball(player: Player) -> void:
 
 
 ## Broken tackle: the defender bounces off and eats turf.
-func _break_tackle(tackler: Player, carrier: Player, dir: Vector3) -> void:
+func _break_tackle(tackler: Player, carrier: Player, dir: Vector3, move: StringName = &"") -> void:
 	tackler.knock_down(-dir * 3.0, tuning.broken_tackle_stun, PlayerFall.Kind.BOUNCE_OFF)
 	carrier.jolt(dir, 0.8)
 	game.add_stat(&"broken_tackles")
-	game.audio.remark(&"announcer_break", AudioDirector.REMARK_BREAK)
-	game.audio.quip(&"color_dog", AudioDirector.QUIP_DOG)
+	game.audio.broke_tackle(move)
 	game.audio.play(&"broken_tackle")
 	game.audio.play(&"body_fall", 0.6)
 	game.audio.crowd_react(carrier.team, 0.3)

@@ -10,7 +10,8 @@ extends SceneTree
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/menu_check.gd
 
-const WAIT_FRAMES: int = 120
+## Long enough for the booth's send-off (Tuning.menu_voice_go_wait) and the fade.
+const WAIT_FRAMES: int = 360
 ## Frames between one press and the look at what it did.
 const STEP_FRAMES: int = 12
 

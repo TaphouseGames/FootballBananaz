@@ -20,9 +20,12 @@ extends Resource
 ## finished and then the game stops for a warning before the next snap or
 ## kickoff (like the NFL's two-minute warning). 0 turns it off.
 @export var warning_time: float = 30.0
-## In the second half's last this many seconds, the playbook's Hail Mary takes
+## In either half's last this many seconds, the playbook's Hail Mary takes
 ## the first play's place (the top-left card on page 1). 0 turns it off.
 @export var hail_mary_time: float = 5.0
+## The Hail Mary only replaces the first play when the line of scrimmage is
+## more than this many yards from the goal line.
+@export var hail_mary_min_distance: float = 20.0
 ## Seconds the warning banner stays up.
 @export var warning_banner_time: float = 2.5
 @export var touchdown_points: int = 6
@@ -83,7 +86,11 @@ extends Resource
 @export_group("Actions")
 @export var dive_speed: float = 13.5
 @export var dive_time: float = 0.28
-@export var dive_recover_time: float = 0.75
+@export var dive_recover_time: float = 1.0
+## After getting up from a dive he accelerates at dive_get_up_accel_scale of the
+## usual rate, easing back to full over dive_get_up_time seconds of running.
+@export var dive_get_up_time: float = 0.8
+@export var dive_get_up_accel_scale: float = 0.35
 ## Human defender: a dive auto-aims at the carrier (or late-hit victim) inside this range.
 @export var dive_trigger_range: float = 6.5
 @export var shove_radius: float = 2.0
@@ -458,6 +465,12 @@ extends Resource
 @export var audio_crowd_db: float = -5.0
 @export var audio_voice_db: float = -2.0
 @export var audio_ui_db: float = -14.0
+## The broadcast music (`music_*`): its bus level in dB, its linear volume, the
+## level it ducks to while Jim or Tony is talking, and seconds to fade in or out.
+@export var audio_music_db: float = -6.0
+@export var audio_music_level: float = 1.0
+@export var audio_music_duck: float = 0.35
+@export var audio_music_fade: float = 0.8
 ## Linear volume (0..1) of the steady crowd murmur, of the roar at full
 ## excitement, of a chant and of the huddle's muttering.
 @export var audio_crowd_bed_level: float = 0.45
@@ -485,6 +498,23 @@ extends Resource
 ## The booth warns that the half or the game is nearly over with no more than
 ## this many plays' worth of clock left.
 @export var audio_late_plays: float = 3.0
+## Jim and Tony on the main menu (MenuBooth). Seconds the menu is up before they
+## welcome the person; seconds a button has to stay highlighted before they
+## remark on it, and the same for EXIT, which Tony cannot bear; seconds before
+## the same kind of remark may come again, and the same for EXIT; the chance of
+## a remark on a highlighted button and on a change in the team select; seconds
+## without input before they wonder if anyone is there; and the longest the
+## game waits for their last word before it quits or the match loads.
+@export var menu_voice_welcome_delay: float = 1.2
+@export var menu_voice_dwell: float = 0.55
+@export var menu_voice_exit_dwell: float = 0.15
+@export var menu_voice_repeat_gap: float = 7.0
+@export var menu_voice_exit_gap: float = 1.5
+@export var menu_voice_highlight_chance: float = 0.7
+@export var menu_voice_select_chance: float = 0.45
+@export var menu_voice_idle_time: float = 25.0
+@export var menu_voice_exit_wait: float = 2.5
+@export var menu_voice_go_wait: float = 1.5
 ## A touchdown is a walk-in when no defender on his feet is within this many
 ## yards of the scorer, and a long one when the play gained at least this many.
 @export var audio_walk_in_yards: float = 6.0
@@ -950,6 +980,17 @@ extends Resource
 ## Seconds the camera takes to circle round behind the other team when the ball
 ## changes sides in the middle of a play.
 @export var camera_swing_time: float = 0.8
+
+@export_group("Pylons")
+## Side and height of an end zone pylon. A real one is 0.1 x 0.46; scaled up
+## like the ball so it reads from the game camera.
+@export var pylon_size: float = 0.16
+@export var pylon_height: float = 0.65
+@export var pylon_mass: float = 0.5
+## How much of the speed of whatever hits a pylon goes into knocking it over.
+@export var pylon_knock_scale: float = 0.4
+## How close (yd) the ball has to come to a pylon's surface to touch it.
+@export var pylon_ball_margin: float = 0.1
 
 
 func half_width() -> float:

@@ -10,5 +10,7 @@ script = ExtResource("1_field")
 
 [node name="Markers" type="Node3D" parent="."]
 
+[node name="Pylons" type="Node3D" parent="."]
+
 [node name="Fx" type="Node3D" parent="."]
 script = ExtResource("2_fx")

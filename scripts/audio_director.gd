@@ -19,6 +19,8 @@ const BUS_SFX: StringName = &"SFX"
 const BUS_CROWD: StringName = &"Crowd"
 const BUS_VOICE: StringName = &"Voice"
 const BUS_UI: StringName = &"UI"
+const BUS_MUSIC: StringName = &"Music"
+const MUSIC_PREFIX: String = "music_"
 const POOL_SIZE: int = 16
 ## Real seconds before the same sound may start again.
 const MIN_REPEAT: float = 0.06
@@ -35,6 +37,11 @@ const REMARK_BREAK: float = 0.25
 const REMARK_HURDLE: float = 0.7
 const REMARK_ROOM: float = 0.5
 const REMARK_PANCAKE: float = 0.25
+## A plain wrap-up is rare (most tackles are dives, which count as hits), so it
+## gets its word often when it comes.
+const REMARK_TACKLE: float = 0.5
+const REMARK_SPIN: float = 0.45
+const REMARK_STIFF_ARM: float = 0.45
 ## Chance the color commentator has something to say about each kind of moment.
 const QUIP_BOLD: float = 0.6
 const QUIP_FOURTH: float = 0.6
@@ -56,6 +63,9 @@ const QUIP_BREAKAWAY: float = 0.5
 const QUIP_JUICE: float = 0.6
 const QUIP_FUMBLE: float = 0.6
 const QUIP_DROP: float = 0.5
+const QUIP_TACKLE: float = 0.4
+const QUIP_SPIN: float = 0.4
+const QUIP_STIFF_ARM: float = 0.4
 ## Real seconds a quip waits for the announcer before it is too late to say it.
 const QUIP_STALE: float = 8.0
 ## Real seconds of quiet between one voice finishing and the next starting.
@@ -84,6 +94,8 @@ const CHAT_PREFIX: String = "chat_"
 ## (see HalftimeExchanges), not at random.
 const SHOW_PREFIX: String = "show_"
 const QUIP_PREFIX: String = "color_"
+## The main menu's lines (see MenuBooth), which are none of this director's.
+const MENU_PREFIX: String = "menu_"
 const BREAKAWAY_YARDS: float = 20.0
 const BREAKAWAY_RETURN_YARDS: float = 40.0
 
@@ -123,6 +135,10 @@ var _announcer: AudioStreamPlayer
 var _announcer_queue: Array[StringName] = []
 var _last_remark: int = -1000000
 var _color: AudioStreamPlayer
+## The broadcast music, and whether it is on its way out.
+var _music: AudioStreamPlayer
+var _music_stopping: bool = false
+var _music_level: float = 0.0
 ## The quip Tony is holding until Jim is done, and when it came up.
 var _quip_pending: StringName = &""
 var _quip_asked: int = 0
@@ -172,6 +188,7 @@ func setup(p_game: Game) -> void:
 	_voice = _make_player(BUS_VOICE)
 	_announcer = _make_player(BUS_VOICE)
 	_color = _make_player(BUS_VOICE)
+	_music = _make_player(BUS_MUSIC)
 	_bed.volume_linear = tuning.audio_crowd_bed_level
 	_roar.volume_linear = SILENT
 	_huddle.volume_linear = SILENT
@@ -259,6 +276,28 @@ func quip(sound: StringName, chance: float) -> void:
 		return
 	_quip_pending = sound
 	_quip_asked = now
+
+
+## The carrier got out of a tackle with `move` (&"spin", &"stiff_arm" or
+## anything else for plain strength): the booth's lines for that move, or the
+## ones for any broken tackle where the move has none of its own.
+func broke_tackle(move: StringName) -> void:
+	var said: StringName = &"announcer_break"
+	var thought: StringName = &"color_dog"
+	var remark_chance: float = REMARK_BREAK
+	var quip_chance: float = QUIP_DOG
+	if move == &"spin" and has_sound(&"announcer_spin") and has_sound(&"color_spin"):
+		said = &"announcer_spin"
+		thought = &"color_spin"
+		remark_chance = REMARK_SPIN
+		quip_chance = QUIP_SPIN
+	elif move == &"stiff_arm" and has_sound(&"announcer_stiff_arm") and has_sound(&"color_stiff_arm"):
+		said = &"announcer_stiff_arm"
+		thought = &"color_stiff_arm"
+		remark_chance = REMARK_STIFF_ARM
+		quip_chance = QUIP_STIFF_ARM
+	remark(said, remark_chance)
+	quip(thought, quip_chance)
 
 
 ## Tony says `sound` next whatever the dice or the gap since his last line
@@ -366,6 +405,49 @@ func hush() -> void:
 	_quip_pending = &""
 	_announcer.stop()
 	_color.stop()
+
+
+## A cue of the broadcast music, from the start, in place of any playing.
+## Returns false when there is no file for it.
+func play_music(sound: StringName) -> bool:
+	play_counts[sound] = play_counts.get(sound, 0) + 1
+	var stream: AudioStream = _pick(sound)
+	if stream == null:
+		return false
+	if not tuning.audio_enabled:
+		return true
+	_music.stream = stream
+	_music_stopping = false
+	_music_level = _music_target()
+	_music.volume_linear = maxf(_music_level, SILENT)
+	_music.play()
+	return true
+
+
+## The music fades out over Tuning.audio_music_fade.
+func stop_music() -> void:
+	_music_stopping = true
+
+
+func music_playing() -> bool:
+	return _music.playing and not _music_stopping
+
+
+func _music_target() -> float:
+	if _music_stopping:
+		return 0.0
+	return tuning.audio_music_level * (tuning.audio_music_duck if booth_busy() else 1.0)
+
+
+## Down under the booth, back up after, and out when asked.
+func _update_music(delta: float) -> void:
+	if not _music.playing:
+		return
+	_music_level = move_toward(_music_level, _music_target(), delta / maxf(tuning.audio_music_fade, 0.01))
+	_music.volume_linear = maxf(_music_level, SILENT)
+	if _music_stopping and _music_level <= 0.0:
+		_music.stop()
+		_music_stopping = false
 
 
 ## The two voices share one microphone: nobody starts until the other has
@@ -597,6 +679,7 @@ func _process(_delta: float) -> void:
 		if _chant_in < 0.0:
 			_start_chant()
 	_update_booth(delta)
+	_update_music(delta)
 	if _chant_fading and _chant.playing:
 		_chant.volume_linear = move_toward(_chant.volume_linear, 0.0, delta / FADE_TIME)
 		if _chant.volume_linear <= SILENT:
@@ -684,6 +767,7 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 				quip(&"color_half", QUIP_HALF)
 		&"GameOver":
 			play(&"buzzer")
+			play_music(&"music_final")
 			shout(&"announcer_final")
 			quip(&"color_final", QUIP_FINAL)
 			var mine: Team = game.human.team if game.human.is_active() and game.human.team != null else game.home
@@ -750,6 +834,8 @@ func _bus_of(sound: StringName) -> StringName:
 		return BUS_VOICE
 	if text.begins_with("ui_"):
 		return BUS_UI
+	if text.begins_with(MUSIC_PREFIX):
+		return BUS_MUSIC
 	return BUS_SFX
 
 
@@ -788,6 +874,7 @@ static func make_buses(tuning: Tuning) -> void:
 		BUS_CROWD: tuning.audio_crowd_db,
 		BUS_VOICE: tuning.audio_voice_db,
 		BUS_UI: tuning.audio_ui_db,
+		BUS_MUSIC: tuning.audio_music_db,
 	}
 	for bus: StringName in levels:
 		var index: int = AudioServer.get_bus_index(bus)
@@ -808,7 +895,7 @@ func _load_streams() -> void:
 	var seen: Dictionary[String, bool] = {}
 	for file: String in DirAccess.get_files_at(AUDIO_DIR):
 		var path: String = file.trim_suffix(".import")
-		if seen.has(path) or not EXTENSIONS.has(path.get_extension()):
+		if seen.has(path) or not EXTENSIONS.has(path.get_extension()) or path.begins_with(MENU_PREFIX):
 			continue
 		seen[path] = true
 		var base: String = path.get_basename()

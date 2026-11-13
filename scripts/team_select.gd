@@ -11,6 +11,9 @@ signal chosen(team: int)
 signal cancelled
 ## The controller went from one place to another, or a side got another team.
 signal moved
+## The controller went to another side, and the team on its side changed.
+signal side_changed
+signal team_changed
 
 const SCRIM_COLOR: Color = Color(0.02, 0.04, 0.1, 0.72)
 const PANEL_COLOR: Color = Color(0.04, 0.08, 0.2, 0.94)
@@ -143,6 +146,7 @@ func _move_to(to: int) -> void:
 	side = to
 	_refresh(true)
 	moved.emit()
+	side_changed.emit()
 
 
 ## The next team (`by` +1) or the one before (-1) on the side the controller
@@ -160,6 +164,7 @@ func _cycle(by: int) -> void:
 	picks[index] = to
 	_refresh(false)
 	moved.emit()
+	team_changed.emit()
 
 
 ## Nothing to start or to change in the middle: the hint to pick a side flashes.

@@ -278,11 +278,14 @@ func warning_due() -> bool:
 
 
 ## The offensive plays on offer for the next snap: the playbook, with the Hail
-## Mary in the first play's place in the game's last Tuning.hail_mary_time seconds.
+## Mary in the first play's place in either half's last Tuning.hail_mary_time
+## seconds, but only from more than Tuning.hail_mary_min_distance yards out.
 func offense_plays() -> Array[OffensePlay]:
 	var plays: Array[OffensePlay] = offense_playbook.plays.duplicate()
 	var hail_mary: OffensePlay = offense_playbook.hail_mary
-	if hail_mary != null and not plays.is_empty() and half == 2 and not conversion and clock <= tuning.hail_mary_time:
+	var to_goal: float = absf(tuning.goal_x(offense.attack_dir) - los_x)
+	if hail_mary != null and not plays.is_empty() and not conversion \
+			and clock <= tuning.hail_mary_time and to_goal > tuning.hail_mary_min_distance:
 		plays[0] = hail_mary
 	return plays
 

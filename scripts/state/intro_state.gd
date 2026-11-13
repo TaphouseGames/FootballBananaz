@@ -30,10 +30,12 @@ func enter() -> void:
 	_place_camera(true)
 	game.hud.set_hint("")
 	game.hud.show_intro()
-	game.audio.play(&"intro_sting", 0.8)
+	if not game.audio.play_music(&"music_open"):
+		game.audio.play(&"intro_sting", 0.8)
 
 
 func exit() -> void:
+	game.audio.stop_music()
 	game.camera_rig.end_shot()
 	game.hud.hide_intro()
 

@@ -77,7 +77,7 @@ func _process(_delta: float) -> bool:
 				_failures.append("the intro lasted %.1f s, outside %.0f-%.0f" % [elapsed, MIN_SECONDS, MAX_SECONDS])
 			if audio.exchange_counts[&"started"] != 1 or audio.exchange_counts[&"finished"] != 1:
 				_failures.append("the booth did not say exactly one whole exchange")
-			if audio.play_counts.get(&"intro_sting", 0) != 1 or audio.missing.has(&"intro_sting"):
+			if audio.play_counts.get(&"music_open", 0) != 1 or audio.missing.has(&"music_open"):
 				_failures.append("the fanfare did not play")
 			if _overlaps > 0:
 				_failures.append("the two voices overlapped on %d frames" % _overlaps)
