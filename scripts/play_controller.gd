@@ -1999,6 +1999,13 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 				rusher.block_pancake_time = randf_range(tuning.block_pancake_time_min, tuning.block_pancake_time_max)
 	rusher.block_engaged_time += delta
 	rusher.block_slow_timer = 0.12
+	# A man with two on him stays with the first until that one lets go.
+	if rusher.block_partner == null or rusher.block_partner == blocker:
+		rusher.block_partner = blocker
+		rusher.block_partner_timer = 0.2
+	if blocker.block_partner == null or blocker.block_partner == rusher:
+		blocker.block_partner = rusher
+		blocker.block_partner_timer = 0.2
 	if rusher.block_pancake_time >= 0.0 and rusher.block_engaged_time >= rusher.block_pancake_time:
 		rusher.knock_down(push_dir * 4.0, tuning.block_pancake_down_time, PlayerFall.Kind.PANCAKE)
 		rusher.block_slow_timer = 0.0

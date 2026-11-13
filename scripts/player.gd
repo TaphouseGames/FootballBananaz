@@ -92,6 +92,10 @@ var block_shed_time: float = 0.0
 ## Seconds into this block at which the blocker flattens him; negative = never.
 var block_pancake_time: float = -1.0
 var block_immune_timer: float = 0.0
+## The man he is locked up with in a block (either side of it), for as long as
+## the timer runs. Only the animation reads it.
+var block_partner: Player = null
+var block_partner_timer: float = 0.0
 
 var spin_evade_timer: float = 0.0
 ## Shared by spin and stiff arm.
@@ -163,6 +167,8 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	block_engaged_time = 0.0
 	block_pancake_time = -1.0
 	block_immune_timer = 0.0
+	block_partner = null
+	block_partner_timer = 0.0
 	spin_evade_timer = 0.0
 	move_cooldown = 0.0
 	move_side = 1.0
@@ -651,6 +657,9 @@ func _tick_timers(delta: float) -> void:
 	catch_timer = maxf(catch_timer - delta, 0.0)
 	ball_grab_cooldown = maxf(ball_grab_cooldown - delta, 0.0)
 	block_immune_timer = maxf(block_immune_timer - delta, 0.0)
+	block_partner_timer = maxf(block_partner_timer - delta, 0.0)
+	if block_partner != null and (block_partner_timer <= 0.0 or block_partner.state != State.NORMAL or state != State.NORMAL):
+		block_partner = null
 	if block_slow_timer > 0.0:
 		block_slow_timer -= delta
 		if block_slow_timer <= 0.0:

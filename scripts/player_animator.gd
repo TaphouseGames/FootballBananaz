@@ -70,6 +70,28 @@ const SPIKE_TIME: float = 0.4
 const HIP_ARM: Vector3 = Vector3(24.0, 0.0, -44.0)
 const HIP_FORE: Vector3 = Vector3(0.0, -100.0, 0.0)
 const HIP_HAND: Vector3 = Vector3(0.215, 0.03, 0.06)
+## Pose branches for a block: waiting for someone, holding a man, being held.
+const MODE_BLOCK_READY: int = 6
+const MODE_BLOCK_HOLD: int = 8
+const MODE_BLOCK_FIGHT: int = 9
+## What the blocked man does with one arm when he changes side: over the top of
+## the blocker's shoulder, or up through under his arm. Seconds each takes.
+const MOVE_NONE: int = 0
+const MOVE_SWIM: int = 1
+const MOVE_RIP: int = 2
+const MOVE_TIME: float = 0.38
+## Yards between two men at which their hands are fully on each other, and at
+## which they have let go.
+const GRAB_NEAR: float = 1.3
+const GRAB_FAR: float = 1.75
+## Where a blocker's hands go on the other man's chest: this far either side of
+## the middle and this far down from the line of the shoulders to the chest
+## bone (0..1). Where the blocked man's go on a shoulder: this far up and
+## forward of the joint. Skeleton units.
+const GRAB_CHEST_APART: float = 0.09
+const GRAB_CHEST_DOWN: float = 0.45
+const GRAB_SHOULDER_UP: float = 0.05
+const GRAB_SHOULDER_FRONT: float = 0.07
 
 var player: Player
 var skeleton: Skeleton3D
@@ -159,6 +181,26 @@ var _punch_wait: float = 0.0
 var _wave: float = 0.0
 var _wave_offset: float = 0.0
 
+# Locked up in a block. The man being blocked keeps trying one side and then
+# the other; the blocker reads which and slides with him a beat late.
+## How strongly each hand is to hold on to the other man this tick, the eased
+## values, who that is, and whether the hands go on his chest (the blocker's)
+## or on his shoulders (the blocked man's).
+var _grab_l: float = 0.0
+var _grab_r: float = 0.0
+var _grab_l_now: float = 0.0
+var _grab_r_now: float = 0.0
+var _grab_with: Player = null
+var _grab_chest: bool = false
+## The side he is working to: +1 his own left, -1 his right. `_fight_now` is
+## the eased value, which is what the pose leans by.
+var _fight_side: float = 1.0
+var _fight_now: float = 0.0
+var _fight_wait: float = 0.0
+## The arm move the blocked man is throwing, and how much of it is left.
+var _move: int = MOVE_NONE
+var _move_timer: float = 0.0
+
 # Loose limbs: a damped spring per bone, kicked by hits and landings.
 var _flop: PackedVector3Array = PackedVector3Array()
 var _flop_vel: PackedVector3Array = PackedVector3Array()
@@ -224,6 +266,7 @@ func _init(p_player: Player, p_skeleton: Skeleton3D) -> void:
 	# Start each player at a different point of the idle sway.
 	_clock = float(player.index) * 1.7 + (0.0 if player.team == null else float(player.team.attack_dir))
 	_wave_offset = _rng.randf_range(0.0, TAU)
+	_fight_side = 1.0 if _rng.randf() < 0.5 else -1.0
 
 
 ## The palm sits a little past the wrist, along the line of the forearm at rest.
@@ -356,6 +399,8 @@ func update(delta: float, instant: bool) -> void:
 	_tuck = false
 	_hip_l = 0.0
 	_hip_r = 0.0
+	_grab_l = 0.0
+	_grab_r = 0.0
 	if instant:
 		_reset_dynamics()
 	_track_momentum(delta)
@@ -404,10 +449,89 @@ func update(delta: float, instant: bool) -> void:
 		_reach_hands()
 	if _hip_l > 0.0 or _hip_r > 0.0:
 		_hands_to_hips()
+	# A hand takes hold, and lets go for a swim or a rip, quicker than a pose eases.
+	_grab_l_now = move_toward(_grab_l_now, _grab_l, delta / 0.09)
+	_grab_r_now = move_toward(_grab_r_now, _grab_r, delta / 0.09)
+	if _grab_l_now > 0.0 or _grab_r_now > 0.0:
+		_grab_partner()
 	_clear_now = lerpf(_clear_now, 1.0 if _mode >= MODE_CELEBRATE else 0.0, blend)
 	if _clear_now > 0.01:
 		_clear_arm(B.ARM_L, B.FORE_L, B.HAND_L, _palm_l)
 		_clear_arm(B.ARM_R, B.FORE_R, B.HAND_R, _palm_r)
+
+
+# --- Hands on another player -----------------------------------------------------
+
+## The two places on him that a man he is locked up with puts his hands, in
+## world space as he is posed now: either side of the front of his chest, or on
+## top of his shoulders.
+func grab_points(chest: bool) -> PackedVector3Array:
+	var points: PackedVector3Array = PackedVector3Array()
+	if _bone[B.ARM_L] < 0 or _bone[B.ARM_R] < 0 or _bone[B.CHEST] < 0:
+		var middle: Vector3 = player.global_position + Vector3(0.0, 1.2, 0.0)
+		points.append(middle)
+		points.append(middle)
+		return points
+	var left: Vector3 = skeleton.get_bone_global_pose(_bone[B.ARM_L]).origin
+	var right: Vector3 = skeleton.get_bone_global_pose(_bone[B.ARM_R]).origin
+	var chest_pose: Transform3D = skeleton.get_bone_global_pose(_bone[B.CHEST])
+	var forward: Vector3 = (chest_pose.basis.orthonormalized() * _chest_forward).normalized()
+	var to_world: Transform3D = skeleton.global_transform
+	if chest:
+		var across: Vector3 = (left - right).normalized()
+		var plate: Vector3 = ((left + right) * 0.5).lerp(chest_pose.origin, GRAB_CHEST_DOWN) + forward * TORSO_RADIUS
+		points.append(to_world * (plate + across * GRAB_CHEST_APART))
+		points.append(to_world * (plate - across * GRAB_CHEST_APART))
+	else:
+		var lift: Vector3 = Vector3(0.0, GRAB_SHOULDER_UP, 0.0) + forward * GRAB_SHOULDER_FRONT
+		points.append(to_world * (left + lift))
+		points.append(to_world * (right + lift))
+	return points
+
+
+## Which way the man being blocked is trying to get round, in world space: no
+## length when he is going straight at his blocker (or is not being blocked).
+func fight_lean() -> Vector3:
+	if _mode != MODE_BLOCK_FIGHT:
+		return Vector3.ZERO
+	return skeleton.global_basis.x.normalized() * _fight_now
+
+
+## Where each palm is to go on the man he has hold of (left, then right), in
+## his own skeleton space: each hand takes the place on its own side.
+func _grab_targets() -> PackedVector3Array:
+	var points: PackedVector3Array = _grab_with.animator.grab_points(_grab_chest)
+	var to_skeleton: Transform3D = skeleton.global_transform.affine_inverse()
+	var a: Vector3 = to_skeleton * points[0]
+	var b: Vector3 = to_skeleton * points[1]
+	return PackedVector3Array([a, b] if a.x >= b.x else [b, a])
+
+
+## Puts the palms on the man he is locked up with. Runs after the pose has been
+## written to the skeleton and works on the bones directly.
+func _grab_partner() -> void:
+	if _grab_with == null or not is_instance_valid(_grab_with) or _grab_with.animator == null or _hands_weight > 0.0:
+		_grab_l_now = 0.0
+		_grab_r_now = 0.0
+		return
+	var targets: PackedVector3Array = _grab_targets()
+	_reach_arm(B.ARM_L, B.FORE_L, B.HAND_L, _palm_l, targets[0], _grab_l_now)
+	_reach_arm(B.ARM_R, B.FORE_R, B.HAND_R, _palm_r, targets[1], _grab_r_now)
+
+
+## How far each palm is from where it has hold of the other man (left, right),
+## in metres, or -1 for a hand that has let go. For tests.
+func grab_gaps() -> Vector2:
+	var gaps: Vector2 = Vector2(-1.0, -1.0)
+	if _grab_with == null or not is_instance_valid(_grab_with) or _grab_with.animator == null:
+		return gaps
+	var targets: PackedVector3Array = _grab_targets()
+	var scale: float = skeleton.global_basis.get_scale().x
+	if _grab_l_now >= 1.0:
+		gaps.x = (skeleton.get_bone_global_pose(_bone[B.HAND_L]) * _palm_l).distance_to(targets[0]) * scale
+	if _grab_r_now >= 1.0:
+		gaps.y = (skeleton.get_bone_global_pose(_bone[B.HAND_R]) * _palm_r).distance_to(targets[1]) * scale
+	return gaps
 
 
 # --- Arms out of the body --------------------------------------------------------
@@ -679,6 +803,13 @@ func _reset_dynamics() -> void:
 	_acc_left = 0.0
 	_turbo = 0.0
 	_punch = 0.0
+	_punch_wait = 0.0
+	_grab_l_now = 0.0
+	_grab_r_now = 0.0
+	_grab_with = null
+	_fight_now = 0.0
+	_move = MOVE_NONE
+	_move_timer = 0.0
 	_wave = 0.0
 	_hop_current = 0.0
 	_settle = 1.0
@@ -874,8 +1005,16 @@ func _build_pose(delta: float) -> void:
 	elif ball.state == Ball.State.FLIGHT and _reach_for_pass(ball):
 		pass
 	elif player.is_blocking or player.block_slow_timer > 0.0:
-		_mode = 6
-		_block(delta)
+		var partner: Player = player.block_partner
+		if partner == null or partner.animator == null:
+			_mode = MODE_BLOCK_READY
+			_block_ready()
+		elif player.is_blocking:
+			_mode = MODE_BLOCK_HOLD
+			_block_hold(delta, partner)
+		else:
+			_mode = MODE_BLOCK_FIGHT
+			_block_fight(delta, partner)
 	elif ball.carrier != null and ball.carrier.team != player.team:
 		_close_in(ball.carrier)
 	else:
@@ -1178,28 +1317,148 @@ func _call_for_ball(pc: PlayController) -> void:
 	_pose[B.FORE_R] = _pose[B.FORE_R].lerp(fore_r, w * both)
 
 
-## Blocking: low base, hands up; punching when someone is in range.
-func _block(delta: float) -> void:
-	var engaged: bool = player.block_slow_timer > 0.0 or _opponent_within(1.7)
-	_punch = maxf(_punch - delta * 5.0, 0.0)
-	_punch_wait -= delta
-	if engaged and _punch_wait <= 0.0:
-		# Each punch lands with a jolt that runs back through the body.
-		_punch = 1.0
-		_punch_wait = _rng.randf_range(0.28, 0.55)
-		jolt(-skeleton.global_basis.z, _rng.randf_range(0.15, 0.35))
-	var punch: float = 22.0 * _punch
+## Looking for someone to block: low base, hands up in front of the chest, and
+## out to meet a man who is nearly on him.
+func _block_ready() -> void:
 	_pose[B.SPINE].x = 20.0
 	_pose[B.CHEST].x = 8.0
 	_pose[B.HEAD].x = -22.0
-	_pose[B.THIGH_L] += Vector3(-22.0, 0.0, 9.0)
-	_pose[B.THIGH_R] += Vector3(-22.0, 0.0, 9.0)
-	_pose[B.SHIN_L].x += 36.0
-	_pose[B.SHIN_R].x += 36.0
-	if engaged:
-		_set_arms(Vector3(-62.0 - punch, 0.0, -80.0), Vector3(0.0, -60.0 + punch * 2.4, 0.0))
+	_block_legs(22.0, 36.0, 9.0, 0.0, 0.0, 0.0)
+	if _opponent_within(1.7):
+		_set_arms(Vector3(-52.0, 0.0, -76.0), Vector3(0.0, -75.0, 0.0))
 	else:
 		_set_arms(Vector3(-35.0, 0.0, -72.0), Vector3(0.0, -95.0, 0.0))
+
+
+## The legs of a man in a block, on top of whatever stride he has: sunk by
+## `thigh` and `shin`, feet `spread` apart and wider still on the `side` he is
+## working to (+1 his left), with short choppy steps of `chop` degrees at
+## `speed`. `pitch` is how far the hips are tipped forward, for the feet.
+func _block_legs(thigh: float, shin: float, spread: float, side: float, chop: float, speed: float, pitch: float = 0.0) -> void:
+	var beat: float = sin(_clock * speed + float(player.index) * 1.3)
+	var up_l: float = maxf(beat, 0.0)
+	var up_r: float = maxf(-beat, 0.0)
+	var thigh_l: float = _pose[B.THIGH_L].x - thigh - chop * up_l
+	var thigh_r: float = _pose[B.THIGH_R].x - thigh - chop * up_r
+	var shin_l: float = _pose[B.SHIN_L].x + shin + chop * 1.8 * up_l
+	var shin_r: float = _pose[B.SHIN_R].x + shin + chop * 1.8 * up_r
+	_pose[B.THIGH_L] = Vector3(thigh_l, 0.0, spread + 9.0 * maxf(side, 0.0))
+	_pose[B.THIGH_R] = Vector3(thigh_r, 0.0, spread + 9.0 * maxf(-side, 0.0))
+	_pose[B.SHIN_L].x = shin_l
+	_pose[B.SHIN_R].x = shin_r
+	# Soles flat on the turf, toes down a little on the foot that is in the air.
+	_pose[B.FOOT_L] = Vector3(clampf(-(thigh_l + shin_l) - pitch, -40.0, 35.0) + 12.0 * up_l, 0.0, 0.0)
+	_pose[B.FOOT_R] = Vector3(clampf(-(thigh_r + shin_r) - pitch, -40.0, 35.0) + 12.0 * up_r, 0.0, 0.0)
+
+
+## How much of a hold two men this far apart have on each other (0..1).
+func _grab_weight(partner: Player) -> float:
+	var gap: Vector3 = partner.position - player.position
+	gap.y = 0.0
+	return 1.0 - smoothstep(GRAB_NEAR, GRAB_FAR, gap.length())
+
+
+## The blocker with a man in his hands: sat down low on a wide base, hands
+## inside on the man's chest, sliding to whichever side he tries to get round.
+func _block_hold(delta: float, partner: Player) -> void:
+	_rate = 16.0
+	var left: Vector3 = skeleton.global_basis.x.normalized()
+	var forward: Vector3 = skeleton.global_basis.z.normalized()
+	# He sees which way the man is going and follows a moment after.
+	var want: float = clampf(partner.animator.fight_lean().dot(left), -1.0, 1.0)
+	_fight_now = lerpf(_fight_now, want, 1.0 - exp(-8.0 * delta))
+	var side: float = _fight_now
+	# Every so often he resets his hands and jolts the man back.
+	_punch = maxf(_punch - delta * 4.0, 0.0)
+	_punch_wait -= delta
+	if _punch_wait <= 0.0:
+		_punch = 1.0
+		_punch_wait = _rng.randf_range(0.7, 1.3)
+		jolt(-forward, _rng.randf_range(0.1, 0.2))
+		partner.animator.jolt(forward, _rng.randf_range(0.2, 0.35))
+	_pose[B.SPINE].x = 17.0 - 7.0 * _punch
+	_pose[B.SPINE].z -= 8.0 * side
+	_pose[B.CHEST].x = 3.0
+	_pose[B.NECK].x = -6.0
+	_pose[B.HEAD].x = -8.0
+	# His head goes to the other side of the man's from the way they lean.
+	_pose[B.HEAD].z += 10.0 * side
+	_block_legs(32.0, 56.0, 14.0, side, 9.0, 11.0)
+	# Elbows in tight under the other man's arms.
+	_set_arms(Vector3(-46.0, 0.0, -72.0), Vector3(0.0, -90.0, 0.0))
+	_turn_toward(partner.global_position + Vector3(0.0, 1.2, 0.0), 0.8)
+	var hold: float = _grab_weight(partner)
+	_grab_with = partner
+	_grab_chest = true
+	_grab_l = hold
+	_grab_r = hold
+
+
+## The man being blocked: leaning in with his legs driving, hands on the
+## blocker's shoulders, working to one side of him and then the other. Each
+## change of side comes with a swim or a rip of the arm away from that side.
+func _block_fight(delta: float, partner: Player) -> void:
+	_rate = 16.0
+	if _mode_prev != MODE_BLOCK_FIGHT:
+		# Just locked up: a moment of pushing before the first move.
+		_fight_wait = _rng.randf_range(0.25, 0.5)
+		_move_timer = 0.0
+	_fight_wait -= delta
+	if _fight_wait <= 0.0:
+		_fight_wait = _rng.randf_range(0.55, 0.95)
+		_fight_side = -_fight_side
+		_move = MOVE_SWIM if _rng.randf() < 0.5 else MOVE_RIP
+		_move_timer = MOVE_TIME
+		partner.animator.jolt(skeleton.global_basis.z.normalized() - skeleton.global_basis.x.normalized() * _fight_side, _rng.randf_range(0.12, 0.22))
+	_move_timer = maxf(_move_timer - delta, 0.0)
+	_fight_now = lerpf(_fight_now, _fight_side, 1.0 - exp(-7.0 * delta))
+	var side: float = _fight_now
+
+	# The whole body tipped into him, shoulder dipped to the side he is going.
+	var pitch: float = 6.0
+	_pose[B.HIPS].x = pitch
+	_pose[B.SPINE].x = 12.0
+	_pose[B.SPINE].z -= 13.0 * side
+	_pose[B.CHEST].x = 4.0
+	_pose[B.CHEST].y += 12.0 * side
+	_pose[B.NECK].x = -6.0
+	_pose[B.HEAD].x = -8.0
+	_pose[B.HEAD].z -= 8.0 * side
+	_block_legs(20.0, 34.0, 7.0, side, 16.0, 14.0, pitch)
+	_set_arms(Vector3(-70.0, 0.0, -58.0), Vector3(0.0, -62.0, 0.0))
+	_turn_toward(partner.global_position + Vector3(0.0, 1.2, 0.0), 0.8)
+	# Eyes past the blocker, on where he wants to get to.
+	_pose[B.HEAD].y += 20.0 * side
+
+	var hold: float = _grab_weight(partner)
+	_grab_with = partner
+	_grab_chest = false
+	_grab_l = hold
+	_grab_r = hold
+	if _move_timer <= 0.0:
+		return
+	# The arm away from the side he is going lets go and does the work.
+	var u: float = 1.0 - _move_timer / MOVE_TIME
+	var arc: float = sin(PI * u)
+	var arm: Vector3
+	var fore: Vector3
+	if _move == MOVE_SWIM:
+		# Up, over the top of the shoulder and down the far side of it.
+		arm = Vector3(lerpf(-45.0, -100.0, u), 0.0, -35.0 + 85.0 * arc)
+		fore = Vector3(0.0, -80.0 + 50.0 * arc, 0.0)
+	else:
+		# From low behind his own hip, up through under the blocker's arm.
+		arm = Vector3(lerpf(30.0, -95.0, smoothstep(0.0, 1.0, u)), 0.0, -76.0)
+		fore = Vector3(0.0, -105.0 + 25.0 * arc, 0.0)
+	_rate = 26.0
+	if _fight_side > 0.0:
+		_pose[B.ARM_R] = arm
+		_pose[B.FORE_R] = fore
+		_grab_r = 0.0
+	else:
+		_pose[B.ARM_L] = arm
+		_pose[B.FORE_L] = fore
+		_grab_l = 0.0
 
 
 ## Defender bearing down on the ball carrier: arms come out for the tackle.
