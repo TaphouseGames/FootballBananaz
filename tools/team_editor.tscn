@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tools/team_editor.gd" id="1_editor"]
+[ext_resource type="Resource" path="res://resources/league.tres" id="2_league"]
+
+[node name="TeamEditor" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_editor")
+league = ExtResource("2_league")
