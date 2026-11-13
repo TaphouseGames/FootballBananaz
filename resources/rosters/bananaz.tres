@@ -1,20 +1,20 @@
-[gd_resource type="Resource" script_class="Roster" format=3]
+[gd_resource type="Resource" script_class="Roster" format=3 uid="uid://j00klqwsak1f"]
 
-[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
-[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
 
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Dash Plantain"
-number = 7
 position = "QB"
-coverage = 45
-get_open = 40
-blocking = 30
-tackling = 40
+number = 7
 speed = 62
 endurance = 65
 strength = 40
+blocking = 30
+tackling = 40
+coverage = 45
+get_open = 40
 catching = 30
 juke = 65
 security = 40
@@ -26,46 +26,43 @@ agility = 85
 script = ExtResource("1_ratings")
 display_name = "Moe Peel"
 number = 61
-position = "LINE"
-coverage = 35
-get_open = 25
 blocking = 62
 tackling = 55
+coverage = 35
+get_open = 25
 
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Big Bunch"
 number = 74
-position = "LINE"
-coverage = 30
-get_open = 20
-blocking = 72
-tackling = 62
 speed = 45
 strength = 65
+blocking = 72
+tackling = 62
+coverage = 30
+get_open = 20
 
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Lou Ripe"
 number = 55
-position = "LINE"
-coverage = 40
-get_open = 25
 blocking = 55
 tackling = 68
+coverage = 40
+get_open = 25
 
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Zip Cavendish"
-number = 81
 position = "WR"
-coverage = 62
-get_open = 85
-blocking = 30
-tackling = 40
+number = 81
 speed = 88
 endurance = 70
 strength = 30
+blocking = 30
+tackling = 40
+coverage = 62
+get_open = 85
 catching = 58
 juke = 70
 security = 45
@@ -73,14 +70,14 @@ security = 45
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Sticky Fingers"
-number = 88
 position = "WR"
-coverage = 55
-get_open = 68
-blocking = 45
-tackling = 55
+number = 88
 speed = 55
 endurance = 55
+blocking = 45
+tackling = 55
+coverage = 55
+get_open = 68
 catching = 90
 juke = 45
 security = 70
@@ -88,15 +85,14 @@ security = 70
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Slip Chiquita"
-number = 22
 position = "RB"
-coverage = 50
-get_open = 72
-blocking = 45
-tackling = 45
+number = 22
 speed = 70
 endurance = 60
 strength = 55
+blocking = 45
+tackling = 45
+get_open = 72
 catching = 40
 juke = 88
 security = 42

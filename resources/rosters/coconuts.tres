@@ -1,20 +1,20 @@
-[gd_resource type="Resource" script_class="Roster" format=3]
+[gd_resource type="Resource" script_class="Roster" format=3 uid="uid://b3s4qjtutgeir"]
 
-[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
-[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
 
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Rocket Husk"
-number = 12
 position = "QB"
-coverage = 40
-get_open = 30
-blocking = 45
-tackling = 55
+number = 12
 speed = 38
 endurance = 40
 strength = 70
+blocking = 45
+tackling = 55
+coverage = 40
+get_open = 30
 catching = 30
 juke = 25
 security = 65
@@ -26,47 +26,43 @@ agility = 30
 script = ExtResource("1_ratings")
 display_name = "Stone Palm"
 number = 66
-position = "LINE"
-coverage = 35
-get_open = 25
-blocking = 68
-tackling = 70
 speed = 45
 strength = 70
+blocking = 68
+tackling = 70
+coverage = 35
+get_open = 25
 
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Rex Shell"
 number = 52
-position = "LINE"
-coverage = 40
-get_open = 25
 blocking = 58
 tackling = 55
+coverage = 40
+get_open = 25
 
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Tank Copra"
 number = 79
-position = "LINE"
-coverage = 30
-get_open = 20
+strength = 65
 blocking = 72
 tackling = 62
-strength = 65
+coverage = 30
+get_open = 20
 
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Miles Frond"
-number = 84
 position = "WR"
-coverage = 68
-get_open = 65
-blocking = 45
-tackling = 50
+number = 84
 speed = 76
 endurance = 60
 strength = 55
+blocking = 45
+coverage = 68
+get_open = 65
 catching = 72
 juke = 55
 security = 60
@@ -74,30 +70,29 @@ security = 60
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Hands Kernel"
-number = 80
 position = "WR"
-coverage = 62
-get_open = 60
-blocking = 50
-tackling = 55
+number = 80
 speed = 68
 endurance = 65
 strength = 60
+tackling = 55
+coverage = 62
+get_open = 60
 catching = 80
 security = 65
 
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Bruno Drupe"
-number = 34
 position = "RB"
-coverage = 55
-get_open = 45
-blocking = 65
-tackling = 65
+number = 34
 speed = 55
 endurance = 75
 strength = 95
+blocking = 65
+tackling = 65
+coverage = 55
+get_open = 45
 catching = 35
 security = 80
 
