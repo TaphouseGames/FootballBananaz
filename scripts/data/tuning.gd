@@ -491,6 +491,18 @@ extends Resource
 @export var audio_color_repeat_gap: float = 120.0
 @export var audio_color_scale: float = 1.0
 @export var audio_color_idle_chance: float = 0.25
+## The booth's stories (BoothStory), told a chapter at a time in the huddle: on
+## or off, the most chapters of all threads in one match (each thread has its
+## own share, BoothStory.PER_MATCH), the huddles that go by before the first
+## and between two, the chance of one in a huddle where it may come, and how
+## much of the idle chatter is noises from the closet while the commissioner
+## is in it.
+@export var story_enabled: bool = true
+@export var story_per_match: int = 3
+@export var story_first_huddle: int = 4
+@export var story_huddle_gap: int = 8
+@export_range(0.0, 1.0) var story_chance: float = 0.35
+@export_range(0.0, 1.0) var story_captive_chance: float = 0.35
 ## His idle chatter is about a rout when the margin is at least this many
 ## points, and about a tight one in the second half within this many.
 @export var audio_blowout_points: int = 17

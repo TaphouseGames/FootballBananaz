@@ -75,6 +75,9 @@ const BOOTH_BREATH: float = 0.25
 const QUIP_IDLE: StringName = &"color_idle"
 const QUIP_IDLE_BLOWOUT: StringName = &"color_idle_blowout"
 const QUIP_IDLE_CLOSE: StringName = &"color_idle_close"
+## The noises from the supply closet, and what the two say to cover for them:
+## only while the story has the commissioner in there (BoothStory.captive()).
+const QUIP_IDLE_CAPTIVE: StringName = &"color_idle_captive"
 ## With a couple of plays left: Tony before the break, and at the end of a
 ## rout, of a tight one and of anything between. All start with QUIP_LATE.
 const QUIP_LATE: StringName = &"color_late"
@@ -97,6 +100,9 @@ const CHAT_PREFIX: String = "chat_"
 ## The halftime report's exchanges: files `show_<id>_<part>`, picked by id
 ## (see HalftimeExchanges), not at random.
 const SHOW_PREFIX: String = "show_"
+## The chapters of the booth's story: files `story_<id>_<part>`, told in order
+## (see BoothStory), one at a time in the huddle.
+const STORY_PREFIX: String = "story_"
 const QUIP_PREFIX: String = "color_"
 ## The main menu's lines (see MenuBooth), which are none of this director's.
 const MENU_PREFIX: String = "menu_"
@@ -124,6 +130,11 @@ var quip_asks: Dictionary[StringName, int] = {}
 ## short by a call, and the `chat_*` sets left out for a missing part.
 var exchange_counts: Dictionary[StringName, int] = {&"started": 0, &"finished": 0, &"cut": 0}
 var broken_exchanges: PackedStringArray = PackedStringArray()
+## The booth tells its story (see BoothStory). Off with the CPU playing both
+## teams, so the headless tests leave the person's place in it alone.
+var story_on: bool = false
+## Chapters of the story heard to the end in this match.
+var stories_told: int = 0
 
 var _streams: Dictionary[StringName, Array] = {}
 var _last_played: Dictionary[StringName, int] = {}
@@ -162,6 +173,18 @@ var _exchange_parts: Array[Array] = []
 ## how many lines the one going on has (0 when none is).
 var _shows: Dictionary[StringName, Array] = {}
 var _show_lines: int = 0
+## The story's chapters by id, each the streams of its lines in order; the one
+## waiting for the microphone and the one being told; huddles so far in this
+## match, and the one in which the last chapter was told.
+var _stories: Dictionary[StringName, Array] = {}
+var _story_pending: StringName = &""
+var _story_playing: StringName = &""
+## The thread of the chapter being told, and the chapters of each thread
+## heard to the end in this match.
+var _story_thread: StringName = &""
+var _told: Dictionary[StringName, int] = {}
+var _huddles: int = 0
+var _story_huddle: int = 0
 ## The half (1 or 2, 0 for none yet) in which Jim last said time was short,
 ## in which he last called the last play, and in which Tony got his say on it.
 var _late_called_half: int = 0
@@ -183,6 +206,9 @@ func setup(p_game: Game) -> void:
 	tuning = p_game.tuning
 	make_buses(tuning)
 	_load_streams()
+	story_on = tuning.story_enabled and not game.autoplay
+	if story_on:
+		_retire_stories()
 	for i: int in POOL_SIZE:
 		_pool.append(_make_player(BUS_SFX))
 	_bed = _make_loop(&"crowd_bed", BUS_CROWD)
@@ -252,9 +278,7 @@ func remark(sound: StringName, chance: float) -> void:
 ## Whoever is talking finishes the sentence first, and the rest of an exchange
 ## between the two is dropped.
 func shout(sound: StringName) -> void:
-	if not _exchange_parts.is_empty():
-		_exchange_parts.clear()
-		exchange_counts[&"cut"] += 1
+	_cut_exchange()
 	_show_lines = 0
 	_announcer_queue.clear()
 	_announcer_queue.append(sound)
@@ -356,9 +380,7 @@ func play_show(id: StringName, tony_first: bool) -> bool:
 		return false
 	if not tuning.audio_enabled:
 		return false
-	if not _exchange_parts.is_empty():
-		_exchange_parts.clear()
-		exchange_counts[&"cut"] += 1
+	_cut_exchange()
 	_announcer_queue.clear()
 	_quip_pending = &""
 	var tony: bool = tony_first
@@ -401,9 +423,8 @@ func speaker() -> StringName:
 
 ## Both of them stop in the middle of the word and forget what came next.
 func hush() -> void:
-	if not _exchange_parts.is_empty():
-		exchange_counts[&"cut"] += 1
-	_exchange_parts.clear()
+	_cut_exchange()
+	_story_pending = &""
 	_show_lines = 0
 	_announcer_queue.clear()
 	_quip_pending = &""
@@ -471,6 +492,8 @@ func _update_booth(delta: float) -> void:
 		_say_part()
 	elif not _announcer_queue.is_empty():
 		_speak(_announcer_queue.pop_front())
+	elif _story_pending != &"":
+		_tell_story()
 	elif _quip_pending != &"":
 		_say_quip()
 
@@ -513,6 +536,89 @@ func _say_part() -> void:
 	_last_quip = Time.get_ticks_msec()
 	if _exchange_parts.is_empty():
 		exchange_counts[&"finished"] += 1
+		if _story_playing != &"":
+			BoothStory.mark_heard(_story_playing)
+			_story_playing = &""
+			stories_told += 1
+			_told[_story_thread] = _told.get(_story_thread, 0) + 1
+			_story_huddle = _huddles
+
+
+## Drops the lines still to come of the exchange going on, if there is one. A
+## chapter of the story cut short this way has not been heard, and comes again.
+func _cut_exchange() -> void:
+	if not _exchange_parts.is_empty():
+		_exchange_parts.clear()
+		exchange_counts[&"cut"] += 1
+	_story_playing = &""
+
+
+## The chapter of the story that is due in this huddle, or none: the match has
+## had fewer than its share, enough huddles have gone by, Tony has nothing
+## more pressing to say, and a thread has a chapter on file that it may still
+## tell in this match. Of several threads, the one that has had least of its
+## share goes first.
+func _story_due() -> StringName:
+	if not story_on or not tuning.audio_enabled or game.conversion:
+		return &""
+	if _quip_pending != &"" or not _exchange_parts.is_empty() or _story_pending != &"":
+		return &""
+	if stories_told >= tuning.story_per_match or _huddles < tuning.story_first_huddle:
+		return &""
+	if stories_told > 0 and _huddles - _story_huddle < tuning.story_huddle_gap:
+		return &""
+	var due: StringName = &""
+	var least: float = 1.0
+	for thread: StringName in BoothStory.THREADS:
+		var chapter: Dictionary = BoothStory.next(thread)
+		var share: float = float(_told.get(thread, 0)) / float(maxi(BoothStory.PER_MATCH.get(thread, 1), 1))
+		if chapter.is_empty() or not story_recorded(chapter) or share >= least:
+			continue
+		least = share
+		due = chapter[&"id"]
+	return due if due != &"" and randf() < tuning.story_chance else &""
+
+
+## There is a recording of every line of `chapter`.
+func story_recorded(chapter: Dictionary) -> bool:
+	return (_stories.get(chapter[&"id"], []) as Array).size() == (chapter[&"lines"] as Array).size()
+
+
+## Starts the chapter that was waiting, if the ball is still dead; one that
+## missed its huddle is asked for again at the next.
+func _tell_story() -> void:
+	var id: StringName = _story_pending
+	_story_pending = &""
+	var thread: StringName = BoothStory.thread_of_next(id)
+	if not game.play_controller.ball_dead or thread == &"":
+		return
+	var chapter: Dictionary = BoothStory.next(thread)
+	if not story_recorded(chapter):
+		return
+	_story_thread = thread
+	var sound: StringName = StringName(STORY_PREFIX + id)
+	play_counts[sound] = play_counts.get(sound, 0) + 1
+	var tony: bool = chapter[&"first"] == BoothStory.TONY
+	for stream: AudioStream in _stories[id]:
+		_exchange_parts.append([tony, stream])
+		tony = not tony
+	_story_playing = id
+	exchange_counts[&"started"] += 1
+	_say_part()
+
+
+## The chapters of every thread that has been told to the end come up from
+## now on like any other idle exchange.
+func _retire_stories() -> void:
+	for thread: StringName in BoothStory.THREADS:
+		if not BoothStory.finished(thread):
+			continue
+		for chapter: Dictionary in BoothStory.chapters(thread):
+			if not story_recorded(chapter):
+				continue
+			if not _exchanges.has(QUIP_IDLE):
+				_exchanges[QUIP_IDLE] = []
+			_exchanges[QUIP_IDLE].append({&"tony_first": chapter[&"first"] == BoothStory.TONY, &"parts": _stories[chapter[&"id"]]})
 
 
 ## A line of `sound` not said since the last time through them all: a stream,
@@ -543,6 +649,9 @@ func _line_count(sound: StringName) -> int:
 ## The idle chatter that fits the score: a rout, a tight second half, or any
 ## old thing. Falls back on the usual kind where the other has no lines.
 func _idle_quip() -> StringName:
+	# With the commissioner in the closet, now and then it is him they hear.
+	if story_on and BoothStory.captive() and has_sound(QUIP_IDLE_CAPTIVE) and randf() < tuning.story_captive_chance:
+		return QUIP_IDLE_CAPTIVE
 	var margin: int = absi(game.home.score - game.home.opponent.score)
 	var sound: StringName = QUIP_IDLE
 	if margin >= tuning.audio_blowout_points:
@@ -736,7 +845,10 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 			_late_calls()
 			if blaze_down():
 				_insist(QUIP_BLAZE)
-			quip(_idle_quip(), tuning.audio_color_idle_chance)
+			_huddles += 1
+			_story_pending = _story_due()
+			if _story_pending == &"":
+				quip(_idle_quip(), tuning.audio_color_idle_chance)
 			if game.human.is_active():
 				_huddle_on = true
 				if not _huddle.playing and tuning.audio_enabled:
@@ -918,7 +1030,7 @@ func _load_streams() -> void:
 		if stream == null:
 			continue
 		var key: String = base.substr(0, cut)
-		if key.begins_with(CHAT_PREFIX) or key.begins_with(SHOW_PREFIX):
+		if key.begins_with(CHAT_PREFIX) or key.begins_with(SHOW_PREFIX) or key.begins_with(STORY_PREFIX):
 			if not chats.has(key):
 				chats[key] = {}
 			chats[key][base.substr(cut + 1).to_int()] = stream
@@ -929,14 +1041,17 @@ func _load_streams() -> void:
 		_streams[sound].append(stream)
 	for chat: String in chats:
 		if chat.begins_with(SHOW_PREFIX):
-			_add_show(chat, chats[chat])
+			_add_show(chat, chats[chat], SHOW_PREFIX, _shows)
+		elif chat.begins_with(STORY_PREFIX):
+			_add_show(chat, chats[chat], STORY_PREFIX, _stories)
 		else:
 			_add_exchange(chat, chats[chat])
 
 
-## Files `show_<id>_<part>` make halftime exchange `id`. One with a part
-## missing is left out.
-func _add_show(show: String, parts: Dictionary) -> void:
+## Files `show_<id>_<part>` make halftime exchange `id`, and `story_<id>_<part>`
+## chapter `id` of the story: the lines in order, filed in `into` under the
+## name less its `prefix`. One with a part missing is left out.
+func _add_show(show: String, parts: Dictionary, prefix: String, into: Dictionary[StringName, Array]) -> void:
 	var streams: Array[AudioStream] = []
 	for part: int in range(1, parts.size() + 1):
 		if parts.has(part):
@@ -944,7 +1059,7 @@ func _add_show(show: String, parts: Dictionary) -> void:
 	if streams.size() != parts.size() or streams.size() < 2:
 		broken_exchanges.append(show)
 		return
-	_shows[StringName(show.trim_prefix(SHOW_PREFIX))] = streams
+	into[StringName(show.trim_prefix(prefix))] = streams
 
 
 ## Files `chat_<moment>_<t|j><k>_<part>` make one exchange of `color_<moment>`:

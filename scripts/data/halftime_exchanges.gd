@@ -98,6 +98,14 @@ const EXCHANGES: Array[Dictionary] = [
 		"Jim, how long is halftime?",
 		"About ten seconds.",
 		"TEN SECONDS? I just ordered a PIZZA!"]},
+	{&"id": &"carol_phone", &"when": ALWAYS, &"priority": 0, &"first": JIM, &"lines": [
+		"Tony, your phone keeps lighting up. It says Carol.",
+		"DIFFERENT Carol, Jim! There are DOZENS of them!",
+		"I see."]},
+	{&"id": &"locker_room", &"when": ALWAYS, &"priority": 0, &"first": TONY, &"lines": [
+		"Where do the players GO at halftime, Jim? Nobody KNOWS!",
+		"The locker room, Tony.",
+		"Have you SEEN it?"]},
 ]
 
 ## The exchange heard last, in this match or the one before.

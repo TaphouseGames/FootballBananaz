@@ -12,7 +12,8 @@ and the text of the lines. Read this before writing a new one.
   yell the way Tony does, and he never sounds bored, flat or quiet.
 - Hates mayonnaise. Hates the phrase "Live, laugh, love" more. He will not say
   why, and the hatred is out of all proportion.
-- Married to Carol. Speaks of her rarely and fondly.
+- Married to Carol for twenty-six years. Speaks of her rarely and fondly.
+- Eleven years in the booth with Tony.
 - Takes the fantasy league seriously: spreadsheets, waiver wire, the lot.
 - He is fond of Tony and would never admit it. His weapon is the pause.
 
@@ -23,7 +24,11 @@ and the text of the lines. Read this before writing a new one.
 - Says weird things: bad metaphors, questions nobody asked, facts that are not
   facts.
 - Loves nachos. Loves his dog, Biscuit, more. Biscuit comes up as proof of
-  almost anything.
+  almost anything. The two of them live in a studio; Biscuit gets the bed.
+- Believes ridiculous conspiracy theories, each with total conviction and
+  no malice (the ball is full of bees). They are never about real people,
+  real events or anything a person could be hurt by.
+- Thursday is his favorite day. He will not say why.
 - In the same fantasy league as Jim and terrible at it. Happy in last place.
 - Calls Jim by name constantly.
 
@@ -34,6 +39,57 @@ denied. Tony lets slip things he should not know (what Carol said, where she
 was on Thursday, the new couch) and changes the subject at the top of his
 voice. Jim almost notices, then moves on. No line ever settles it, and Tony is
 never smug about it: he does not seem to realise what he is giving away.
+
+## The stories
+
+The person gets to know the two of them by playing. The stories are threads
+of chapters in `scripts/data/booth_story.gd` (`BoothStory`). Each thread is
+told in its own order, a chapter being an exchange of two to four lines in
+the huddle, and the threads run side by side:
+
+- `carol` (13 chapters, up to 2 a match): the booth, Carol, and Tony's slips.
+- `commissioner` (12 chapters, 1 a match): the league commissioner is
+  missing. Match 1 brings the league's statement (`missing`), and the next
+  four matches a word each that he is still missing (`day_two`, `reward`,
+  `description`, `witness`), with Jim and Tony sounding as guilty as they
+  are. `closet` and what follows wait until the Carol thread is over
+  (`after`): he is in the booth's supply closet, the league negotiates, the
+  police come, and the two apologise on the air and are fined fourteen
+  dollars each.
+
+How they are paced:
+
+- At most `Tuning.story_per_match` chapters a match in all (3) and each
+  thread's own share (`BoothStory.PER_MATCH`); the first no sooner than
+  huddle `story_first_huddle` (4), the next `story_huddle_gap` (8) huddles
+  later, and `story_chance` of the time in a huddle where one may come. The
+  thread that has had least of its share goes first: Carol, the
+  commissioner, Carol. Fourth and twenty and the end of a half come first.
+- The place in each thread is kept in `user://booth_story.cfg`, so it
+  carries on from one session to the next. A chapter cut short by a call has
+  not been heard and comes again.
+- A thread waits at a chapter that has no recording of every line.
+- Once a thread's last chapter has been heard, its chapters join the idle
+  chatter.
+- Off with the CPU playing both teams. `tests/story_check.gd` checks it.
+
+A chapter may build on the ones before it in its thread (Thursday is set up
+in `thursday` and `book_club` and pays off in `dinner`). Lines outside the
+stories may not: they come in any order.
+
+### The closet
+
+While the commissioner is in the closet (from `closet` heard until `caught`
+heard, `BoothStory.captive()`), `Tuning.story_captive_chance` of the idle
+chatter is a noise from the closet and one of them covering for it: the
+lines of `color_idle_captive` and `chat_idle_captive_*`.
+
+The commissioner has no voice of his own. His muffled yelling and the kick
+that quiets him are four sound effects (`eleven_text_to_sound_v2`, in the
+booth flow), mixed into the recording of the line before or after them at a
+third of the voices' level, so a chapter is still Jim and Tony turn about.
+Tony and Jim when guilty: `[nervous] [shouting]` for Tony, `[excited]
+[nervous]` for Jim; the league's statements are `[excited] [urgent]`.
 
 ## Rules
 
@@ -63,6 +119,7 @@ find the files by name, so adding a line is adding a file.
 | `color_<moment>_<n>` | Tony, one line. |
 | `chat_<moment>_<t\|j><k>_<part>` | Exchange `k` of `color_<moment>`; the letter is who speaks first, the parts alternate. |
 | `show_<id>_<part>` | Halftime report; text and conditions in `scripts/data/halftime_exchanges.gd`. |
+| `story_<id>_<part>` | Chapter `id` of the story; text and order in `scripts/data/booth_story.gd`. |
 | `menu_<moment>_<t\|j><k>_<part>` | Main menu and team select. Same shape as `chat_`; a set with one part is a solo line. |
 
 ## Recording
@@ -187,6 +244,46 @@ only in the flow, where a node shows the first few words of its prompt.
 - t9: You know what's GREAT on nachos, Jim? MAYONNAISE! / I will leave this booth, Tony.
 - j7: You started a quarterback on his bye week, Tony. / He seemed RESTED!
 - j8: Somebody put mayonnaise on my sandwich, Tony. / Is that BAD? / I've called the police.
+
+Added with the story (one take each; a slip of Tony's is prompted
+`[panicked] [shouting]`):
+
+- `color_idle_32`: Biscuit and I live in a STUDIO, Jim! He gets the BED!
+- `color_idle_33`: Jim is my EMERGENCY CONTACT, everybody! He doesn't KNOW!
+- `chat_idle_blowout_t1` (a rout): With this score, Jim, you could be HOME by eight! Carol's making POT ROAST! / How do you know what Carol's making? / It's a POT ROAST kind of night, Jim!
+- `chat_idle_close_j1` (a tight second half): My heart can't take this, Tony. Carol says I should retire. / DON'T, Jim! Who would I SIT with?
+- `show_carol_phone` (halftime): Tony, your phone keeps lighting up. It says Carol. / DIFFERENT Carol, Jim! There are DOZENS of them! / I see.
+
+Tony's conspiracy theories, and the booth off the air on the menu (one take
+each):
+
+- `color_idle_34`: The first down line is REAL, Jim! The players can SEE it! They just won't ADMIT it!
+- `color_idle_35`: I don't trust the scoreboard, Jim! Who's telling IT the score?
+- `color_idle_36`: Halftime isn't real, Jim! They just TURN US OFF!
+- `color_idle_37`: Mayonnaise is just COLD GRAVY, Jim! They don't want you to KNOW!
+- `chat_idle_t10`: There is no other team, Jim! It's the SAME team in different SHIRTS! / They're tackling each other, Tony. / That's how DEEP it goes!
+- `chat_idle_t11`: The coin toss is RIGGED, Jim! That coin has TWO SIDES! / Every coin has two sides, Tony. / And who PROFITS?
+- `chat_idle_j9`: Tony, why is there foil on your headset? / So the OTHER booth can't hear my thoughts, Jim! / There is no other booth. / That's what the foil is FOR!
+- `show_locker_room` (halftime): Where do the players GO at halftime, Jim? Nobody KNOWS! / The locker room, Tony. / Have you SEEN it?
+- `menu_options_t3`: DON'T press options! That's how they TRACK you!
+- `menu_welcome_t3`: Sorry I'm late, Jim! THURSDAY traffic! / It's Sunday, Tony.
+- `menu_idle_j3` (Jim is on the phone): Yes, dear. No, he's here. I'll ask him. / Ask me WHAT, Jim? / Carol says hello. / HI, CAROL! I mean, hello, Jim's wife!
+
+The closet, only while the commissioner is in it (the noise is part of the
+recording):
+
+- `color_idle_captive_1`: (muffled yelling) That's the AIR CONDITIONING, folks!
+- `color_idle_captive_2`: (muffled shouting) QUIET in there! I mean... GREAT crowd tonight!
+- `chat_idle_captive_j1`: Tony, the closet is making noise again. / (a thud) FIXED it, Jim!
+- `chat_idle_captive_t1`: (muffled yelling) Does anybody else hear a GHOST, Jim? / There are no ghosts, Tony. Only consequences.
+
+### The stories
+
+The text of the chapters is in `scripts/data/booth_story.gd`, in order.
+`carol`: `lunch`, `years`, `met`, `photo`, `thursday`, `book_club`, `couch`, `mayo_carol`,
+`biscuit`, `deserve`, `anniversary`, `sweater`, `dinner`. `commissioner`:
+`missing`, `day_two`, `reward`, `description`, `witness`, `closet`,
+`demands`, `statement`, `counter`, `snack`, `caught`, `apology`.
 
 ### On the main menu
 
