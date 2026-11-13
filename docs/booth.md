@@ -159,6 +159,16 @@ only in the flow, where a node shows the first few words of its prompt.
 - 2: He just told that man NO with his whole ARM!
 - 3: That's how I keep people away from my NACHOS!
 
+`color_blaze` (fourth and twenty, in the huddle, after Jim's "Fourth down. Twenty to go."; said every time)
+
+- 1: FOURTH and TWENTY, Jim! FOUR-TWENTY! BLAZE IT!
+- 2: FOUR-TWENTY! No WONDER this drive went up in SMOKE!
+
+`chat_blaze`
+
+- j1: Fourth and twenty. DON'T say it, Tony! / BLAZE IT, JIM! / He said it!
+- t1: FOUR-TWENTY, Jim! The whole stadium just got the MUNCHIES! / That explains the NACHO line!
+
 `color_idle` (Tony, between plays)
 
 - 24: Jim, if you put nachos ON nachos, is that still one nacho?

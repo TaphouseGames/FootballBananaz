@@ -593,9 +593,10 @@ func snap() -> void:
 	if not kickoff and not game.conversion:
 		if heave:
 			game.audio.quip(&"color_bold", AudioDirector.QUIP_BOLD)
-		elif game.down == 4 and not game.goal_to_go:
+		elif game.down == 4 and not game.goal_to_go and not game.audio.blaze_down():
 			# Nobody punts or kicks here, so going for it is no choice to
-			# admire: it is the last chance at the first down.
+			# admire: it is the last chance at the first down. Fourth and
+			# twenty has a joke of its own, asked for in the huddle.
 			game.audio.quip(&"color_fourth", AudioDirector.QUIP_FOURTH)
 	_update_markers()
 

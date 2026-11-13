@@ -87,6 +87,10 @@ const CALL_LATE_GAME: StringName = &"announcer_late_game"
 const CALL_LAST_PLAY: StringName = &"announcer_last_play"
 ## Jim calls the warning when the half's clock gets under Tuning.warning_time.
 const CALL_WARNING: StringName = &"announcer_warning"
+## Fourth and twenty: the booth cannot let 4:20 go by.
+const QUIP_BLAZE: StringName = &"color_blaze"
+const BLAZE_DOWN: int = 4
+const BLAZE_YARDS: int = 20
 ## The exchanges that open the broadcast, before the first kickoff.
 const QUIP_INTRO: StringName = &"color_intro"
 const CHAT_PREFIX: String = "chat_"
@@ -596,6 +600,12 @@ func announce_down() -> void:
 	announce([StringName("announcer_down%d" % clampi(game.down, 1, 4)), distance])
 
 
+## The play being lined up is fourth and twenty, and there is a joke on file.
+func blaze_down() -> bool:
+	return not game.conversion and game.down == BLAZE_DOWN and not game.goal_to_go \
+			and game.yards_to_go() == BLAZE_YARDS and has_sound(QUIP_BLAZE)
+
+
 func _speak(sound: StringName) -> void:
 	play_counts[sound] = play_counts.get(sound, 0) + 1
 	# In turn, so a remark with several takes does not repeat itself.
@@ -724,6 +734,8 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 		&"PlaySelect":
 			announce_down()
 			_late_calls()
+			if blaze_down():
+				_insist(QUIP_BLAZE)
 			quip(_idle_quip(), tuning.audio_color_idle_chance)
 			if game.human.is_active():
 				_huddle_on = true
