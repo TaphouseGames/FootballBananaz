@@ -20,3 +20,9 @@ func exit() -> void:
 
 func physics_update(_delta: float) -> void:
 	pass
+
+
+## In place of physics_update while the screen dips to black on the way to the
+## next state, which has already been asked for.
+func hold_update(_delta: float) -> void:
+	pass

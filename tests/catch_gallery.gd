@@ -17,6 +17,7 @@ const NAMES: PackedStringArray = ["run", "jump", "dive"]
 var _out_dir: String = "user://catch_gallery"
 var _play_filter: String = "slants"
 var _defense_filter: String = "prevent"
+var _toss_filter: String = "toss"
 var _game: Game
 var _pc: PlayController
 var _cam: Camera3D
@@ -51,8 +52,11 @@ func _run() -> void:
 	tuning.ai_catch_effort_chance = 0.0
 	tuning.ai_contest_chance = 0.0
 	tuning.ai_qb_min_time = 1.0e9
+	# The white flash on whoever gets the ball would hide what his arms do.
+	tuning.possession_flash = 0.0
 	for kind: int in [Kind.RUN, Kind.JUMP, Kind.DIVE]:
 		await _catch(kind)
+	await _toss()
 	quit(0)
 
 
@@ -79,8 +83,15 @@ func _catch(kind: int) -> void:
 	_pc.state_machine.transition(&"Live")
 
 	var receiver: Player = _pc.eligible[0]
-	while _pc.live_time < 1.1 and not _pc.ball_dead:
+	var pocket_shot: bool = kind != Kind.RUN
+	var cocked: int = 0
+	while _pc.live_time < 1.1 and not _pc.ball_dead and _pc.ball.carrier == _pc.qb:
 		await physics_frame
+		# Once he has had the ball up by his ear for a moment.
+		cocked = cocked + 1 if _pc.qb.animator._mode == 2 else 0
+		if not pocket_shot and cocked >= 20:
+			pocket_shot = true
+			await _pocket(_pc.qb)
 	_pc.throw_ball(receiver, 0.5)
 	await physics_frame
 	var ball: Ball = _pc.ball
@@ -118,6 +129,56 @@ func _catch(kind: int) -> void:
 	print("%s: caught by %s, ball %.2f m from the hand after settling" % [label, catcher.name, hand_gap])
 
 
+## The quarterback with the ball up to throw, from close in all round: is it in
+## his hand?
+func _pocket(qb: Player) -> void:
+	var at: Vector3 = _pc.ball.global_position
+	var side: Vector3 = Vector3.UP.cross(qb.facing).normalized()
+	print("pocket: ball %.2f m above his wrist" % (at.y - (qb.animator.skeleton.global_transform * qb.animator.skeleton.get_bone_global_pose(qb.animator._bone[PlayerAnimator.B.HAND_R]).origin).y))
+	for other: Player in _pc.players:
+		other.visible = other == qb
+	await _shot("pocket_front", at + qb.facing * 2.6 + Vector3(0.0, 0.2, 0.0), at - Vector3(0.0, 0.25, 0.0))
+	await _shot("pocket_right", at - side * 2.6 + Vector3(0.0, 0.2, 0.0), at - Vector3(0.0, 0.25, 0.0))
+	await _shot("pocket_left", at + side * 2.6 + Vector3(0.0, 0.2, 0.0), at - Vector3(0.0, 0.25, 0.0))
+	await _shot("pocket_back", at - qb.facing * 2.6 + Vector3(0.0, 0.5, 0.0), at - Vector3(0.0, 0.25, 0.0))
+	for other: Player in _pc.players:
+		other.visible = true
+
+
+## The back taking a toss (or handoff) on a run play: shot as he gets ready for
+## it, while it is on its way and once it is his.
+func _toss() -> void:
+	var offense_play: OffensePlay = null
+	for candidate: OffensePlay in _game.offense_playbook.plays:
+		if candidate.is_run and (offense_play == null or candidate.play_name.to_lower().contains(_toss_filter)):
+			offense_play = candidate
+	if offense_play == null:
+		print("skipped toss: no run play")
+		return
+	_game.clock = 1.0e6
+	_game.start_drive(_game.home, _game.tuning.yard_to_x(_game.home.attack_dir, START_YARD))
+	_pc.line_up(offense_play, _game.defense_playbook.plays[0])
+	_pc.snap()
+	_pc.state_machine.transition(&"Live")
+	var back: Player = _pc.runner
+	print("toss: ", offense_play.play_name)
+	while _pc.live_time < offense_play.handoff_delay - 0.06 and not _pc.ball_dead:
+		await physics_frame
+	await _shots("toss_1_ready", back)
+	while not _pc.handoff_done and not _pc.ball_dead:
+		await physics_frame
+	var step: int = 2
+	while back.catch_timer > 0.0 and step < 8:
+		await _shots("toss_%d_coming" % step, back)
+		step += 1
+		for i: int in 4:
+			await physics_frame
+	await _shots("toss_%d_his" % step, back)
+	for i: int in 12:
+		await physics_frame
+	await _shots("toss_%d_away" % (step + 1), back)
+
+
 ## One picture from the side and one from in front of him, plus how far each
 ## palm is from the ball at that moment.
 func _shots(label: String, subject: Player) -> void:
@@ -127,6 +188,14 @@ func _shots(label: String, subject: Player) -> void:
 	var left: Vector3 = skeleton.global_transform * (skeleton.get_bone_global_pose(animator._bone[PlayerAnimator.B.HAND_L]) * animator._palm_l)
 	var right: Vector3 = skeleton.global_transform * (skeleton.get_bone_global_pose(animator._bone[PlayerAnimator.B.HAND_R]) * animator._palm_r)
 	print("%s: ball to left palm %.2f m, to right palm %.2f m" % [label, ball_at.distance_to(left), ball_at.distance_to(right)])
+	# Which way his chest is turned against where the ball is, and how far in
+	# front of the line of his shoulders each palm is (negative: behind his back).
+	var chest: Vector3 = skeleton.global_basis * (skeleton.get_bone_global_pose(animator._bone[PlayerAnimator.B.CHEST]).basis.orthonormalized() * animator._chest_forward)
+	var mid: Vector3 = animator.shoulders()
+	var to_ball: Vector3 = ball_at - mid
+	var flat_chest: Vector3 = Vector3(chest.x, 0.0, chest.z).normalized()
+	var off: float = rad_to_deg(flat_chest.angle_to(Vector3(to_ball.x, 0.0, to_ball.z).normalized()))
+	print("%s: ball %.0f deg off his chest, palms %.2f m / %.2f m in front of his shoulders" % [label, off, (left - mid).dot(chest.normalized()), (right - mid).dot(chest.normalized())])
 	var at: Vector3 = subject.position + Vector3(0.0, 1.2 + subject.air_height(), 0.0)
 	var side: Vector3 = Vector3.UP.cross(subject.facing).normalized()
 	# From whichever side has nobody standing in the way.

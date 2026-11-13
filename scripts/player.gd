@@ -10,6 +10,28 @@ extends Node3D
 enum State { NORMAL, DIVING, DOWN, SHOVING, JUMPING, DRAGGING, HOLDING, SPINNING, STIFF_ARM }
 
 const JERSEY_SHADER: Shader = preload("res://assets/player/player_jersey.gdshader")
+## Looks a player can have, picked by his name so he keeps his from game to
+## game. A skin tint multiplies the painted skin (white leaves it as it is).
+const SKIN_TINTS: Array[Color] = [
+	Color(1.0, 1.0, 1.0),
+	Color(0.96, 0.9, 0.82),
+	Color(0.86, 0.75, 0.65),
+	Color(0.74, 0.62, 0.54),
+	Color(0.62, 0.5, 0.44),
+	Color(0.5, 0.4, 0.36),
+]
+## Hair colours. Fully transparent stands for the hair as painted (brown).
+const HAIR_COLORS: Array[Color] = [
+	Color(0.0, 0.0, 0.0, 0.0),
+	Color(0.09, 0.08, 0.08),
+	Color(0.24, 0.15, 0.1),
+	Color(0.62, 0.27, 0.12),
+	Color(0.8, 0.64, 0.36),
+	Color(0.56, 0.55, 0.53),
+]
+
+## The model's meshes with the height at rest baked in. See _with_rest_height().
+static var _rest_meshes: Dictionary[Mesh, Mesh] = {}
 ## A fall that has gone on this long counts as landed whatever it looks like, so
 ## a play can never be left waiting for one.
 const GROUNDED_TIMEOUT: float = 0.4
@@ -183,13 +205,23 @@ func _process(delta: float) -> void:
 
 ## Dresses the model in the team colour and hooks up the procedural animator.
 func _setup_model() -> void:
+	var look: int = hash([team.team_color, index])
+	if ratings != null and not ratings.display_name.is_empty():
+		look = hash(ratings.display_name)
+	var skin_tint: Color = SKIN_TINTS[look % SKIN_TINTS.size()]
+	var hair_color: Color = HAIR_COLORS[(look / 64) % HAIR_COLORS.size()]
 	for node: Node in body.find_children("*", "MeshInstance3D", true, false):
 		var mesh_instance: MeshInstance3D = node as MeshInstance3D
 		var source: BaseMaterial3D = mesh_instance.get_active_material(0) as BaseMaterial3D
+		mesh_instance.mesh = _with_rest_height(mesh_instance.mesh)
 		var material: ShaderMaterial = ShaderMaterial.new()
 		material.shader = JERSEY_SHADER
 		material.set_shader_parameter(&"team_color", team.team_color)
+		material.set_shader_parameter(&"white_kit", team.white_kit)
 		material.set_shader_parameter(&"grey_kit", grey_kit)
+		material.set_shader_parameter(&"skin_tint", skin_tint)
+		material.set_shader_parameter(&"recolor_hair", hair_color.a > 0.0)
+		material.set_shader_parameter(&"hair_color", hair_color)
 		if source != null:
 			material.set_shader_parameter(&"albedo_tex", source.albedo_texture)
 		mesh_instance.material_override = material
@@ -201,11 +233,58 @@ func _setup_model() -> void:
 	animator = PlayerAnimator.new(self, skeletons[0] as Skeleton3D)
 
 
+## A copy of `mesh` whose vertex colour holds, in its red, how high up the
+## model each vertex is as it stands at rest (0 at the feet, 1 at the top of the
+## head). The jersey shader cuts the home kit's chest band by it. Made once per
+## mesh and shared by every player. A mesh it cannot copy comes back as it is.
+static func _with_rest_height(mesh: Mesh) -> Mesh:
+	if _rest_meshes.has(mesh):
+		return _rest_meshes[mesh]
+	var source: ArrayMesh = mesh as ArrayMesh
+	var result: Mesh = mesh
+	if source != null and source.get_blend_shape_count() == 0:
+		var low: float = INF
+		var high: float = -INF
+		var surfaces: Array[Array] = []
+		for surface: int in source.get_surface_count():
+			var arrays: Array = source.surface_get_arrays(surface)
+			surfaces.append(arrays)
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			for vertex: Vector3 in vertices:
+				low = minf(low, vertex.y)
+				high = maxf(high, vertex.y)
+		var copy: ArrayMesh = ArrayMesh.new()
+		for surface: int in surfaces.size():
+			var arrays: Array = surfaces[surface]
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var colors: PackedColorArray = PackedColorArray()
+			colors.resize(vertices.size())
+			for i: int in vertices.size():
+				colors[i] = Color(inverse_lerp(low, high, vertices[i].y), 0.0, 0.0)
+			arrays[Mesh.ARRAY_COLOR] = colors
+			var flags: int = source.surface_get_format(surface) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
+			copy.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays, [], {}, flags)
+			copy.surface_set_material(surface, source.surface_get_material(surface))
+		result = copy
+	_rest_meshes[mesh] = result
+	return result
+
+
 ## Where the ball sits while this player holds it.
 func ball_anchor() -> Vector3:
 	if animator == null:
 		return position + facing * 0.4 + Vector3(0.0, 1.15 + air_height(), 0.0)
 	return animator.ball_anchor()
+
+
+## Which way the long axis of the ball he carries points, in world space.
+func ball_axis() -> Vector3:
+	if animator == null:
+		var dir: Vector3 = facing
+		if not is_down():
+			dir = dir + Vector3(0.0, 0.45, 0.0)
+		return dir
+	return animator.ball_axis()
 
 
 ## The frame his upper body is in: it leans, jumps and dives with him.

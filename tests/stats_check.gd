@@ -8,6 +8,8 @@ extends SceneTree
 ## Optional user args after "--":
 ##   games=<n>   play n games (default 1)
 ##   print       print the box score of every game
+##   home=<short name>, away=<short name>   the league teams that play; the
+##               scene's own two otherwise
 
 const SPEED: float = 8.0
 const STUCK_FRAMES: int = 600
@@ -17,6 +19,8 @@ var _state: StringName = &""
 var _state_frames: int = 0
 var _games_left: int = 1
 var _print: bool = false
+## Short names of the league teams to play as home and away, "" for the scene's.
+var _teams: PackedStringArray = PackedStringArray(["", ""])
 ## Frames since the menu was told to close at the end of a game; -1 before that.
 var _closing_frames: int = -1
 var _failures: PackedStringArray = PackedStringArray()
@@ -28,6 +32,8 @@ func _initialize() -> void:
 			_games_left = maxi(int(arg.trim_prefix("games=")), 1)
 		elif arg == "print":
 			_print = true
+		elif arg.begins_with("home=") or arg.begins_with("away="):
+			_teams[0 if arg.begins_with("home=") else 1] = arg.get_slice("=", 1)
 	# See smoke_test.gd: the tick rate goes up with the time scale.
 	Game.base_time_scale = SPEED
 	Engine.time_scale = SPEED
@@ -40,6 +46,9 @@ func _start_game() -> void:
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	_game = scene.instantiate() as Game
 	_game.autoplay = true
+	for i: int in 2:
+		if _teams[i] != "":
+			Game.team_picks[i] = _game.league.find(_teams[i])
 	root.add_child(_game)
 	_state = &""
 	_state_frames = 0
@@ -130,6 +139,10 @@ func _check_book() -> void:
 		_expect(sum.rec == t.pass_comp and sum.rec_yds == t.pass_yds and sum.rec_td == t.pass_td, "%s: receiving does not match passing" % who)
 		_expect(sum.targets == t.pass_att, "%s: %d targets for %d passes" % [who, sum.targets, t.pass_att])
 		_expect(sum.fumbles_lost == t.fumbles_lost, "%s: fumbles lost do not add up" % who)
+		_expect(t.fumbles >= t.fumbles_lost, "%s lost %d fumbles out of %d" % [who, t.fumbles_lost, t.fumbles])
+		_expect(t.dives > 0, "%s never dived" % who)
+		_expect(t.late_hits >= 0 and t.max_deficit >= 0, "%s: late hits or deficit below zero" % who)
+		_expect(book.top_scorer_tds(team) <= t.touchdowns and book.longest_run(team) >= 0 and book.longest_run(team) <= roundi(tuning.field_length),"%s: best scorer or longest run does not fit the team's line" % who)
 		_expect(defense.interceptions == t.pass_int, "%s threw %d interceptions, the other team caught %d" % [who, t.pass_int, defense.interceptions])
 		_expect(defense.sacks <= t.sacked, "%s was sacked %d times, the other team has %d" % [who, t.sacked, defense.sacks])
 		_expect(t.plays == t.pass_att + t.rush_att + t.sacked, "%s: %d plays is not passes + runs + sacks" % [who, t.plays])
@@ -181,6 +194,8 @@ func _check_menu() -> void:
 	menu.show_screen(PauseMenu.Screen.CONTROLS)
 	_expect(menu.screen == PauseMenu.Screen.CONTROLS and menu._body.get_child_count() == 1, "the controls screen did not build")
 	menu.show_screen(PauseMenu.Screen.MENU)
+	var items: Array[String] = menu._items()
+	_expect(not items.has(PauseMenu.RESUME) and items.back() == PauseMenu.MAIN_MENU, "the game-over menu should have no resume and end in the main menu")
 	menu.close()
 	_expect(not menu.visible, "closing the menu left it on screen")
 

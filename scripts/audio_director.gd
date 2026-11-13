@@ -37,6 +37,7 @@ const REMARK_ROOM: float = 0.5
 const REMARK_PANCAKE: float = 0.25
 ## Chance the color commentator has something to say about each kind of moment.
 const QUIP_BOLD: float = 0.6
+const QUIP_FOURTH: float = 0.6
 const QUIP_DOG: float = 0.2
 const QUIP_QB_RUN: float = 0.6
 const QUIP_INTERCEPTION: float = 0.8
@@ -51,6 +52,10 @@ const QUIP_CATCH: float = 0.4
 const QUIP_DOWNS: float = 0.6
 const QUIP_HALF: float = 0.9
 const QUIP_FINAL: float = 0.9
+const QUIP_BREAKAWAY: float = 0.5
+const QUIP_JUICE: float = 0.6
+const QUIP_FUMBLE: float = 0.6
+const QUIP_DROP: float = 0.5
 ## Real seconds a quip waits for the announcer before it is too late to say it.
 const QUIP_STALE: float = 8.0
 ## Real seconds of quiet between one voice finishing and the next starting.
@@ -60,9 +65,24 @@ const BOOTH_BREATH: float = 0.25
 const QUIP_IDLE: StringName = &"color_idle"
 const QUIP_IDLE_BLOWOUT: StringName = &"color_idle_blowout"
 const QUIP_IDLE_CLOSE: StringName = &"color_idle_close"
+## With a couple of plays left: Tony before the break, and at the end of a
+## rout, of a tight one and of anything between. All start with QUIP_LATE.
+const QUIP_LATE: StringName = &"color_late"
+const QUIP_LATE_HALF: StringName = &"color_late_half"
+const QUIP_LATE_BLOWOUT: StringName = &"color_late_blowout"
+const QUIP_LATE_CLOSE: StringName = &"color_late_close"
+## Jim's word that the half or the game is nearly over, and on its last play.
+const CALL_LATE_HALF: StringName = &"announcer_late_half"
+const CALL_LATE_GAME: StringName = &"announcer_late_game"
+const CALL_LAST_PLAY: StringName = &"announcer_last_play"
+## Jim calls the warning when the half's clock gets under Tuning.warning_time.
+const CALL_WARNING: StringName = &"announcer_warning"
 ## The exchanges that open the broadcast, before the first kickoff.
 const QUIP_INTRO: StringName = &"color_intro"
 const CHAT_PREFIX: String = "chat_"
+## The halftime report's exchanges: files `show_<id>_<part>`, picked by id
+## (see HalftimeExchanges), not at random.
+const SHOW_PREFIX: String = "show_"
 const QUIP_PREFIX: String = "color_"
 const BREAKAWAY_YARDS: float = 20.0
 const BREAKAWAY_RETURN_YARDS: float = 40.0
@@ -118,6 +138,15 @@ var _quip_said: Dictionary[StringName, int] = {}
 var _exchanges: Dictionary[StringName, Array] = {}
 ## The lines still to come of the exchange going on: [by Tony, stream] each.
 var _exchange_parts: Array[Array] = []
+## The halftime exchanges by id, each the streams of its lines in order, and
+## how many lines the one going on has (0 when none is).
+var _shows: Dictionary[StringName, Array] = {}
+var _show_lines: int = 0
+## The half (1 or 2, 0 for none yet) in which Jim last said time was short,
+## in which he last called the last play, and in which Tony got his say on it.
+var _late_called_half: int = 0
+var _last_play_called_half: int = 0
+var _late_quip_said_half: int = 0
 ## The run in progress has already been called a breakaway (or passed over).
 var _breakaway_called: bool = false
 var _roar_level: float = 0.0
@@ -205,6 +234,7 @@ func shout(sound: StringName) -> void:
 	if not _exchange_parts.is_empty():
 		_exchange_parts.clear()
 		exchange_counts[&"cut"] += 1
+	_show_lines = 0
 	_announcer_queue.clear()
 	_announcer_queue.append(sound)
 
@@ -229,6 +259,15 @@ func quip(sound: StringName, chance: float) -> void:
 		return
 	_quip_pending = sound
 	_quip_asked = now
+
+
+## Tony says `sound` next whatever the dice or the gap since his last line
+## would have said, in place of any thought he was holding. He still waits his
+## turn at the microphone.
+func _insist(sound: StringName) -> void:
+	quip_asks[sound] = quip_asks.get(sound, 0) + 1
+	_quip_pending = sound
+	_quip_asked = Time.get_ticks_msec()
 
 
 ## Jim and Tony open the broadcast with one of their exchanges, a different one
@@ -263,9 +302,51 @@ static func next_intro(count: int) -> int:
 	return _last_intro
 
 
+## Jim and Tony say halftime exchange `id` (see HalftimeExchanges) once whoever
+## is talking has finished the sentence, in place of anything else they had
+## lined up. False if there is nothing to hear.
+func play_show(id: StringName, tony_first: bool) -> bool:
+	var sound: StringName = StringName(SHOW_PREFIX + id)
+	play_counts[sound] = play_counts.get(sound, 0) + 1
+	if not _shows.has(id):
+		missing[sound] = true
+		return false
+	if not tuning.audio_enabled:
+		return false
+	if not _exchange_parts.is_empty():
+		_exchange_parts.clear()
+		exchange_counts[&"cut"] += 1
+	_announcer_queue.clear()
+	_quip_pending = &""
+	var tony: bool = tony_first
+	for stream: AudioStream in _shows[id]:
+		_exchange_parts.append([tony, stream])
+		tony = not tony
+	_show_lines = _exchange_parts.size()
+	exchange_counts[&"started"] += 1
+	return true
+
+
+## How many lines there are on file for halftime exchange `id`.
+func show_size(id: StringName) -> int:
+	return (_shows.get(id, []) as Array).size()
+
+
+## Which line of the halftime exchange was started last, from 0: -1 before the
+## first, and when none is going on.
+func show_line() -> int:
+	return _show_lines - _exchange_parts.size() - 1 if _show_lines > 0 else -1
+
+
 ## Somebody in the booth is talking or is about to.
 func booth_busy() -> bool:
 	return _announcer.playing or _color.playing or not _exchange_parts.is_empty() or not _announcer_queue.is_empty()
+
+
+## Somebody in the booth is talking or still has something to say, Tony's
+## thought he is waiting to get in included.
+func booth_pending() -> bool:
+	return booth_busy() or _quip_pending != &""
 
 
 ## Who is talking right now: &"jim", &"tony" or nobody.
@@ -280,6 +361,7 @@ func hush() -> void:
 	if not _exchange_parts.is_empty():
 		exchange_counts[&"cut"] += 1
 	_exchange_parts.clear()
+	_show_lines = 0
 	_announcer_queue.clear()
 	_quip_pending = &""
 	_announcer.stop()
@@ -317,6 +399,8 @@ func _say_quip() -> void:
 	_quip_said[sound] = now
 	play_counts[sound] = play_counts.get(sound, 0) + 1
 	var line: Variant = _pick_fresh(sound, not game.play_controller.ball_dead)
+	if line != null and String(sound).begins_with(String(QUIP_LATE)):
+		_late_quip_said_half = game.half
 	if line == null or not tuning.audio_enabled:
 		return
 	if line is Dictionary:
@@ -380,6 +464,42 @@ func _idle_quip() -> StringName:
 	elif game.half >= 2 and margin <= tuning.audio_close_points:
 		sound = QUIP_IDLE_CLOSE
 	return sound if has_sound(sound) else QUIP_IDLE
+
+
+## What Tony makes of the time running out: the break coming up, or the end of
+## a rout, of a tight one or of anything between.
+func _late_quip() -> StringName:
+	var margin: int = absi(game.home.score - game.home.opponent.score)
+	var sound: StringName = QUIP_LATE
+	if game.half < 2:
+		sound = QUIP_LATE_HALF
+	elif margin >= tuning.audio_blowout_points:
+		sound = QUIP_LATE_BLOWOUT
+	elif margin <= tuning.audio_close_points:
+		sound = QUIP_LATE_CLOSE
+	return sound if has_sound(sound) else QUIP_LATE
+
+
+## In the huddle with only a few plays' worth of clock left, Jim says so once
+## a half and Tony has his say; on the last play Jim says that too. Tony's line
+## is asked for again at each huddle until he has got it out. The try is
+## untimed, so nothing is said before one.
+func _late_calls() -> void:
+	if game.conversion:
+		return
+	var plays_left: float = game.play_caller.situation(game).plays_left
+	if plays_left > tuning.audio_late_plays:
+		return
+	if plays_left <= tuning.ai_call_last_play:
+		if _last_play_called_half != game.half:
+			_last_play_called_half = game.half
+			_late_called_half = game.half
+			announce([CALL_LAST_PLAY])
+	elif _late_called_half != game.half:
+		_late_called_half = game.half
+		announce([CALL_LATE_HALF if game.half < 2 else CALL_LATE_GAME])
+	if _late_quip_said_half != game.half:
+		_insist(_late_quip())
 
 
 ## Down and distance for the play being lined up: "Second down. Seven to go."
@@ -503,6 +623,11 @@ func _live_excitement() -> float:
 			if not _breakaway_called and gain >= (BREAKAWAY_RETURN_YARDS if pc.kickoff else BREAKAWAY_YARDS):
 				_breakaway_called = true
 				remark(&"announcer_room", REMARK_ROOM)
+				# A handed-off back breaking loose gets his own line.
+				if not pc.kickoff and pc.handoff_done and not pc.pass_completed() and carrier.ratings.position == "RB":
+					quip(&"color_juice", QUIP_JUICE)
+				else:
+					quip(&"color_breakaway", QUIP_BREAKAWAY)
 			return clampf(0.2 + gain / 25.0, 0.2, 0.9)
 	return 0.0
 
@@ -515,6 +640,7 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 	match to:
 		&"PlaySelect":
 			announce_down()
+			_late_calls()
 			quip(_idle_quip(), tuning.audio_color_idle_chance)
 			if game.human.is_active():
 				_huddle_on = true
@@ -546,10 +672,16 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 					crowd_react(game.offense, 0.7)
 				_:
 					crowd_react(game.offense, 0.5)
+		&"Warning":
+			play(&"whistle")
+			shout(CALL_WARNING)
+			excite(0.3)
 		&"Halftime":
 			play(&"buzzer")
-			shout(&"announcer_half")
-			quip(&"color_half", QUIP_HALF)
+			# The halftime report has an exchange of its own (HalftimeState).
+			if not game.has_halftime_show():
+				shout(&"announcer_half")
+				quip(&"color_half", QUIP_HALF)
 		&"GameOver":
 			play(&"buzzer")
 			shout(&"announcer_final")
@@ -687,7 +819,7 @@ func _load_streams() -> void:
 		if stream == null:
 			continue
 		var key: String = base.substr(0, cut)
-		if key.begins_with(CHAT_PREFIX):
+		if key.begins_with(CHAT_PREFIX) or key.begins_with(SHOW_PREFIX):
 			if not chats.has(key):
 				chats[key] = {}
 			chats[key][base.substr(cut + 1).to_int()] = stream
@@ -697,7 +829,23 @@ func _load_streams() -> void:
 			_streams[sound] = []
 		_streams[sound].append(stream)
 	for chat: String in chats:
-		_add_exchange(chat, chats[chat])
+		if chat.begins_with(SHOW_PREFIX):
+			_add_show(chat, chats[chat])
+		else:
+			_add_exchange(chat, chats[chat])
+
+
+## Files `show_<id>_<part>` make halftime exchange `id`. One with a part
+## missing is left out.
+func _add_show(show: String, parts: Dictionary) -> void:
+	var streams: Array[AudioStream] = []
+	for part: int in range(1, parts.size() + 1):
+		if parts.has(part):
+			streams.append(parts[part])
+	if streams.size() != parts.size() or streams.size() < 2:
+		broken_exchanges.append(show)
+		return
+	_shows[StringName(show.trim_prefix(SHOW_PREFIX))] = streams
 
 
 ## Files `chat_<moment>_<t|j><k>_<part>` make one exchange of `color_<moment>`:

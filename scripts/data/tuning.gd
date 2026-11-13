@@ -16,6 +16,15 @@ extends Resource
 @export var yards_to_gain: float = 30.0
 ## Game clock in seconds, played as two halves. Only runs while the ball is live.
 @export var game_length: float = 360.0
+## The first time a half's clock gets down to this many seconds, the play is
+## finished and then the game stops for a warning before the next snap or
+## kickoff (like the NFL's two-minute warning). 0 turns it off.
+@export var warning_time: float = 30.0
+## In the second half's last this many seconds, the playbook's Hail Mary takes
+## the first play's place (the top-left card on page 1). 0 turns it off.
+@export var hail_mary_time: float = 5.0
+## Seconds the warning banner stays up.
+@export var warning_banner_time: float = 2.5
 @export var touchdown_points: int = 6
 @export var safety_points: int = 2
 ## After a touchdown: one untimed play from this many yards out, worth this much.
@@ -38,6 +47,11 @@ extends Resource
 ## The kicking team lines up this far behind the ball.
 @export var kickoff_run_up: float = 2.0
 @export var halftime_banner_time: float = 4.0
+## After the final whistle the menu waits at least `min` seconds, and for the
+## booth to have been silent for `breath`; after `max` it comes up regardless.
+@export var game_over_menu_min: float = 3.0
+@export var game_over_menu_breath: float = 1.2
+@export var game_over_menu_max: float = 60.0
 
 @export_group("Movement")
 @export var run_speed: float = 7.6
@@ -468,6 +482,9 @@ extends Resource
 ## points, and about a tight one in the second half within this many.
 @export var audio_blowout_points: int = 17
 @export var audio_close_points: int = 7
+## The booth warns that the half or the game is nearly over with no more than
+## this many plays' worth of clock left.
+@export var audio_late_plays: float = 3.0
 ## A touchdown is a walk-in when no defender on his feet is within this many
 ## yards of the scorer, and a long one when the play gained at least this many.
 @export var audio_walk_in_yards: float = 6.0
@@ -496,6 +513,42 @@ extends Resource
 @export var intro_silent_time: float = 5.0
 ## Seconds the camera takes over its whole move.
 @export var intro_shot_time: float = 10.0
+
+@export_group("Halftime show")
+## The halftime report: the score, the team stats and a word from the booth.
+## Off (and with the CPU playing both teams) it is the plain banner, for
+## `halftime_banner_time`.
+@export var halftime_show_enabled: bool = true
+## Seconds the report stays up. If the booth is still talking it waits for the
+## end of the sentence, but never past the maximum.
+@export var halftime_show_time: float = 10.0
+@export var halftime_show_max: float = 12.5
+## Seconds of buzzer before the booth starts talking.
+@export var halftime_voice_delay: float = 0.9
+## How often one of the booth's non sequiturs comes up even though the half
+## gave them something to talk about.
+@export_range(0.0, 1.0) var halftime_random_chance: float = 0.15
+## What the booth takes for a rout (a lead of this many), a tight one (within
+## this many) and a defensive struggle (no more than this many points in all).
+@export var halftime_blowout_points: int = 21
+@export var halftime_close_points: int = 3
+@export var halftime_slugfest_points: int = 7
+## A comeback: a team that trailed by the first is now within the second.
+@export var halftime_comeback_from: int = 14
+@export var halftime_comeback_to: int = 7
+## One team has had the ball this share of the half.
+@export_range(0.5, 1.0) var halftime_possession_share: float = 0.65
+## A big day in the air or on the ground: this many yards that way between the
+## two teams, and this many times what they have the other way.
+@export var halftime_big_yards: int = 100
+@export var halftime_big_yards_ratio: float = 2.0
+## Giveaways, late hits and dives between the two teams that get a mention.
+@export var halftime_turnovers: int = 3
+@export var halftime_late_hits: int = 3
+@export var halftime_dives: int = 12
+## A run this long gets a mention, and so does a player with this many touchdowns.
+@export var halftime_long_run: int = 40
+@export var halftime_star_tds: int = 2
 
 @export_group("Turf FX")
 @export var blood_enabled: bool = true
@@ -860,6 +913,29 @@ extends Resource
 ## come down within `heave_range_margin` yards of the end of his range.
 @export var ai_qb_heave_max_time: float = 5.0
 @export var ai_qb_heave_range_margin: float = 4.0
+
+@export_group("Comeback assist")
+## A quiet nudge for the team that is well behind: its catches stick a little
+## more, it throws a few less picks, breaks a few more tackles and fumbles a
+## little less; the team ahead gets a smaller nudge the other way. See RubberBand.
+@export var comeback_enabled: bool = true
+## No effect at this margin or less (one score here is a touchdown and the
+## two-point try)...
+@export var comeback_dead_zone: int = 8
+## ...then it grows smoothly, reaching full strength at this margin.
+@export var comeback_full_gap: int = 24
+## At full strength: share added to the trailing team's good rolls and taken
+## off its bad ones, and the (smaller) share the other way for the leader.
+@export var comeback_max_boost: float = 0.06
+@export var comeback_max_penalty: float = 0.03
+## Over the second half's last this many plays' worth of clock the strength is
+## multiplied by up to `late_scale`, still capped at full strength.
+@export var comeback_late_plays: float = 12.0
+@export var comeback_late_scale: float = 1.3
+## At full strength a CPU offense that trails leans this far toward throwing
+## downfield; one that leads leans toward running the clock (scaled by
+## max_penalty / max_boost).
+@export var comeback_ai_shift: float = 0.15
 
 @export_group("Camera")
 ## The camera sits behind the followed player: this high and this far back.

@@ -381,10 +381,7 @@ func _update_visual(delta: float) -> void:
 			else:
 				visual.basis = _aim_basis(vel).rotated(vel.normalized(), _spin)
 		State.HELD:
-			var dir: Vector3 = carrier.facing
-			if not carrier.is_down():
-				dir = dir + Vector3(0.0, 0.45, 0.0)
-			visual.basis = visual.basis.orthonormalized().slerp(_aim_basis(dir), 1.0 - exp(-14.0 * delta))
+			visual.basis = visual.basis.orthonormalized().slerp(_aim_basis(carrier.ball_axis()), 1.0 - exp(-14.0 * delta))
 		State.LOOSE:
 			if _loose_velocity.length_squared() > 0.01:
 				# Bouncing: tumble end over end across the direction of travel.

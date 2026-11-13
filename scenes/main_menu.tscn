@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_menu"]
 [ext_resource type="Resource" path="res://resources/tuning.tres" id="2_tuning"]
 [ext_resource type="PackedScene" path="res://scenes/field.tscn" id="3_field"]
+[ext_resource type="Resource" path="res://resources/league.tres" id="4_league"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 sky_top_color = Color(0.13, 0.11, 0.36, 1)
@@ -28,6 +29,7 @@ fog_sky_affect = 0.0
 [node name="MainMenu" type="Node3D"]
 script = ExtResource("1_menu")
 tuning = ExtResource("2_tuning")
+league = ExtResource("4_league")
 
 [node name="Field" parent="." instance=ExtResource("3_field")]
 

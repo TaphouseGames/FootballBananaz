@@ -10,6 +10,9 @@ extends RefCounted
 const KICKOFF_WALL_DEPTH: float = 12.0
 const KICKOFF_BLOCK_RANGE: float = 9.0
 const KICKOFF_LANE_DEPTH: float = 18.0
+## How far the wall slides across towards the side the kick comes down on
+## (0 = stays in the middle, 1 = centred on the landing spot).
+const KICKOFF_WALL_SHIFT: float = 0.7
 ## A route has cut once its heading is further than this (as a dot product, about
 ## 25 degrees) from the leg the receiver is on.
 const ROUTE_CUT_DOT: float = 0.9
@@ -335,7 +338,11 @@ func _think_kickoff(pc: PlayController) -> void:
 		if pc.nearest_opponent_distance(player) < KICKOFF_BLOCK_RANGE:
 			_block(pc, landing)
 		else:
-			_seek(Vector3(landing.x + upfield * KICKOFF_WALL_DEPTH, 0.0, start_point.z * 0.6))
+			# The wall forms in front of where the kick comes down, not in the
+			# middle of the field: a kick to one side pulls it over there.
+			var edge: float = tuning.half_width() - 2.0
+			var lane: float = clampf(landing.z * KICKOFF_WALL_SHIFT + start_point.z * 0.6, -edge, edge)
+			_seek(Vector3(landing.x + upfield * KICKOFF_WALL_DEPTH, 0.0, lane))
 		return
 	var aim: Vector3 = landing
 	if absf(landing.x - player.position.x) > KICKOFF_LANE_DEPTH:
@@ -565,7 +572,8 @@ func _best_receiver(pc: PlayController, checkdowns: bool) -> Player:
 	var best: Player = null
 	var best_score: float = -INF
 	# Short of time, yards count for more next to how open a man is.
-	var depth_bonus: float = lerpf(tuning.ai_qb_depth_bonus, tuning.ai_qb_urgent_depth_bonus, pc.qb_urgency)
+	# A team that throws short takes the man underneath unless time is short.
+	var depth_bonus: float = lerpf(tuning.ai_qb_depth_bonus * player.team.call_bias[OffensePlay.Category.DEEP], tuning.ai_qb_urgent_depth_bonus, pc.qb_urgency)
 	for receiver: Player in pc.eligible:
 		if receiver.is_down():
 			continue

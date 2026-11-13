@@ -32,9 +32,13 @@ var _time_count: float = 0.0
 
 ## What the score and the clock ask of the offense on the next play.
 func situation(game: Game) -> GameSituation:
+	return GameSituation.read(game, play_time(game))
+
+
+## Seconds of clock a play takes on average, as seen so far.
+func play_time(game: Game) -> float:
 	# The starting guess counts as a few plays, so one odd play does not swing it.
-	var play_time: float = (game.tuning.ai_call_play_time * TIME_PRIOR + _time_sum) / (TIME_PRIOR + _time_count)
-	return GameSituation.read(game, play_time)
+	return (game.tuning.ai_call_play_time * TIME_PRIOR + _time_sum) / (TIME_PRIOR + _time_count)
 
 
 ## Called at the whistle with the yards the offense made (0 on a turnover) and
@@ -114,6 +118,11 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 		if any > 0.0:
 			return plays[_weighted(deep)]
 	var want: PackedFloat32Array = _situation(game)
+	# What this team likes to call, less and less as the clock takes over.
+	var now: GameSituation = situation(game)
+	var own_way: float = 1.0 - maxf(now.urgency, now.clock_kill)
+	for i: int in CATEGORIES:
+		want[i] *= lerpf(1.0, game.offense.call_bias[i], own_way)
 	var history: Array = _history.get(game.offense, [])
 	# Shared out over the plays of a category, so a playbook with more runs than
 	# deep passes does not run more often for it.
@@ -163,6 +172,14 @@ func _situation(game: Game) -> PackedFloat32Array:
 	for i: int in CATEGORIES:
 		result[i] = lerpf(result[i], HURRY_MIX[i], now.urgency)
 		result[i] = lerpf(result[i], KILL_MIX[i], kill)
+	# Comeback assist: well behind, take a few more shots; well ahead, sit on it.
+	var lean: float = tuning.comeback_ai_shift * RubberBand.strength(game)
+	if lean > 0.0 and now.margin != 0:
+		var mix: Array[float] = HURRY_MIX if now.margin < 0 else KILL_MIX
+		if now.margin > 0:
+			lean *= tuning.comeback_max_penalty / maxf(tuning.comeback_max_boost, 0.001)
+		for i: int in CATEGORIES:
+			result[i] = lerpf(result[i], mix[i], lean)
 	return result
 
 

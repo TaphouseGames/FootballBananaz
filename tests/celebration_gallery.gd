@@ -8,6 +8,7 @@ extends SceneTree
 var _out_dir: String = "user://celebration_gallery"
 var _game: Game
 var _cam: Camera3D
+var _worst_overlap: float = 0.0
 
 
 func _initialize() -> void:
@@ -78,7 +79,8 @@ func _run() -> void:
 			await _close("3%d_sulk_a" % variant, loser)
 			await _wait(0.14)
 			await _close("3%d_sulk_b" % variant, loser)
-	quit(0)
+	print("deepest: arms %.3f into a body  %s" % [_worst_overlap, "ok" if _worst_overlap < 0.02 else "CLIPPING"])
+	quit(0 if _worst_overlap < 0.02 else 1)
 
 
 func _with_variant(pc: PlayController, team: Team, count: int, variant: int, skip: Player) -> Player:
@@ -93,7 +95,11 @@ func _close(label: String, player: Player) -> void:
 	var side: Vector3 = Vector3(-player.facing.z, 0.0, player.facing.x)
 	for other: Player in _game.play_controller.players:
 		other.visible = other == player
-	await _shot(label, player.position + player.facing * 4.2 + side * 1.6 + Vector3(0.0, 1.7, 0.0), player.position + Vector3(0.0, 1.0, 0.0))
+	# How far his arms are inside his own head or body: 0 is clear of it.
+	var overlap: float = player.animator.arm_overlap()
+	_worst_overlap = maxf(_worst_overlap, overlap)
+	print("%s: arms %.3f into his body" % [label, overlap])
+	await _shot(label, player.position + player.facing * 3.0 + side * 1.2 + Vector3(0.0, 1.9, 0.0), player.position + Vector3(0.0, 1.3, 0.0))
 	for other: Player in _game.play_controller.players:
 		other.visible = true
 

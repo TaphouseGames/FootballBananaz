@@ -48,6 +48,43 @@ func add_possession(team: Team, seconds: float) -> void:
 	teams[team].possession += seconds
 
 
+func add_late_hit(team: Team) -> void:
+	teams[team].late_hits += 1
+
+
+func add_dive(team: Team) -> void:
+	teams[team].dives += 1
+
+
+func add_fumble(team: Team) -> void:
+	teams[team].fumbles += 1
+
+
+## The score has changed: keeps the most each team has been behind by.
+func note_score() -> void:
+	for team: Team in teams:
+		var line: TeamLine = teams[team]
+		line.max_deficit = maxi(line.max_deficit, team.opponent.score - team.score)
+
+
+## The team's longest run so far, in yards (0 with none).
+func longest_run(team: Team) -> int:
+	var longest: int = 0
+	for player: Player in team.players:
+		if players[player].rush_att > 0:
+			longest = maxi(longest, players[player].rush_long)
+	return longest
+
+
+## The most touchdowns any one of the team's players has scored himself.
+func top_scorer_tds(team: Team) -> int:
+	var most: int = 0
+	for player: Player in team.players:
+		var p: PlayerLine = players[player]
+		most = maxi(most, p.rush_td + p.rec_td + p.return_td)
+	return most
+
+
 ## Books the play that has just been whistled dead. Called from
 ## PlayController.end_play(), before Game moves the ball or the down.
 func record_play(game: Game) -> void:

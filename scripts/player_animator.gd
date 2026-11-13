@@ -33,6 +33,30 @@ const HANDS_TIME: float = 0.35
 const LOOSE_REACH: float = 2.5
 ## Half the gap between the two hands on the ball, in metres.
 const HANDS_APART: float = 0.11
+## The hands never go for a ball further back than this far in front of the line
+## of the shoulders, in metres.
+const CHEST_CLEAR: float = 0.14
+## Seconds before a handoff or toss that the back turns and gets his hands ready.
+const HANDOFF_READY_TIME: float = 0.4
+## A ball gripped to throw: how far from the wrist (0) to the palm point (1) its
+## middle is, and how far off the palm, in metres.
+const GRIP_ALONG: float = 1.0
+## His body as far as his own arms are concerned, in skeleton units: a ball for
+## the head (its middle this far above the head bone), a tube from hips to
+## chest, and how thick an arm is. Celebrations keep the arms outside these.
+const HEAD_RADIUS: float = 0.235
+const HEAD_RISE: float = 0.18
+const TORSO_RADIUS: float = 0.14
+const ARM_RADIUS: float = 0.055
+## The first pose branch that is a celebration.
+const MODE_CELEBRATE: int = 30
+const GRIP_OUT: float = 0.12
+## A ball tucked under the arm: its middle this far from the elbow (0) to the
+## palm (1), so one end is in the hand and the other in the crook of the elbow,
+## and this far in from the forearm toward the chest, in metres, so it lies
+## along the inside of the arm instead of through it.
+const TUCK_ALONG: float = 0.5
+const TUCK_IN: float = 0.15
 ## How many dances a scorer has, ways his teammates cheer and ways the other
 ## team sulks. The last sulk is the one who walks off.
 const DANCES: int = 4
@@ -40,9 +64,12 @@ const CHEERS: int = 3
 const SULKS: int = 5
 const SULK_TRUDGE: int = 4
 const SPIKE_TIME: float = 0.4
-## Hands on hips, elbows out.
-const HIP_ARM: Vector3 = Vector3(18.0, -95.0, -58.0)
-const HIP_FORE: Vector3 = Vector3(0.0, -95.0, 0.0)
+## Hands on hips, elbows out. The pose gets the elbows about right and the palms
+## are then put on the hips: this far out to the side, up and forward of the
+## hips bone, in skeleton units.
+const HIP_ARM: Vector3 = Vector3(24.0, 0.0, -44.0)
+const HIP_FORE: Vector3 = Vector3(0.0, -100.0, 0.0)
+const HIP_HAND: Vector3 = Vector3(0.215, 0.03, 0.06)
 
 var player: Player
 var skeleton: Skeleton3D
@@ -57,6 +84,24 @@ var _ankle_rest_y: float = 0.0
 ## Palm of each hand, in that hand bone's own space.
 var _palm_l: Vector3 = Vector3(0.0, 0.15, 0.0)
 var _palm_r: Vector3 = Vector3(0.0, 0.15, 0.0)
+## The way each palm faces, in that hand bone's own space.
+var _palm_out_l: Vector3 = Vector3.DOWN
+var _palm_out_r: Vector3 = Vector3.DOWN
+## The ball is gripped in one hand to throw, not clamped under the arm: it sits
+## on the palm instead of round the fingers. `_grip_now` is the eased value.
+var _grip: bool = false
+var _grip_now: float = 0.0
+## The ball is tucked between forearm and chest (see `_tuck_ball`); eased the
+## same way.
+var _tuck: bool = false
+var _tuck_now: float = 0.0
+## Middle of the head, in the head bone's own space.
+var _head_centre: Vector3 = Vector3(0.0, HEAD_RISE, 0.0)
+## How much each hand is resting on its hip this tick (0..1).
+var _hip_l: float = 0.0
+var _hip_r: float = 0.0
+## How much the arms are being kept out of the body just now (0..1).
+var _clear_now: float = 0.0
 ## "Up" in the space the hips bone is positioned in.
 var _hips_up: Vector3 = Vector3.UP
 var _ground: float = 1.0
@@ -82,6 +127,12 @@ var _hands_reach: float = 0.5
 var _arm_length: float = 0.6
 ## Where the ball hand would be without that, in world space.
 var _anchor_rest: Vector3 = Vector3.ZERO
+## Which shoulder he has turned over to see a ball behind him (+1 left, -1
+## right, 0 not turned), and whether he turned to anything this tick.
+var _twist_side: float = 0.0
+var _turned: bool = false
+## "Forward" in the chest bone's own space.
+var _chest_forward: Vector3 = Vector3.BACK
 
 ## Which pose branch is active; a change eases in instead of snapping.
 var _mode: int = 0
@@ -149,8 +200,17 @@ func _init(p_player: Player, p_skeleton: Skeleton3D) -> void:
 		_ankle_rest_y = skeleton.get_bone_global_rest(_bone[B.FOOT_L]).origin.y
 		if _bone[B.HIPS] >= 0:
 			_leg_length = maxf(skeleton.get_bone_global_rest(_bone[B.HIPS]).origin.y - _ankle_rest_y, 0.1)
+	if _bone[B.CHEST] >= 0:
+		_chest_forward = skeleton.get_bone_global_rest(_bone[B.CHEST]).basis.orthonormalized().inverse() * Vector3.BACK
 	_palm_l = _palm_offset(B.HAND_L, B.FORE_L, _palm_l)
 	_palm_r = _palm_offset(B.HAND_R, B.FORE_R, _palm_r)
+	if _bone[B.HEAD] >= 0:
+		_head_centre = skeleton.get_bone_global_rest(_bone[B.HEAD]).basis.orthonormalized().inverse() * Vector3(0.0, HEAD_RISE, 0.0)
+	# The model stands with its arms out and its palms to the turf.
+	if _bone[B.HAND_L] >= 0:
+		_palm_out_l = skeleton.get_bone_global_rest(_bone[B.HAND_L]).basis.orthonormalized().inverse() * Vector3.DOWN
+	if _bone[B.HAND_R] >= 0:
+		_palm_out_r = skeleton.get_bone_global_rest(_bone[B.HAND_R]).basis.orthonormalized().inverse() * Vector3.DOWN
 	if _bone[B.ARM_L] >= 0 and _bone[B.ARM_R] >= 0 and _bone[B.FORE_L] >= 0 and _bone[B.HAND_L] >= 0:
 		var shoulder: Vector3 = skeleton.get_bone_global_rest(_bone[B.ARM_L]).origin
 		var elbow: Vector3 = skeleton.get_bone_global_rest(_bone[B.FORE_L]).origin
@@ -224,7 +284,60 @@ func _palm_world() -> Vector3:
 	if idx < 0:
 		return player.global_position + Vector3(0.0, 1.1, 0.0)
 	var hand: Transform3D = skeleton.get_bone_global_pose(idx)
-	return skeleton.global_transform * (hand * (_palm_r if _ball_hand == B.HAND_R else _palm_l))
+	var right: bool = _ball_hand == B.HAND_R
+	var palm: Vector3 = hand * (_palm_r if right else _palm_l)
+	if _grip_now > 0.0:
+		# Back toward the heel of the hand and out off the palm by half the
+		# ball's width, so the hand is round it and not through it.
+		var out: Vector3 = (hand.basis.orthonormalized() * (_palm_out_r if right else _palm_out_l)).normalized()
+		var held: Vector3 = hand.origin.lerp(palm, GRIP_ALONG) + out * (GRIP_OUT / skeleton.global_basis.get_scale().x)
+		palm = palm.lerp(held, _grip_now)
+	if _tuck_now > 0.0:
+		palm = palm.lerp(_tuck_point(), _tuck_now)
+	return skeleton.global_transform * palm
+
+
+## Middle of a ball tucked under the carrying arm, in skeleton space: halfway
+## down the forearm, pushed in off it toward the chest by about half the ball's
+## width plus the arm's.
+func _tuck_point() -> Vector3:
+	var right: bool = _ball_hand == B.HAND_R
+	var fore_idx: int = _bone[B.FORE_R if right else B.FORE_L]
+	var hand_idx: int = _bone[_ball_hand]
+	var chest_idx: int = _bone[B.CHEST]
+	if fore_idx < 0 or hand_idx < 0 or chest_idx < 0:
+		return skeleton.get_bone_global_pose(maxi(hand_idx, 0)).origin
+	var elbow: Vector3 = skeleton.get_bone_global_pose(fore_idx).origin
+	var palm: Vector3 = skeleton.get_bone_global_pose(hand_idx) * (_palm_r if right else _palm_l)
+	var along: Vector3 = elbow.lerp(palm, TUCK_ALONG)
+	var axis: Vector3 = (palm - elbow).normalized()
+	var to_chest: Vector3 = skeleton.get_bone_global_pose(chest_idx).origin - along
+	var inward: Vector3 = to_chest - axis * to_chest.dot(axis)
+	if inward.length_squared() < 0.000001:
+		return along
+	return along + inward.normalized() * (TUCK_IN / skeleton.global_basis.get_scale().x)
+
+
+## Which way the long axis of the carried ball points, in world space: along the
+## forearm when it is tucked, otherwise ahead and a little up.
+func ball_axis() -> Vector3:
+	var dir: Vector3 = player.facing
+	if not player.is_down():
+		dir = dir + Vector3(0.0, 0.45, 0.0)
+	dir = dir.normalized()
+	if _tuck_now <= 0.0:
+		return dir
+	var right: bool = _ball_hand == B.HAND_R
+	var fore_idx: int = _bone[B.FORE_R if right else B.FORE_L]
+	var hand_idx: int = _bone[_ball_hand]
+	if fore_idx < 0 or hand_idx < 0:
+		return dir
+	var elbow: Vector3 = skeleton.get_bone_global_pose(fore_idx).origin
+	var palm: Vector3 = skeleton.get_bone_global_pose(hand_idx) * (_palm_r if right else _palm_l)
+	var fore: Vector3 = skeleton.global_basis * (palm - elbow)
+	if fore.length_squared() < 0.000001:
+		return dir
+	return dir.slerp(fore.normalized(), _tuck_now)
 
 
 func update(delta: float, instant: bool) -> void:
@@ -239,11 +352,18 @@ func update(delta: float, instant: bool) -> void:
 	_flop_damping = 15.0
 	_hands_weight = 0.0
 	_off_hand_weight = 0.0
+	_grip = false
+	_tuck = false
+	_hip_l = 0.0
+	_hip_r = 0.0
 	if instant:
 		_reset_dynamics()
 	_track_momentum(delta)
 	_watch_ball(delta)
+	_turned = false
 	_build_pose(delta)
+	if not _turned:
+		_twist_side = 0.0
 	_update_flop(delta)
 
 	# The stride must not be smoothed away, but a change of pose still eases in.
@@ -256,6 +376,8 @@ func update(delta: float, instant: bool) -> void:
 		rate = lerpf(rate, _cycle_rate, _settle)
 
 	var blend: float = 1.0 if instant else 1.0 - exp(-rate * delta)
+	_grip_now = lerpf(_grip_now, 1.0 if _grip else 0.0, blend)
+	_tuck_now = lerpf(_tuck_now, 1.0 if _tuck else 0.0, blend)
 	_ground_current = lerpf(_ground_current, _ground, blend)
 	_hop_current = lerpf(_hop_current, _hop, blend)
 	for i: int in B.COUNT:
@@ -280,6 +402,106 @@ func update(delta: float, instant: bool) -> void:
 			# Exactly where the ball will put itself this tick.
 			_hands_target = pc.ball.settle_position(_anchor_rest, pc.ball.settle_share(delta))
 		_reach_hands()
+	if _hip_l > 0.0 or _hip_r > 0.0:
+		_hands_to_hips()
+	_clear_now = lerpf(_clear_now, 1.0 if _mode >= MODE_CELEBRATE else 0.0, blend)
+	if _clear_now > 0.01:
+		_clear_arm(B.ARM_L, B.FORE_L, B.HAND_L, _palm_l)
+		_clear_arm(B.ARM_R, B.FORE_R, B.HAND_R, _palm_r)
+
+
+# --- Arms out of the body --------------------------------------------------------
+
+## Rests the palms on the hips, wherever the dance has put the hips.
+func _hands_to_hips() -> void:
+	if _bone[B.HIPS] < 0:
+		return
+	var hips: Transform3D = skeleton.get_bone_global_pose(_bone[B.HIPS])
+	var frame: Basis = hips.basis.orthonormalized() * Basis(_rest_global[B.HIPS].inverse())
+	_reach_arm(B.ARM_L, B.FORE_L, B.HAND_L, _palm_l, hips.origin + frame * HIP_HAND, _hip_l)
+	_reach_arm(B.ARM_R, B.FORE_R, B.HAND_R, _palm_r, hips.origin + frame * Vector3(-HIP_HAND.x, HIP_HAND.y, HIP_HAND.z), _hip_r)
+
+
+## Where `point` has to be for an arm there to be outside his head and trunk
+## (itself, if it already is). In skeleton space, as he is posed now.
+func _outside_body(point: Vector3) -> Vector3:
+	var result: Vector3 = point
+	var low: Vector3 = skeleton.get_bone_global_pose(_bone[B.HIPS]).origin
+	var high: Vector3 = skeleton.get_bone_global_pose(_bone[B.CHEST]).origin
+	var along: Vector3 = high - low
+	var nearest: Vector3 = low + along * clampf((result - low).dot(along) / maxf(along.length_squared(), 0.0001), 0.0, 1.0)
+	var off: Vector3 = result - nearest
+	if off.length() < TORSO_RADIUS + ARM_RADIUS:
+		# Dead centre there is no way out to prefer: forward will do.
+		result = nearest + (off.normalized() if off.length_squared() > 0.000001 else Vector3.BACK) * (TORSO_RADIUS + ARM_RADIUS)
+	var head: Vector3 = skeleton.get_bone_global_pose(_bone[B.HEAD]) * _head_centre
+	off = result - head
+	if off.length() < HEAD_RADIUS + ARM_RADIUS:
+		result = head + (off.normalized() if off.length_squared() > 0.000001 else Vector3.BACK) * (HEAD_RADIUS + ARM_RADIUS)
+	return result
+
+
+## How far into his own head or trunk his arms are, in skeleton units: 0 when
+## they are clear of it. For tests.
+func arm_overlap() -> float:
+	var worst: float = 0.0
+	for arm: Array in [[B.ARM_L, B.FORE_L, B.HAND_L, _palm_l], [B.ARM_R, B.FORE_R, B.HAND_R, _palm_r]]:
+		var fore_idx: int = _bone[arm[1]]
+		var hand_idx: int = _bone[arm[2]]
+		if fore_idx < 0 or hand_idx < 0:
+			continue
+		var elbow: Vector3 = skeleton.get_bone_global_pose(fore_idx).origin
+		var hand: Transform3D = skeleton.get_bone_global_pose(hand_idx)
+		var palm_local: Vector3 = arm[3]
+		for point: Vector3 in [elbow, elbow.lerp(hand.origin, 0.5), hand.origin, hand * palm_local]:
+			worst = maxf(worst, point.distance_to(_outside_body(point)))
+	return worst
+
+
+## Swings one arm clear of his head and trunk: the upper arm until the elbow is
+## out, then the forearm until the wrist and palm are. Runs after the pose has
+## been written to the skeleton and works on the bones directly.
+func _clear_arm(upper: int, fore: int, hand: int, palm_local: Vector3) -> void:
+	var upper_idx: int = _bone[upper]
+	var fore_idx: int = _bone[fore]
+	var hand_idx: int = _bone[hand]
+	if upper_idx < 0 or fore_idx < 0 or hand_idx < 0 or _bone[B.HEAD] < 0 or _bone[B.HIPS] < 0 or _bone[B.CHEST] < 0:
+		return
+	# Moving the forearm out can bring it back in somewhere else, so a few times.
+	for i: int in 4:
+		var elbow: Vector3 = skeleton.get_bone_global_pose(fore_idx).origin
+		_swing_bone(upper_idx, elbow, _outside_body(elbow))
+		elbow = skeleton.get_bone_global_pose(fore_idx).origin
+		var wrist: Transform3D = skeleton.get_bone_global_pose(hand_idx)
+		# Whichever part of the forearm and hand is deepest in leads it out.
+		var deepest: Vector3 = wrist.origin
+		var deepest_to: Vector3 = deepest
+		var depth: float = 0.0
+		for point: Vector3 in [elbow.lerp(wrist.origin, 0.5), wrist.origin, wrist * palm_local]:
+			var to: Vector3 = _outside_body(point)
+			if point.distance_to(to) > depth:
+				depth = point.distance_to(to)
+				deepest = point
+				deepest_to = to
+		if depth > 0.0:
+			_swing_bone(fore_idx, deepest, deepest_to)
+
+
+## Turns a bone about its own joint so that `from`, a point that moves with it,
+## comes onto the line to `to`. Skeleton space.
+func _swing_bone(idx: int, from: Vector3, to: Vector3) -> void:
+	var pose: Transform3D = skeleton.get_bone_global_pose(idx)
+	var a: Vector3 = from - pose.origin
+	var b: Vector3 = to - pose.origin
+	if a.length_squared() < 0.000001 or b.length_squared() < 0.000001 or a.normalized().dot(b.normalized()) > 0.99999:
+		return
+	var turned: Basis = (Basis(Quaternion(a.normalized(), b.normalized())) * pose.basis).orthonormalized()
+	var parent_idx: int = skeleton.get_bone_parent(idx)
+	var parent_basis: Basis = Basis.IDENTITY
+	if parent_idx >= 0:
+		parent_basis = skeleton.get_bone_global_pose(parent_idx).basis.orthonormalized()
+	var local: Quaternion = (parent_basis.inverse() * turned).get_rotation_quaternion()
+	skeleton.set_bone_pose_rotation(idx, skeleton.get_bone_pose_rotation(idx).slerp(local, _clear_now))
 
 
 # --- Hands on the ball -----------------------------------------------------------
@@ -333,15 +555,35 @@ func _watch_ball(delta: float) -> void:
 
 
 ## Turns and leans the upper body toward the ball the hands are following.
-func _lean_to_ball(amount: float) -> void:
-	if _hands_weight <= 0.0:
+func _turn_to_ball(amount: float) -> void:
+	if _hands_weight > 0.0:
+		_turn_toward(_hands_target, _hands_weight * amount)
+
+
+## Twists him from the hips up to face `point` (world space), so that what his
+## hands are doing happens in front of his chest and not behind his back. The
+## feet keep going the way they were.
+func _turn_toward(point: Vector3, weight: float) -> void:
+	if weight <= 0.0:
 		return
-	var local: Vector3 = skeleton.global_transform.affine_inverse() * _hands_target
-	var yaw: float = clampf(rad_to_deg(atan2(local.x, absf(local.z) + 0.3)), -70.0, 70.0) * _hands_weight * amount
-	_pose[B.SPINE].y += yaw * 0.3
-	_pose[B.SPINE].z -= yaw * 0.25
-	_pose[B.CHEST].y += yaw * 0.4
-	_pose[B.HEAD].y += yaw * 0.25
+	_turned = true
+	var local: Vector3 = skeleton.global_transform.affine_inverse() * point
+	if local.x * local.x + local.z * local.z < 0.0004:
+		return
+	var angle: float = rad_to_deg(atan2(local.x, local.z))
+	# Straight behind him either shoulder would do: he stays with the one he
+	# has already turned over instead of whipping round to the other.
+	if _twist_side != 0.0 and absf(angle) > 110.0 and signf(angle) != _twist_side:
+		angle += 360.0 * _twist_side
+	elif absf(angle) > 8.0:
+		_twist_side = signf(angle)
+	var turn: float = clampf(angle, -150.0, 150.0) * weight
+	_pose[B.HIPS].y += turn * 0.1
+	_pose[B.SPINE].y += turn * 0.27
+	_pose[B.SPINE].z -= clampf(turn, -70.0, 70.0) * 0.2
+	_pose[B.CHEST].y += turn * 0.3
+	_pose[B.NECK].y += turn * 0.1
+	_pose[B.HEAD].y += turn * 0.23
 
 
 ## Puts both palms on the ball, one either side of it. Runs after the pose has
@@ -351,6 +593,15 @@ func _reach_hands() -> void:
 	var target: Vector3 = to_skeleton * _hands_target
 	# Half the gap between the hands, in skeleton units. +X is his left.
 	var apart: float = HANDS_APART * to_skeleton.basis.get_scale().x
+	# Nobody's arms go back through his own body: a ball behind the line of his
+	# shoulders is waited for just in front of it, until he has turned to it.
+	if _bone[B.CHEST] >= 0 and _bone[B.ARM_L] >= 0 and _bone[B.ARM_R] >= 0:
+		var forward: Vector3 = (skeleton.get_bone_global_pose(_bone[B.CHEST]).basis.orthonormalized() * _chest_forward).normalized()
+		var mid: Vector3 = (skeleton.get_bone_global_pose(_bone[B.ARM_L]).origin + skeleton.get_bone_global_pose(_bone[B.ARM_R]).origin) * 0.5
+		var ahead: float = (target - mid).dot(forward)
+		var least: float = CHEST_CLEAR * to_skeleton.basis.get_scale().x
+		if ahead < least:
+			target += forward * (least - ahead)
 	var carries_left: bool = _ball_hand == B.HAND_L
 	_reach_arm(B.ARM_L, B.FORE_L, B.HAND_L, _palm_l, target + Vector3(apart, 0.0, 0.0), _hands_weight if carries_left else _off_hand_weight)
 	_reach_arm(B.ARM_R, B.FORE_R, B.HAND_R, _palm_r, target - Vector3(apart, 0.0, 0.0), _off_hand_weight if carries_left else _hands_weight)
@@ -617,6 +868,9 @@ func _build_pose(delta: float) -> void:
 		_fake_carry()
 	elif pc.ball_dead:
 		pass
+	elif _awaits_handoff(pc, ball):
+		_mode = 7
+		_ready_for_handoff(pc, ball)
 	elif ball.state == Ball.State.FLIGHT and _reach_for_pass(ball):
 		pass
 	elif player.is_blocking or player.block_slow_timer > 0.0:
@@ -631,6 +885,8 @@ func _build_pose(delta: float) -> void:
 	_wave = move_toward(_wave, 1.0, delta * 5.0) if waving else (move_toward(_wave, 0.0, delta * 5.0) if _mode == 0 else 0.0)
 	if _wave > 0.0 and _mode == 0:
 		_call_for_ball(pc)
+	if not _turned:
+		_turn_to_ball(1.0)
 
 
 func _set_arms(arm: Vector3, fore: Vector3) -> void:
@@ -792,8 +1048,11 @@ func _stance() -> void:
 ## Ball carrier: the ball is clamped in the left arm, the right arm keeps pumping.
 func _tuck_ball() -> void:
 	_ball_hand = B.HAND_L
+	_tuck = true
 	_pose[B.ARM_L] = Vector3(-18.0, -35.0, -72.0)
 	_pose[B.FORE_L] = Vector3(0.0, -112.0, 0.0)
+	# Wrist turned in so the fingers come over the front end of the ball.
+	_pose[B.HAND_L] = Vector3(0.0, 0.0, -25.0)
 	_pose[B.CHEST].y *= 0.4
 
 
@@ -815,14 +1074,35 @@ func _fake_carry() -> void:
 	_pose[B.CHEST].y *= 0.4
 
 
+## The back on a run play, in the moment before the ball is his.
+func _awaits_handoff(pc: PlayController, ball: Ball) -> bool:
+	return player == pc.runner and pc.off_play != null and pc.off_play.is_run and not pc.handoff_done 			and pc.qb != null and ball.carrier == pc.qb 			and pc.live_time > pc.off_play.handoff_delay - HANDOFF_READY_TIME
+
+
+## He looks round at the quarterback, shoulders turned to him, and makes a
+## pocket for the ball with his arms: one forearm over, one under.
+func _ready_for_handoff(pc: PlayController, ball: Ball) -> void:
+	var w: float = smoothstep(0.0, 1.0, 1.0 - (pc.off_play.handoff_delay - pc.live_time) / HANDOFF_READY_TIME)
+	_rate = 18.0
+	_pose[B.ARM_L] = _pose[B.ARM_L].lerp(Vector3(-30.0, -20.0, -68.0), w)
+	_pose[B.FORE_L] = _pose[B.FORE_L].lerp(Vector3(0.0, -85.0, 0.0), w)
+	_pose[B.ARM_R] = _pose[B.ARM_R].lerp(Vector3(-48.0, -20.0, -60.0), w)
+	_pose[B.FORE_R] = _pose[B.FORE_R].lerp(Vector3(0.0, -95.0, 0.0), w)
+	_pose[B.CHEST].y *= 1.0 - 0.6 * w
+	_turn_toward(ball.global_position, w)
+
+
 ## Quarterback in the pocket: ball up by the ear, front hand out for balance.
 func _qb_cocked() -> void:
 	_ball_hand = B.HAND_R
+	_grip = true
 	_pose[B.SPINE].x = 2.0
 	_pose[B.CHEST] = Vector3(0.0, -22.0, 0.0)
 	_pose[B.HEAD] = Vector3(-4.0, 20.0, 0.0)
 	_pose[B.ARM_R] = Vector3(-95.0, 18.0, 8.0)
 	_pose[B.FORE_R] = Vector3(0.0, -105.0, 0.0)
+	# Wrist bent so the fingers come over the top of the ball.
+	_pose[B.HAND_R] = Vector3(0.0, 0.0, -20.0)
 	_pose[B.ARM_L] = Vector3(-55.0, 0.0, -62.0)
 	_pose[B.FORE_L] = Vector3(0.0, -70.0, 0.0)
 
@@ -858,12 +1138,10 @@ func _reach_for_pass(ball: Ball) -> bool:
 	if ball.intended != player and to_spot.length() > 3.0:
 		return false
 	var weight: float = clampf(1.0 - remaining / reach_time, 0.0, 1.0)
-	var local: Vector3 = skeleton.global_transform.affine_inverse() * ball.global_position
-	var yaw: float = clampf(rad_to_deg(atan2(local.x, local.z)), -80.0, 80.0) * weight
 	_rate = 18.0
-	_pose[B.SPINE].y += yaw * 0.35
-	_pose[B.CHEST].y = yaw * 0.4
-	_pose[B.HEAD] = Vector3(-22.0 * weight, yaw * 0.25, 0.0)
+	_pose[B.CHEST].y *= 1.0 - weight
+	_pose[B.HEAD] = Vector3(-22.0 * weight, 0.0, 0.0)
+	_turn_toward(ball.global_position, weight)
 	var arm: Vector3 = Vector3(-135.0, 0.0, -80.0)
 	var fore: Vector3 = Vector3(0.0, -28.0, 0.0)
 	_pose[B.ARM_L] = _pose[B.ARM_L].lerp(arm, weight)
@@ -1007,12 +1285,13 @@ func _jump() -> void:
 	_pose[B.FOOT_L] = Vector3(30.0, 0.0, 0.0)
 	_pose[B.FOOT_R] = Vector3(30.0, 0.0, 0.0)
 	_set_arms(Vector3(-168.0, 0.0, -82.0), Vector3(0.0, -12.0, 0.0))
-	_lean_to_ball(1.0)
+	_turn_to_ball(1.0)
 	if player.has_ball:
 		var pc: PlayController = player.play
 		if pc != null and player == pc.qb and pc.phase == PlayController.Phase.POCKET:
 			# Jump pass: ball up in the throwing hand.
 			_ball_hand = B.HAND_R
+			_grip = true
 			_pose[B.ARM_L] = Vector3(-60.0, 0.0, -60.0)
 			_pose[B.FORE_L] = Vector3(0.0, -60.0, 0.0)
 		else:
@@ -1032,7 +1311,7 @@ func _dive() -> void:
 	_pose[B.SHIN_R] = Vector3(8.0, 0.0, 0.0)
 	_pose[B.FOOT_L] = Vector3(40.0, 0.0, 0.0)
 	_pose[B.FOOT_R] = Vector3(40.0, 0.0, 0.0)
-	_lean_to_ball(0.6)
+	_turn_to_ball(0.6)
 	if player.has_ball:
 		_pose[B.ARM_L] = Vector3(-150.0, -20.0, -80.0)
 
@@ -1346,6 +1625,8 @@ func _scorer_dance(pc: PlayController, still: float) -> void:
 			_pose[B.FORE_L] = HIP_FORE.lerp(sky_fore, left)
 			_pose[B.ARM_R] = HIP_ARM.lerp(sky, 1.0 - left)
 			_pose[B.FORE_R] = HIP_FORE.lerp(sky_fore, 1.0 - left)
+			_hip_l = (1.0 - left) * still
+			_hip_r = left * still
 			_set_legs(-16.0 * bob, 32.0 * bob)
 	_cycle_rate = 40.0
 	_blend_from_stash(still)
@@ -1415,11 +1696,13 @@ func _sulk(pc: PlayController, still: float) -> void:
 			_pose[B.CHEST] = Vector3(8.0, 0.0, 0.0)
 			_pose[B.HEAD] = Vector3(26.0, 22.0 * sin(t * 3.2), 0.0)
 			_set_arms(HIP_ARM, HIP_FORE)
+			_hip_l = still
+			_hip_r = still
 		1:
 			# Hands on his helmet, staring at the sky.
 			_pose[B.SPINE] = Vector3(-10.0, 0.0, 3.0 * sin(t * 1.1))
 			_pose[B.HEAD] = Vector3(-24.0, 0.0, 0.0)
-			_set_arms(Vector3(-90.0, 0.0, -14.0), Vector3(0.0, -138.0, 0.0))
+			_set_arms(Vector3(-96.0, 0.0, -4.0), Vector3(0.0, -118.0, 0.0))
 		2:
 			# Down on one knee, head bowed, a hand on the other knee.
 			_pose[B.SPINE] = Vector3(22.0, 0.0, 0.0)

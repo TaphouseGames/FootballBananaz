@@ -1,0 +1,111 @@
+[gd_resource type="Resource" script_class="Roster" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+
+[sub_resource type="Resource" id="player_0"]
+script = ExtResource("1_ratings")
+display_name = "Jet Huckle"
+number = 1
+position = "QB"
+coverage = 12
+get_open = 50
+blocking = 25
+tackling = 20
+speed = 94
+endurance = 85
+strength = 40
+catching = 35
+juke = 84
+security = 50
+power = 35
+accuracy = 68
+agility = 96
+
+[sub_resource type="Resource" id="player_1"]
+script = ExtResource("1_ratings")
+display_name = "Pip Bramble"
+number = 60
+position = "LINE"
+coverage = 18
+get_open = 25
+blocking = 58
+tackling = 35
+strength = 38
+speed = 42
+
+[sub_resource type="Resource" id="player_2"]
+script = ExtResource("1_ratings")
+display_name = "Tad Thorn"
+number = 67
+position = "LINE"
+coverage = 18
+get_open = 20
+blocking = 60
+tackling = 32
+strength = 40
+speed = 42
+
+[sub_resource type="Resource" id="player_3"]
+script = ExtResource("1_ratings")
+display_name = "Sol Briar"
+number = 71
+position = "LINE"
+coverage = 18
+get_open = 25
+blocking = 55
+tackling = 37
+strength = 36
+speed = 44
+
+[sub_resource type="Resource" id="player_4"]
+script = ExtResource("1_ratings")
+display_name = "Ray Acai"
+number = 11
+position = "WR"
+coverage = 15
+get_open = 58
+blocking = 40
+tackling = 29
+speed = 62
+endurance = 55
+strength = 40
+catching = 60
+juke = 50
+security = 50
+
+[sub_resource type="Resource" id="player_5"]
+script = ExtResource("1_ratings")
+display_name = "Cole Currant"
+number = 19
+position = "WR"
+coverage = 19
+get_open = 55
+blocking = 40
+tackling = 29
+speed = 58
+endurance = 55
+strength = 45
+catching = 62
+juke = 45
+security = 50
+
+[sub_resource type="Resource" id="player_6"]
+script = ExtResource("1_ratings")
+display_name = "Flash Elder"
+number = 28
+position = "RB"
+coverage = 12
+get_open = 65
+blocking = 35
+tackling = 25
+speed = 83
+endurance = 55
+strength = 35
+catching = 85
+juke = 45
+security = 32
+
+[resource]
+script = ExtResource("2_roster")
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])

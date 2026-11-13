@@ -1,0 +1,114 @@
+[gd_resource type="Resource" script_class="Roster" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+
+[sub_resource type="Resource" id="player_0"]
+script = ExtResource("1_ratings")
+display_name = "Clyde Concord"
+number = 14
+position = "QB"
+coverage = 90
+get_open = 30
+blocking = 45
+tackling = 85
+speed = 38
+endurance = 65
+strength = 60
+catching = 30
+juke = 25
+security = 60
+power = 58
+accuracy = 55
+agility = 25
+
+[sub_resource type="Resource" id="player_1"]
+script = ExtResource("1_ratings")
+display_name = "Mack Vine"
+number = 70
+position = "LINE"
+coverage = 75
+get_open = 25
+blocking = 62
+tackling = 94
+strength = 88
+speed = 70
+endurance = 80
+
+[sub_resource type="Resource" id="player_2"]
+script = ExtResource("1_ratings")
+display_name = "Otis Raisin"
+number = 63
+position = "LINE"
+coverage = 72
+get_open = 20
+blocking = 66
+tackling = 92
+speed = 68
+strength = 86
+endurance = 80
+
+[sub_resource type="Resource" id="player_3"]
+script = ExtResource("1_ratings")
+display_name = "Brick Tannin"
+number = 77
+position = "LINE"
+coverage = 78
+get_open = 25
+blocking = 60
+tackling = 95
+strength = 85
+speed = 72
+endurance = 80
+
+[sub_resource type="Resource" id="player_4"]
+script = ExtResource("1_ratings")
+display_name = "Gus Trellis"
+number = 85
+position = "WR"
+coverage = 96
+get_open = 42
+blocking = 85
+tackling = 88
+speed = 48
+endurance = 75
+strength = 65
+catching = 52
+juke = 35
+security = 60
+
+[sub_resource type="Resource" id="player_5"]
+script = ExtResource("1_ratings")
+display_name = "Hank Cluster"
+number = 83
+position = "WR"
+coverage = 94
+get_open = 45
+blocking = 88
+tackling = 90
+speed = 46
+endurance = 75
+strength = 68
+catching = 55
+juke = 35
+security = 60
+
+[sub_resource type="Resource" id="player_6"]
+script = ExtResource("1_ratings")
+display_name = "Crush Merlot"
+number = 44
+position = "RB"
+coverage = 88
+get_open = 40
+blocking = 60
+tackling = 90
+speed = 60
+endurance = 80
+strength = 99
+catching = 40
+juke = 60
+security = 85
+
+[resource]
+script = ExtResource("2_roster")
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])

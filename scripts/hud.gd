@@ -22,6 +22,7 @@ var _card_style: StyleBoxFlat
 var _card_selected_style: StyleBoxFlat
 
 var _intro_card: IntroCard
+var _halftime_card: HalftimeCard
 
 @onready var top_bar: Control = $TopBar
 @onready var score_label: Label = $TopBar/Row/ScoreLabel
@@ -60,7 +61,7 @@ func _process(_delta: float) -> void:
 	clock_label.text = game.clock_text()
 
 	var controlled: Player = game.human.controlled
-	turbo_box.visible = controlled != null and not play_select.visible and _intro_card == null
+	turbo_box.visible = controlled != null and not play_select.visible and _intro_card == null and _halftime_card == null
 	if controlled != null:
 		turbo_bar.value = controlled.turbo
 		turbo_bar.modulate = Color(1.0, 0.4, 0.3) if controlled.turbo_locked else Color.WHITE
@@ -89,6 +90,25 @@ func hide_intro() -> void:
 	if _intro_card != null:
 		_intro_card.finish()
 		_intro_card = null
+
+
+## The halftime report, in place of the scoreboard.
+func show_halftime() -> HalftimeCard:
+	hide_halftime()
+	top_bar.visible = false
+	_halftime_card = HalftimeCard.new()
+	add_child(_halftime_card)
+	# Under the pause menu.
+	move_child(_halftime_card, pause_menu.get_index())
+	_halftime_card.setup(game)
+	return _halftime_card
+
+
+func hide_halftime() -> void:
+	if _halftime_card != null:
+		top_bar.visible = true
+		_halftime_card.finish()
+		_halftime_card = null
 
 
 func hide_banner() -> void:
@@ -147,7 +167,8 @@ func show_play_select(title: String, plays: Array[Resource]) -> void:
 		_cards.append(card)
 		_card_names.append(name_label)
 		_diagrams.append(diagram)
-	play_select.visible = true
+	# Fades in when it comes up; a page change shows at once.
+	ScreenFade.pop(play_select, true, ScreenFade.FADE_IN)
 	set_play_cursor(0)
 
 
@@ -176,4 +197,4 @@ func _make_card_style(fill: Color, border: Color, border_width: int) -> StyleBox
 
 
 func hide_play_select() -> void:
-	play_select.visible = false
+	ScreenFade.pop(play_select, false, 0.0)

@@ -1,7 +1,9 @@
 class_name MainMenu
 extends Node3D
 ## The title screen the game opens on: the field at dusk behind the title and
-## three buttons. Start fades to the match and its intro, Exit quits, Options does nothing yet.
+## three buttons. Start brings up the team select, where the person picks the
+## two teams of the league and their own side, and which fades to the match and
+## its intro; Exit quits, Options does nothing yet.
 ## The buttons take the D-pad or stick and (A), the arrow keys and Enter, or
 ## the mouse, all through Godot's own ui_* actions.
 
@@ -23,15 +25,21 @@ const CAMERA_FROM: Vector3 = Vector3(62.0, 4.0, 0.0)
 const CAMERA_AT: Vector3 = Vector3(112.0, 5.0, 0.0)
 const CAMERA_SWAY: float = 6.0
 const CAMERA_SWAY_SPEED: float = 0.12
-## Seconds the menu takes to go to black on the way into a match.
-const FADE_OUT: float = 0.35
 
 @export var tuning: Tuning
+## The teams the team select has to offer.
+@export var league: League
 
 var start_button: Button
 var options_button: Button
 var exit_button: Button
+## Made the first time START GAME is pressed.
+var team_select: TeamSelect
 
+var _title: Control
+var _buttons: Control
+## Held so the match does not have to be loaded a second time.
+var _game_scene: PackedScene
 var _time: float = 0.0
 var _starting: bool = false
 ## Off until the first button has its focus, so that does not make a sound.
@@ -63,6 +71,11 @@ func _ready() -> void:
 	_build_buttons()
 	start_button.grab_focus()
 	_sounds_on = true
+	# Up out of black, at the start (on the way back from a match the change
+	# of scene does it, and these do nothing).
+	var fade: ScreenFade = ScreenFade.of(get_tree())
+	fade.cover(0.0)
+	fade.reveal()
 
 
 func _process(delta: float) -> void:
@@ -74,6 +87,8 @@ func _process(delta: float) -> void:
 ## game's own confirm action and presses whichever button has the focus.
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(&"confirm") or event.is_action(&"ui_accept"):
+		return
+	if team_select != null and team_select.visible:
 		return
 	var focused: Button = get_viewport().gui_get_focus_owner() as Button
 	if focused != null:
@@ -88,20 +103,45 @@ func _place_camera() -> void:
 
 # --- Buttons -------------------------------------------------------------------------
 
+## On to the team select, in place of the title and the buttons.
 func _on_start() -> void:
+	if _starting:
+		return
+	_play(CONFIRM_SOUND)
+	if team_select == null:
+		team_select = TeamSelect.new()
+		# Loaded here, so the fade into the match does not have to wait for it.
+		_game_scene = load(GAME_SCENE)
+		team_select.setup(_font, league.teams)
+		team_select.chosen.connect(_start_match)
+		team_select.cancelled.connect(_on_select_cancelled)
+		team_select.moved.connect(_play.bind(MOVE_SOUND))
+		ui.add_child(team_select)
+	ScreenFade.pop(_title, false)
+	ScreenFade.pop(_buttons, false)
+	team_select.open()
+	ScreenFade.pop(team_select, true)
+
+
+## Back to the title. START GAME taking the focus makes the sound.
+func _on_select_cancelled() -> void:
+	team_select.close()
+	ScreenFade.pop(_title, true)
+	ScreenFade.pop(_buttons, true)
+	start_button.grab_focus()
+
+
+## `team` is the side the person plays: 0 home (the left team), 1 away.
+func _start_match(team: int) -> void:
 	if _starting:
 		return
 	_starting = true
 	_play(CONFIRM_SOUND)
+	Game.human_side = team
+	Game.team_picks = PackedInt32Array(team_select.picks)
 	# The match opens with the broadcast's intro, which comes up out of black.
 	Game.show_intro = true
-	var black: ColorRect = ColorRect.new()
-	black.color = Color(0.0, 0.0, 0.0, 0.0)
-	black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ui.add_child(black)
-	var fade: Tween = create_tween()
-	fade.tween_property(black, ^"color:a", 1.0, FADE_OUT)
-	fade.tween_callback(get_tree().change_scene_to_file.bind(GAME_SCENE))
+	ScreenFade.of(get_tree()).change_scene(GAME_SCENE)
 
 
 ## Nothing to set yet.
@@ -146,6 +186,7 @@ func _build_title() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override(&"separation", -6)
 	ui.add_child(column)
+	_title = column
 
 	var title: HBoxContainer = HBoxContainer.new()
 	title.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -184,6 +225,7 @@ func _build_buttons() -> void:
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 12)
 	ui.add_child(column)
+	_buttons = column
 	start_button = _button("START GAME", _on_start)
 	options_button = _button("OPTIONS", _on_options)
 	exit_button = _button("EXIT", _on_exit)

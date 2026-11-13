@@ -26,6 +26,14 @@ var rush_yds: int = 0
 var rush_td: int = 0
 
 var fumbles_lost: int = 0
+## Every time one of its carriers put the ball on the ground, whoever got it back.
+var fumbles: int = 0
+## Men knocked over after the whistle.
+var late_hits: int = 0
+## Dives of every kind: with the ball, at a carrier, at nobody.
+var dives: int = 0
+## The most points it has trailed by.
+var max_deficit: int = 0
 var red_zone_att: int = 0
 var red_zone_made: int = 0
 var tries_att: int = 0

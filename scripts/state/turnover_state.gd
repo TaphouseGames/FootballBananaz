@@ -16,3 +16,7 @@ func physics_update(delta: float) -> void:
 	pc.simulate_dead(delta)
 	if time_in_state >= game.tuning.turnover_banner_time:
 		machine.transition(game.next_play_state())
+
+
+func hold_update(delta: float) -> void:
+	pc.simulate_dead(delta)

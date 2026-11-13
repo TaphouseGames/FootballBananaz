@@ -19,12 +19,14 @@
 [ext_resource type="Script" path="res://scripts/state/kickoff_state.gd" id="22_kickoff"]
 [ext_resource type="Script" path="res://scripts/state/halftime_state.gd" id="23_halftime"]
 [ext_resource type="Script" path="res://scripts/state/intro_state.gd" id="25_intro"]
+[ext_resource type="Script" path="res://scripts/state/warning_state.gd" id="27_warning"]
 [ext_resource type="Script" path="res://scripts/human_controller.gd" id="17_human"]
 [ext_resource type="Script" path="res://scripts/audio_director.gd" id="24_audio"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="18_camera"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="19_hud"]
-[ext_resource type="Resource" path="res://resources/rosters/bananaz.tres" id="20_bananaz"]
-[ext_resource type="Resource" path="res://resources/rosters/coconuts.tres" id="21_coconuts"]
+[ext_resource type="Resource" path="res://resources/teams/bananaz.tres" id="20_bananaz"]
+[ext_resource type="Resource" path="res://resources/teams/coconuts.tres" id="21_coconuts"]
+[ext_resource type="Resource" path="res://resources/league.tres" id="26_league"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 sky_top_color = Color(0.2, 0.4, 0.72, 1)
@@ -50,23 +52,18 @@ script = ExtResource("1_game")
 tuning = ExtResource("2_tuning")
 offense_playbook = ExtResource("3_offense")
 defense_playbook = ExtResource("4_defense")
+league = ExtResource("26_league")
 
 [node name="Field" parent="." instance=ExtResource("5_field")]
 
 [node name="HomeTeam" parent="." instance=ExtResource("6_team")]
-team_name = "Bayside Bananaz"
-short_name = "BANANAZ"
-team_color = Color(0.98, 0.8, 0.1, 1)
 attack_dir = 1
 is_human = true
-roster = ExtResource("20_bananaz")
+data = ExtResource("20_bananaz")
 
 [node name="AwayTeam" parent="." instance=ExtResource("6_team")]
-team_name = "Iron Coconuts"
-short_name = "COCONUTS"
-team_color = Color(0.82, 0.16, 0.2, 1)
 attack_dir = -1
-roster = ExtResource("21_coconuts")
+data = ExtResource("21_coconuts")
 
 [node name="Ball" parent="." instance=ExtResource("7_ball")]
 
@@ -105,6 +102,9 @@ script = ExtResource("23_halftime")
 
 [node name="Intro" type="Node" parent="PlayController/StateMachine"]
 script = ExtResource("25_intro")
+
+[node name="Warning" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("27_warning")
 
 [node name="HumanController" type="Node" parent="."]
 script = ExtResource("17_human")

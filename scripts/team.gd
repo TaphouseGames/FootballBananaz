@@ -11,13 +11,29 @@ extends Node3D
 @export var is_human: bool = false
 ## Ratings for each Player child, in order. Missing entries play as average.
 @export var roster: Roster
+## The league team this side plays as. Set, it takes the place of the name, the
+## colour and the roster above.
+@export var data: TeamData
 
+## Wears white with a band of the team colour instead of the colour all over.
+## The home team does, so two teams of a similar colour are still told apart.
+var white_kit: bool = false
 var score: int = 0
 var opponent: Team
 var players: Array[Player] = []
+## How the CPU leans when it calls this team's offense: a multiplier for each
+## OffensePlay.Category (run, short, deep). See Roster.call_bias().
+var call_bias: PackedFloat32Array = PackedFloat32Array([1.0, 1.0, 1.0])
 
 
 func setup(tuning: Tuning, p_opponent: Team) -> void:
+	if data != null:
+		team_name = data.team_name
+		short_name = data.short_name
+		team_color = data.team_color
+		roster = data.roster
+	if roster != null:
+		call_bias = roster.call_bias()
 	opponent = p_opponent
 	players.clear()
 	for child: Node in get_children():

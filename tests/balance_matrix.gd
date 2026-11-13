@@ -21,6 +21,8 @@ extends SceneTree
 ##                 the CPU quarterback choose; default normal)
 ##   times=<a>/<b>/...   release times for the spam probe (default 0.8/1.4/2.0/2.6)
 ##   set=<name>:<value>[,<name>:<value>...]   override Tuning values for this run
+##   home=<short name>, away=<short name>   the league teams that play, taking
+##                 turns on offense; the scene's own two otherwise
 ##
 ## Gains are capped at CAP yards so one long touchdown does not swamp a cell, and
 ## a turnover counts as TURNOVER_COST yards lost.
@@ -64,6 +66,8 @@ var _live: bool = false
 var _thrown: bool = false
 var _completions_before: int = 0
 var _home_next: bool = true
+## Short names of the league teams to play as home and away, "" for the scene's.
+var _teams: PackedStringArray = PackedStringArray(["", ""])
 
 
 func _initialize() -> void:
@@ -87,6 +91,8 @@ func _initialize() -> void:
 			_rollout_forward = shape[1] if shape.size() > 1 else _rollout_forward
 		elif arg == "scout":
 			_scout = true
+		elif arg.begins_with("home=") or arg.begins_with("away="):
+			_teams[0 if arg.begins_with("home=") else 1] = arg.get_slice("=", 1)
 		elif arg.begins_with("times="):
 			_spam_times = arg.trim_prefix("times=").split_floats("/")
 		elif arg.begins_with("set="):
@@ -104,6 +110,9 @@ func _initialize() -> void:
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	_game = scene.instantiate() as Game
 	_game.autoplay = true
+	for i: int in 2:
+		if _teams[i] != "":
+			Game.team_picks[i] = _game.league.find(_teams[i])
 	root.add_child(_game)
 	physics_frame.connect(_tick)
 

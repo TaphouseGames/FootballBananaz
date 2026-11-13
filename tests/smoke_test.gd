@@ -7,6 +7,8 @@ extends SceneTree
 ##   games=<n>   play n games (default 1)
 ##   set=<name>:<value>[,<name>:<value>...]   override Tuning values for this run
 ##   monkey      random button presses play the human team (exercises input code)
+##   home=<short name>, away=<short name>   the league teams that play (e.g.
+##               home=grapes away=berries); the scene's own two otherwise
 
 const SPEED: float = 8.0
 ## Frames a single state may last (at SPEED x 60 fps, 600 frames = 80 game seconds).
@@ -26,6 +28,8 @@ var _games_left: int = 1
 var _monkey: bool = false
 ## "home" or "away": only that team gets the CPU edge (see Tuning.cpu_skill).
 var _edge: String = ""
+## Short names of the league teams to play as home and away, "" for the scene's.
+var _teams: PackedStringArray = PackedStringArray(["", ""])
 var _home_points: int = 0
 var _away_points: int = 0
 var _overrides: Dictionary[String, float] = {}
@@ -61,6 +65,10 @@ func _initialize() -> void:
 			_monkey = true
 		elif arg.begins_with("edge="):
 			_edge = arg.trim_prefix("edge=")
+		elif arg.begins_with("home="):
+			_teams[0] = arg.trim_prefix("home=")
+		elif arg.begins_with("away="):
+			_teams[1] = arg.trim_prefix("away=")
 		elif arg.begins_with("set="):
 			for pair: String in arg.trim_prefix("set=").split(","):
 				var parts: PackedStringArray = pair.split(":")
@@ -82,6 +90,11 @@ func _start_game() -> void:
 	_game.autoplay = not _monkey
 	for key: String in _overrides:
 		_game.tuning.set(key, _overrides[key])
+	for i: int in 2:
+		if _teams[i] != "":
+			Game.team_picks[i] = _game.league.find(_teams[i])
+			if Game.team_picks[i] < 0:
+				_failures.append("no team called '%s' in the league" % _teams[i])
 	root.add_child(_game)
 	_state = &""
 	_state_frames = 0
@@ -208,6 +221,11 @@ func _report() -> bool:
 	var kickoffs: int = _totals.get(&"kickoffs", 0)
 	if kickoffs < 2 * halftimes and _failures.is_empty():
 		_failures.append("%d kickoffs in %d games" % [kickoffs, halftimes])
+	# A warning at most once a half; a play would have to run out the last
+	# thirty seconds on its own for a half to go without one.
+	var warnings: int = _totals.get(&"warnings", 0)
+	if (warnings < halftimes or warnings > 2 * halftimes) and _failures.is_empty():
+		_failures.append("%d warnings in %d games" % [warnings, halftimes])
 	if _bad_kicks > 0 and _failures.is_empty():
 		_failures.append("%d kickoffs came down in the wrong place or went to the wrong man" % _bad_kicks)
 
@@ -230,6 +248,8 @@ func _report() -> bool:
 
 	print("passes called incomplete before the ball was down: %d" % _early_whistles)
 	print("points: home %d, away %d (edge: %s)" % [_home_points, _away_points, _edge if _edge != "" else "both"])
+	for team: Team in [_game.home, _game.away]:
+		print("%s calls run x%.2f, short x%.2f, deep x%.2f" % [team.short_name, team.call_bias[0], team.call_bias[1], team.call_bias[2]])
 	print("totals: %s" % _totals)
 	if _failures.is_empty():
 		print("SMOKE TEST PASSED")

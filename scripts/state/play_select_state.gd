@@ -23,17 +23,26 @@ func enter() -> void:
 		return
 	_human_on_offense = game.human.team == game.offense
 	if _human_on_offense:
-		_plays.assign(game.offense_playbook.plays)
+		_plays.assign(game.offense_plays())
 	else:
 		_plays.assign(game.defense_playbook.plays)
 	_page = 0
 	_flipped = false
 	_show_page()
-	game.hud.set_hint("")
+	_show_hint()
 
 
 func exit() -> void:
 	game.hud.hide_play_select()
+	game.hud.set_hint("")
+
+
+## Under the cards: the buttons that pick a play and, on offense, mirror it.
+func _show_hint() -> void:
+	var text: String = "(A) Pick play"
+	if _human_on_offense:
+		text += "      (X) Flip play" + ("  -  FLIPPED" if _flipped else "")
+	game.hud.set_hint(text)
 
 
 func _page_count() -> int:
@@ -83,6 +92,7 @@ func physics_update(_delta: float) -> void:
 	if _human_on_offense and Input.is_action_just_pressed(&"flip_play"):
 		_flipped = not _flipped
 		game.hud.set_play_flipped(_flipped)
+		_show_hint()
 		game.audio.play(&"ui_flip")
 	if Input.is_action_just_pressed(&"confirm"):
 		game.audio.play(&"ui_confirm")
@@ -103,7 +113,7 @@ func _step(from: int, dx: int, dy: int) -> int:
 
 ## `choice` is the person's pick, or -1 when the CPU picks for both sides.
 func _confirm(choice: int) -> void:
-	var off_plays: Array[OffensePlay] = game.offense_playbook.plays
+	var off_plays: Array[OffensePlay] = game.offense_plays()
 	var def_plays: Array[DefensePlay] = game.defense_playbook.plays
 	var off_play: OffensePlay = null
 	var def_play: DefensePlay = null

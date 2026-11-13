@@ -23,3 +23,7 @@ func physics_update(delta: float) -> void:
 		# The try is played even when the clock has run out.
 		game.start_conversion(_scorer)
 		machine.transition(&"PlaySelect")
+
+
+func hold_update(delta: float) -> void:
+	pc.simulate_dead(delta)

@@ -1,12 +1,17 @@
 class_name PauseMenu
 extends Control
-## Start pauses the game and opens this: resume, the box score, the team stats
-## and the rosters with a card for each player. It keeps running while the tree
-## is paused; everything else stops.
+## Start pauses the game and opens this: resume, the box score, the team stats,
+## the rosters with a card for each player, and the way back to the main menu.
+## It keeps running while the tree is paused; everything else stops.
+## Once the game is over it comes up by itself (see GameOverState), without the
+## resume, and stays: the main menu is the only way on.
 
 enum Screen { MENU, BOX_SCORE, TEAM_STATS, ROSTER, CONTROLS }
 
-const MENU_ITEMS: Array[String] = ["RESUME", "BOX SCORE", "TEAM STATS", "VIEW ROSTER", "CONTROLS"]
+const RESUME: String = "RESUME"
+const MAIN_MENU: String = "MAIN MENU"
+const MENU_ITEMS: Array[String] = [RESUME, "BOX SCORE", "TEAM STATS", "VIEW ROSTER", "CONTROLS", MAIN_MENU]
+const MENU_SCENE: String = "res://scenes/main_menu.tscn"
 ## The controls screen: a heading, then a button and what it does on each line.
 ## The first half of the sections fills the left column, the rest the right.
 const CONTROLS: Array[Array] = [
@@ -73,7 +78,10 @@ var screen: Screen = Screen.MENU
 var _open: bool = false
 ## Closing, and waiting for the buttons to be released.
 var _closing: bool = false
-var _reload: bool = false
+## Closing for good: on to the main menu.
+var _to_menu: bool = false
+## MAIN MENU was picked with a game still on, and has to be picked again.
+var _confirm_quit: bool = false
 var _cursor: int = 0
 var _box_page: int = 0
 var _roster_team: int = 0
@@ -109,11 +117,15 @@ func _process(delta: float) -> void:
 		_finish_close()
 		return
 	if not _open:
-		if Input.is_action_just_pressed(&"pause"):
+		# After the final whistle it opens by itself, once the booth is done.
+		if Input.is_action_just_pressed(&"pause") and not _game_over():
 			open()
 		return
 	if Input.is_action_just_pressed(&"pause"):
-		close()
+		if not _game_over():
+			close()
+		elif screen != Screen.MENU:
+			_back()
 		return
 	match screen:
 		Screen.MENU:
@@ -131,72 +143,105 @@ func open() -> void:
 		return
 	_open = true
 	_closing = false
-	_reload = false
+	_to_menu = false
+	_confirm_quit = false
 	_cursor = 0
 	get_tree().paused = true
-	visible = true
+	ScreenFade.pop(self, true, ScreenFade.MENU_FADE, true)
 	# The game's own prompt would show through under the panel.
 	game.hud.hint.modulate.a = 0.0
 	show_screen(Screen.MENU)
 	_play(&"ui_page")
 
 
-## Hides the menu. The game starts again once the buttons are let go.
-func close(reload: bool = false) -> void:
+## Hides the menu. The game starts again once the buttons are let go, or with
+## `to_menu` gives way to the main menu.
+func close(to_menu: bool = false) -> void:
 	if not _open:
 		return
 	_open = false
 	_closing = true
-	_reload = reload
-	visible = false
+	_to_menu = to_menu
+	ScreenFade.pop(self, false, ScreenFade.MENU_FADE, true)
 	game.hud.hint.modulate.a = 1.0
 
 
 func _finish_close() -> void:
 	_closing = false
 	get_tree().paused = false
-	if _reload:
-		get_tree().reload_current_scene()
+	if _to_menu:
+		ScreenFade.of(get_tree()).change_scene(MENU_SCENE)
 
 
 func show_screen(to: Screen, page: int = 0) -> void:
 	screen = to
+	_confirm_quit = false
 	if to == Screen.BOX_SCORE:
 		_box_page = posmod(page, BOX_PAGES.size())
 	elif to == Screen.ROSTER:
 		_roster_team = posmod(page, 2)
 		_roster_cursor = 0
 	_refresh()
+	# The new screen's contents come up out of nothing.
+	_body.modulate.a = 0.0
+	ScreenFade.pop(_body, true, ScreenFade.MENU_FADE, true)
 
 
-## The game is over: the first entry starts another one.
+## The game is over: nothing to resume, and the menu does not close.
 func _game_over() -> bool:
 	return game.play_controller.state_machine.current_name() == &"GameOver"
+
+
+## The entries of the menu screen.
+func _items() -> Array[String]:
+	var items: Array[String] = []
+	for item: String in MENU_ITEMS:
+		if item != RESUME or not _game_over():
+			items.append(item)
+	return items
+
+
+## The end of a screen's hint: what Start does from there.
+func _start_hint() -> String:
+	return "Start: menu" if _game_over() else "Start: resume"
 
 
 # --- Input ---------------------------------------------------------------------------
 
 func _update_menu() -> void:
 	var step: int = int(Input.is_action_just_pressed(&"move_down")) - int(Input.is_action_just_pressed(&"move_up"))
+	var items: Array[String] = _items()
 	if step != 0:
-		_cursor = posmod(_cursor + step, MENU_ITEMS.size())
+		_cursor = posmod(_cursor + step, items.size())
+		_confirm_quit = false
 		_refresh()
 		_play(&"ui_move")
 	if Input.is_action_just_pressed(&"back"):
-		close()
+		if _confirm_quit:
+			_confirm_quit = false
+			_refresh()
+		elif not _game_over():
+			close()
 	elif Input.is_action_just_pressed(&"confirm"):
 		_play(&"ui_confirm")
-		match _cursor:
-			0:
-				close(_game_over())
-			1:
+		match items[_cursor]:
+			RESUME:
+				close()
+			"BOX SCORE":
 				show_screen(Screen.BOX_SCORE)
-			2:
+			"TEAM STATS":
 				show_screen(Screen.TEAM_STATS)
-			3:
+			"VIEW ROSTER":
 				show_screen(Screen.ROSTER)
-			4:
+			"CONTROLS":
 				show_screen(Screen.CONTROLS)
+			MAIN_MENU:
+				# A game still on is not thrown away by one stray press.
+				if _game_over() or _confirm_quit:
+					close(true)
+				else:
+					_confirm_quit = true
+					_refresh()
 
 
 func _update_table(delta: float) -> void:
@@ -257,23 +302,27 @@ func _refresh() -> void:
 	match screen:
 		Screen.MENU:
 			_title.text = "GAME OVER" if _game_over() else "PAUSED"
-			_hint.text = "Stick / D-pad: choose      (A): select      (B) / Start: %s" % ("close" if _game_over() else "resume")
+			_hint.text = "Stick / D-pad: choose      (A): select"
+			if _confirm_quit:
+				_hint.text = "(A): leave this game for the main menu      (B): stay"
+			elif not _game_over():
+				_hint.text += "      (B) / Start: resume"
 			_body.add_child(_menu_view())
 		Screen.BOX_SCORE:
 			_title.text = "BOX SCORE  -  %s" % BOX_PAGES[_box_page]
-			_hint.text = "(LB) / (RB): offense, defense      Stick: scroll      (B): back      Start: resume"
+			_hint.text = "(LB) / (RB): offense, defense      Stick: scroll      (B): back      " + _start_hint()
 			_body.add_child(_box_score_view())
 		Screen.TEAM_STATS:
 			_title.text = "TEAM STATS"
-			_hint.text = "Stick: scroll      (B): back      Start: resume"
+			_hint.text = "Stick: scroll      (B): back      " + _start_hint()
 			_body.add_child(_team_stats_view())
 		Screen.ROSTER:
 			_title.text = "ROSTER  -  %s" % _roster().team_name.to_upper()
-			_hint.text = "Stick / D-pad: choose a player      (LB) / (RB): other team      (B): back      Start: resume"
+			_hint.text = "Stick / D-pad: choose a player      (LB) / (RB): other team      (B): back      " + _start_hint()
 			_body.add_child(_roster_view())
 		Screen.CONTROLS:
 			_title.text = "CONTROLS"
-			_hint.text = "(A): accept      Stick: scroll      (B): back      Start: resume"
+			_hint.text = "(A): accept      Stick: scroll      (B): back      " + _start_hint()
 			_body.add_child(_controls_view())
 
 
@@ -324,13 +373,14 @@ func _menu_view() -> Control:
 	column.add_theme_constant_override(&"separation", 12)
 	column.add_child(_label(_score_line(), 24, TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	column.add_child(_spacer(18.0))
-	for i: int in MENU_ITEMS.size():
+	var items: Array[String] = _items()
+	for i: int in items.size():
 		var selected: bool = i == _cursor
 		var item: PanelContainer = PanelContainer.new()
 		item.custom_minimum_size = Vector2(380.0, 58.0)
 		item.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		item.add_theme_stylebox_override(&"panel", _item_selected_style if selected else _item_style)
-		var text: String = "PLAY AGAIN" if i == 0 and _game_over() else MENU_ITEMS[i]
+		var text: String = "QUIT GAME?  (A) AGAIN" if selected and _confirm_quit else items[i]
 		var label: Label = _label(text, 26, HUD.NAME_SELECTED_COLOR if selected else HUD.NAME_COLOR, HORIZONTAL_ALIGNMENT_CENTER)
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		item.add_child(label)

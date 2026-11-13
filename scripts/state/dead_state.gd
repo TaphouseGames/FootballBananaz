@@ -15,3 +15,7 @@ func physics_update(delta: float) -> void:
 	pc.simulate_dead(delta)
 	if time_in_state >= game.tuning.late_hit_window:
 		machine.transition(game.resolve_play(pc.result, pc.dead_spot_x, pc.final_team))
+
+
+func hold_update(delta: float) -> void:
+	pc.simulate_dead(delta)

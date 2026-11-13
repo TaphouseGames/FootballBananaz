@@ -7,11 +7,19 @@ const DOWN_NAMES: Array[String] = ["1ST", "2ND", "3RD", "4TH"]
 
 ## Normal Engine.time_scale. Hit-stop returns to this (tests raise it).
 static var base_time_scale: float = 1.0
-## The next match opens with the pregame intro. The main menu sets it; a
-## restart from the pause menu and the tests go straight to the kickoff.
+## The next match opens with the pregame intro. The main menu sets it; the
+## tests go straight to the kickoff.
 static var show_intro: bool = false
+## The team the person plays, picked on the team select: 0 home, 1 away.
+## -1 leaves it to Team.is_human.
+static var human_side: int = -1
+## The league teams picked on the team select for home and away, as places in
+## `league.teams`. -1 leaves the scene's own team.
+static var team_picks: PackedInt32Array = PackedInt32Array([-1, -1])
 
 @export var tuning: Tuning
+## Every team there is to play as.
+@export var league: League
 @export var offense_playbook: OffensePlaybook
 @export var defense_playbook: DefensePlaybook
 ## CPU plays both teams. Used by the headless smoke test; also a handy attract mode.
@@ -26,6 +34,8 @@ var goal_to_go: bool = false
 var clock: float = 0.0
 ## 1 or 2. `clock` counts down the half being played.
 var half: int = 1
+## The half (0 for none yet) in which the warning was given (Tuning.warning_time).
+var warning_half: int = 0
 ## The play being lined up or run is the try after a touchdown.
 var conversion: bool = false
 ## Team that receives the kickoff that is due, or null when none is.
@@ -59,6 +69,14 @@ var _camera_offense: Team
 
 
 func _ready() -> void:
+	if human_side >= 0:
+		home.is_human = human_side == 0
+		away.is_human = human_side == 1
+	var sides: Array[Team] = [home, away]
+	for i: int in sides.size():
+		if league != null and team_picks[i] >= 0 and team_picks[i] < league.teams.size():
+			sides[i].data = league.teams[team_picks[i]]
+	home.white_kit = true
 	home.setup(tuning, away)
 	away.setup(tuning, home)
 	stat_book.setup(home, away)
@@ -76,6 +94,8 @@ func _ready() -> void:
 	show_intro = false
 	play_controller.state_machine.transition(opening)
 	camera_rig.snap_to(_camera_target(), _camera_facing())
+	# Up out of black, if the way in left it there.
+	ScreenFade.of(get_tree()).reveal()
 
 
 func _exit_tree() -> void:
@@ -137,6 +157,7 @@ func is_time_up() -> bool:
 
 func award_touchdown(team: Team) -> void:
 	team.score += tuning.touchdown_points
+	stat_book.note_score()
 
 
 ## After a touchdown the scoring team gets one play from close in for two more.
@@ -160,6 +181,11 @@ func start_kickoff(receiving: Team) -> void:
 	goal_to_go = false
 
 
+## Halftime is the full report, not just the banner.
+func has_halftime_show() -> bool:
+	return tuning.halftime_show_enabled and not autoplay
+
+
 func start_second_half() -> void:
 	half = 2
 	clock = tuning.game_length * 0.5
@@ -174,6 +200,7 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 		if result == PlayController.Result.TOUCHDOWN:
 			# The defense can run a turnover all the way back for two of its own.
 			final_team.score += tuning.conversion_points
+			stat_book.note_score()
 			add_stat(&"conversions_made")
 			audio.crowd_react(final_team, 0.8)
 			audio.shout(&"announcer_trygood")
@@ -210,6 +237,7 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 				# The team that gave it up kicks off to the team that scored.
 				var scorer: Team = defense
 				scorer.score += tuning.safety_points
+				stat_book.note_score()
 				start_kickoff(scorer)
 				kickoff_to = scorer
 				add_stat(&"safeties")
@@ -234,10 +262,29 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 
 
 ## A half ends once its clock has run out and the play (and any try) is over.
+## The warning comes after the play (and any try) that took the clock under
+## Tuning.warning_time, before the next snap or kickoff.
 func next_play_state() -> StringName:
 	if is_time_up():
 		return &"Halftime" if half == 1 else &"GameOver"
+	if warning_due():
+		return &"Warning"
 	return &"Kickoff" if kickoff_to != null else &"PlaySelect"
+
+
+## The clock is under the warning time and this half has not had its warning.
+func warning_due() -> bool:
+	return tuning.warning_time > 0.0 and warning_half != half and clock <= tuning.warning_time and not conversion
+
+
+## The offensive plays on offer for the next snap: the playbook, with the Hail
+## Mary in the first play's place in the game's last Tuning.hail_mary_time seconds.
+func offense_plays() -> Array[OffensePlay]:
+	var plays: Array[OffensePlay] = offense_playbook.plays.duplicate()
+	var hail_mary: OffensePlay = offense_playbook.hail_mary
+	if hail_mary != null and not plays.is_empty() and half == 2 and not conversion and clock <= tuning.hail_mary_time:
+		plays[0] = hail_mary
+	return plays
 
 
 # --- Text for the HUD ------------------------------------------------------------

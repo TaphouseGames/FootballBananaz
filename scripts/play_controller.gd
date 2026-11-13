@@ -339,7 +339,19 @@ func line_up_kickoff() -> void:
 	var own_goal: float = tuning.own_goal_x(offense.attack_dir)
 	var deep_yard: float = maxf((tuning.kickoff_land_min + tuning.kickoff_land_max) * 0.5, 2.0)
 	var lane: float = tuning.field_width / float(maxi(defense.players.size(), 1))
-	var row: int = 0
+	# The better blockers go in the row nearest the returner, the rest up
+	# front, and who gets which side changes from kick to kick: no side of the
+	# field is the strong one every time.
+	var blockers: Array[Player] = []
+	for player: Player in offense.players:
+		if player != returner:
+			blockers.append(player)
+	blockers.sort_custom(func(a: Player, b: Player) -> bool: return a.ratings.blocking > b.ratings.blocking)
+	var lanes: Array[Player] = []
+	for from: int in range(0, blockers.size(), 3):
+		var line: Array[Player] = blockers.slice(from, from + 3)
+		line.shuffle()
+		lanes.append_array(line)
 	for player: Player in offense.players:
 		var assignment: OffenseAssignment = OffenseAssignment.new()
 		var spot: Vector3 = Vector3(own_goal + off_dir * deep_yard, 0.0, 0.0)
@@ -350,10 +362,10 @@ func line_up_kickoff() -> void:
 			# Three up front, three behind them, spread across the field.
 			assignment.label = "B"
 			assignment.job = OffenseAssignment.Job.BLOCK
+			var row: int = lanes.find(player)
 			@warning_ignore("integer_division")
 			var depth: float = tuning.kickoff_land_max + 12.0 + 12.0 * float(row / 3)
 			spot = Vector3(own_goal + off_dir * depth, 0.0, (float(row % 3) - 1.0) * tuning.field_width * 0.3)
-			row += 1
 		off_play.assignments.append(assignment)
 		player.reset_for_play(spot, face_off)
 		player.brain.assign_offense(assignment, spot, PackedVector3Array())
@@ -577,8 +589,13 @@ func snap() -> void:
 	game.audio.play(&"snap")
 	game.audio.play(&"pads_clash", 0.6)
 	touchdown_quip = &""
-	if not kickoff and not game.conversion and (heave or (game.down == 4 and game.yards_to_go() >= 5)):
-		game.audio.quip(&"color_bold", AudioDirector.QUIP_BOLD)
+	if not kickoff and not game.conversion:
+		if heave:
+			game.audio.quip(&"color_bold", AudioDirector.QUIP_BOLD)
+		elif game.down == 4 and not game.goal_to_go:
+			# Nobody punts or kicks here, so going for it is no choice to
+			# admire: it is the last chance at the first down.
+			game.audio.quip(&"color_fourth", AudioDirector.QUIP_FOURTH)
 	_update_markers()
 
 
@@ -821,6 +838,11 @@ func _check_carrier() -> void:
 ## The color commentator's line for `scorer` crossing the goal line at `spot_x`:
 ## a walk-in with no defender near him, a long one, or just a score. Only an
 ## untouched stroll is worth a word when it was not the offense that scored.
+## A pass was caught by the offense on this play.
+func pass_completed() -> bool:
+	return _completed
+
+
 func _pick_touchdown_quip(scorer: Player, spot_x: float) -> StringName:
 	if game.conversion:
 		return &""
@@ -1147,10 +1169,10 @@ func _resolve_pass_arrival() -> void:
 				game.add_stat(&"dive_catches")
 			_complete_pass(receiver)
 			return
-		if defender != null and randf() < tuning.interception_chance * _catch_scale(defender):
+		if defender != null and randf() < tuning.interception_chance * _catch_scale(defender) * RubberBand.bad(offense, game):
 			_intercept(defender)
 			return
-	elif defender != null and randf() < tuning.interception_chance_open * _catch_scale(defender):
+	elif defender != null and randf() < tuning.interception_chance_open * _catch_scale(defender) * RubberBand.bad(offense, game):
 		_intercept(defender)
 		return
 
@@ -1172,6 +1194,7 @@ func _resolve_pass_arrival() -> void:
 		var drop: Vector3 = pace.rotated(Vector3.UP, randf_range(-0.6, 0.6)) * tuning.tip_drop_speed_share
 		drop.y = randf_range(tuning.tip_drop_up_min, tuning.tip_drop_up_max)
 		game.add_stat(&"drops")
+		game.audio.quip(&"color_drop", AudioDirector.QUIP_DROP)
 		_tip_pass(receiver, drop)
 	else:
 		_tip_pass(null, ball.flight_velocity_now())
@@ -1215,6 +1238,7 @@ func catch_chance(receiver: Player, point: Vector3) -> float:
 		if (opponent.is_airborne() or opponent.dive_reach_timer > 0.0) and _flat_distance(opponent.position, point) <= catch_reach(opponent, point):
 			chance -= tuning.contest_penalty
 	chance *= _catch_scale(receiver)
+	chance *= RubberBand.good(receiver.team, game)
 	return clampf(chance, tuning.catch_min_chance, 1.0)
 
 
@@ -1302,6 +1326,8 @@ func _check_tipped_ball() -> void:
 	var player: Player = near[0]
 	_tip_tried.append(player.team)
 	var chance: float = (tuning.tip_catch_chance if player.team == offense else tuning.tip_intercept_chance) * _catch_scale(player)
+	# Comeback assist, on the offense's side either way: its catch, or a pick it throws.
+	chance *= RubberBand.good(offense, game) if player.team == offense else RubberBand.bad(offense, game)
 	if randf() < clampf(chance, 0.0, 0.95):
 		if player.team == offense:
 			game.add_stat(&"tip_catches")
@@ -1410,6 +1436,7 @@ func do_dive(player: Player, dir: Vector3) -> void:
 	if not player.can_act():
 		return
 	player.start_dive(dir, _ball_dive_speed(player, dir))
+	game.stat_book.add_dive(player.team)
 	game.audio.action(player, &"dive")
 
 
@@ -1681,6 +1708,7 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 	var stiff_armed: bool = carrier.stiff_arm_covers(tackler)
 	if stiff_armed:
 		chance *= PlayerRatings.blend(skills.strength, tuning.stiff_arm_tackle_scale_low, tuning.stiff_arm_tackle_scale_high)
+	chance *= RubberBand.bad(carrier.team, game)
 
 	if randf() >= chance:
 		if stiff_armed:
@@ -1736,6 +1764,7 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 	var chance: float = PlayerRatings.blend(carrier.ratings.security, tuning.fumble_chance_low, tuning.fumble_chance_high)
 	if kind != PlayerFall.Kind.WRAP:
 		chance *= tuning.fumble_big_hit_scale
+	chance *= RubberBand.bad(carrier.team, game)
 	if randf() >= chance:
 		return false
 	# A standing big hit pops it up, a dive at his legs squirts it out low and
@@ -1759,6 +1788,7 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 	ball.fumble(pop)
 	carrier.flash(Color(1.0, 0.1, 0.1), tuning.fumble_flash)
 	game.audio.shout(&"announcer_fumble")
+	game.audio.quip(&"color_fumble", AudioDirector.QUIP_FUMBLE)
 	game.audio.quip(&"color_confused", AudioDirector.QUIP_CONFUSED)
 	fumbler = carrier
 	fumble_forcer = tackled_by
@@ -1769,6 +1799,7 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 	loose_time = 0.0
 	_loose_untouched = 0.0
 	game.add_stat(&"fumbles")
+	game.stat_book.add_fumble(carrier.team)
 	# For the tests: which team lost it.
 	game.add_stat(StringName("fumbles_lost_" + carrier.team.short_name.to_lower()))
 	game.audio.play(&"crowd_gasp")
@@ -1902,6 +1933,8 @@ func _knock_over(attacker: Player, victim: Player, dir: Vector3) -> void:
 	victim.knock_down(dir * tuning.shove_knockdown_impulse, tuning.knockdown_time, kind)
 	attacker.jolt(-dir, 0.5)
 	game.add_stat(&"knockdowns")
+	if ball_dead and attacker.team != victim.team:
+		game.stat_book.add_late_hit(attacker.team)
 	game.audio.hit(attacker, victim, attacker == human.controlled)
 	var cheap_shot: bool = attacker.brain.cheap_shot_delay >= 0.0 and is_celebrating(victim)
 	if cheap_shot:
