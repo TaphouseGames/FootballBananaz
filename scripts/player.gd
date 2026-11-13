@@ -30,6 +30,10 @@ const HAIR_COLORS: Array[Color] = [
 	Color(0.56, 0.55, 0.53),
 ]
 
+## Whether a player is the model built from his PlayerLook (see PlayerModel)
+## or the one model in the player scene, repainted.
+const LOOK_MODELS: bool = true
+
 ## The model's meshes with the height at rest baked in. See _with_rest_height().
 static var _rest_meshes: Dictionary[Mesh, Mesh] = {}
 ## A fall that has gone on this long counts as landed whatever it looks like, so
@@ -49,6 +53,8 @@ var tuning: Tuning
 var ratings: PlayerRatings
 var brain: PlayerBrain
 var animator: PlayerAnimator
+## His model, when it is the one built from his look (see LOOK_MODELS).
+var model: PlayerModel
 ## Body tumble for dives, knock-downs and getting up. Visual only.
 var fall: PlayerFall = PlayerFall.new()
 ## Set by PlayController; the animator reads the ball and the play from it.
@@ -215,6 +221,9 @@ func _process(delta: float) -> void:
 
 ## Dresses the model in the team colour and hooks up the procedural animator.
 func _setup_model() -> void:
+	if LOOK_MODELS:
+		_setup_look_model()
+		return
 	var look: int = hash([team.team_color, index])
 	if ratings != null and not ratings.display_name.is_empty():
 		look = hash(ratings.display_name)
@@ -241,6 +250,21 @@ func _setup_model() -> void:
 		push_error("Player model has no Skeleton3D")
 		return
 	animator = PlayerAnimator.new(self, skeletons[0] as Skeleton3D)
+
+
+## Puts the model built from the player's own look where the scene's model
+## stands, in his team's kit with his number and name on it.
+func _setup_look_model() -> void:
+	var placeholder: Node3D = body.get_node("Model") as Node3D
+	model = PlayerModel.new()
+	model.name = "LookModel"
+	model.transform = placeholder.transform
+	body.remove_child(placeholder)
+	placeholder.queue_free()
+	body.add_child(model)
+	model.show_look(ratings.look_or_default(), team.team_color, ratings.number, ratings.display_name, team.white_kit)
+	_meshes.append(model.body_mesh)
+	animator = PlayerAnimator.new(self, model.skeleton)
 
 
 ## A copy of `mesh` whose vertex colour holds, in its red, how high up the

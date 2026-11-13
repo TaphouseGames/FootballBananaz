@@ -8,6 +8,8 @@ extends Resource
 @export_enum("QB", "LINE", "WR", "RB") var position: String = "LINE"
 ## Jersey number. 0 = none.
 @export_range(0, 99) var number: int = 0
+## What his model looks like. Nobody has to have one: see look_or_default().
+@export var look: PlayerLook
 
 @export_group("Everyone")
 ## Run speed, with and without turbo.
@@ -68,6 +70,14 @@ const CARD_LABELS: Dictionary[StringName, String] = {
 	&"agility": "THROW ON THE RUN",
 }
 const QB_ONLY: Array[StringName] = [&"power", &"accuracy", &"agility"]
+
+
+## His look, or for a player nobody has given one, a look made up from his
+## name: the same one every time.
+func look_or_default() -> PlayerLook:
+	if look != null:
+		return look
+	return PlayerLook.random(hash(display_name), position)
 
 
 ## One number for how good he is at his position: the mean of its key ratings.

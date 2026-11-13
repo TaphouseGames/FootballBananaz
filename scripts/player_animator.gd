@@ -26,6 +26,12 @@ const BONE_NAMES: PackedStringArray = [
 	"UpperArm.L", "Forearm.L", "Hand.L", "UpperArm.R", "Forearm.R", "Hand.R",
 	"Thigh.L", "Shin.L", "Foot.L", "Thigh.R", "Shin.R", "Foot.R",
 ]
+## What the same bones are called in the base models PlayerModel builds on.
+const BONE_NAMES_LOOK: PackedStringArray = [
+	"Hip", "Waist", "Spine02", "NeckTwist01", "Head",
+	"L_Upperarm", "L_Forearm", "L_Hand", "R_Upperarm", "R_Forearm", "R_Hand",
+	"L_Thigh", "L_Calf", "L_Foot", "R_Thigh", "R_Calf", "R_Foot",
+]
 const ARM_DOWN: float = -78.0
 ## Seconds before a pass arrives that the hands start following the ball itself.
 const HANDS_TIME: float = 0.35
@@ -222,6 +228,8 @@ func _init(p_player: Player, p_skeleton: Skeleton3D) -> void:
 		var idx: int = skeleton.find_bone(bone_name)
 		if idx < 0:
 			idx = skeleton.find_bone(bone_name.replace(".", "_"))
+		if idx < 0:
+			idx = skeleton.find_bone(BONE_NAMES_LOOK[i])
 		if idx < 0:
 			push_error("PlayerAnimator: bone '%s' is missing from the player model" % bone_name)
 		_bone.append(idx)

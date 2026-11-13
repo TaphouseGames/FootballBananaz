@@ -1,6 +1,7 @@
 extends SceneTree
 ## Checks the team editor (tools/team_editor.tscn): edits through its controls
-## reach the team, the overall and the team ratings follow, Save writes files
+## reach the team and its players' looks, the overall, the team ratings and the
+## player's model follow, Save writes files
 ## that read back the same and Revert undoes what was not saved. Saves go to
 ## copies under user://, never to resources/.
 ##
@@ -71,6 +72,53 @@ func _run(editor: TeamEditor) -> void:
 		var value: int = ratings[row][1]
 		_expect(roundi(editor.rating_bars[row].value) == value, "the bar for %s did not follow the rating" % ratings[row][0])
 
+	# The player's model: every control reaches his look.
+	editor.show_models(true)
+	editor.select_player(0)
+	_expect(editor.player_list.item_count == team.roster.players.size(), "the model view does not list every player")
+	_expect(editor.model.look == qb.look and qb.look != null, "the model does not show the player's look")
+	_expect(editor.model.number == 42 and editor.model.team_color.is_equal_approx(color), "the model's jersey is not the team's and the player's")
+	_choose(editor, &"base", PlayerLook.Base.FEMALE)
+	_expect(qb.look.base == PlayerLook.Base.FEMALE, "the base model picked did not reach the look")
+	var hair: OptionButton = editor.look_controls[&"hair_style"] as OptionButton
+	_expect(hair.item_count == 7 and hair.get_item_text(2) == PlayerLook.HAIR_NAMES[PlayerLook.Base.FEMALE][2], "the hairstyles are not the female base's")
+	_expect((editor.look_controls[&"facial_hair"] as OptionButton).disabled, "facial hair can be picked for the female base")
+	_choose(editor, &"base", PlayerLook.Base.MALE)
+	_expect(not (editor.look_controls[&"facial_hair"] as OptionButton).disabled, "facial hair cannot be picked for the male base")
+	_expect(hair.get_item_text(2) == PlayerLook.HAIR_NAMES[PlayerLook.Base.MALE][2], "the hairstyles are not the male base's")
+	var choices: Dictionary[StringName, int] = {
+		&"hair_style": 4, &"facial_hair": 3, &"eye_type": 5, &"glasses": PlayerLook.Glasses.EYEPATCH,
+		&"eyepatch_side": PlayerLook.Eye.RIGHT, &"nose_type": 2, &"mouth_type": 4,
+	}
+	for property: StringName in choices:
+		_choose(editor, property, choices[property])
+		var chosen: int = qb.look.get(property)
+		_expect(chosen == choices[property], "%s picked did not reach the look" % property)
+	var slides: Dictionary[StringName, float] = {
+		&"height_in": 77.0, &"weight_lb": 305.0, &"forehead_size": 0.8, &"chin_size": 0.2, &"nose_size": 0.9, &"mouth_size": 0.1,
+	}
+	for property: StringName in slides:
+		(editor.look_controls[property] as HSlider).value = slides[property]
+		var slid: float = qb.look.get(property)
+		_expect(is_equal_approx(slid, slides[property]), "%s set did not reach the look" % property)
+	var skin: Color = Color(0.4, 0.3, 0.2)
+	var hair_color: Color = Color(0.9, 0.1, 0.1)
+	for picked: Array in [[&"skin_color", skin], [&"hair_color", hair_color]]:
+		var picker: ColorPickerButton = editor.look_controls[picked[0]] as ColorPickerButton
+		picker.color = picked[1]
+		picker.color_changed.emit(picked[1])
+	_expect(qb.look.skin_color.is_equal_approx(skin) and qb.look.hair_color.is_equal_approx(hair_color), "the colours picked did not reach the look")
+	await process_frame
+	_expect(editor.model.hair != null and editor.model.hair.mesh != null, "the model has no hair")
+	_expect(editor.model.nose != null and editor.model.nose.mesh != null, "the model has no nose")
+	_expect(editor.model.brows != null and editor.model.brows.mesh != null, "the model has no eyebrows")
+	_expect(editor.model.whiskers != null and editor.model.whiskers.mesh != null, "the model has no goatee")
+	_expect(is_equal_approx(editor.model.rig.scale.y * PlayerModel.RIG_HEIGHT, qb.look.height_m()), "the model is not as tall as the look says")
+	# Another player has a look of his own.
+	editor.select_player(1)
+	_expect(editor.model.look == team.roster.players[1].look and editor.model.look != qb.look, "picking another player does not show his model")
+	editor.select_player(0)
+
 	# A short name another team has is pointed out.
 	_type(editor.short_edit, league.teams[0].short_name)
 	_expect(editor.status.text.contains("also the short name"), "a short name used twice is not pointed out")
@@ -93,6 +141,11 @@ func _run(editor: TeamEditor) -> void:
 		var saved_qb: PlayerRatings = roster_copy.players[0]
 		_expect(saved_qb.accuracy == new_accuracy and saved_qb.number == 42 and saved_qb.display_name == "Testy McTest", "the saved player has other values")
 		_expect(saved_qb.position == "QB" and saved_qb.speed == qb.speed, "the saved player lost what was not edited")
+		var saved_look: PlayerLook = saved_qb.look
+		_expect(saved_look != null, "the saved player has no look")
+		if saved_look != null:
+			_expect(saved_look.hair_style == 4 and saved_look.glasses == PlayerLook.Glasses.EYEPATCH and saved_look.height_in == 77, "the saved look has other values")
+			_expect(saved_look.skin_color.is_equal_approx(skin) and is_equal_approx(saved_look.nose_size, 0.9), "the saved look has another skin or nose")
 	for i: int in files.size():
 		_expect(FileAccess.get_file_as_string(files[i]) == before[i], "%s was written to" % files[i])
 
@@ -111,6 +164,8 @@ func _run(editor: TeamEditor) -> void:
 	_expect(editor.name_edit.text == old_name, "the name field does not show the reverted name")
 	var reverted: SpinBox = editor.rating_spins[0][&"accuracy"]
 	_expect(roundi(reverted.value) == old_accuracy, "the rating shown is not the reverted one")
+	_expect(qb.look == null or qb.look.height_in != 77, "revert did not bring the look back")
+	_expect(editor.model.look == editor.look() and editor.model.look.height_in != 77, "the model shown is not the reverted one")
 
 	for failure: String in _failures:
 		print("FAIL: ", failure)
@@ -122,6 +177,13 @@ func _run(editor: TeamEditor) -> void:
 func _type(edit: LineEdit, text: String) -> void:
 	edit.text = text
 	edit.text_changed.emit(text)
+
+
+## Picking a line of one of the look's lists by hand.
+func _choose(editor: TeamEditor, property: StringName, index: int) -> void:
+	var option: OptionButton = editor.look_controls[property] as OptionButton
+	option.select(index)
+	option.item_selected.emit(index)
 
 
 func _load_copy(path: String) -> Resource:
