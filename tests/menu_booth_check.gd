@@ -13,6 +13,10 @@ extends SceneTree
 const MOMENTS: Array[StringName] = [
 	&"welcome", &"welcome_back", &"start", &"options", &"exit", &"start_pick",
 	&"options_pick", &"exit_pick", &"team", &"side", &"back", &"go", &"idle",
+	# The season's screen (MainMenu and SeasonHub).
+	&"season", &"season_pick", &"season_open", &"standings", &"stats",
+	&"season_win", &"season_loss", &"bye", &"playoffs", &"eliminated",
+	&"champion", &"season_over",
 ]
 ## Times the highlight is rested on EXIT.
 const EXIT_VISITS: int = 16

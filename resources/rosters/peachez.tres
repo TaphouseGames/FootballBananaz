@@ -1,0 +1,102 @@
+[gd_resource type="Resource" script_class="Roster" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+
+[sub_resource type="Resource" id="player_0"]
+script = ExtResource("1_ratings")
+display_name = "Georgia Pitt"
+position = "QB"
+number = 10
+speed = 60
+endurance = 60
+strength = 55
+blocking = 40
+tackling = 58
+coverage = 62
+get_open = 35
+catching = 35
+juke = 55
+security = 60
+power = 66
+accuracy = 68
+agility = 62
+
+[sub_resource type="Resource" id="player_1"]
+script = ExtResource("1_ratings")
+display_name = "Fuzz Melba"
+number = 63
+strength = 64
+blocking = 66
+tackling = 64
+coverage = 35
+get_open = 25
+
+[sub_resource type="Resource" id="player_2"]
+script = ExtResource("1_ratings")
+display_name = "Donut Clingstone"
+number = 70
+strength = 62
+blocking = 64
+tackling = 60
+coverage = 35
+get_open = 25
+
+[sub_resource type="Resource" id="player_3"]
+script = ExtResource("1_ratings")
+display_name = "Hal Freestone"
+number = 58
+strength = 60
+blocking = 62
+tackling = 62
+coverage = 35
+get_open = 25
+
+[sub_resource type="Resource" id="player_4"]
+script = ExtResource("1_ratings")
+display_name = "Belle Nectar"
+position = "WR"
+number = 83
+speed = 74
+endurance = 60
+tackling = 55
+coverage = 64
+get_open = 68
+catching = 68
+juke = 60
+security = 60
+
+[sub_resource type="Resource" id="player_5"]
+script = ExtResource("1_ratings")
+display_name = "Skip Blossom"
+position = "WR"
+number = 86
+speed = 68
+endurance = 60
+blocking = 52
+tackling = 58
+coverage = 62
+get_open = 64
+catching = 70
+juke = 55
+security = 62
+
+[sub_resource type="Resource" id="player_6"]
+script = ExtResource("1_ratings")
+display_name = "Rusty Cobbler"
+position = "RB"
+number = 25
+speed = 70
+endurance = 68
+strength = 66
+blocking = 55
+tackling = 62
+coverage = 58
+get_open = 58
+catching = 58
+juke = 68
+security = 66
+
+[resource]
+script = ExtResource("2_roster")
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])

@@ -197,7 +197,7 @@ func _check_rest() -> void:
 			if chapter.has(&"after"):
 				_expect(BoothStory.finished(chapter[&"after"]), "'%s' came up before the %s thread was over" % [id, chapter[&"after"]])
 			shares[thread] = shares.get(thread, 0) + 1
-			_expect(shares[thread] <= BoothStory.PER_MATCH[thread], "match %d brought %d chapters of the %s thread" % [matches, shares[thread], thread])
+			_expect(shares[thread] <= BoothStory.share(thread), "match %d brought %d chapters of the %s thread" % [matches, shares[thread], thread])
 			_expect(turn < tuning.story_per_match, "match %d brought more than %d chapters" % [matches, tuning.story_per_match])
 			_tell(id)
 			# The closet is heard from once he is in it, and not after he is out.

@@ -306,6 +306,8 @@ func _refresh() -> void:
 			_hint.text = "Stick / D-pad: choose      (A): select"
 			if _confirm_quit:
 				_hint.text = "(A): leave this game for the main menu      (B): stay"
+				if game.season() != null:
+					_hint.text = "(A): leave this game, to be played again from the start      (B): stay"
 			elif not _game_over():
 				_hint.text += "      (B) / Start: resume"
 			_body.add_child(_menu_view())
@@ -382,6 +384,8 @@ func _menu_view() -> Control:
 		item.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		item.add_theme_stylebox_override(&"panel", _item_selected_style if selected else _item_style)
 		var text: String = "QUIT GAME?  (A) AGAIN" if selected and _confirm_quit else items[i]
+		if text == MAIN_MENU and game.season() != null:
+			text = "BACK TO SEASON"
 		var label: Label = _label(text, 26, HUD.NAME_SELECTED_COLOR if selected else HUD.NAME_COLOR, HORIZONTAL_ALIGNMENT_CENTER)
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		item.add_child(label)
@@ -422,21 +426,7 @@ func _add_table(column: VBoxContainer, team: Team, what: String, head: PackedStr
 ## One line of a table: the name on the left, the numbers in columns of the
 ## same width on the right.
 func _table_row(cells: PackedStringArray, fill: Color, color: Color, font_size: int) -> Control:
-	var panel: PanelContainer = PanelContainer.new()
-	panel.add_theme_stylebox_override(&"panel", _flat(fill, 6.0, 1.0))
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override(&"separation", 0)
-	panel.add_child(row)
-	for i: int in cells.size():
-		var cell: Label = _label(cells[i], font_size, color, HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT)
-		if i == 0:
-			cell.custom_minimum_size.x = NAME_WIDTH
-			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			cell.clip_text = true
-		else:
-			cell.custom_minimum_size.x = STAT_WIDTH
-		row.add_child(cell)
-	return panel
+	return StatTable.row(cells, fill, color, font_size, STAT_WIDTH, NAME_WIDTH)
 
 
 func _team_stats_view() -> Control:
@@ -568,6 +558,13 @@ func _player_card(player: Player) -> Control:
 	column.add_child(_label("THIS GAME", 13, DIM_TEXT))
 	for line: String in game.stat_book.player_summary(player):
 		column.add_child(_label(line, 15, TEXT))
+	var season: Season = game.season()
+	var season_team: int = season.team_of(player.team.short_name) if season != null else -1
+	if season_team >= 0:
+		column.add_child(_spacer(6.0))
+		column.add_child(_label("THIS SEASON", 13, DIM_TEXT))
+		for line: String in StatBook.summary_of(season.player_line(season_team, player.index)):
+			column.add_child(_label(line, 15, TEXT))
 	return card
 
 
@@ -624,29 +621,18 @@ func _build() -> void:
 	add_child(_sound)
 
 
+# The pieces of the tables are shared with the season's screen (StatTable).
+
 func _label(text: String, font_size: int, color: Color, align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
-	var label: Label = Label.new()
-	label.text = text
-	label.horizontal_alignment = align
-	label.add_theme_font_size_override(&"font_size", font_size)
-	label.add_theme_color_override(&"font_color", color)
-	return label
+	return StatTable.label(text, font_size, color, align)
 
 
 func _spacer(height: float) -> Control:
-	var spacer: Control = Control.new()
-	spacer.custom_minimum_size.y = height
-	return spacer
+	return StatTable.spacer(height)
 
 
 func _flat(fill: Color, margin_x: float, margin_y: float) -> StyleBoxFlat:
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = fill
-	style.content_margin_left = margin_x
-	style.content_margin_right = margin_x
-	style.content_margin_top = margin_y
-	style.content_margin_bottom = margin_y
-	return style
+	return StatTable.flat(fill, margin_x, margin_y)
 
 
 ## The team's colour, lightened enough to read on the dark panel.

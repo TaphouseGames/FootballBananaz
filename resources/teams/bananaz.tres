@@ -5,7 +5,7 @@
 
 [resource]
 script = ExtResource("1_team")
-team_name = "Bayside Bananaz"
+team_name = "Bananaz"
 short_name = "BANANAZ"
 team_color = Color(0.98, 0.8, 0.1, 1)
 roster = ExtResource("2_roster")

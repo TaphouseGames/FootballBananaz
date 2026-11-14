@@ -132,6 +132,12 @@ func update_live() -> void:
 	player.move_input = move
 	player.wants_turbo = Input.is_action_pressed(&"turbo")
 
+	# Play action: he stays with the back until the fake is over.
+	if player == pc.qb and player.has_ball and pc.faking():
+		player.move_input = Vector3.ZERO
+		player.wants_turbo = false
+		return
+
 	if pc.phase == PlayController.Phase.AIR and pc.ball.intended == player and not moving:
 		assist = true
 

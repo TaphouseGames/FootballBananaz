@@ -38,7 +38,7 @@ static func modifier_for(margin: int, late: float, tuning: Tuning) -> float:
 ## half, over its last comeback_late_plays plays' worth of clock.
 static func lateness(game: Game) -> float:
 	var tuning: Tuning = game.tuning
-	if game.half < 2 or tuning.comeback_late_plays <= 0.0:
+	if game.half < 2 or game.overtime or tuning.comeback_late_plays <= 0.0:
 		return 0.0
 	var plays_left: float = game.clock / maxf(game.play_caller.play_time(game), 0.5)
 	return clampf(1.0 - plays_left / tuning.comeback_late_plays, 0.0, 1.0)

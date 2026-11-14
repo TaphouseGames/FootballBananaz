@@ -6,7 +6,9 @@
 [ext_resource type="Resource" path="res://resources/teams/coconuts.tres" id="4_coconuts"]
 [ext_resource type="Resource" path="res://resources/teams/grapes.tres" id="5_grapes"]
 [ext_resource type="Resource" path="res://resources/teams/berries.tres" id="6_berries"]
+[ext_resource type="Resource" path="res://resources/teams/peachez.tres" id="7_peachez"]
+[ext_resource type="Resource" path="res://resources/teams/applez.tres" id="8_applez"]
 
 [resource]
 script = ExtResource("1_league")
-teams = Array[ExtResource("2_team")]([ExtResource("3_bananaz"), ExtResource("4_coconuts"), ExtResource("5_grapes"), ExtResource("6_berries")])
+teams = Array[ExtResource("2_team")]([ExtResource("3_bananaz"), ExtResource("4_coconuts"), ExtResource("5_grapes"), ExtResource("6_berries"), ExtResource("7_peachez"), ExtResource("8_applez")])

@@ -20,6 +20,19 @@ const TAGLINES: PackedStringArray = [
 	"EVERY POINT COUNTS. THAT IS HOW COUNTING WORKS.",
 	"NO REFUNDS.",
 ]
+## The ones for a playoff game of the season, and for its final.
+const PLAYOFF_TAGLINES: PackedStringArray = [
+	"WIN OR GO HOME. HOME IS ALSO NICE.",
+	"THE SEMIFINAL: HALF OF A FINAL.",
+	"ONE OF THESE TEAMS HAS NEXT WEEK OFF, FOREVER.",
+	"TEN WEEKS OF FOOTBALL CAME DOWN TO MORE FOOTBALL.",
+]
+const FINAL_TAGLINES: PackedStringArray = [
+	"THE FRUIT CUP: IT IS A CUP. THERE IS FRUIT.",
+	"ONE GAME. ONE CUP. NO SPOON.",
+	"WINNER TAKES THE CUP. LOSER TAKES THE BUS.",
+	"THE BIGGEST GAME OF THE YEAR SO FAR.",
+]
 const BAR_HEIGHT: float = 62.0
 const MARGIN: float = 44.0
 const PANEL_COLOR: Color = Color(0.04, 0.08, 0.2, 0.94)
@@ -153,7 +166,8 @@ func _build_lower_third() -> void:
 	var strip: PanelContainer = PanelContainer.new()
 	strip.add_theme_stylebox_override(&"panel", _flat(MainMenu.GOLD, MainMenu.GOLD, 0, 14.0, 2.0))
 	strip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	strip.add_child(_label("TONIGHT'S MATCHUP", 20, MainMenu.OUTLINE))
+	var season: Season = game.season()
+	strip.add_child(_label("TONIGHT'S MATCHUP" if season == null else season.round_name(game.season_round), 20, MainMenu.OUTLINE))
 	column.add_child(strip)
 
 	var panel: PanelContainer = PanelContainer.new()
@@ -169,11 +183,16 @@ func _build_lower_third() -> void:
 	matchup.add_child(_label("VS", 26, MainMenu.BUTTON_BORDER))
 	matchup.add_child(_team(game.away))
 
-	var pick: int = randi() % TAGLINES.size()
+	var taglines: PackedStringArray = TAGLINES
+	if game.season_round == Season.FINAL_ROUND:
+		taglines = FINAL_TAGLINES
+	elif game.is_playoff():
+		taglines = PLAYOFF_TAGLINES
+	var pick: int = randi() % taglines.size()
 	if pick == _last_tagline:
-		pick = (pick + 1) % TAGLINES.size()
+		pick = (pick + 1) % taglines.size()
 	_last_tagline = pick
-	body.add_child(_label(TAGLINES[pick], 22, Color(0.86, 0.9, 1.0)))
+	body.add_child(_label(taglines[pick], 22, Color(0.86, 0.9, 1.0)))
 	column.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE)
 	column.position += Vector2(MARGIN, -(BAR_HEIGHT + 22.0))
 
@@ -191,6 +210,13 @@ func _team(team: Team) -> Control:
 	chip.add_theme_stylebox_override(&"panel", style)
 	row.add_child(chip)
 	row.add_child(_label(team.team_name.to_upper(), 42, Color.WHITE))
+	# In a game of the season, how the team's season has gone.
+	var season: Season = game.season()
+	var place: int = season.team_of(team.short_name) if season != null else -1
+	if place >= 0:
+		var record: Label = _label("(%s)" % season.record_text(place), 24, Color(0.86, 0.9, 1.0))
+		record.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(record)
 	return row
 
 

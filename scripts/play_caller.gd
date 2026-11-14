@@ -18,6 +18,10 @@ const HURRY_MIX: Array[float] = [0.0, 0.25, 0.75]
 const KILL_MIX: Array[float] = [0.8, 0.18, 0.02]
 ## Plays the starting guess of a play's length is worth. See situation().
 const TIME_PRIOR: float = 4.0
+## What a goal line play's chance of being called is multiplied by near the goal
+## line and away from it. See _goal_line_scale().
+const GOAL_LINE_NEAR: float = 6.0
+const GOAL_LINE_FAR: float = 0.02
 
 ## Per offensive team: how often it has called each category lately, and the
 ## yards it made with it. Both decay by MEMORY every play.
@@ -99,7 +103,7 @@ func pick_defense(plays: Array[DefensePlay], game: Game) -> DefensePlay:
 		var fit: float = 0.0
 		for i: int in CATEGORIES:
 			fit += expect[i] * play.fit(i as OffensePlay.Category)
-		weights.append(pow(fit, SHARPNESS) + 0.01)
+		weights.append((pow(fit, SHARPNESS) + 0.01) * _goal_line_scale(play.goal_line, game))
 	return plays[_weighted(weights)]
 
 
@@ -127,11 +131,14 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 	# Shared out over the plays of a category, so a playbook with more runs than
 	# deep passes does not run more often for it.
 	var per_category: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
+	# Goal line plays away from the goal line are as good as not in the book.
 	for play: OffensePlay in plays:
-		per_category[play.category] += 1.0
+		if _goal_line_scale(play.goal_line, game) >= 1.0:
+			per_category[play.category] += 1.0
 	var weights: PackedFloat32Array = PackedFloat32Array()
 	for play: OffensePlay in plays:
-		var weight: float = (want[play.category] + 0.05) / per_category[play.category]
+		var weight: float = (want[play.category] + 0.05) / maxf(per_category[play.category], 1.0)
+		weight *= _goal_line_scale(play.goal_line, game)
 		# Do not call the same play three times in a row.
 		var repeats: int = 0
 		for i: int in range(history.size() - 1, -1, -1):
@@ -183,7 +190,17 @@ func _situation(game: Game) -> PackedFloat32Array:
 	return result
 
 
-func _row(table: Dictionary[Team, PackedFloat32Array], team: Team) -> PackedFloat32Array:
+## How much more or less often a play is called for where the ball is: a goal
+## line play close to the goal line comes up more, anywhere else almost never.
+func _goal_line_scale(goal_line_play: bool, game: Game) -> float:
+	if not goal_line_play:
+		return 1.0
+	var dir: int = game.offense.attack_dir
+	var to_goal: float = (game.tuning.goal_x(dir) - game.los_x) * float(dir)
+	return GOAL_LINE_NEAR if to_goal <= game.tuning.ai_goal_line_distance else GOAL_LINE_FAR
+
+
+func _row(table:Dictionary[Team, PackedFloat32Array], team: Team) -> PackedFloat32Array:
 	var fallback: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
 	return table.get(team, fallback)
 

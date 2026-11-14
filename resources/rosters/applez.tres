@@ -1,0 +1,99 @@
+[gd_resource type="Resource" script_class="Roster" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+
+[sub_resource type="Resource" id="player_0"]
+script = ExtResource("1_ratings")
+display_name = "Cannon Cortland"
+position = "QB"
+number = 9
+speed = 30
+endurance = 45
+strength = 60
+blocking = 40
+tackling = 40
+coverage = 40
+get_open = 30
+catching = 30
+juke = 20
+security = 60
+power = 97
+accuracy = 72
+agility = 25
+
+[sub_resource type="Resource" id="player_1"]
+script = ExtResource("1_ratings")
+display_name = "Granny Smith"
+number = 72
+speed = 45
+strength = 56
+blocking = 85
+coverage = 35
+get_open = 25
+
+[sub_resource type="Resource" id="player_2"]
+script = ExtResource("1_ratings")
+display_name = "Mac Intosh"
+number = 68
+strength = 55
+blocking = 82
+tackling = 48
+coverage = 35
+get_open = 25
+
+[sub_resource type="Resource" id="player_3"]
+script = ExtResource("1_ratings")
+display_name = "Gala Core"
+number = 77
+strength = 54
+blocking = 80
+coverage = 30
+get_open = 20
+
+[sub_resource type="Resource" id="player_4"]
+script = ExtResource("1_ratings")
+display_name = "Jet Pippin"
+position = "WR"
+number = 11
+speed = 90
+endurance = 65
+strength = 35
+blocking = 35
+tackling = 45
+get_open = 78
+catching = 70
+juke = 55
+
+[sub_resource type="Resource" id="player_5"]
+script = ExtResource("1_ratings")
+display_name = "Fuji Stem"
+position = "WR"
+number = 85
+speed = 80
+endurance = 60
+strength = 45
+blocking = 40
+tackling = 45
+coverage = 48
+get_open = 72
+catching = 78
+security = 60
+
+[sub_resource type="Resource" id="player_6"]
+script = ExtResource("1_ratings")
+display_name = "Honey Crisp"
+position = "RB"
+number = 28
+speed = 82
+endurance = 60
+strength = 25
+blocking = 35
+tackling = 40
+get_open = 75
+catching = 80
+security = 40
+
+[resource]
+script = ExtResource("2_roster")
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])

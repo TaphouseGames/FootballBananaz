@@ -332,7 +332,11 @@ func team_rows() -> Array[Array]:
 
 ## What `player` has done in this game, a line for each part of it he had a hand in.
 func player_summary(player: Player) -> PackedStringArray:
-	var p: PlayerLine = players[player]
+	return summary_of(players[player])
+
+
+## The same for any line: a game's, or a season's.
+static func summary_of(p: PlayerLine) -> PackedStringArray:
 	var lines: PackedStringArray = PackedStringArray()
 	if p.has_passing():
 		lines.append("PASSING   %d/%d,  %d YDS,  %d TD,  %d INT" % [p.pass_comp, p.pass_att, p.pass_yds, p.pass_td, p.pass_int])
@@ -360,8 +364,12 @@ func player_summary(player: Player) -> PackedStringArray:
 
 ## "#12 Dash Plantain", or his position and place on the team if he has no name.
 static func label_of(player: Player) -> String:
-	var ratings: PlayerRatings = player.ratings
-	var who: String = ratings.display_name if ratings.display_name != "" else "%s %d" % [ratings.position, player.index + 1]
+	return label_of_ratings(player.ratings, player.index)
+
+
+## The same from his ratings and his place (from 0) on the roster.
+static func label_of_ratings(ratings: PlayerRatings, index: int) -> String:
+	var who: String = ratings.display_name if ratings.display_name != "" else "%s %d" % [ratings.position, index + 1]
 	return "#%d %s" % [ratings.number, who] if ratings.number > 0 else who
 
 

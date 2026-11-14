@@ -11,7 +11,16 @@
 [ext_resource type="Resource" path="res://resources/plays/defense/all_out_blitz.tres" id="9_all_out_blitz"]
 [ext_resource type="Resource" path="res://resources/plays/defense/zone_blitz.tres" id="10_zone_blitz"]
 [ext_resource type="Resource" path="res://resources/plays/defense/corner_blitz.tres" id="11_corner_blitz"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_stuff.tres" id="12_gl_stuff"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_man.tres" id="13_gl_man"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_zone.tres" id="14_gl_zone"]
+[ext_resource type="Resource" path="res://resources/plays/defense/two_man.tres" id="15_two_man"]
+[ext_resource type="Resource" path="res://resources/plays/defense/bracket.tres" id="16_bracket"]
+[ext_resource type="Resource" path="res://resources/plays/defense/cover_1_spy.tres" id="17_cover_1_spy"]
+[ext_resource type="Resource" path="res://resources/plays/defense/safety_blitz.tres" id="18_safety_blitz"]
+[ext_resource type="Resource" path="res://resources/plays/defense/mike_blitz.tres" id="19_mike_blitz"]
+[ext_resource type="Resource" path="res://resources/plays/defense/overload.tres" id="20_overload"]
 
 [resource]
 script = ExtResource("1_book")
-plays = Array[ExtResource("2_play")]([ExtResource("3_man_cover"), ExtResource("4_man_robber"), ExtResource("5_run_stuff"), ExtResource("6_zone_cover"), ExtResource("7_cover_3"), ExtResource("8_prevent"), ExtResource("9_all_out_blitz"), ExtResource("10_zone_blitz"), ExtResource("11_corner_blitz")])
+plays = Array[ExtResource("2_play")]([ExtResource("3_man_cover"), ExtResource("4_man_robber"), ExtResource("5_run_stuff"), ExtResource("6_zone_cover"), ExtResource("7_cover_3"), ExtResource("8_prevent"), ExtResource("9_all_out_blitz"), ExtResource("10_zone_blitz"), ExtResource("11_corner_blitz"), ExtResource("12_gl_stuff"), ExtResource("13_gl_man"), ExtResource("14_gl_zone"), ExtResource("15_two_man"), ExtResource("16_bracket"), ExtResource("17_cover_1_spy"), ExtResource("18_safety_blitz"), ExtResource("19_mike_blitz"), ExtResource("20_overload")])

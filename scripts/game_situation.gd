@@ -26,7 +26,8 @@ static func read(game: Game, play_time: float) -> GameSituation:
 	now.margin = game.offense.score - game.defense.score
 	now.to_goal = absf(tuning.goal_x(game.offense.attack_dir) - game.los_x)
 	# The try after a touchdown is untimed and worth the same whatever the score.
-	if game.conversion:
+	# So is sudden death: there is no clock to beat or to run out.
+	if game.conversion or game.overtime:
 		return now
 	now.plays_left = game.clock / maxf(play_time, 0.5)
 

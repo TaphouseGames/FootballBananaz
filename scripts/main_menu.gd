@@ -1,9 +1,12 @@
 class_name MainMenu
 extends Node3D
 ## The title screen the game opens on: the field at dusk behind the title and
-## three buttons. Start brings up the team select, where the person picks the
-## two teams of the league and their own side, and which fades to the match and
-## its intro; Exit quits, Options does nothing yet.
+## four buttons. Season brings up the season's screen (SeasonHub): the table,
+## the stats and the way into the person's next game. Exhibition brings up the
+## team select, where the person picks the two teams of the league and their
+## own side, and which fades to a match that counts for nothing and its intro;
+## Exit quits, Options does nothing yet. Back from a game of the season the
+## scene comes up on the season's screen.
 ## Jim and Tony talk over all of it (MenuBooth).
 ## The buttons take the D-pad or stick and (A), the arrow keys and Enter, or
 ## the mouse, all through Godot's own ui_* actions.
@@ -33,11 +36,16 @@ const CAMERA_SWAY_SPEED: float = 0.12
 ## The teams the team select has to offer.
 @export var league: League
 
+## SEASON, or CONTINUE SEASON with one on.
+var season_button: Button
+## EXHIBITION: a one-off match.
 var start_button: Button
 var options_button: Button
 var exit_button: Button
-## Made the first time START GAME is pressed.
+## Made the first time EXHIBITION is pressed.
 var team_select: TeamSelect
+## Made the first time SEASON is pressed.
+var season_hub: SeasonHub
 
 var _title: Control
 var _buttons: Control
@@ -84,13 +92,24 @@ func _ready() -> void:
 	booth = MenuBooth.new()
 	add_child(booth)
 	booth.setup(tuning)
+	# Back from a game of the season: straight to the season's screen.
+	var from_season: bool = Game.season_match
+	Game.season_match = false
+	if Season.current == null and league != null:
+		Season.load_saved(league)
 	var welcome: StringName = &"welcome_back" if _visited and booth.has(&"welcome_back") else &"welcome"
+	if from_season and Season.current != null and booth.has(_season_welcome()):
+		welcome = _season_welcome()
 	_visited = true
 	booth.consider(welcome, 1.0, tuning.menu_voice_welcome_delay, 0.0, false, true)
 
 	_build_title()
 	_build_buttons()
-	start_button.grab_focus()
+	season_button.grab_focus()
+	if from_season and Season.current != null:
+		_title.visible = false
+		_buttons.visible = false
+		_open_hub()
 	_sounds_on = true
 	# Up out of black, at the start (on the way back from a match the change
 	# of scene does it, and these do nothing).
@@ -116,7 +135,7 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(&"confirm") or event.is_action(&"ui_accept"):
 		return
-	if team_select != null and team_select.visible:
+	if (team_select != null and team_select.visible) or (season_hub != null and season_hub.visible):
 		return
 	var focused: Button = get_viewport().gui_get_focus_owner() as Button
 	if focused != null:
@@ -130,6 +149,85 @@ func _place_camera() -> void:
 
 
 # --- Buttons -------------------------------------------------------------------------
+
+## On to the season's screen, in place of the title and the buttons.
+func _on_season() -> void:
+	if _starting or _leaving:
+		return
+	_play(CONFIRM_SOUND)
+	booth.react(&"season_pick" if Season.current == null else &"season_open")
+	ScreenFade.pop(_title, false)
+	ScreenFade.pop(_buttons, false)
+	_open_hub()
+	ScreenFade.pop(season_hub, true)
+
+
+func _open_hub() -> void:
+	if season_hub == null:
+		season_hub = SeasonHub.new()
+		season_hub.setup(_font, league)
+		season_hub.play_requested.connect(_start_season_match)
+		season_hub.closed.connect(_on_hub_closed)
+		season_hub.moved.connect(_play.bind(MOVE_SOUND))
+		season_hub.picked.connect(_play.bind(CONFIRM_SOUND))
+		season_hub.remark.connect(_remark_season)
+		ui.add_child(season_hub)
+	if _game_scene == null:
+		# Loaded here, so the fade into the match does not have to wait for it.
+		_game_scene = load(GAME_SCENE)
+	season_hub.open()
+
+
+## Back to the title. SEASON taking the focus makes the sound.
+func _on_hub_closed() -> void:
+	booth.react(&"back")
+	season_hub.close()
+	season_button.text = _season_text()
+	ScreenFade.pop(_title, true)
+	ScreenFade.pop(_buttons, true)
+	season_button.grab_focus()
+
+
+## The person's game of the season's round: their side and the two teams come
+## from the schedule.
+func _start_season_match() -> void:
+	var season: Season = Season.current
+	var fixture: Array = season.fixture() if season != null else []
+	if _starting or fixture.is_empty():
+		return
+	Game.season_match = true
+	_launch(0 if fixture[0] == season.user_team else 1, PackedInt32Array([season.league_index(fixture[0]), season.league_index(fixture[1])]))
+
+
+## What the two say as the person comes back from a game of the season.
+func _season_welcome() -> StringName:
+	var season: Season = Season.current
+	if season.is_over() and season.champion == season.user_team:
+		return &"champion"
+	for i: int in range(season.results.size() - 1, -1, -1):
+		var result: Dictionary = season.results[i]
+		if result["home"] == season.user_team or result["away"] == season.user_team:
+			# The game just played is of the round before the one now on.
+			var last: int = Season.FINAL_ROUND if season.is_over() else season.current_round() - 1
+			if result["round"] != last:
+				break
+			return &"season_win" if Season.winner_of(result) == season.user_team else &"season_loss"
+	return &"welcome_back"
+
+
+## Something on the season's screen the booth may have a word about.
+func _remark_season(moment: StringName, sure: bool) -> void:
+	if _starting:
+		return
+	if sure:
+		booth.react(moment)
+	else:
+		booth.consider(moment, tuning.menu_voice_select_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
+
+
+func _season_text() -> String:
+	return "SEASON" if Season.current == null else "CONTINUE SEASON"
+
 
 ## On to the team select, in place of the title and the buttons.
 func _on_start() -> void:
@@ -154,7 +252,7 @@ func _on_start() -> void:
 	ScreenFade.pop(team_select, true)
 
 
-## Back to the title. START GAME taking the focus makes the sound.
+## Back to the title. EXHIBITION taking the focus makes the sound.
 func _on_select_cancelled() -> void:
 	booth.react(&"back")
 	team_select.close()
@@ -167,10 +265,17 @@ func _on_select_cancelled() -> void:
 func _start_match(team: int) -> void:
 	if _starting:
 		return
+	Game.season_match = false
+	_launch(team, PackedInt32Array(team_select.picks))
+
+
+## Fades to the match between the league's teams `picks` (home, away), the
+## person on side `team`.
+func _launch(team: int, picks: PackedInt32Array) -> void:
 	_starting = true
 	_play(CONFIRM_SOUND)
 	Game.human_side = team
-	Game.team_picks = PackedInt32Array(team_select.picks)
+	Game.team_picks = picks
 	# The match opens with the broadcast's intro, which comes up out of black.
 	Game.show_intro = true
 	_fade_music()
@@ -212,6 +317,8 @@ func _on_button_focused(button: Button) -> void:
 		return
 	if button == exit_button:
 		booth.consider(&"exit", 1.0, tuning.menu_voice_exit_dwell, tuning.menu_voice_exit_gap, true)
+	elif button == season_button:
+		booth.consider(&"season", tuning.menu_voice_highlight_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
 	elif button == start_button:
 		booth.consider(&"start", tuning.menu_voice_highlight_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
 	else:
@@ -328,14 +435,15 @@ func _build_buttons() -> void:
 	column.add_theme_constant_override(&"separation", 12)
 	ui.add_child(column)
 	_buttons = column
-	start_button = _button("START GAME", _on_start)
+	season_button = _button(_season_text(), _on_season)
+	start_button = _button("EXHIBITION", _on_start)
 	options_button = _button("OPTIONS", _on_options)
 	exit_button = _button("EXIT", _on_exit)
-	for button: Button in [start_button, options_button, exit_button]:
+	for button: Button in [season_button, start_button, options_button, exit_button]:
 		column.add_child(button)
 	# Up from the first one goes round to the last, and back.
-	start_button.focus_neighbor_top = start_button.get_path_to(exit_button)
-	exit_button.focus_neighbor_bottom = exit_button.get_path_to(start_button)
+	season_button.focus_neighbor_top = season_button.get_path_to(exit_button)
+	exit_button.focus_neighbor_bottom = exit_button.get_path_to(season_button)
 	column.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 56)
 
 

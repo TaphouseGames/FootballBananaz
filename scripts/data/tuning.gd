@@ -66,6 +66,9 @@ extends Resource
 ## The kicking team lines up this far behind the ball.
 @export var kickoff_run_up: float = 2.0
 @export var halftime_banner_time: float = 4.0
+## Seconds the "overtime" banner stays up before the scramble that opens
+## sudden death (a second half that ends level).
+@export var overtime_banner_time: float = 4.0
 ## After the final whistle the menu waits at least `min` seconds, and for the
 ## booth to have been silent for `breath`; after `max` it comes up regardless.
 @export var game_over_menu_min: float = 3.0
@@ -519,6 +522,12 @@ extends Resource
 @export var story_huddle_gap: int = 8
 @export_range(0.0, 1.0) var story_chance: float = 0.35
 @export_range(0.0, 1.0) var story_captive_chance: float = 0.35
+## In a game of the season: how often the broadcast opens with a word about
+## the season in place of a usual opening (a playoff game always opens with
+## its own), and how much of the idle chatter is about the season, the
+## playoffs or the cup.
+@export_range(0.0, 1.0) var season_intro_chance: float = 0.5
+@export_range(0.0, 1.0) var season_idle_chance: float = 0.35
 ## His idle chatter is about a rout when the margin is at least this many
 ## points, and about a tight one in the second half within this many.
 @export var audio_blowout_points: int = 17
@@ -960,6 +969,9 @@ extends Resource
 ## number of plays: the clock divided by how long a play lasts. This is the
 ## starting guess, in seconds; the play caller corrects it as the game goes.
 @export var ai_call_play_time: float = 5.0
+## Within this many yards of the goal line the CPU calls the plays marked
+## `goal_line`, on both sides of the ball; further out it leaves them alone.
+@export var ai_goal_line_distance: float = 10.0
 ## An offense that needs points before the clock runs out compares the yards it
 ## needs per play it has left with a normal gain (yards_to_gain over
 ## downs_per_series). Below `calm_pace` times normal it calls plays as usual;

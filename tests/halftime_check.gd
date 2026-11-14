@@ -43,6 +43,10 @@ const HALVES: Dictionary[StringName, Dictionary] = {
 	&"close": {&"margin": 3.0},
 	&"long_run": {&"long_run": 55.0},
 	&"dives": {&"dives": 20.0},
+	# A game of the season, of its playoffs, and its final.
+	&"season": {&"season": 1.0},
+	&"playoff": {&"playoff": 1.0},
+	&"cup": {&"cup": 1.0},
 }
 
 var _tuning: Tuning

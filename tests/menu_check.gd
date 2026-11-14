@@ -1,6 +1,6 @@
 extends SceneTree
-## Check of the main menu and the team select behind START GAME: the three
-## buttons are there with Start chosen, Options leaves the menu up, Start brings
+## Check of the main menu and the team select behind EXHIBITION: the four
+## buttons are there with Season chosen, Options leaves the menu up, Start brings
 ## up the team select, (B) goes back, the D-pad slides the controller from side
 ## to side, up and down change the team on the controller's side without ever
 ## showing the other side's, and (A) on a team loads the match with the person
@@ -27,6 +27,9 @@ func _initialize() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("out="):
 			_out = arg.trim_prefix("out=")
+	# No season of the person's own gets in the way, or is touched.
+	Season.save_path = "user://menu_check_season.cfg"
+	Season.clear()
 	var scene: PackedScene = load("res://scenes/main_menu.tscn")
 	_menu = scene.instantiate() as MainMenu
 	root.add_child(_menu)
@@ -45,20 +48,23 @@ func _tick() -> void:
 	match _step:
 		1:
 			_save("")
-			for button: Button in [_menu.start_button, _menu.options_button, _menu.exit_button]:
+			for button: Button in [_menu.season_button, _menu.start_button, _menu.options_button, _menu.exit_button]:
 				if button == null or not button.is_visible_in_tree():
 					_failures.append("a button is missing")
-			if not _menu.start_button.has_focus():
-				_failures.append("START GAME does not have the focus")
+			if not _menu.season_button.has_focus():
+				_failures.append("SEASON does not have the focus")
+			if _menu.season_button.text != "SEASON" or _menu.start_button.text != "EXHIBITION":
+				_failures.append("the first two buttons read %s and %s" % [_menu.season_button.text, _menu.start_button.text])
 			_menu.options_button.pressed.emit()
 			if current_scene != _menu or _menu.team_select != null:
 				_failures.append("OPTIONS left the menu")
-			# The real thing: (A) on the gamepad with START GAME in focus.
+			# The real thing: (A) on the gamepad with EXHIBITION in focus.
+			_menu.start_button.grab_focus()
 			_press(JOY_BUTTON_A)
 		2:
-			_expect_select(0, "after START GAME")
-			_expect_ratings("after START GAME")
-			_expect_better_defense("GRAPES", "BERRIES")
+			_expect_select(0, "after EXHIBITION")
+			_expect_ratings("after EXHIBITION")
+			_expect_better_defense("GRAPEZ", "BERRIEZ")
 			if _menu.start_button.is_visible_in_tree():
 				_failures.append("the buttons are still up behind the team select")
 			_press(JOY_BUTTON_A)
@@ -69,7 +75,7 @@ func _tick() -> void:
 			if _menu.team_select.visible:
 				_failures.append("(B) did not close the team select")
 			if not _menu.start_button.has_focus():
-				_failures.append("START GAME does not have the focus after (B)")
+				_failures.append("EXHIBITION does not have the focus after (B)")
 			_press(JOY_BUTTON_A)
 		5:
 			_expect_select(0, "opened a second time")
@@ -100,21 +106,21 @@ func _tick() -> void:
 			# Up from the second team would be the first, which the left has.
 			_press(JOY_BUTTON_DPAD_UP)
 		14:
-			_expect_picks(0, 3, "after up past the left side's team")
+			_expect_picks(0, _last_team(), "after up past the left side's team")
 			_press(JOY_BUTTON_DPAD_LEFT)
 		15:
 			# In the middle there is no team to change.
 			_press(JOY_BUTTON_DPAD_DOWN)
 		16:
-			_expect_picks(0, 3, "after down in the middle")
+			_expect_picks(0, _last_team(), "after down in the middle")
 			_press(JOY_BUTTON_DPAD_LEFT)
 		17:
 			_press(JOY_BUTTON_DPAD_DOWN)
 		18:
-			_expect_picks(1, 3, "after down on the left")
+			_expect_picks(1, _last_team(), "after down on the left")
 			_press(JOY_BUTTON_DPAD_DOWN)
 		19:
-			_expect_picks(2, 3, "after down twice on the left")
+			_expect_picks(2, _last_team(), "after down twice on the left")
 			_expect_ratings("after both sides changed team")
 			_press(JOY_BUTTON_DPAD_RIGHT)
 		20:
@@ -139,10 +145,15 @@ func _wait_for_match() -> void:
 		if game.human.team != game.away:
 			_failures.append("the person is not on the away team")
 		var league: League = game.league
-		if game.home.short_name != league.teams[2].short_name or game.away.short_name != league.teams[3].short_name:
+		var last: TeamData = league.teams[league.teams.size() - 1]
+		if game.home.short_name != league.teams[2].short_name or game.away.short_name != last.short_name:
 			_failures.append("the match is %s against %s, not the teams picked" % [game.home.short_name, game.away.short_name])
-		if game.away.roster != league.teams[3].roster:
+		if game.away.roster != last.roster:
 			_failures.append("the away team does not have its own roster")
+	if loaded and Game.season_match:
+		_failures.append("the exhibition match counts for the season")
+	if loaded and (current_scene as Game).audio.story_on:
+		_failures.append("the booth tells its story in an exhibition match")
 	Game.human_side = -1
 	Game.team_picks = PackedInt32Array([-1, -1])
 	process_frame.disconnect(_tick)
@@ -161,6 +172,11 @@ func _expect_select(side: int, when: String) -> void:
 		_failures.append("the team select is not up %s" % when)
 	elif select.side != side:
 		_failures.append("the controller is at %d, not %d, %s" % [select.side, side, when])
+
+
+## The index of the league's last team, where up from the first wraps to.
+func _last_team() -> int:
+	return _menu.league.teams.size() - 1
 
 
 ## The left side has the league's team `left` and the right side `right`.

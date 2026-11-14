@@ -16,6 +16,10 @@ static var human_side: int = -1
 ## The league teams picked on the team select for home and away, as places in
 ## `league.teams`. -1 leaves the scene's own team.
 static var team_picks: PackedInt32Array = PackedInt32Array([-1, -1])
+## The match is a game of the season (Season.current): its result is booked at
+## the final whistle, the booth tells its stories and talks about the table,
+## and the way out leads back to the season. The season's screen sets it.
+static var season_match: bool = false
 
 @export var tuning: Tuning
 ## Every team there is to play as.
@@ -38,6 +42,9 @@ var half: int = 1
 var warning_half: int = 0
 ## The play being lined up or run is the try after a touchdown.
 var conversion: bool = false
+## Sudden death: the second half ended level, and the next score wins. The
+## clock stays at zero.
+var overtime: bool = false
 ## Team that receives the kickoff that is due, or null when none is.
 var kickoff_to: Team
 ## A scramble is due: the ball goes up from midfield and both teams go for it.
@@ -52,6 +59,9 @@ var play_caller: PlayCaller = PlayCaller.new()
 var scout: Scout = Scout.new()
 ## The box score: each team's and each player's numbers (see the pause menu).
 var stat_book: StatBook = StatBook.new()
+## In a game of the season: its round (see Season), as it was at the start.
+## The season itself moves on at the final whistle. -1 in an exhibition.
+var season_round: int = -1
 
 var _hit_stop_left: float = 0.0
 ## Team the camera sits behind, and the offense it was last set from.
@@ -70,6 +80,8 @@ var _camera_offense: Team
 
 
 func _ready() -> void:
+	if season() != null:
+		season_round = season().current_round()
 	if human_side >= 0:
 		home.is_human = human_side == 0
 		away.is_human = human_side == 1
@@ -147,7 +159,7 @@ func start_drive(team: Team, x: float) -> void:
 
 ## The try after a touchdown is untimed.
 func tick_clock(delta: float) -> void:
-	if not conversion:
+	if not conversion and not overtime:
 		clock = maxf(clock - delta, 0.0)
 
 
@@ -203,6 +215,20 @@ func start_second_half() -> void:
 	clock = tuning.game_length * 0.5
 	kickoff_to = null
 	scramble_due = true
+
+
+## The second half ended level: a scramble for the ball, and the first score
+## of any kind wins.
+func start_overtime() -> void:
+	overtime = true
+	conversion = false
+	kickoff_to = null
+	scramble_due = true
+	add_stat(&"overtimes")
+
+
+func is_tied() -> bool:
+	return home.score == away.score
 
 
 ## Applies the result of a finished play and returns the next state.
@@ -292,10 +318,16 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 
 ## A half ends once its clock has run out and the play (and any try) is over.
 ## The warning comes after the play (and any try) that took the clock under
-## Tuning.warning_time, before the next snap or kickoff.
+## Tuning.warning_time, before the next snap or kickoff. Nobody ties: a second
+## half that ends level goes to sudden death, which lasts until the scores differ.
 func next_play_state() -> StringName:
 	if is_time_up():
-		return &"Halftime" if half == 1 else &"GameOver"
+		if half == 1:
+			return &"Halftime"
+		if not is_tied():
+			return &"GameOver"
+		if not overtime:
+			return &"Overtime"
 	if warning_due():
 		return &"Warning"
 	if scramble_due:
@@ -305,7 +337,7 @@ func next_play_state() -> StringName:
 
 ## The clock is under the warning time and this half has not had its warning.
 func warning_due() -> bool:
-	return tuning.warning_time > 0.0 and warning_half != half and clock <= tuning.warning_time and not conversion
+	return tuning.warning_time > 0.0 and warning_half != half and clock <= tuning.warning_time and not conversion and not overtime
 
 
 ## The offensive plays on offer for the next snap: the playbook, with the Hail
@@ -315,7 +347,7 @@ func offense_plays() -> Array[OffensePlay]:
 	var plays: Array[OffensePlay] = offense_playbook.plays.duplicate()
 	var hail_mary: OffensePlay = offense_playbook.hail_mary
 	var to_goal: float = absf(tuning.goal_x(offense.attack_dir) - los_x)
-	if hail_mary != null and not plays.is_empty() and not conversion \
+	if hail_mary != null and not plays.is_empty() and not conversion and not overtime \
 			and clock <= tuning.hail_mary_time and to_goal > tuning.hail_mary_min_distance:
 		plays[0] = hail_mary
 	return plays
@@ -353,10 +385,22 @@ func ball_on_text() -> String:
 
 
 func clock_text() -> String:
+	if overtime:
+		return "OT"
 	var seconds: int = ceili(clock)
 	@warning_ignore("integer_division")
 	var minutes: int = seconds / 60
 	return "%s  %d:%02d" % ["1ST" if half == 1 else "2ND", minutes, seconds % 60]
+
+
+## A game of the season's playoffs: the semifinal or the final.
+func is_playoff() -> bool:
+	return season_round >= Season.WEEKS
+
+
+## The season this match is a game of, or null: an exhibition, or a test.
+func season() -> Season:
+	return Season.current if season_match and not autoplay else null
 
 
 func add_stat(key: StringName, amount: int = 1) -> void:

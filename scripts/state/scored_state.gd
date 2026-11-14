@@ -20,6 +20,10 @@ func exit() -> void:
 func physics_update(delta: float) -> void:
 	pc.simulate_dead(delta)
 	if time_in_state >= game.tuning.scored_banner_time:
+		# In sudden death the touchdown has won it: no try.
+		if game.overtime:
+			machine.transition(&"GameOver")
+			return
 		# The try is played even when the clock has run out.
 		game.start_conversion(_scorer)
 		machine.transition(&"PlaySelect")

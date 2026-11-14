@@ -106,7 +106,9 @@ func _check_book() -> void:
 		possession += t.possession
 		var points: int = t.touchdowns * tuning.touchdown_points + (t.tries_made + t.tries_returned) * tuning.conversion_points + t.safeties * tuning.safety_points
 		_expect(points == team.score, "%s scored %d but the book makes it %d" % [who, team.score, points])
-		_expect(t.tries_att == t.touchdowns, "%s: %d touchdowns, %d tries" % [who, t.touchdowns, t.tries_att])
+		# The touchdown that wins sudden death has no try.
+		var tries_due: int = t.touchdowns - int(_game.overtime and team.score > team.opponent.score and t.tries_att < t.touchdowns)
+		_expect(t.tries_att == tries_due, "%s: %d touchdowns, %d tries" % [who, t.touchdowns, t.tries_att])
 
 		var sum: PlayerLine = PlayerLine.new()
 		var defense: PlayerLine = PlayerLine.new()

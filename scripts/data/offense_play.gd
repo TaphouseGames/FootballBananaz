@@ -15,6 +15,9 @@ enum Category { RUN, SHORT, DEEP }
 ## route as a receiver. The fake lasts `handoff_delay` seconds: the quarterback
 ## cannot throw until it is over, and coverage defenders may come up for the run.
 @export var play_action: bool = false
+## Drawn for the last few yards before the end zone. The CPU play caller calls
+## it there (Tuning.ai_goal_line_distance) and hardly ever anywhere else.
+@export var goal_line: bool = false
 @export var assignments: Array[OffenseAssignment] = []
 
 

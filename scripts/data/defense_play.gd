@@ -9,6 +9,9 @@ extends Resource
 @export_range(0.0, 1.0) var run_fit: float = 0.5
 @export_range(0.0, 1.0) var short_fit: float = 0.5
 @export_range(0.0, 1.0) var deep_fit: float = 0.5
+## Drawn for a stand at the goal line. The CPU play caller calls it there
+## (Tuning.ai_goal_line_distance) and hardly ever anywhere else.
+@export var goal_line: bool = false
 
 
 func fit(category: OffensePlay.Category) -> float:

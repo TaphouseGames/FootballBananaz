@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TeamData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/team_data.gd" id="1_team"]
+[ext_resource type="Resource" path="res://resources/rosters/peachez.tres" id="2_roster"]
+
+[resource]
+script = ExtResource("1_team")
+team_name = "Peachez"
+short_name = "PEACHEZ"
+team_color = Color(1, 0.6, 0.45, 1)
+roster = ExtResource("2_roster")

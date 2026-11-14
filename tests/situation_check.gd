@@ -114,6 +114,15 @@ func _check_calls() -> void:
 	_offense("down 6, 0:04 left, opp 5")
 	_expect(not _game.play_caller.situation(_game).heave, "heave called from the 5")
 
+	# Goal line plays are for the goal line, on both sides of the ball.
+	_put(2, 150.0, 0, 0, 50.0, 1, 30.0)
+	var far: PackedFloat32Array = _goal_line_shares()
+	_put(2, 150.0, 0, 0, 96.0, 1, 0.0)
+	var near: PackedFloat32Array = _goal_line_shares()
+	print("goal line plays called at midfield: offense %.0f%% defense %.0f%%; at the 4: offense %.0f%% defense %.0f%%" % [far[0] * 100.0, far[1] * 100.0, near[0] * 100.0, near[1] * 100.0])
+	_expect(far[0] < 0.03 and far[1] < 0.03, "goal line plays called at midfield")
+	_expect(near[0] > 0.4 and near[1] > 0.4, "goal line plays not called at the goal line")
+
 	# The try is untimed: the clock must not change it.
 	_put(2, 150.0, 6, 6, 50.0, 1, 30.0)
 	_game.start_conversion(_game.home)
@@ -150,6 +159,17 @@ func _offense(label: String) -> PackedFloat32Array:
 		shares[play.category] += 1.0 / float(SAMPLES)
 	var now: GameSituation = _game.play_caller.situation(_game)
 	print("%-48s run %3.0f%%  short %3.0f%%  deep %3.0f%%   urgency %.2f  kill %.2f  heave %s" % [label, shares[0] * 100.0, shares[1] * 100.0, shares[2] * 100.0, now.urgency, now.clock_kill, now.heave])
+	return shares
+
+
+## Share of the calls in this situation that are goal line plays: offense, defense.
+func _goal_line_shares() -> PackedFloat32Array:
+	var shares: PackedFloat32Array = PackedFloat32Array([0.0, 0.0])
+	for i: int in SAMPLES:
+		if _game.play_caller.pick_offense(_game.offense_playbook.plays, _game).goal_line:
+			shares[0] += 1.0 / float(SAMPLES)
+		if _game.play_caller.pick_defense(_game.defense_playbook.plays, _game).goal_line:
+			shares[1] += 1.0 / float(SAMPLES)
 	return shares
 
 

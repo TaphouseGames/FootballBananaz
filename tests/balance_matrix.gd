@@ -21,6 +21,8 @@ extends SceneTree
 ##                 the CPU quarterback choose; default normal)
 ##   times=<a>/<b>/...   release times for the spam probe (default 0.8/1.4/2.0/2.6)
 ##   set=<name>:<value>[,<name>:<value>...]   override Tuning values for this run
+##   yard=<n>      yard line from the own goal the snaps start on (default 25);
+##                 96 puts the ball on the 4 for the goal line plays
 ##   home=<short name>, away=<short name>   the league teams that play, taking
 ##                 turns on offense; the scene's own two otherwise
 ##
@@ -31,6 +33,8 @@ const SPEED: float = 16.0
 const CAP: float = 30.0
 const TURNOVER_COST: float = 12.0
 const START_YARD: float = 25.0
+## Yard line (from the own goal) every snap starts on. `yard=<n>` changes it.
+var _start_yard: float = START_YARD
 const MAX_PLAY_TIME: float = 25.0
 
 var _game: Game
@@ -80,6 +84,8 @@ func _initialize() -> void:
 			_off_filter = arg.trim_prefix("off=").to_lower()
 		elif arg.begins_with("place="):
 			_place = arg.trim_prefix("place=")
+		elif arg.begins_with("yard="):
+			_start_yard = float(arg.trim_prefix("yard="))
 		elif arg == "detail":
 			_detail = true
 		elif arg == "rollout":
@@ -218,7 +224,7 @@ func _start_play() -> void:
 	var team: Team = _game.home if _home_next else _game.away
 	_home_next = not _home_next
 	_game.clock = 1.0e6
-	_game.start_drive(team, _game.tuning.yard_to_x(team.attack_dir, START_YARD))
+	_game.start_drive(team, _game.tuning.yard_to_x(team.attack_dir, _start_yard))
 	var off_index: int = job["off"]
 	var def_index: int = job["def"]
 	_pc.line_up(_game.offense_playbook.plays[off_index], _game.defense_playbook.plays[def_index])

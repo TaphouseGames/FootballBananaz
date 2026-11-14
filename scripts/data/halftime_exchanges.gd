@@ -34,12 +34,12 @@ const EXCHANGES: Array[Dictionary] = [
 		"A big goose egg on the board, Tony.",
 		"ZERO, Jim! I've had more points on my LICENSE!"]},
 	{&"id": &"star_1", &"when": &"star", &"priority": 4, &"first": TONY, &"lines": [
-		"One guy is doing EVERYTHING out there, Jim!",
+		"One player is doing EVERYTHING out there, Jim!",
 		"Two touchdowns already.",
-		"Give the man a RAISE!"]},
+		"Somebody give that player a RAISE!"]},
 	{&"id": &"star_2", &"when": &"star", &"priority": 4, &"first": JIM, &"lines": [
 		"Two scores for one player already, Tony.",
-		"The rest of the team should send him a FRUIT BASKET!"]},
+		"The rest of the team should send a FRUIT BASKET!"]},
 	{&"id": &"turnovers", &"when": &"turnovers", &"priority": 3, &"first": JIM, &"lines": [
 		"Turnovers everywhere in this half, Tony.",
 		"It's a BAKERY out there, Jim!",
@@ -71,9 +71,33 @@ const EXCHANGES: Array[Dictionary] = [
 		"That's what makes it GREAT!"]},
 	{&"id": &"long_run", &"when": &"long_run", &"priority": 2, &"first": JIM, &"lines": [
 		"How about that long run, Tony?",
-		"He's STILL running, Jim! Somebody check the PARKING LOT!"]},
+		"STILL running, Jim! Somebody check the PARKING LOT!"]},
+	# A game of the season, of its playoffs, and its final (the Fruit Cup).
+	{&"id": &"cup_half", &"when": &"cup", &"priority": 3, &"first": JIM, &"lines": [
+		"One half left to decide the Fruit Cup, Tony.",
+		"I can't LOOK, Jim!",
+		"You're paid to look.",
+		"Then I'll look a LITTLE!"]},
+	{&"id": &"cup_fruit", &"when": &"cup", &"priority": 3, &"first": TONY, &"lines": [
+		"Jim, at halftime of the Fruit Cup, do they serve the FRUIT?",
+		"It's a trophy, Tony.",
+		"So NO fruit? At ALL? This league is a SCAM!"]},
+	{&"id": &"playoff_half", &"when": &"playoff", &"priority": 3, &"first": TONY, &"lines": [
+		"Somebody's SEASON ends today, Jim!",
+		"That is how the playoffs work, Tony.",
+		"It's so SAD! I LOVE it!"]},
+	{&"id": &"playoff_nerves", &"when": &"playoff", &"priority": 3, &"first": JIM, &"lines": [
+		"You can feel the nerves in this building, Tony.",
+		"That's ME, Jim! I've been shaking the DESK!"]},
+	{&"id": &"season_race", &"when": &"season", &"priority": 1, &"first": JIM, &"lines": [
+		"This one matters in the standings, Tony.",
+		"EVERYTHING matters in the standings, Jim! That's why they're STANDING!"]},
+	{&"id": &"season_long", &"when": &"season", &"priority": 1, &"first": TONY, &"lines": [
+		"It's a LONG season, Jim! You've got to PACE yourself!",
+		"You're sitting down, Tony.",
+		"I'm ALREADY tired!"]},
 	{&"id": &"dives", &"when": &"dives", &"priority": 1, &"first": TONY, &"lines": [
-		"These guys are diving ALL OVER the place, Jim!",
+		"Everybody is diving ALL OVER the place, Jim!",
 		"It's football, not a swim meet.",
 		"Tell THEM that!"]},
 	{&"id": &"replay_button", &"when": ALWAYS, &"priority": 0, &"first": JIM, &"lines": [
@@ -138,6 +162,10 @@ static func facts(game: Game) -> Dictionary[StringName, float]:
 		&"dives": float(home.dives + away.dives),
 		&"long_run": float(maxi(book.longest_run(game.home), book.longest_run(game.away))),
 		&"top_tds": float(maxi(book.top_scorer_tds(game.home), book.top_scorer_tds(game.away))),
+		# A week of the season, a semifinal, the final: each only that.
+		&"season": float(game.season_round >= 0 and not game.is_playoff()),
+		&"playoff": float(game.is_playoff() and game.season_round != Season.FINAL_ROUND),
+		&"cup": float(game.season_round == Season.FINAL_ROUND),
 	}
 
 
@@ -176,6 +204,8 @@ static func passes(when: StringName, facts: Dictionary[StringName, float], tunin
 			return facts.get(&"long_run", 0.0) >= tuning.halftime_long_run
 		&"dives":
 			return facts.get(&"dives", 0.0) >= tuning.halftime_dives
+		&"season", &"playoff", &"cup":
+			return facts.get(when, 0.0) > 0.0
 	push_warning("HalftimeExchanges: no condition called '%s'" % when)
 	return false
 

@@ -12,14 +12,17 @@ var _menu_shown: bool = false
 func enter() -> void:
 	var home: Team = game.home
 	var away: Team = game.away
-	var headline: String = "TIE GAME"
-	if home.score != away.score:
-		var winner: Team = home if home.score > away.score else away
-		headline = "%s WIN!" % winner.short_name
+	var winner: Team = home if home.score >= away.score else away
+	var headline: String = "%s WIN%s!" % [winner.short_name, " IN OVERTIME" if game.overtime else ""]
 	game.hud.show_banner(headline, "Final:  %s %d  -  %d %s" % [home.short_name, home.score, away.score, away.short_name])
 	game.hud.set_hint("")
 	_quiet = 0.0
 	_menu_shown = false
+	# A game of the season goes into its books, and the rest of the round is
+	# played on paper.
+	var season: Season = game.season()
+	if season != null and season.record_match(game):
+		season.finish_round()
 
 
 func physics_update(delta: float) -> void:

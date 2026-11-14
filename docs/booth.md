@@ -43,13 +43,18 @@ never smug about it: he does not seem to realise what he is giving away.
 
 ## The stories
 
+The stories are told in the games of a season only, never in an exhibition
+match, and they start over with every new season (`Season.start()`).
+
 The person gets to know the two of them by playing. The stories are threads
 of chapters in `scripts/data/booth_story.gd` (`BoothStory`). Each thread is
 told in its own order, a chapter being an exchange of two to four lines in
 the huddle, and the threads run side by side:
 
 - `carol` (13 chapters, up to 2 a match): the booth, Carol, and Tony's slips.
-- `commissioner` (12 chapters, 1 a match): the league commissioner is
+- `commissioner` (12 chapters, 1 a match, up to 3 once the Carol thread is
+  over, so the closet is opened inside a ten-game season): the league
+  commissioner is
   missing. Match 1 brings the league's statement (`missing`), and the next
   four matches a word each that he is still missing (`day_two`, `reward`,
   `description`, `witness`), with Jim and Tony sounding as guilty as they
@@ -61,7 +66,7 @@ the huddle, and the threads run side by side:
 How they are paced:
 
 - At most `Tuning.story_per_match` chapters a match in all (3) and each
-  thread's own share (`BoothStory.PER_MATCH`); the first no sooner than
+  thread's own share (`BoothStory.share()`); the first no sooner than
   huddle `story_first_huddle` (4), the next `story_huddle_gap` (8) huddles
   later, and `story_chance` of the time in a huddle where one may come. The
   thread that has had least of its share goes first: Carol, the
@@ -77,7 +82,8 @@ How they are paced:
 - A thread waits at a chapter that has no recording of every line.
 - Once a thread's last chapter has been heard, its chapters join the idle
   chatter.
-- Off with the CPU playing both teams. `tests/story_check.gd` checks it.
+- Off in an exhibition match and with the CPU playing both teams.
+  `tests/story_check.gd` checks it.
 
 A chapter may build on the ones before it in its thread (Thursday is set up
 in `thursday` and `book_club` and pays off in `dinner`). Lines outside the
@@ -97,6 +103,205 @@ third of the voices' level, so a chapter is still Jim and Tony turn about.
 Tony and Jim when guilty: `[nervous] [shouting]` for Tony, `[excited]
 [nervous]` for Jim; the league's statements are `[excited] [urgent]`.
 
+## The season
+
+The lines for Season mode, recorded on 2026-11-13 (152 lines, one take
+each). None names a team, since any
+team can be in any game, and none leans on another having been heard. None
+states how many games, teams or playoff places there are, or who plays whom
+in the playoffs: all of that is still changing (see "Rules").
+
+The championship game is the Fruit Cup. Tony is never sure whether it is a
+trophy or a cup of fruit.
+
+A moment's lines for a game of the season are files under the moment's own
+name with `_season`, `_playoff` (the semifinal) or `_cup` (the final) after
+it; `AudioDirector._season_take()` picks them, and falls back on the usual
+lines. A week of the season opens with one of the `_season` openings
+`Tuning.season_intro_chance` of the time, a playoff game always with its
+own; `Tuning.season_idle_chance` of the idle chatter in such a game is
+about the season.
+
+### Before the game
+
+`chat_intro_season` (a week of the regular season)
+
+- j1: Another week of the season, Tony. / Every game COUNTS, Jim! / They do keep a table, yes.
+- j2: Another game in the books after today, Tony. / There are BOOKS, Jim? / It's an expression. / I'd READ them!
+- j3: The road to the Fruit Cup runs through today, Tony. / There's a ROAD, Jim? I took the BUS!
+- t1: I've been studying the STANDINGS, Jim! / And? / They're in ORDER! Somebody put them in ORDER!
+- t2: It's a LONG season, Jim! / It is not long, Tony. / I can only count to NINE, Jim! This is NEW for me!
+- t3: You know what this season is all about, Jim? The FRUIT CUP! / It is. / I hope it's PEACHES!
+
+`chat_intro_playoff` (the semifinal)
+
+- j1: Welcome to the playoffs. Win, and you play for the Fruit Cup. Lose, and you go home. / No PRESSURE, Jim! / There is considerable pressure, Tony.
+- t1: It's the PLAYOFFS, Jim! I wore my LUCKY socks! / You wear those every week, Tony. / And we're STILL HERE!
+- t2: WIN OR GO HOME, Jim! / That's right, Tony. / What if they LIVE here?
+
+`chat_intro_cup` (the final)
+
+- j1: This is it. The championship. One game for the Fruit Cup. / I've got GOOSEBUMPS, Jim! / So have I, Tony. Don't tell anyone.
+- t1: THE FRUIT CUP, Jim! The biggest prize in FOOTBALL! / It's the only prize in football, Tony. / That's what makes it the BIGGEST!
+- t2: Jim, is there real FRUIT in the Fruit Cup? / It's a trophy, Tony. / So that's a MAYBE!
+
+### Between plays
+
+`color_idle_season` (Tony, a week of the regular season)
+
+- 1: Every game COUNTS in a season, Jim! I've been counting them! I LOST COUNT!
+- 2: Only the BEST teams make the playoffs, Jim! The rest of us watch from HOME! Like ME!
+- 3: Somebody's going to WIN this whole season, Jim! And it's NOT going to be me!
+- 4: I love the STANDINGS, Jim! It's like a MENU, but for TEAMS!
+- 5: Biscuit's been following the season, Jim! He's got a FAVORITE team! He won't say WHICH!
+
+`chat_idle_season`
+
+- j1: The standings are tight this year, Tony. / TIGHT, Jim! Like my pants after NACHO night!
+- j2: A win today matters in the playoff race, Tony. / And a LOSS, Jim? / Also matters. / It ALL matters! I can't SLEEP!
+- j3: Carol asked who I like for the Fruit Cup this year, Tony. / What did you SAY, Jim? / I said it's a long season. / That's what she told ME! I mean... GOOD answer!
+- t1: Jim, what do they WIN at the end of the season? / The Fruit Cup, Tony. / A WHOLE cup? Of FRUIT? / It's a trophy. / Even BETTER! It KEEPS!
+- t2: My fantasy season is going GREAT, Jim! / You're in last place, Tony. / But I'm FIRST in my heart!
+
+`color_idle_playoff` (Tony, the semifinal)
+
+- 1: It's the PLAYOFFS, Jim! Everything is the SAME, but it MATTERS more!
+- 2: There's no NEXT WEEK for the loser, Jim! I mean there IS, but they're not INVITED!
+- 3: I can SMELL the Fruit Cup from here, Jim! Or that's my NACHOS!
+
+`chat_idle_playoff`
+
+- j1: Nobody wants their season to end today, Tony. / Then they should BOTH win, Jim! / That's not possible. / Not with THAT attitude!
+- t1: PLAYOFF football, Jim! You can feel it in the AIR! / That's the nacho machine, Tony. / It's BOTH!
+
+`color_idle_cup` (Tony, the final)
+
+- 1: One of these teams is taking home the FRUIT CUP, Jim! I hope they SHARE!
+- 2: This is the LAST game of the season, Jim! What do we do TOMORROW?
+
+`chat_idle_cup`
+
+- j1: The Fruit Cup is sitting right there on the sideline, Tony. / It's so SHINY, Jim! Can I touch it? / No. / Can BISCUIT touch it?
+- t1: I've waited all SEASON for this game, Jim! / So has everybody, Tony. / But I waited the HARDEST!
+
+### Halftime
+
+In `scripts/data/halftime_exchanges.gd`, conditions `season`, `playoff`, `cup`:
+`show_season_race`, `show_season_long`, `show_playoff_half`,
+`show_playoff_nerves`, `show_cup_half`, `show_cup_fruit`.
+
+### The final whistle
+
+`announcer_final_playoff` (Jim, the semifinal is over)
+
+- 1: That's the game! One season goes on. One is over.
+- 2: It's over! Their season is still alive!
+
+`color_final_playoff` (Tony)
+
+- 1: THEY'RE STILL IN IT, Jim! Somebody tell their MOTHERS!
+- 2: And the other team goes HOME, Jim! I hope home is NICE!
+
+`announcer_final_cup` (Jim, the final is over)
+
+- 1: It's over! We have a champion! The Fruit Cup has a new home!
+- 2: That's it! Champions of the league, and winners of the Fruit Cup!
+
+`color_final_cup` (Tony)
+
+- 1: CHAMPIONS, Jim! CHAMPIONS! Somebody fill that cup with FRUIT!
+- 2: THEY DID IT, Jim! THE FRUIT CUP! I'm not crying! YOU'RE crying!
+
+`chat_final_cup_j1`: What a season, Tony. / What a SEASON, Jim! Can we do it AGAIN? / Next season, Tony. / Is that TOMORROW?
+
+### Sudden death
+
+Any match, exhibition included: a second half that ends level goes to
+sudden death, a scramble for the ball and the first score wins.
+
+`announcer_overtime` (Jim, as it starts)
+
+- 1: We are level at the end of the second half. Overtime! The next score wins it.
+- 2: Nobody ties in this league. Sudden death! First score wins.
+
+`color_overtime` (Tony)
+
+- 1: SUDDEN DEATH, Jim! Nobody actually DIES, right?
+- 2: FREE FOOTBALL, Jim! We didn't even pay for the FIRST football!
+- 3: NEXT SCORE WINS! I can't feel my LEGS, Jim!
+
+`chat_overtime_t1`: OVERTIME, Jim! How long does it go? / Until somebody scores, Tony. / What if NOBODY scores? / Then we live here now.
+
+### On the season's screen
+
+Played by `MenuBooth`, asked for by `MainMenu` and `SeasonHub`.
+
+`menu_season` (SEASON highlighted)
+
+- j1: The season. Then the playoffs. Then the Fruit Cup.
+- t1: SEASON! That's where the FRUIT CUP is!
+- t2: A whole SEASON, Jim! With STANDINGS!
+
+`menu_season_pick` (a new season: the choice of a team, and the team chosen)
+
+- j1: A new season. Pick your team.
+- j2: Choose wisely. You're stuck with them all season.
+- t1: NEW SEASON! Everybody's in FIRST PLACE, Jim!
+
+`menu_season_open` (SEASON pressed with a season on)
+
+- j1: Back to the season.
+- t1: The season's still GOING, Jim! I CHECKED!
+
+`menu_standings` (the STANDINGS page)
+
+- j1: The standings. The top of it is the place to be.
+- t1: LOOK at all those NUMBERS, Jim!
+- t2: Jim, which way is UP on this thing? / The top, Tony.
+
+`menu_stats` (TEAM STATS, PLAYER STATS)
+
+- j1: The numbers don't lie.
+- t1: STATS, Jim! I don't know what ANY of these mean!
+
+`menu_season_win` (back from a game of the season, won)
+
+- j1: A win. That helps in the standings.
+- t1: A WIN, Jim! Put it on the BOARD!
+- t2: They WON, Jim! I KNEW they would! / You picked the other team, Tony.
+
+`menu_season_loss` (lost)
+
+- j1: A loss. There's always next week.
+- t1: They LOST, Jim! But they looked GOOD doing it!
+- t2: It's FINE, Jim! Nobody remembers the losses! / The standings do, Tony.
+
+`menu_bye` (a playoff round went by with the person's team on its week off)
+
+- j1: A week off. Well earned.
+- t1: A week OFF, Jim! What do we do? / We wait, Tony. / I'm BAD at that!
+
+`menu_playoffs` (the playoffs go on with the person still in them)
+
+- j1: The playoffs. Win, or the season is over.
+- t1: PLAYOFFS, Jim! PLAYOFFS!
+
+`menu_eliminated` (the person's season is over)
+
+- j1: The season is over for this team. There's always next year.
+- t1: We can still WATCH, Jim! I LOVE watching!
+
+`menu_champion` (the person's team won the Fruit Cup)
+
+- j1: Champions. The Fruit Cup is theirs.
+- t1: CHAMPIONS, Jim! Can I hold the CUP? / No, Tony.
+- t2: THE FRUIT CUP, Jim! It's even BIGGER up close!
+
+`menu_season_over` (somebody else won it)
+
+- j1: The season is over. A new one is one button away.
+- t1: It's OVER, Jim! Let's do ANOTHER one!
+
 ## Rules
 
 - The game has no punts and no kicks. Nothing either of them says may imply
@@ -112,6 +317,18 @@ Tony and Jim when guilty: `[nervous] [shouting]` for Tony, `[excited]
 - A line said during a live play is one short sentence. Exchanges only start
   with the ball dead, and run two to four lines.
 - No real people, teams, networks or brands.
+- Nothing that is going to change. The game is early in development, so no
+  line states the number of games, weeks, teams or playoff places, which seed
+  plays which, who has the week off, or how long a half is. "The season",
+  "the playoffs", "the standings", "the Fruit Cup" and "win or go home" are
+  safe. A number is fine only in a joke that is true whatever the format
+  (Tony can only count to nine).
+- No "he" or "she" for a player: the players are men and women. A line about
+  a player says "they", "the runner", "the quarterback", "that one",
+  "somebody", or has no subject at all ("Down they go", "Shrugs it off").
+  No "his", "him", "her", "that man", "these guys" or "son" either. Jim,
+  Tony, Carol, the commissioner and Biscuit keep their own. The older lines
+  that broke this were recorded again (see 'Without "he" or "him"').
 - The players wear no helmets. A line may only mention helmets as a joke about that.
 
 ## File names
@@ -126,7 +343,8 @@ find the files by name, so adding a line is adding a file.
 | `chat_<moment>_<t\|j><k>_<part>` | Exchange `k` of `color_<moment>`; the letter is who speaks first, the parts alternate. |
 | `show_<id>_<part>` | Halftime report; text and conditions in `scripts/data/halftime_exchanges.gd`. |
 | `story_<id>_<part>` | Chapter `id` of the story; text and order in `scripts/data/booth_story.gd`. |
-| `menu_<moment>_<t\|j><k>_<part>` | Main menu and team select. Same shape as `chat_`; a set with one part is a solo line. |
+| `menu_<moment>_<t\|j><k>_<part>` | Main menu, team select and the season's screen. Same shape as `chat_`; a set with one part is a solo line. |
+| `<moment>_season\|_playoff\|_cup_...` | A moment's lines for a game of the season, a playoff game, the final (see "The season"). |
 
 ## Recording
 
@@ -183,15 +401,15 @@ only in the flow, where a node shows the first few words of its prompt.
 `announcer_hit` (Jim, a big hit)
 
 - 7: That one left a mark.
-- 8: He will feel that tomorrow.
+- 8: That will be felt tomorrow.
 - 9: Oh, my. That was unnecessary.
 
 `color_lawn_chair` (Tony, a big hit)
 
-- 6: He just got hit into NEXT TUESDAY!
+- 6: Just got hit into NEXT TUESDAY!
 - 7: BISCUIT felt that one, Jim, and he's at HOME!
-- 8: Somebody check his SHOES! I think he left them back there!
-- 9: That man just met his ANCESTORS!
+- 8: Somebody check for SHOES! I think they got left back there!
+- 9: Somebody just met their ANCESTORS!
 
 `chat_lawn_chair_t2`: Did you SEE that hit, Jim?! / I heard it. / My FILLINGS heard it!
 
@@ -199,56 +417,56 @@ only in the flow, where a node shows the first few words of its prompt.
 
 `announcer_break` (Jim, a broken tackle)
 
-- 6: He shrugs him off.
+- 6: Shrugs off the tackle.
 - 7: Not today, says the ball carrier.
-- 8: One man is not going to be enough.
-- 9: He simply declined to be tackled.
+- 8: One tackler is not going to be enough.
+- 9: Simply declined to be tackled.
 
 `color_dog` (Tony, a broken tackle)
 
-- 5: He bounced off him like a SCREEN DOOR!
-- 6: You can't tackle a man with your FEELINGS, Jim!
+- 5: Bounced off like a SCREEN DOOR!
+- 6: You can't tackle somebody with your FEELINGS, Jim!
 - 7: That's how Biscuit gets away at BATH TIME!
-- 8: He's got BUTTER on his jersey! Somebody check!
+- 8: There's BUTTER on that jersey! Somebody check!
 
-`chat_dog_j1`: Nobody can bring him down, Tony. / Have they tried ASKING NICELY?
+`chat_dog_j1`: Nobody can make the tackle, Tony. / Have they tried ASKING NICELY?
 
 `announcer_tackle` (Jim, a plain wrap-up tackle; most tackles are dives, which are hits)
 
-- 1: Down he goes.
+- 1: Down they go.
 - 2: That'll do it.
 - 3: Wrapped up and brought down.
 - 4: A sensible tackle.
 
 `color_tackle` (Tony, an ordinary tackle)
 
-- 1: And he is DOWN, Jim! Gravity wins AGAIN!
+- 1: DOWN, Jim! Gravity wins AGAIN!
 - 2: That's a tackle! I KNOW that one!
 - 3: Right in the GRASS! That's where they keep the ground!
 - 4: Textbook! I assume! I never read the textbook!
 
 `announcer_spin` (Jim, a spin beats the tackler)
 
-- 1: A spin, and he's free.
-- 2: He spins away from the tackle.
-- 3: Around he goes. Nobody home.
+- 1: A spin, and free.
+- 2: Spins away from the tackle.
+- 3: Round they go. Nobody home.
 
 `color_spin` (Tony)
 
-- 1: He's a CEILING FAN, Jim!
+- 1: It's a CEILING FAN, Jim!
 - 2: ROUND AND ROUND! I'm getting dizzy up HERE!
 - 3: That's the same move Biscuit does before he lies down!
 
 `announcer_stiff_arm` (Jim, a stiff arm beats the tackler)
 
-- 1: A stiff arm, and he keeps going.
-- 2: He holds him off with one hand.
+- 1: A stiff arm, and still going.
+- 2: Held off with one hand.
 - 3: Kept at arm's length. Literally.
 
 `color_stiff_arm` (Tony)
 
 - 1: TALK TO THE HAND, Jim!
-- 2: He just told that man NO with his whole ARM!
+- 2: Just told that tackler NO with a whole ARM!
 - 3: That's how I keep people away from my NACHOS!
 
 `color_blaze` (fourth and twenty, in the huddle, after Jim's "Fourth down. Twenty to go."; said every time)
@@ -277,7 +495,7 @@ only in the flow, where a node shows the first few words of its prompt.
 - t7: They had a sign at the hotel, Jim! Live, laugh... / Don't. / LOVE! / I'm going to need a minute.
 - t8: Carol says you SNORE, Jim! / When did Carol say that? / WHAT A GAME we've got today!
 - t9: You know what's GREAT on nachos, Jim? MAYONNAISE! / I will leave this booth, Tony.
-- j7: You started a quarterback on his bye week, Tony. / He seemed RESTED!
+- j7: You started a quarterback on a bye week, Tony. / They seemed RESTED!
 - j8: Somebody put mayonnaise on my sandwich, Tony. / Is that BAD? / I've called the police.
 
 Added with the story (one take each; a slip of Tony's is prompted
@@ -319,6 +537,111 @@ recording):
 - `color_idle_captive_2`: (muffled shouting) QUIET in there! I mean... GREAT crowd tonight!
 - `chat_idle_captive_j1`: Tony, the closet is making noise again. / (a thud) FIXED it, Jim!
 - `chat_idle_captive_t1`: (muffled yelling) Does anybody else hear a GHOST, Jim? / There are no ghosts, Tony. Only consequences.
+
+### Without "he" or "him"
+
+Every recorded line that called a player "he", "him", "that man" or "these
+guys" was written again and recorded again on 2026-11-13 (97 lines, found by
+transcribing the clips; one take each), since the players are men and women.
+The files kept their names (two of them, `menu_team_t1` and `_t2`, are
+listed with the menu lines). Lines 1-5 of the older sets are only here and in
+the flow:
+
+- `announcer_break_3`: They will not go down, Tony!
+- `announcer_break_4`: Nobody can make the tackle, Tony! Still going!
+- `announcer_break_5`: Bounced right off! Look at this, Tony!
+- `announcer_break_6`: Shrugs off the tackle!
+- `announcer_break_8`: One tackler is not going to be enough!
+- `announcer_break_9`: Simply declined to be tackled!
+- `announcer_catch_3`: How do you hold on to that?
+- `announcer_catch_5`: Oh, what a grab! Tony, how do you hang on to that?
+- `announcer_catch_6`: What a catch, Tony! No business coming down with that!
+- `announcer_hit_5`: That one got rocked, Tony! Somebody send help!
+- `announcer_hit_8`: That will be felt tomorrow!
+- `announcer_hurdle_2`: Over the top! Tony, that was a HURDLE!
+- `announcer_pancake_2`: Flattened, Tony! Flat as a pancake!
+- `announcer_pancake_3`: Flat on the back! Tony, that's a big body down!
+- `announcer_room_2`: This could go all the way!
+- `announcer_room_3`: Tony! There's room! Nothing but grass!
+- `announcer_room_4`: Loose, Tony! On the LOOSE!
+- `announcer_room_5`: Look at that, Tony! Somebody better catch up!
+- `announcer_spin_1`: A SPIN! And free!
+- `announcer_spin_2`: Spins away from the tackle!
+- `announcer_spin_3`: Round they go! Nobody home!
+- `announcer_stiff_arm_1`: A stiff arm, and still going!
+- `announcer_stiff_arm_2`: Held off with one hand!
+- `announcer_tackle_1`: Down they go!
+- `announcer_throw_4`: Tony! Dropped that one in a bucket!
+- `color_bad_throw_5`: That one went to the HOT DOG stand, Jim!
+- `color_breakaway_1`: Look at that one GO! Slowest getaway since that white BRONCO!
+- `color_catch_1`: Jim! Caught that with the FINGERNAILS!
+- `color_catch_3`: That's a GROWN-UP catch, Jim! Left the GROUND for that one!
+- `color_confused_3`: DROPPED it, Jim! You're not supposed to DROP it!
+- `color_confused_5`: Jim! Jim! ONE job! Hold the BALL!
+- `color_dog_1`: They've got that DOG in them! Possibly SEVERAL dogs!
+- `color_dog_2`: REFUSES to go down, Jim! Got somewhere to BE!
+- `color_dog_3`: Jim, you could hit that one with a TRUCK and it wouldn't MATTER!
+- `color_dog_4`: Still on their FEET! How, Jim? HOW?
+- `color_dog_5`: Bounced off like a SCREEN DOOR!
+- `color_dog_6`: You can't tackle somebody with your FEELINGS, Jim!
+- `color_dog_8`: There's BUTTER on that jersey! Somebody check!
+- `color_drop_1`: Tried to catch it, but the glove did NOT fit!
+- `color_fourth_8`: Do or DIE, Jim! Well, do, or give the other team the ball! Still BAD!
+- `color_hot_1`: ABSOLUTELY lighting up this defense!
+- `color_hot_4`: WIDE OPEN! Jim, that was so open, I got SUSPICIOUS!
+- `color_hurdle_1`: Jumped over a whole PERSON, Jim! That's illegal in most states!
+- `color_hurdle_2`: They can FLY! Jim, did you know they could FLY?
+- `color_hurdle_3`: Right over the TOP, Jim! Like a deer over a FENCE!
+- `color_idle_1`: You know, Jim, the key to winning football games is scoring more points than the other TEAM!
+- `color_idle_11`: These are PROFESSIONALS, Jim! I'm assuming! Nobody's shown me any PAPERWORK!
+- `color_idle_3`: The quarterback is the one who THROWS the ball, Jim! Unless it's a HANDOFF!
+- `color_interception_1`: That's the OTHER team!
+- `color_interception_2`: Great catch, Jim! Wrong TEAM, but great catch!
+- `color_interception_3`: NOOOOO! Jim! That went to the wrong COLOR!
+- `color_interception_4`: You're supposed to throw it to YOUR team, Jim! I'm pretty sure that's in the RULES!
+- `color_interception_5`: Gave it to them, Jim! As a GIFT!
+- `color_late_half_2`: Hurry it up, EVERYBODY! The halftime snacks are getting COLD!
+- `color_lawn_chair_1`: Absolutely FOLDED like a lawn chair!
+- `color_lawn_chair_3`: They're going to feel that one on TUESDAY, Jim! And WEDNESDAY!
+- `color_lawn_chair_4`: Somebody just got hit into NEXT WEEK, Jim!
+- `color_lawn_chair_5`: JIM! FOLDED! Like a LAWN CHAIR!
+- `color_lawn_chair_6`: Just got hit into NEXT TUESDAY!
+- `color_lawn_chair_8`: Somebody check for SHOES! I think they got left back there!
+- `color_lawn_chair_9`: Somebody just met their ANCESTORS!
+- `color_qb_run_1`: Using the LEGS!
+- `color_qb_run_2`: The quarterback is RUNNING, Jim! Is that ALLOWED?
+- `color_qb_run_3`: RUN! RUN! Nobody can hear me, Jim, but I'm HELPING!
+- `color_qb_run_4`: Nobody's open, so the quarterback said FINE! I'll do it MYSELF!
+- `color_sack_1`: Never saw it COMING, Jim! I saw it! I just didn't SAY anything!
+- `color_sack_4`: The line let that rusher right THROUGH, Jim! They held the DOOR!
+- `color_spin_1`: It's a CEILING FAN, Jim!
+- `color_stiff_arm_2`: Just told that tackler NO with a whole ARM!
+- `color_tackle_1`: DOWN, Jim! Gravity wins AGAIN!
+- `color_td_4`: In the END ZONE, Jim! That's where the points LIVE!
+- `color_td_long_2`: Jim! STILL running! Somebody say it's okay to STOP!
+- `color_td_long_3`: That was so FAR, Jim! I got tired just WATCHING!
+- `color_td_long_4`: GOODBYE! Send a postcard, Jim, because that one is GONE!
+- `color_td_walk_1`: Just WALKED into the end zone like they owned the place!
+- `color_td_walk_2`: Nobody within a MILE, Jim! There was time to stop for a SANDWICH!
+- `color_td_walk_5`: Strolled in, Jim! That was a STROLL! A leisurely stroll!
+- `chat_bad_throw_j1_1`: Tony, not the best throw!
+- `chat_bad_throw_j1_2`: Not the BEST, Jim? My nephew throws better, and he's a TODDLER!
+- `chat_dog_j1_1`: Nobody can make the tackle, Tony!
+- `chat_idle_j7_1`: You started a quarterback on a bye week, Tony!
+- `chat_idle_j7_2`: They seemed RESTED!
+- `chat_interception_j1_1`: Tony, what was the quarterback looking at there?
+- `chat_intro_j3_2`: Score POINTS, Jim! As many as possible! Ideally more than the other TEAM!
+- `chat_lawn_chair_j1_2`: That's going to hurt TOMORROW, Jim! I felt it NOW!
+- `chat_lawn_chair_t1_1`: Jim, is that one OKAY? Are they OKAY?
+- `chat_lawn_chair_t1_2`: Back on their feet, Tony!
+- `chat_lawn_chair_t1_3`: TOUGHER than me, Jim! I'd have gone HOME!
+- `chat_td_j2_2`: Sure, Jim! Had the ball, and then: END ZONE! That's the whole thing!
+- `chat_td_walk_j1_1`: Nobody anywhere near, Tony!
+- `show_star_1_1`: One player is doing EVERYTHING out there, Jim!
+- `show_star_1_3`: Somebody give that player a RAISE!
+- `show_star_2_2`: The rest of the team should send a FRUIT BASKET!
+- `show_long_run_2`: STILL running, Jim! Somebody check the PARKING LOT!
+- `show_dives_1`: Everybody is diving ALL OVER the place, Jim!
 
 ### The stories
 
@@ -389,8 +712,8 @@ The text of the chapters is in `scripts/data/booth_story.gd`, in order.
 
 - j1: A solid football team.
 - j2: Interesting choice.
-- t1: Ooh, I LIKE these guys!
-- t2: THOSE are my guys! I have NO idea who they are!
+- t1: Ooh, I LIKE this team!
+- t2: THAT'S my team! I have NO idea who they are!
 - t3: Biscuit could beat THIS team, Jim!
 
 `menu_side` (team select: the controller changes side)

@@ -21,8 +21,17 @@
 [ext_resource type="Resource" path="res://resources/plays/offense/smash.tres" id="19_smash"]
 [ext_resource type="Resource" path="res://resources/plays/offense/sluggo.tres" id="20_sluggo"]
 [ext_resource type="Resource" path="res://resources/plays/offense/hail_mary.tres" id="21_hail_mary"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gun_verts.tres" id="22_gun_verts"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gun_stick.tres" id="23_gun_stick"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gun_stretch.tres" id="24_gun_stretch"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_fade.tres" id="25_gl_fade"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_rub.tres" id="26_gl_rub"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_corner.tres" id="27_gl_corner"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_dive.tres" id="28_gl_dive"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_power.tres" id="29_gl_power"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_pa.tres" id="30_gl_pa"]
 
 [resource]
 script = ExtResource("1_book")
-plays = Array[ExtResource("2_play")]([ExtResource("3_hb_dive"), ExtResource("4_power_sweep"), ExtResource("5_counter"), ExtResource("6_quick_slants"), ExtResource("7_curl_flat"), ExtResource("8_hb_screen"), ExtResource("9_crossfire"), ExtResource("10_flood"), ExtResource("11_deep_bomb"), ExtResource("12_off_tackle"), ExtResource("13_hb_toss"), ExtResource("14_draw"), ExtResource("15_end_around"), ExtResource("16_pa_post"), ExtResource("17_bootleg"), ExtResource("18_mesh"), ExtResource("19_smash"), ExtResource("20_sluggo")])
+plays = Array[ExtResource("2_play")]([ExtResource("3_hb_dive"), ExtResource("4_power_sweep"), ExtResource("5_counter"), ExtResource("6_quick_slants"), ExtResource("7_curl_flat"), ExtResource("8_hb_screen"), ExtResource("9_crossfire"), ExtResource("10_flood"), ExtResource("11_deep_bomb"), ExtResource("12_off_tackle"), ExtResource("13_hb_toss"), ExtResource("14_draw"), ExtResource("15_end_around"), ExtResource("16_pa_post"), ExtResource("17_bootleg"), ExtResource("18_mesh"), ExtResource("19_smash"), ExtResource("20_sluggo"), ExtResource("22_gun_verts"), ExtResource("23_gun_stick"), ExtResource("24_gun_stretch"), ExtResource("25_gl_fade"), ExtResource("26_gl_rub"), ExtResource("27_gl_corner"), ExtResource("28_gl_dive"), ExtResource("29_gl_power"), ExtResource("30_gl_pa")])
 hail_mary = ExtResource("21_hail_mary")

@@ -3,7 +3,9 @@ extends RefCounted
 ## The stories Jim and Tony tell without meaning to. Each is a thread of
 ## chapters that come out in order, a chapter at a time in the huddle, and the
 ## game remembers how far the person has got in each from one session to the
-## next. The threads run side by side:
+## next. They are told in the games of a season only (never in an exhibition)
+## and start over with every new season (Season.start()). The threads run side
+## by side:
 ##
 ## - `carol`: eleven years in the booth, Jim's wife Carol, and what Tony seems
 ##   to know about her. Nothing in it is ever confirmed (see docs/booth.md).
@@ -35,6 +37,9 @@ const KEY_OLD: String = "heard"
 ## chapters of each that one match may bring.
 const THREADS: Array[StringName] = [CAROL, COMMISSIONER]
 const PER_MATCH: Dictionary[StringName, int] = {CAROL: 2, COMMISSIONER: 1}
+## With the Carol thread told, the commissioner's has the match to itself: a
+## season is ten games, and the closet has to be opened before it is over.
+const PER_MATCH_ALONE: int = 3
 ## The commissioner can be heard in the closet once the first of these
 ## chapters has been told and until the second has.
 const CAPTIVE_FROM: StringName = &"closet"
@@ -184,6 +189,14 @@ static func all_chapters() -> Array[Dictionary]:
 	for thread: StringName in THREADS:
 		all.append_array(chapters(thread))
 	return all
+
+
+## The most chapters of `thread` the match being played may bring.
+static func share(thread: StringName) -> int:
+	for other: StringName in THREADS:
+		if other != thread and not finished(other):
+			return PER_MATCH.get(thread, 1)
+	return maxi(PER_MATCH.get(thread, 1), PER_MATCH_ALONE)
 
 
 ## How many chapters of `thread` the person has heard, from the first.

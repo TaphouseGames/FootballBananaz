@@ -103,6 +103,19 @@ const BLAZE_DOWN: int = 4
 const BLAZE_YARDS: int = 20
 ## The exchanges that open the broadcast, before the first kickoff.
 const QUIP_INTRO: StringName = &"color_intro"
+## What the booth says about the season. A moment's lines for a game of the
+## season, for a playoff game and for the final (the Fruit Cup) are files under
+## the moment's own name with one of these after it: `color_idle_playoff_1`,
+## `chat_intro_cup_j1_1`, `announcer_final_cup_1`. Where there are none the
+## moment's usual lines are said (see _season_take()).
+const SEASON_SUFFIX: String = "_season"
+const PLAYOFF_SUFFIX: String = "_playoff"
+const CUP_SUFFIX: String = "_cup"
+## Jim's call that the game is level at the end and goes to sudden death;
+## Tony's thought on it is `color_overtime`.
+const CALL_OVERTIME: StringName = &"announcer_overtime"
+const OVERTIME_MOMENT: String = "overtime"
+const QUIP_OVERTIME_CHANCE: float = 0.9
 const CHAT_PREFIX: String = "chat_"
 ## The halftime report's exchanges: files `show_<id>_<part>`, picked by id
 ## (see HalftimeExchanges), not at random.
@@ -119,8 +132,8 @@ const BREAKAWAY_RETURN_YARDS: float = 40.0
 ## The openings not heard yet this time round, by their place among the
 ## exchanges of QUIP_INTRO, and the one heard last. Kept from match to match:
 ## the director itself is made again with every one.
-static var _intro_bag: Array[int] = []
-static var _last_intro: int = -1
+static var _intro_bags: Dictionary[StringName, Array] = {}
+static var _last_intros: Dictionary[StringName, int] = {}
 
 var game: Game
 var tuning: Tuning
@@ -137,8 +150,9 @@ var quip_asks: Dictionary[StringName, int] = {}
 ## short by a call, and the `chat_*` sets left out for a missing part.
 var exchange_counts: Dictionary[StringName, int] = {&"started": 0, &"finished": 0, &"cut": 0, &"resumed": 0}
 var broken_exchanges: PackedStringArray = PackedStringArray()
-## The booth tells its story (see BoothStory). Off with the CPU playing both
-## teams, so the headless tests leave the person's place in it alone.
+## The booth tells its story (see BoothStory): in the games of a season only,
+## never in an exhibition. Off with the CPU playing both teams, so the
+## headless tests leave the person's place in it alone.
 var story_on: bool = false
 ## Chapters of the story heard to the end in this match.
 var stories_told: int = 0
@@ -220,7 +234,7 @@ func setup(p_game: Game) -> void:
 	tuning = p_game.tuning
 	make_buses(tuning)
 	_load_streams()
-	story_on = tuning.story_enabled and not game.autoplay
+	story_on = tuning.story_enabled and game.season() != null
 	if story_on:
 		_retire_stories()
 	for i: int in POOL_SIZE:
@@ -354,14 +368,18 @@ func _insist(sound: StringName) -> void:
 ## Jim and Tony open the broadcast with one of their exchanges, a different one
 ## every match until all have been heard. False if there is nothing to say.
 func intro() -> bool:
-	play_counts[QUIP_INTRO] = play_counts.get(QUIP_INTRO, 0) + 1
-	var openings: Array = _exchanges.get(QUIP_INTRO, [])
+	# A playoff game opens with its own word, a week of the season now and then.
+	var moment: StringName = QUIP_INTRO
+	if game.is_playoff() or (game.season_round >= 0 and randf() < tuning.season_intro_chance):
+		moment = _season_take(QUIP_INTRO)
+	play_counts[moment] = play_counts.get(moment, 0) + 1
+	var openings: Array = _exchanges.get(moment, [])
 	if openings.is_empty():
-		missing[QUIP_INTRO] = true
+		missing[moment] = true
 		return false
 	if not tuning.audio_enabled:
 		return false
-	var opening: Dictionary = openings[next_intro(openings.size())]
+	var opening: Dictionary = openings[next_intro(openings.size(), moment)]
 	var tony: bool = opening[&"tony_first"]
 	for stream: AudioStream in opening[&"parts"]:
 		_exchange_parts.append([tony, stream])
@@ -370,17 +388,34 @@ func intro() -> bool:
 	return true
 
 
-## Which of `count` openings comes next: each once in a random order, and the
-## first of a new round is never the last of the one before.
-static func next_intro(count: int) -> int:
-	_intro_bag = _intro_bag.filter(func(index: int) -> bool: return index < count)
-	if _intro_bag.is_empty():
-		_intro_bag.assign(range(count))
-		_intro_bag.shuffle()
-		if count > 1 and _intro_bag.back() == _last_intro:
-			_intro_bag.push_front(_intro_bag.pop_back())
-	_last_intro = _intro_bag.pop_back()
-	return _last_intro
+## Which of the `count` openings of `moment` comes next: each once in a random
+## order, and the first of a new round is never the last of the one before.
+static func next_intro(count: int, moment: StringName = QUIP_INTRO) -> int:
+	var bag: Array = (_intro_bags.get(moment, []) as Array).filter(func(index: int) -> bool: return index < count)
+	if bag.is_empty():
+		bag.assign(range(count))
+		bag.shuffle()
+		if count > 1 and bag.back() == _last_intros.get(moment, -1):
+			bag.push_front(bag.pop_back())
+	var pick: int = bag.pop_back()
+	_intro_bags[moment] = bag
+	_last_intros[moment] = pick
+	return pick
+
+
+## `sound` as it is said in the game being played: its lines for the final of
+## the season, for a playoff game or for any game of the season, if there are
+## any on file; otherwise, and in an exhibition, `sound` itself.
+func _season_take(sound: StringName) -> StringName:
+	if game.season_round < 0:
+		return sound
+	var suffix: String = SEASON_SUFFIX
+	if game.season_round == Season.FINAL_ROUND:
+		suffix = CUP_SUFFIX
+	elif game.is_playoff():
+		suffix = PLAYOFF_SUFFIX
+	var special: StringName = StringName(String(sound) + suffix)
+	return special if has_sound(special) else sound
 
 
 ## Jim and Tony say halftime exchange `id` (see HalftimeExchanges) once whoever
@@ -630,7 +665,7 @@ func _story_due() -> StringName:
 	var least: float = 1.0
 	for thread: StringName in BoothStory.THREADS:
 		var chapter: Dictionary = BoothStory.next(thread)
-		var share: float = float(_told.get(thread, 0)) / float(maxi(BoothStory.PER_MATCH.get(thread, 1), 1))
+		var share: float = float(_told.get(thread, 0)) / float(maxi(BoothStory.share(thread), 1))
 		if chapter.is_empty() or not story_recorded(chapter) or share >= least:
 			continue
 		least = share
@@ -711,6 +746,11 @@ func _idle_quip() -> StringName:
 	# With the commissioner in the closet, now and then it is him they hear.
 	if story_on and BoothStory.captive() and has_sound(QUIP_IDLE_CAPTIVE) and randf() < tuning.story_captive_chance:
 		return QUIP_IDLE_CAPTIVE
+	# In a game of the season, now and then it is the season they talk about.
+	if game.season_round >= 0 and randf() < tuning.season_idle_chance:
+		var special: StringName = _season_take(QUIP_IDLE)
+		if special != QUIP_IDLE:
+			return special
 	var margin: int = absi(game.home.score - game.home.opponent.score)
 	var sound: StringName = QUIP_IDLE
 	if margin >= tuning.audio_blowout_points:
@@ -973,11 +1013,22 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 			if not game.has_halftime_show():
 				shout(&"announcer_half")
 				quip(&"color_half", QUIP_HALF)
-		&"GameOver":
+		&"Overtime":
 			play(&"buzzer")
+			excite(0.6)
+			if has_sound(CALL_OVERTIME):
+				shout(CALL_OVERTIME)
+			var thought: StringName = StringName(QUIP_PREFIX + OVERTIME_MOMENT)
+			if has_sound(thought):
+				quip(thought, QUIP_OVERTIME_CHANCE)
+		&"GameOver":
+			# After sudden death the buzzer has already gone.
+			if not game.overtime:
+				play(&"buzzer")
 			play_music(&"music_final")
-			shout(&"announcer_final")
-			quip(&"color_final", QUIP_FINAL)
+			# A playoff game and the final of the season end on words of their own.
+			shout(_season_take(StringName("announcer_final")))
+			quip(_season_take(StringName(QUIP_PREFIX + "final")), QUIP_FINAL)
 			var mine: Team = game.human.team if game.human.is_active() and game.human.team != null else game.home
 			if mine.score > mine.opponent.score:
 				crowd_react(mine, 1.0)
