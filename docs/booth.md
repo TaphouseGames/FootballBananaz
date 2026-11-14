@@ -15,6 +15,7 @@ and the text of the lines. Read this before writing a new one.
 - Married to Carol for twenty-six years. Speaks of her rarely and fondly.
 - Eleven years in the booth with Tony.
 - Takes the fantasy league seriously: spreadsheets, waiver wire, the lot.
+  Carol joined it this year and is beating him.
 - He is fond of Tony and would never admit it. His weapon is the pause.
 
 ## Tony (color)
@@ -302,6 +303,14 @@ each):
 - `menu_options_t3`: DON'T press options! That's how they TRACK you!
 - `menu_welcome_t3`: Sorry I'm late, Jim! THURSDAY traffic! / It's Sunday, Tony.
 - `menu_idle_j3` (Jim is on the phone): Yes, dear. No, he's here. I'll ask him. / Ask me WHAT, Jim? / Carol says hello. / HI, CAROL! I mean, hello, Jim's wife!
+
+The fantasy league, which Carol is in too (one take each):
+
+- `color_idle_38`: My fantasy team is ZERO and NINE, Jim! That's called CONSISTENCY!
+- `color_idle_39`: Carol's in our fantasy league now, Jim! She's in FIRST PLACE! I helped her DRAFT!
+- `chat_idle_j10`: Carol joined our fantasy league this year, Tony. She's beating me. / She's beating EVERYBODY, Jim! She's RUTHLESS! / She named her team "Sorry, Jim."
+- `chat_idle_t12`: Jim, I need a running back for my fantasy team! What'll you take for YOURS? / Nothing you have, Tony. / I've got NACHOS! / ...Go on.
+- `chat_idle_t13`: Carol and I made a fantasy TRADE last night, Jim! / Last night? I was home last night. / It was a very QUIET trade, Jim!
 
 The closet, only while the commissioner is in it (the noise is part of the
 recording):
