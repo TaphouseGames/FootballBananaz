@@ -57,4 +57,5 @@ description = "Linebacker shoots the middle gap. Man on the wideouts, one safety
 run_fit = 0.51
 short_fit = 0.53
 deep_fit = 0.56
+group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])

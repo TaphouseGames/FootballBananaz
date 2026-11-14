@@ -59,4 +59,5 @@ description = "Four rush, zones outside, one safety deep. Open in the short midd
 run_fit = 0.66
 short_fit = 0.62
 deep_fit = 0.2
+group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])

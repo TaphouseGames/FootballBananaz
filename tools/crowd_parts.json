@@ -1,0 +1,69 @@
+{
+  "_about": "The fans the crowd's parts are cut from (tools/prep_crowd.py makes assets/stadium/crowd_kit.glb from this). Every fan is one whole Tripo character; its head, torso (the outfit) and legs become parts that fit any other part of the same gender. `template` is the prompt, with `{who}` from the fan. `source` is the raw model, from the project root; a fan without one is skipped. `use` lists the parts of the fan that go into the kit. `yaw` turns the model to face -Y in Blender. `joints` overrides a joint prep_crowd.py found (names as printed after JOINTS; [x, y, z] with the height = 1, front = -Y, the fan's left = +X). `keys` overrides a colour it sampled (`skin`, `hair`, `shirt`, `pants`: [r, g, b] 0..1 as in the texture; `hair`: null for a bald head). `options` tunes how its texture is read: `chroma` (0.07: how far from a sampled colour a pixel may be and still count as it; lower when skin gets painted as shirt) and `luma` ([0.4, 1.8]: how much darker and brighter). `beard` (true for a fan whose beard hangs below the chin, so that it goes with the head and not with the shirt; only if the hair is not the colour of the shirt). `budgets` gives a fan triangle budgets of its own (same shape as the `budgets` below; what it leaves out is as for everybody). A `placeholder` fan is used only while its gender has no other fan with a source.",
+  "template": "a sports fan, {who}, standing upright in a T-pose with arms straight out to the sides and legs slightly apart, clean shaven, smooth skin, chunky stylized cartoon character, simple shapes, single isolated figure",
+  "genders": {
+    "m": {"height": 1.85},
+    "f": {"height": 1.72}
+  },
+  "budgets": {
+    "near": {"head": 350, "torso": 350, "legs": 200},
+    "mid": {"head": 120, "torso": 130, "legs": 70},
+    "far": {"head": 40, "torso": 56, "legs": 34}
+  },
+  "atlas_cell": 512,
+  "fans": {
+    "m0": {
+      "gender": "m",
+      "placeholder": true,
+      "who": "(the dudeman player model, standing in until the real fans are generated)",
+      "source": "assets/player/dudeman.glb",
+      "mesh": "FootballPlayer",
+      "yaw": 0,
+      "use": ["head", "torso", "legs"],
+      "joints": {},
+      "keys": {}
+    },
+    "m1": {
+      "gender": "m",
+      "outfit": "jersey",
+      "who": "a stocky man with a round face and a big grin, short dark brown hair, light skin, wearing a plain light grey short-sleeved football jersey with a big number on the chest, blue jeans and white sneakers",
+      "source": "assets/stadium/source/tripo/fans/m1/tripo-out/fan-m1-dfb3144e/model.glb",
+      "yaw": -90,
+      "use": ["head", "torso", "legs"],
+      "joints": {},
+      "keys": {}
+    },
+    "m2": {
+      "gender": "m",
+      "outfit": "hoodie",
+      "who": "a tall lean young man with a long face and raised eyebrows, short black curly hair, brown skin, wearing a plain light grey hoodie with the hood down, dark blue shorts and sneakers",
+      "source": "assets/stadium/source/tripo/fans/m2/tripo-out/fan-m2-uv-38b0537c/model.glb",
+      "yaw": -90,
+      "use": ["head", "torso"],
+      "joints": {},
+      "keys": {}
+    },
+    "m3": {
+      "gender": "m",
+      "outfit": "tank top",
+      "who": "an older man with a square jaw, a bald head and a big grey moustache, tan skin, wearing a plain light grey tank top, khaki trousers and brown boots",
+      "source": "assets/stadium/source/tripo/fans/m3/tripo-out/fan-m3-01843d2d/model.glb",
+      "yaw": -90,
+      "use": ["head", "torso"],
+      "joints": {},
+      "keys": {}
+    },
+    "m4": {
+      "gender": "m",
+      "outfit": "fan t-shirt",
+      "who": "(from concept art, not from the template: assets/stadium/source/tripo/fans/m4_concept/FAN.jpg, a burly bearded man in a white FAN shirt with striped sleeves, torn jeans and red sneakers)",
+      "source": "assets/stadium/source/tripo/fans/m4/tripo-out/fan-m4-uv-8e7edb88/model.glb",
+      "yaw": -90,
+      "use": ["head", "torso", "legs"],
+      "budgets": {"near": {"head": 500, "torso": 500, "legs": 500}},
+      "options": {"chroma": 0.05, "beard": true},
+      "joints": {},
+      "keys": {}
+    }
+  }
+}

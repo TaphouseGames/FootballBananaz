@@ -2,9 +2,9 @@ class_name PlayDiagram
 extends Control
 ## Chalkboard drawing of one play, made from the play resource itself so it
 ## always matches what the players will do.
-## Offense is drawn from behind the offense (downfield is up). Defense is drawn
-## from behind the defense (the line of scrimmage is at the top), the way the
-## person sees the field when they play that side.
+## Both are drawn with the line of scrimmage low on the board and the deep men
+## above it. Left and right are as the person sees them on the field when they
+## play that side: from behind the offense, or from behind the defense.
 
 const LATERAL: float = 21.0
 ## Yards shown past the line of scrimmage and behind it, for an offensive play.
@@ -26,7 +26,7 @@ const SPY_COLOR: Color = Color(1.0, 0.7, 0.25)
 
 var _offense: OffensePlay
 var _defense: DefensePlay
-## Offense only: drawn mirrored left to right.
+## Drawn mirrored left to right.
 var _flipped: bool = false
 
 
@@ -165,8 +165,9 @@ func _draw_zone(center: Vector2, radius: float, color: Color) -> void:
 
 
 func _def_point(play_point: Vector2) -> Vector2:
-	var u: float = (LATERAL - play_point.y) / (2.0 * LATERAL)
-	var v: float = (play_point.x + DEFENSE_BEHIND) / (DEFENSE_AHEAD + DEFENSE_BEHIND)
+	var lateral: float = -play_point.y if _flipped else play_point.y
+	var u: float = (LATERAL - lateral) / (2.0 * LATERAL)
+	var v: float = (DEFENSE_AHEAD - play_point.x) / (DEFENSE_AHEAD + DEFENSE_BEHIND)
 	return Vector2(u * size.x, v * size.y)
 
 

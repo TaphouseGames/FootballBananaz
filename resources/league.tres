@@ -1,11 +1,11 @@
-[gd_resource type="Resource" script_class="League" format=3]
+[gd_resource type="Resource" script_class="League" format=3 uid="uid://na52fkdwdjle"]
 
-[ext_resource type="Script" path="res://scripts/data/league.gd" id="1_league"]
-[ext_resource type="Script" path="res://scripts/data/team_data.gd" id="2_team"]
-[ext_resource type="Resource" path="res://resources/teams/bananaz.tres" id="3_bananaz"]
-[ext_resource type="Resource" path="res://resources/teams/coconuts.tres" id="4_coconuts"]
-[ext_resource type="Resource" path="res://resources/teams/grapes.tres" id="5_grapes"]
-[ext_resource type="Resource" path="res://resources/teams/berries.tres" id="6_berries"]
+[ext_resource type="Script" uid="uid://ymgitvytffpt" path="res://scripts/data/league.gd" id="1_league"]
+[ext_resource type="Script" uid="uid://84mgn6egeexs" path="res://scripts/data/team_data.gd" id="2_team"]
+[ext_resource type="Resource" uid="uid://ds4686wiswwq6" path="res://resources/teams/bananaz.tres" id="3_bananaz"]
+[ext_resource type="Resource" uid="uid://m6o4bsaiorww" path="res://resources/teams/coconuts.tres" id="4_coconuts"]
+[ext_resource type="Resource" uid="uid://cwn8uvhm5eh7l" path="res://resources/teams/grapes.tres" id="5_grapes"]
+[ext_resource type="Resource" uid="uid://c6w47643ii74" path="res://resources/teams/berries.tres" id="6_berries"]
 [ext_resource type="Resource" path="res://resources/teams/peachez.tres" id="7_peachez"]
 [ext_resource type="Resource" path="res://resources/teams/applez.tres" id="8_applez"]
 

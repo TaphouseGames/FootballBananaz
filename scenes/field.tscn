@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/field.gd" id="1_field"]
 [ext_resource type="Script" path="res://scripts/field_fx.gd" id="2_fx"]
+[ext_resource type="Script" path="res://scripts/stadium.gd" id="3_stadium"]
 
 [node name="Field" type="Node3D"]
 script = ExtResource("1_field")
@@ -14,3 +15,6 @@ script = ExtResource("1_field")
 
 [node name="Fx" type="Node3D" parent="."]
 script = ExtResource("2_fx")
+
+[node name="Stadium" type="Node3D" parent="."]
+script = ExtResource("3_stadium")

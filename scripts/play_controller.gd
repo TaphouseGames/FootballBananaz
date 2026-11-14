@@ -26,6 +26,8 @@ var off_play: OffensePlay
 var def_play: DefensePlay
 ## The offensive play is being run mirrored left to right.
 var off_flipped: bool = false
+## The defensive play is being run mirrored left to right.
+var def_flipped: bool = false
 ## +1 or -1: the offense's direction along X.
 var off_dir: float = 1.0
 var los_x: float = 0.0
@@ -44,6 +46,8 @@ var was_fumble: bool = false
 ## out, where, and who got it back.
 var passer: Player
 var pass_intended: Player
+## The pass in the air was thrown out of bounds on purpose: nobody can get to it.
+var thrown_away: bool = false
 var catcher: Player
 var interceptor: Player
 var tackled_by: Player
@@ -78,10 +82,12 @@ var handoff_time: float = 0.0
 ## the kick goes to, and there is no quarterback or play call.
 var kickoff: bool = false
 ## This play is the scramble that opens a half: the ball goes up from midfield
-## and is anybody's. `offense` is only the side the camera starts behind.
+## and the two mascots go for it. `offense` is only the side the camera starts behind.
 var scramble: bool = false
 ## The team that came up with the scramble's ball, or null while it is still out.
 var scramble_team: Team
+## The mascots are on the field in place of the teams (see _field).
+var _mascots_out: bool = false
 var returner: Player
 ## The returner gave himself up in his own end zone, or ran out of the back of it.
 var was_touchback: bool = false
@@ -171,13 +177,16 @@ func to_world(point: Vector2, flip: float = 1.0) -> Vector3:
 	return Vector3(los_x + off_dir * point.x, 0.0, clampf(off_dir * flip * point.y, -limit, limit))
 
 
-## `p_flipped` runs the offensive play mirrored left to right.
-func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false) -> void:
+## `p_flipped` runs the offensive play mirrored left to right, `p_def_flipped`
+## the defensive one.
+func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_def_flipped: bool = false) -> void:
 	_reset_play()
 	off_play = p_off
 	def_play = p_def
 	off_flipped = p_flipped
+	def_flipped = p_def_flipped
 	var flip: float = -1.0 if p_flipped else 1.0
+	var def_flip: float = -1.0 if p_def_flipped else 1.0
 	los_x = game.los_x
 
 	var face_off: Vector3 = Vector3(off_dir, 0.0, 0.0)
@@ -229,7 +238,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false) ->
 	for i: int in defense.players.size():
 		var player: Player = defense.players[i]
 		var assignment: DefenseAssignment = p_def.assignments[mini(i, p_def.assignments.size() - 1)]
-		var start: Vector3 = to_world(_def_point(assignment.start, deepest, room))
+		var start: Vector3 = to_world(_def_point(assignment.start, deepest, room), def_flip)
 		var target: Player = null
 		if assignment.job == DefenseAssignment.Job.MAN and not cover_order.is_empty():
 			target = cover_order[mini(assignment.man_target, cover_order.size() - 1)]
@@ -239,7 +248,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false) ->
 		# comes at full speed.
 		if assignment.job == DefenseAssignment.Job.RUSH and assignment.start.x <= tuning.line_depth:
 			player.speed_scale = tuning.line_speed_scale
-		player.brain.assign_defense(assignment, start, target, to_world(_def_point(assignment.zone_center, deepest, room)))
+		player.brain.assign_defense(assignment, start, target, to_world(_def_point(assignment.zone_center, deepest, room), def_flip))
 	_scout_defense()
 	_roll_blown_coverage()
 	_roll_takeout()
@@ -267,10 +276,12 @@ func _def_point(point: Vector2, deepest: float, room: float) -> Vector2:
 
 ## Clears everything left over from the last play.
 func _reset_play() -> void:
+	_field(false)
 	offense = game.offense
 	defense = game.defense
 	off_dir = float(offense.attack_dir)
 	off_flipped = false
+	def_flipped = false
 	kickoff = false
 	scramble = false
 	scramble_team = null
@@ -284,6 +295,7 @@ func _reset_play() -> void:
 	fumbler = null
 	passer = null
 	pass_intended = null
+	thrown_away = false
 	catcher = null
 	interceptor = null
 	tackled_by = null
@@ -423,10 +435,26 @@ func kick_off() -> void:
 
 # --- Scramble --------------------------------------------------------------------
 
-## Lines both teams up for the scramble that opens a half: the ball in the
-## middle of the field, each team in a row across its own side of it.
+## Who is on the field: each team's mascot alone (the scramble) or its seven.
+## Everything that goes through `players` or a team's `players` follows.
+func _field(mascots: bool) -> void:
+	if mascots == _mascots_out:
+		return
+	_mascots_out = mascots
+	players.clear()
+	for team: Team in [game.home, game.away]:
+		team.field_mascot(mascots)
+		players.append_array(team.players)
+	for player: Player in players:
+		player.play = self
+	game.field.stadium.set_mascots_visible(not mascots)
+
+
+## Lines up the scramble that opens a half: the ball in the middle of the
+## field and each team's mascot, nobody else, on its own side of it.
 func line_up_scramble() -> void:
 	_reset_play()
+	_field(true)
 	scramble = true
 	handoff_done = true
 	los_x = tuning.field_length * 0.5
@@ -587,6 +615,9 @@ func _roll_blown_coverage() -> void:
 ## team playing against the person gets Tuning.cpu_skill and the person's own
 ## teammates get none; with nobody playing, both teams get it.
 func team_edge(team: Team) -> float:
+	# The mascots are each other's equal, whoever plays one.
+	if scramble:
+		return 0.0
 	if edge_team != null:
 		return tuning.cpu_skill if team == edge_team else 0.0
 	if human.is_active() and human.team == team:
@@ -1254,6 +1285,34 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	human.on_throw(target)
 
 
+## The quarterback gets rid of it: out of bounds past the sideline on `side`
+## (+1 or -1 along z), a little downfield. Nobody can catch it; it is incomplete
+## when it lands.
+func throw_away(side: float) -> void:
+	if _thinking:
+		_queued_actions.append(throw_away.bind(side))
+		return
+	if not can_pass():
+		return
+	var back: float = tuning.end_zone_depth - 1.0
+	var point: Vector3 = Vector3(qb.position.x + off_dir * tuning.throwaway_downfield, 0.0, 0.0)
+	point.x = clampf(point.x, -back, tuning.field_length + back)
+	point.z = (1.0 if side >= 0.0 else -1.0) * (tuning.half_width() + tuning.throwaway_past_sideline)
+	ball.throw_to(qb, null, point, tuning.throwaway_speed, tuning)
+	thrown_away = true
+	pass_placement = Placement.NORMAL
+	pass_short = 0.0
+	ball_coverer = null
+	ball_breakers.clear()
+	phase = Phase.AIR
+	throw_time = live_time
+	passer = qb
+	pass_intended = null
+	game.add_stat(&"passes")
+	game.add_stat(&"throwaways")
+	game.audio.play(&"throw", 0.45)
+
+
 func _resolve_pass_arrival() -> void:
 	if kickoff:
 		# The returner always fields it.
@@ -1263,6 +1322,12 @@ func _resolve_pass_arrival() -> void:
 		game.add_stat(&"kick_returns")
 		game.audio.play(&"catch")
 		human.on_carrier_changed(returner)
+		return
+	if thrown_away:
+		# Out of everybody's reach: it goes on until it lands.
+		_tip_tried.clear()
+		_tip_bad_throw = false
+		_tip_pass(null, ball.flight_velocity_now())
 		return
 	var point: Vector3 = ball.target_point
 	if pass_short >= 1.0 and ball_coverer != null and ball.intended != null:
@@ -1502,7 +1567,7 @@ func _best_catcher(candidates: Array[Player], point: Vector3, exclude: Player, l
 ## make a play on it, so a catch ends in the hands and not next to them. Only
 ## the path changes: the catch is still decided at the landing spot.
 func _guide_pass() -> void:
-	if ball_dead or ball.state != Ball.State.FLIGHT:
+	if ball_dead or thrown_away or ball.state != Ball.State.FLIGHT:
 		return
 	var left: float = ball.flight_time - ball.flight_elapsed
 	if left > tuning.catch_guide_time:
@@ -1571,7 +1636,7 @@ func do_jump(player: Player) -> void:
 ## From `player` to where the pass in the air comes down, flat. Vector3.INF when
 ## there is no pass for him to go for.
 func _gap_to_pass(player: Player) -> Vector3:
-	if ball_dead or player.has_ball:
+	if ball_dead or thrown_away or player.has_ball:
 		return Vector3.INF
 	var in_flight: bool = phase == Phase.AIR and ball.state == Ball.State.FLIGHT
 	if not in_flight and (phase != Phase.TIPPED or _tip_untouched):

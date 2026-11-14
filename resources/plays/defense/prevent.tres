@@ -66,4 +66,5 @@ description = "Two rush, four deep. Gives up everything underneath."
 run_fit = 0.61
 short_fit = 0.39
 deep_fit = 0.42
+group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])

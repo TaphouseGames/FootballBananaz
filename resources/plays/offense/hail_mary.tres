@@ -54,4 +54,6 @@ script = ExtResource("1_play")
 play_name = "Hail Mary"
 description = "Everyone goes deep. Throw it up and pray."
 category = 2
+group = 2
+heave_only = true
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

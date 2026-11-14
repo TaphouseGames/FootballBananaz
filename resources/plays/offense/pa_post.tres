@@ -56,4 +56,5 @@ description = "Fake the dive up the middle, then a deep post and a go route behi
 category = 2
 handoff_delay = 0.42
 play_action = true
+group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

@@ -53,4 +53,5 @@ description = "Shotgun. Back crosses in front of the quarterback, takes the ball
 category = 0
 is_run = true
 handoff_delay = 0.4
+group = 3
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

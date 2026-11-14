@@ -192,6 +192,10 @@ theme_override_font_sizes/font_size = 28
 text = "OFFENSE  -  1ST & 30"
 horizontal_alignment = 1
 
+[node name="Tabs" type="HBoxContainer" parent="PlaySelect/Margin/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
 [node name="PlayGrid" type="GridContainer" parent="PlaySelect/Margin/Column"]
 layout_mode = 2
 size_flags_vertical = 3

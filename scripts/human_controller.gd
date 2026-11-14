@@ -148,6 +148,13 @@ func update_live() -> void:
 	# The pass leaves on release: the longer the hold, the harder and flatter the
 	# throw. A tap is a lob; a full charge fires a bullet by itself.
 	if is_passer:
+		# Getting rid of it: out of bounds on the side the stick leans to, or else
+		# the nearer sideline. It beats a pass being wound up.
+		if Input.is_action_just_pressed(&"throw_away"):
+			_pass_slot = -1
+			var side: float = signf(move.z) if absf(move.z) > 0.3 else signf(player.position.z)
+			pc.throw_away(side if side != 0.0 else 1.0)
+			return
 		if _pass_slot < 0 or _pass_slot >= pc.eligible.size():
 			_pass_slot = -1
 			for slot: int in mini(PASS_ACTIONS.size(), pc.eligible.size()):

@@ -182,7 +182,7 @@ func _note_cursor() -> void:
 	var cursor: int = select.get(&"_cursor")
 	if _picks_checked == 0:
 		_expect(cursor == 1, "the cursor is on card %d after one step right" % cursor)
-	_expected_play = plays[int(select.get(&"_page")) * HUD.PAGE_SIZE + cursor]
+	_expected_play = plays[cursor]
 
 
 func _shouts() -> int:

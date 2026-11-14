@@ -54,4 +54,5 @@ script = ExtResource("1_play")
 play_name = "Flood"
 description = "Three levels on the right side: deep, middle and flat."
 category = 2
+group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

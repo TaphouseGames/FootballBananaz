@@ -54,4 +54,5 @@ script = ExtResource("1_play")
 play_name = "Mesh"
 description = "Wideouts cross over the middle 8 yards deep. Back angles in underneath."
 category = 1
+group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

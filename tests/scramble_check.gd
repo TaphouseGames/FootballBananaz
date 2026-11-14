@@ -1,11 +1,12 @@
 extends SceneTree
-## Check of the scramble that opens a half: the ball goes up from midfield, both
-## teams run in, and somebody comes out of it with the ball. Plays one scramble
-## after another (CPU against CPU) and prints how they went: when the first man
+## Check of the scramble that opens a half: the ball goes up from midfield, the
+## two mascots run in, and one comes out of it with the ball. Plays one scramble
+## after another (CPU against CPU) and prints how they went: when the first one
 ## got to where it came down against when it landed, how long until somebody had
 ## it, how many were on the turf by then, and who won.
-## Fails if nobody may touch it before it lands does not hold, if too many end
-## with nobody having it, or if one team wins nearly all of them.
+## Fails if anybody but the two mascots is out there or they are not rated 50 in
+## everything, if nobody may touch it before it lands does not hold, if too many
+## end with nobody having it, or if one team wins nearly all of them.
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/scramble_check.gd -- scrambles=N [set=name:value,...]
 
@@ -34,6 +35,7 @@ var _sum_recovered: float = 0.0
 var _longest: float = 0.0
 var _sum_down: int = 0
 var _touchdowns: int = 0
+var _field_failure: String = ""
 
 
 func _initialize() -> void:
@@ -70,6 +72,7 @@ func _physics_process(delta: float) -> bool:
 			_landed_at = -1.0
 			_arrived_at = -1.0
 			_spot = pc.ball.target_point
+			_check_field(pc)
 		elif state != &"Scramble" and state != &"Live":
 			# Whatever came of the last one, the next goes up.
 			_game.scramble_due = true
@@ -94,6 +97,26 @@ func _physics_process(delta: float) -> bool:
 		_do_overs += 1
 		_finish()
 	return _left <= 0 and _report()
+
+
+## Only the two mascots are out there, one a side, and neither is the better.
+func _check_field(pc: PlayController) -> void:
+	if not _field_failure.is_empty():
+		return
+	if pc.players.size() != 2 or not (pc.players[0] is Mascot) or not (pc.players[1] is Mascot):
+		_field_failure = "%d players in the scramble, not the two mascots" % pc.players.size()
+	elif pc.players[0].team == pc.players[1].team:
+		_field_failure = "both mascots are on the same team"
+	else:
+		for rating: StringName in PlayerRatings.CARD_ORDER:
+			if pc.players[0].ratings.get(rating) != 50 or pc.players[1].ratings.get(rating) != 50:
+				_field_failure = "a mascot's %s is not 50" % rating
+	for team: Team in [_game.home, _game.away]:
+		for player: Player in team.squad:
+			if player.visible:
+				_field_failure = "a footballer is on the field during the scramble"
+	if not _field_failure.is_empty():
+		_failures.append(_field_failure)
 
 
 func _note_recovery(pc: PlayController) -> void:

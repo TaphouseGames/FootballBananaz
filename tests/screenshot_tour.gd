@@ -41,10 +41,10 @@ func _tour() -> void:
 		await _wait(0.1)
 	await _wait(0.6)
 	await _shot("1_play_select")
-	# Around the grid and down to the first pass play (second row, first card).
+	# Around the grid and on to the first pass play (the next tab's first card).
 	await _tap(&"move_right")
 	await _tap(&"move_left")
-	await _tap(&"move_down")
+	await _tap(&"page_next")
 	await _shot("1b_play_select_moved")
 	await _tap(&"confirm")
 	await _wait(0.8)

@@ -4,7 +4,10 @@ extends CanvasLayer
 ## play-select panel. Reads everything it shows from Game each frame.
 
 const GRID_COLUMNS: int = 3
-## Plays on one page of the play-select grid.
+## The grid always has at least this many rows, so a tab with few plays has
+## cards of the same size as a full one.
+const GRID_ROWS: int = 2
+## The most plays one tab of the play-select grid has room for.
 const PAGE_SIZE: int = 9
 const CARD_COLOR: Color = Color(0.09, 0.16, 0.13, 0.96)
 const CARD_SELECTED_COLOR: Color = Color(0.14, 0.27, 0.2, 1.0)
@@ -19,8 +22,12 @@ var game: Game
 var _cards: Array[PanelContainer] = []
 var _card_names: Array[Label] = []
 var _diagrams: Array[PlayDiagram] = []
+## Empty cells that fill the grid up to GRID_ROWS rows.
+var _fillers: Array[Control] = []
 var _card_style: StyleBoxFlat
 var _card_selected_style: StyleBoxFlat
+var _tab_style: StyleBoxFlat
+var _tab_selected_style: StyleBoxFlat
 
 var _intro_card: IntroCard
 var _halftime_card: HalftimeCard
@@ -36,6 +43,7 @@ var _halftime_card: HalftimeCard
 @onready var turbo_bar: ProgressBar = $TurboBox/TurboBar
 @onready var play_select: Control = $PlaySelect
 @onready var play_title: Label = $PlaySelect/Margin/Column/Title
+@onready var play_tabs: HBoxContainer = $PlaySelect/Margin/Column/Tabs
 @onready var play_grid: GridContainer = $PlaySelect/Margin/Column/PlayGrid
 @onready var countdown: Label = $Countdown
 @onready var pause_menu: PauseMenu = $PauseMenu
@@ -124,13 +132,18 @@ func set_hint(text: String) -> void:
 	hint.visible = text != ""
 
 
-## `plays` holds OffensePlay or DefensePlay resources, shown as a grid of cards
-## in playbook order.
-func show_play_select(title: String, plays: Array[Resource]) -> void:
+## `plays` holds the OffensePlay or DefensePlay resources of one tab, shown as a
+## grid of cards in playbook order. `tabs` names every tab; `tab` is the open one.
+func show_play_select(title: String, tabs: PackedStringArray, tab: int, plays: Array[Resource]) -> void:
+	_show_tabs(tabs, tab)
 	for card: PanelContainer in _cards:
 		# Out of the grid at once, so a page change never shows both pages.
 		play_grid.remove_child(card)
 		card.queue_free()
+	for filler: Control in _fillers:
+		play_grid.remove_child(filler)
+		filler.queue_free()
+	_fillers.clear()
 	_cards.clear()
 	_card_names.clear()
 	_diagrams.clear()
@@ -170,12 +183,39 @@ func show_play_select(title: String, plays: Array[Resource]) -> void:
 		_cards.append(card)
 		_card_names.append(name_label)
 		_diagrams.append(diagram)
-	# Fades in when it comes up; a page change shows at once.
+	for i: int in range(plays.size(), GRID_COLUMNS * GRID_ROWS):
+		var filler: Control = Control.new()
+		filler.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		filler.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		play_grid.add_child(filler)
+		_fillers.append(filler)
+	# Fades in when it comes up; a tab change shows at once.
 	ScreenFade.pop(play_select, true, ScreenFade.FADE_IN)
 	set_play_cursor(0)
 
 
-## Draws every offensive play mirrored left to right, or as designed.
+## The strip of tab names over the cards, the open one lit.
+func _show_tabs(tabs: PackedStringArray, tab: int) -> void:
+	if _tab_style == null:
+		_tab_style = _make_card_style(CARD_COLOR, CARD_BORDER, 2)
+		_tab_selected_style = _make_card_style(CARD_SELECTED_COLOR, CARD_SELECTED_BORDER, 2)
+	for child: Node in play_tabs.get_children():
+		play_tabs.remove_child(child)
+		child.queue_free()
+	for i: int in tabs.size():
+		var selected: bool = i == tab
+		var label: Label = Label.new()
+		label.text = tabs[i]
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override(&"font_size", 20)
+		label.add_theme_color_override(&"font_color", NAME_SELECTED_COLOR if selected else NAME_COLOR)
+		label.add_theme_stylebox_override(&"normal", _tab_selected_style if selected else _tab_style)
+		play_tabs.add_child(label)
+
+
+## Draws every play mirrored left to right, or as designed.
 func set_play_flipped(flipped: bool) -> void:
 	for diagram: PlayDiagram in _diagrams:
 		diagram.set_flipped(flipped)

@@ -384,6 +384,7 @@ func _build_field() -> void:
 	right.attack_dir = -1
 	field.setup(tuning, left, right)
 	field.markers.visible = false
+	field.stadium.show_jumbotrons(false)
 	left.free()
 	right.free()
 

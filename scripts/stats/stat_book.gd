@@ -24,8 +24,11 @@ func setup(home: Team, away: Team) -> void:
 	players.clear()
 	for team: Team in [home, away]:
 		teams[team] = TeamLine.new()
-		for player: Player in team.players:
+		for player: Player in team.squad:
 			players[player] = PlayerLine.new()
+		# The mascot can come up with a scramble's ball and score: it has a line
+		# to write to, which no table shows.
+		players[team.mascot] = PlayerLine.new()
 
 
 func team_line(team: Team) -> TeamLine:
@@ -70,7 +73,7 @@ func note_score() -> void:
 ## The team's longest run so far, in yards (0 with none).
 func longest_run(team: Team) -> int:
 	var longest: int = 0
-	for player: Player in team.players:
+	for player: Player in team.squad:
 		if players[player].rush_att > 0:
 			longest = maxi(longest, players[player].rush_long)
 	return longest
@@ -79,7 +82,7 @@ func longest_run(team: Team) -> int:
 ## The most touchdowns any one of the team's players has scored himself.
 func top_scorer_tds(team: Team) -> int:
 	var most: int = 0
-	for player: Player in team.players:
+	for player: Player in team.squad:
 		var p: PlayerLine = players[player]
 		most = maxi(most, p.rush_td + p.rec_td + p.return_td)
 	return most
@@ -240,7 +243,7 @@ func _record_fumble(pc: PlayController, final_team: Team) -> void:
 
 func passing_rows(team: Team) -> Array[PackedStringArray]:
 	var rows: Array[PackedStringArray] = []
-	for player: Player in team.players:
+	for player: Player in team.squad:
 		var p: PlayerLine = players[player]
 		if p.has_passing():
 			rows.append(PackedStringArray([label_of(player), "%d/%d" % [p.pass_comp, p.pass_att], str(p.pass_yds), _average(p.pass_yds, p.pass_att), str(p.pass_td), str(p.pass_int), "%d-%d" % [p.sacked, p.sacked_yds]]))
@@ -379,7 +382,7 @@ func _defense_row(label: String, p: PlayerLine) -> PackedStringArray:
 
 ## The team's players, the one with the most of `key` first.
 func _sorted(team: Team, key: Callable) -> Array[Player]:
-	var sorted: Array[Player] = team.players.duplicate()
+	var sorted: Array[Player] = team.squad.duplicate()
 	sorted.sort_custom(func(a: Player, b: Player) -> bool:
 		var left: int = key.call(players[a])
 		var right: int = key.call(players[b])

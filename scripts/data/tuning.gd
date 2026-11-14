@@ -20,12 +20,6 @@ extends Resource
 ## finished and then the game stops for a warning before the next snap or
 ## kickoff (like the NFL's two-minute warning). 0 turns it off.
 @export var warning_time: float = 30.0
-## In either half's last this many seconds, the playbook's Hail Mary takes
-## the first play's place (the top-left card on page 1). 0 turns it off.
-@export var hail_mary_time: float = 5.0
-## The Hail Mary only replaces the first play when the line of scrimmage is
-## more than this many yards from the goal line.
-@export var hail_mary_min_distance: float = 20.0
 ## Seconds the warning banner stays up.
 @export var warning_banner_time: float = 2.5
 @export var touchdown_points: int = 6
@@ -176,6 +170,11 @@ extends Resource
 @export var pass_release_height: float = 1.9
 @export var pass_catch_height: float = 1.3
 @export var pass_max_lead_time: float = 2.6
+## Throwing it away: flat speed of the ball, how many yards past the sideline it
+## comes down, and how many yards downfield of the quarterback.
+@export var throwaway_speed: float = 24.0
+@export var throwaway_past_sideline: float = 4.0
+@export var throwaway_downfield: float = 12.0
 ## Throwing on the run (turbo held): the pass can miss by up to this many yards
 ## per yard thrown.
 @export var pass_scramble_error: float = 0.18
@@ -1044,6 +1043,37 @@ extends Resource
 @export var pylon_knock_scale: float = 0.4
 ## How close (yd) the ball has to come to a pylon's surface to touch it.
 @export var pylon_ball_margin: float = 0.1
+
+@export_group("Stadium")
+## The stands, the crowd and the dressing round the field (see Stadium).
+@export var stadium_enabled: bool = true
+## Share of the seats with a fan in them, 0..1. There are about 11,000 seats.
+@export_range(0.0, 1.0) var crowd_density: float = 0.93
+## Rows of seats, counted up from the wall.
+@export var stadium_rows: int = 13
+## Share of home fans on the home side (the stand at -Z and the left end) and
+## of visiting fans on the other. The rest of each are the other lot.
+@export_range(0.0, 1.0) var crowd_home_share: float = 0.85
+@export_range(0.0, 1.0) var crowd_away_share: float = 0.7
+## Share of the crowd in no team's colour.
+@export_range(0.0, 1.0) var crowd_neutral_share: float = 0.15
+## Share of the fans who are women (none while the kit has no parts for them).
+@export_range(0.0, 1.0) var crowd_female_share: float = 0.45
+## Who sits where and what they look like: another number, another crowd.
+@export var crowd_seed: int = 4242
+## The crowd's colours are multiplied by `dim` and pulled toward grey by
+## 1 - `saturation`, so the players and the ball stand out against the stands.
+@export_range(0.0, 1.0) var crowd_dim: float = 0.55
+@export_range(0.0, 1.0) var crowd_saturation: float = 0.7
+## Yards from the camera to a piece of the stands up to which its fans are
+## drawn in full detail, and beyond which they are drawn at their plainest
+## (in between: the middle level). Lower both on a weak graphics card.
+@export var crowd_lod_near: float = 30.0
+@export var crowd_lod_far: float = 65.0
+## Seconds between two stadium waves, and how long one takes to go round.
+@export var wave_min_gap: float = 45.0
+@export var wave_max_gap: float = 90.0
+@export var wave_lap_time: float = 9.0
 
 
 func half_width() -> float:

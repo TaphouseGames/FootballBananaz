@@ -2,6 +2,8 @@ class_name Team
 extends Node3D
 ## A side: its identity, direction of attack, score, and seven Player children.
 
+const MASCOT_SCENE: PackedScene = preload("res://scenes/mascot.tscn")
+
 @export var team_name: String = "Team"
 @export var short_name: String = "TEAM"
 @export var team_color: Color = Color.WHITE
@@ -20,7 +22,11 @@ extends Node3D
 var white_kit: bool = false
 var score: int = 0
 var opponent: Team
+## Who is on the field for this team: its seven, or for the scramble that opens
+## a half its mascot alone (see field_mascot). The seven are always in `squad`.
 var players: Array[Player] = []
+var squad: Array[Player] = []
+var mascot: Mascot
 ## How the CPU leans when it calls this team's offense: a multiplier for each
 ## OffensePlay.Category (run, short, deep). See Roster.call_bias().
 var call_bias: PackedFloat32Array = PackedFloat32Array([1.0, 1.0, 1.0])
@@ -35,13 +41,30 @@ func setup(tuning: Tuning, p_opponent: Team) -> void:
 	if roster != null:
 		call_bias = roster.call_bias()
 	opponent = p_opponent
-	players.clear()
+	squad.clear()
 	for child: Node in get_children():
 		var player: Player = child as Player
-		if player != null:
-			var slot: int = players.size()
+		if player != null and player != mascot:
+			var slot: int = squad.size()
 			var ratings: PlayerRatings = null
 			if roster != null and slot < roster.players.size():
 				ratings = roster.players[slot]
 			player.setup(self, slot, tuning, ratings if ratings != null else PlayerRatings.new())
-			players.append(player)
+			squad.append(player)
+	if mascot == null:
+		mascot = MASCOT_SCENE.instantiate() as Mascot
+		add_child(mascot)
+		mascot.setup(self, squad.size(), tuning, Mascot.ratings_for(self))
+	field_mascot(false)
+
+
+## Puts the mascot on the field in place of the seven, or the seven back.
+func field_mascot(on: bool) -> void:
+	players.clear()
+	if on:
+		players.append(mascot)
+	else:
+		players.append_array(squad)
+	for player: Player in squad:
+		player.visible = not on
+	mascot.visible = on

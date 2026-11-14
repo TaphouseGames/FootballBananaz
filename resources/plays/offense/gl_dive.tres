@@ -54,4 +54,5 @@ category = 0
 is_run = true
 handoff_delay = 0.3
 goal_line = true
+group = 4
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

@@ -94,6 +94,7 @@ func _ready() -> void:
 	away.setup(tuning, home)
 	stat_book.setup(home, away)
 	field.setup(tuning, home, away)
+	field.stadium.watch(self)
 	camera_rig.setup(tuning)
 	human.setup(self)
 	play_controller.setup(self)
@@ -338,19 +339,6 @@ func next_play_state() -> StringName:
 ## The clock is under the warning time and this half has not had its warning.
 func warning_due() -> bool:
 	return tuning.warning_time > 0.0 and warning_half != half and clock <= tuning.warning_time and not conversion and not overtime
-
-
-## The offensive plays on offer for the next snap: the playbook, with the Hail
-## Mary in the first play's place in either half's last Tuning.hail_mary_time
-## seconds, but only from more than Tuning.hail_mary_min_distance yards out.
-func offense_plays() -> Array[OffensePlay]:
-	var plays: Array[OffensePlay] = offense_playbook.plays.duplicate()
-	var hail_mary: OffensePlay = offense_playbook.hail_mary
-	var to_goal: float = absf(tuning.goal_x(offense.attack_dir) - los_x)
-	if hail_mary != null and not plays.is_empty() and not conversion and not overtime \
-			and clock <= tuning.hail_mary_time and to_goal > tuning.hail_mary_min_distance:
-		plays[0] = hail_mary
-	return plays
 
 
 # --- Text for the HUD ------------------------------------------------------------

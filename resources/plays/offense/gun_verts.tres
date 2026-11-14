@@ -54,4 +54,5 @@ script = ExtResource("1_play")
 play_name = "Gun Verts"
 description = "Shotgun. Both wideouts straight up the field, slot up the seam between the safeties."
 category = 2
+group = 3
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

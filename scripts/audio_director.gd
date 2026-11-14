@@ -866,6 +866,7 @@ func excite(amount: float) -> void:
 ## Something good happened for `team`, `size` 0..1. The crowd is the home
 ## team's: it cheers for it and groans (or boos, at the worst) for the visitors.
 func crowd_react(team: Team, size: float) -> void:
+	game.field.stadium.react(team == game.home, size)
 	if team == game.home:
 		excite(size)
 		if size >= REACTION_SHOUT:

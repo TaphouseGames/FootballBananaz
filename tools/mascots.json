@@ -1,0 +1,39 @@
+{
+  "_about": "One entry per team mascot, keyed by the team's short name in lower case. `prompt` is what Tripo was given (model tripo-p2, pbr=false); only the costume and accessories differ between them. The banana came first, from a shorter prompt; the others spell out what it happened to get (black limbs, white gloves and sneakers, big white eyes). `source` is the raw model under assets/stadium/source/tripo/. `joints` may override what tools/prep_mascot.py finds: name -> [x, y, z] with height = 1 and front = -Y, names as that script prints them after JOINTS.",
+  "bananaz": {
+    "fruit": "banana",
+    "prompt": "a goofy sports team mascot, a person in a big yellow banana costume with a grinning face, white gloves and big sneakers, standing upright with arms raised cheering, chunky stylized cartoon character, single isolated figure",
+    "source": "mascot/tripo-out/mascot-07cf547b/model.glb",
+    "joints": {}
+  },
+  "peachez": {
+    "fruit": "peach",
+    "prompt": "a goofy sports team mascot, a person in a big round fuzzy matte orange-pink peach costume with a grinning face and big white cartoon eyes, a crease down the front and a short brown stem with one green leaf on top, thin black arms and legs, white gloves and big white sneakers, standing upright with arms raised cheering, chunky stylized cartoon character, single isolated figure",
+    "source": "mascot_peachez/tripo-out/mascot-peachez-2-f3c6acbd/model.glb",
+    "joints": {}
+  },
+  "applez": {
+    "fruit": "green apple",
+    "prompt": "a goofy sports team mascot, a person in a big round shiny green apple costume with a grinning face and big white cartoon eyes, a short brown stem with one green leaf on top and a green sweatband, thin black arms and legs, white gloves and big white sneakers, standing upright with arms raised cheering, chunky stylized cartoon character, single isolated figure",
+    "source": "mascot_applez/tripo-out/mascot-applez-406cce6b/model.glb",
+    "joints": {}
+  },
+  "berriez": {
+    "fruit": "blueberry",
+    "prompt": "a goofy sports team mascot, a person in a big round blue blueberry costume with a grinning face and big white cartoon eyes, the little star-shaped crown of a blueberry on top and a light blue sweatband, thin black arms and legs, white gloves and big white sneakers, standing upright with arms raised cheering, chunky stylized cartoon character, single isolated figure",
+    "source": "mascot_berriez/tripo-out/mascot-berriez-0f45f413/model.glb",
+    "joints": {}
+  },
+  "coconutz": {
+    "fruit": "coconut",
+    "prompt": "a goofy sports team mascot, a person in a big round brown hairy coconut costume with a grinning face and big white cartoon eyes and a red sweatband, thin black arms and legs, white gloves and big red sneakers, standing upright with arms raised cheering, chunky stylized cartoon character, single isolated figure",
+    "source": "mascot_coconutz/tripo-out/mascot-coconutz-c75fdb98/model.glb",
+    "joints": {}
+  },
+  "grapez": {
+    "fruit": "grapes",
+    "prompt": "a goofy sports team mascot, a person in a big costume of a bunch of round purple grapes with a grinning face and big white cartoon eyes, a short brown stem with one green vine leaf on top, thin black arms and legs, white gloves and big white sneakers, standing upright with arms raised cheering, chunky stylized cartoon character, single isolated figure",
+    "source": "mascot_grapez/tripo-out/mascot-grapez-0d1814b2/model.glb",
+    "joints": {}
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "task_id": "d85d393d-6f1c-4677-a778-b4bffc41cc15",
+  "type": "text_to_model",
+  "status": "success",
+  "input": {
+    "pbr": false,
+    "prompt": "a goofy sports team mascot, a person in a big round fuzzy matte orange-pink peach costume with a grinning face, a crease down the front and a short brown stem with one green leaf on top, white gloves and big sneakers, standing upright with arms raised cheering, chunky stylized cartoon character, single isolated figure",
+    "texture": true,
+    "export_uv": true,
+    "model_version": "P2-20260801",
+    "texture_alignment": "geometry"
+  },
+  "output_fields": [
+    "model_url",
+    "rendered_image_url",
+    "generated_image_url"
+  ],
+  "credits_consumed": 110,
+  "created_at": "2026-11-14T17:49:31.372969Z",
+  "completed_at": "2026-11-14T17:50:23.413740Z",
+  "files": [
+    "model.glb",
+    "rendered_image.webp",
+    "generated_image.jpeg",
+    "preview.png"
+  ]
+}

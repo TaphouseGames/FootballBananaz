@@ -62,4 +62,5 @@ description = "Three rush, two flats, two deep halves. Soft in the middle."
 run_fit = 0.67
 short_fit = 0.5
 deep_fit = 0.11
+group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])

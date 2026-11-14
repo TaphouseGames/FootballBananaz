@@ -55,4 +55,5 @@ script = ExtResource("1_play")
 play_name = "Sluggo"
 description = "Slant and go on the right: sell the slant, then straight up the field. Deep in on the left."
 category = 2
+group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

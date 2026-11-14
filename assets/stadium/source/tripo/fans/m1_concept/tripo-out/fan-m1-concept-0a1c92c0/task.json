@@ -1,0 +1,20 @@
+{
+  "task_id": "0a1c92c0-d76a-4703-95eb-bcbc5859b2aa",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Completely show the full body of the character in T-pose. Standing upright, facing forward. Arms raise horizontally at shoulder height. Palms facing down, remove handheld objects but keep hand-worn equipment and accessories. Legs straight, feet shoulder-width apart. Keep natural body proportions and anatomy. Front view, neutral background.\nA new character: a human sports fan, a stocky man with a round face and a big grin, short dark brown hair, light skin, wearing a plain light grey short-sleeved football jersey with a big number on the chest, blue jeans and white sneakers. Full body, front view, standing upright in a T-pose with arms straight out to the sides and legs slightly apart, clean shaven, smooth skin. Chunky stylized cartoon character with simple shapes, a big head and big sneakers, in exactly the smooth vinyl toy 3D art style and lighting of image[1]. Single isolated figure on a plain grey background.",
+    "template": "t_pose",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-14T18:29:44.883516Z",
+  "completed_at": "2026-11-14T18:30:12.423366Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

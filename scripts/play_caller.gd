@@ -133,10 +133,13 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 	var per_category: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
 	# Goal line plays away from the goal line are as good as not in the book.
 	for play: OffensePlay in plays:
-		if _goal_line_scale(play.goal_line, game) >= 1.0:
+		if _goal_line_scale(play.goal_line, game) >= 1.0 and not play.heave_only:
 			per_category[play.category] += 1.0
 	var weights: PackedFloat32Array = PackedFloat32Array()
 	for play: OffensePlay in plays:
+		if play.heave_only:
+			weights.append(0.0)
+			continue
 		var weight: float = (want[play.category] + 0.05) / maxf(per_category[play.category], 1.0)
 		weight *= _goal_line_scale(play.goal_line, game)
 		# Do not call the same play three times in a row.

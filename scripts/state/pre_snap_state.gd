@@ -20,7 +20,8 @@ func enter() -> void:
 		game.hud.show_banner("", "%s%s  -  (A) snap   (B) shout" % [pc.off_play.play_name, flipped])
 		game.hud.set_hint("")
 	elif game.human.is_active():
-		game.hud.show_banner("", "%s  -  get ready" % pc.def_play.play_name)
+		var flipped: String = " (flipped)" if pc.def_flipped else ""
+		game.hud.show_banner("", "%s%s  -  get ready" % [pc.def_play.play_name, flipped])
 		game.hud.set_hint("")
 	else:
 		game.hud.set_hint("AUTOPLAY")

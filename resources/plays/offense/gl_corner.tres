@@ -55,4 +55,5 @@ script = ExtResource("1_play")
 play_name = "Goal Line Corner"
 description = "Right tight end breaks to the back corner, left tight end sits down in the middle, back in the flat."
 goal_line = true
+group = 4
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

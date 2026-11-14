@@ -57,4 +57,5 @@ description = "Fake the sweep left and roll out right. Out route and a drag come
 category = 1
 handoff_delay = 0.6
 play_action = true
+group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

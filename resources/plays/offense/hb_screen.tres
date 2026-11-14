@@ -55,4 +55,5 @@ script = ExtResource("1_play")
 play_name = "HB Screen"
 description = "Wideouts clear out deep. Dump it to the back behind the line."
 category = 1
+group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

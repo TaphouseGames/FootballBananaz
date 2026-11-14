@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="Roster" format=3]
+[gd_resource type="Resource" script_class="Roster" format=3 uid="uid://b5svrfch3voq1"]
 
-[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
-[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
 
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")

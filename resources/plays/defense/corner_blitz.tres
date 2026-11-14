@@ -55,4 +55,5 @@ description = "Right corner comes off the edge. The safety picks up his man from
 run_fit = 0.41
 short_fit = 0.84
 deep_fit = 0.42
+group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])

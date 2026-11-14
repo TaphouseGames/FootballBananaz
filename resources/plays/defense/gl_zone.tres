@@ -61,4 +61,5 @@ run_fit = 0.49
 short_fit = 0.39
 deep_fit = 0.1
 goal_line = true
+group = 3
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])

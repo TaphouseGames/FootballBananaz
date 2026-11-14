@@ -56,4 +56,5 @@ description = "Fake the goal line dive. Right tight end slips to the back corner
 handoff_delay = 0.35
 play_action = true
 goal_line = true
+group = 4
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

@@ -54,4 +54,5 @@ route = PackedVector2Array(1, 5, 4, 11)
 script = ExtResource("1_play")
 play_name = "Gun Stick"
 description = "Shotgun. Slot sits down six yards deep, wideout fades behind him, back swings to the flat."
+group = 3
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])

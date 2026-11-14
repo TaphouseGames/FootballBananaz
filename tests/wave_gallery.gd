@@ -42,6 +42,8 @@ func _run() -> void:
 	var chosen: OffensePlay = plays[pick]
 	plays[pick] = plays[0]
 	plays[0] = chosen
+	# On the tab the screen opens with.
+	chosen.group = OffensePlay.Group.RUN
 	print("play: ", chosen.resource_path.get_file())
 	await _tap(&"confirm")
 	await _wait(1.0)

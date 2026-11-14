@@ -22,6 +22,7 @@ var _tuning: Tuning
 @onready var markers: Node3D = $Markers
 @onready var fx: FieldFx = $Fx
 @onready var pylon_root: Node3D = $Pylons
+@onready var stadium: Stadium = $Stadium
 
 
 func setup(tuning: Tuning, home: Team, away: Team) -> void:
@@ -65,6 +66,7 @@ func setup(tuning: Tuning, home: Team, away: Team) -> void:
 	_first_down_marker = _add_box(markers, Vector3(0.0, 0.03, 0.0), Vector3(0.22, 0.02, width), FIRST_DOWN_COLOR, false)
 	_build_pylons(tuning)
 	fx.setup(tuning)
+	stadium.setup(tuning, home, away, left_team == home)
 
 
 # --- Pylons ----------------------------------------------------------------------

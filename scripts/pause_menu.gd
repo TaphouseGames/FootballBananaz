@@ -25,6 +25,7 @@ const CONTROLS: Array[Array] = [
 		["Hold (LB)", "Lead him"],
 		["Hold (RB)", "Underthrow"],
 		["Hold RT", "Tuck and run, let go to throw again"],
+		["LT", "Throw it away, out of bounds"],
 		["(Y)", "Jump"],
 	]],
 	["RUNNING WITH THE BALL", [
@@ -276,7 +277,7 @@ func _update_roster() -> void:
 		return
 	var step: int = int(Input.is_action_just_pressed(&"move_down")) - int(Input.is_action_just_pressed(&"move_up"))
 	if step != 0:
-		_roster_cursor = posmod(_roster_cursor + step, _roster().players.size())
+		_roster_cursor = posmod(_roster_cursor + step, _roster().squad.size())
 		_refresh()
 		_play(&"ui_move")
 
@@ -477,8 +478,8 @@ func _roster_view() -> Control:
 	list.custom_minimum_size.x = 400.0
 	list.add_theme_constant_override(&"separation", 6)
 	row.add_child(list)
-	for i: int in team.players.size():
-		var player: Player = team.players[i]
+	for i: int in team.squad.size():
+		var player: Player = team.squad[i]
 		var selected: bool = i == _roster_cursor
 		var item: PanelContainer = PanelContainer.new()
 		item.add_theme_stylebox_override(&"panel", _item_selected_style if selected else _item_style)
@@ -496,7 +497,7 @@ func _roster_view() -> Control:
 		overall.custom_minimum_size.x = 44.0
 		line.add_child(overall)
 		list.add_child(item)
-	row.add_child(_player_card(team.players[_roster_cursor]))
+	row.add_child(_player_card(team.squad[_roster_cursor]))
 	return row
 
 

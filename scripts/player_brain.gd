@@ -1402,6 +1402,10 @@ func _think_air(pc: PlayController) -> void:
 			_run_route(pc)
 		return
 
+	if pc.thrown_away:
+		# Nothing to go and get: he stays on his job.
+		_defense_pocket(pc)
+		return
 	var react_time: float = _sharp(tuning.ai_ball_react_time, tuning.ai_edge_ball_react_time)
 	if pc.ball.intended == pc.read_target:
 		# The throw the defense was waiting for.

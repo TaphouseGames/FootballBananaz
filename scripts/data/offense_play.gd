@@ -4,10 +4,19 @@ extends Resource
 
 ## What the play attacks. The CPU play caller uses it to pick and to counter.
 enum Category { RUN, SHORT, DEEP }
+## The tab of the play-select screen the play is on.
+enum Group { RUN, SHORT_PASS, DEEP_PASS, SHOTGUN, GOAL_LINE }
+
+## The tabs' titles, in Group order.
+const GROUP_NAMES: PackedStringArray = ["RUN", "SHORT PASS", "DEEP PASS", "SHOTGUN", "GOAL LINE"]
 
 @export var play_name: String = "Play"
 @export var description: String = ""
 @export var category: Category = Category.SHORT
+@export var group: Group = Group.RUN
+## The CPU play caller only calls it as a last-play heave. The person can pick
+## it at any time.
+@export var heave_only: bool = false
 ## Run play: the ball is handed to the RUNNER after `handoff_delay` seconds.
 @export var is_run: bool = false
 @export var handoff_delay: float = 0.5

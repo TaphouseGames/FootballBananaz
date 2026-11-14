@@ -56,4 +56,5 @@ script = ExtResource("1_play")
 play_name = "Curl Flat"
 description = "Wideouts stop and turn back at twelve yards. Back swings out and turns upfield."
 category = 1
+group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
