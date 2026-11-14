@@ -90,6 +90,13 @@ const CALL_LATE_GAME: StringName = &"announcer_late_game"
 const CALL_LAST_PLAY: StringName = &"announcer_last_play"
 ## Jim calls the warning when the half's clock gets under Tuning.warning_time.
 const CALL_WARNING: StringName = &"announcer_warning"
+## "As I was saying": what Jim or Tony says to pick up a chapter of the story
+## that a call interrupted.
+const CALL_RESUME: StringName = &"announcer_resume"
+const QUIP_RESUME: StringName = &"color_resume"
+## The quarterback's extra shouts before the snap (B), and his silly ones.
+const QB_CALL: StringName = &"qb_call"
+const QB_SILLY: StringName = &"qb_silly"
 ## Fourth and twenty: the booth cannot let 4:20 go by.
 const QUIP_BLAZE: StringName = &"color_blaze"
 const BLAZE_DOWN: int = 4
@@ -128,7 +135,7 @@ var remark_asks: Dictionary[StringName, int] = {}
 var quip_asks: Dictionary[StringName, int] = {}
 ## Exchanges between the two that started, got to the last line, or were cut
 ## short by a call, and the `chat_*` sets left out for a missing part.
-var exchange_counts: Dictionary[StringName, int] = {&"started": 0, &"finished": 0, &"cut": 0}
+var exchange_counts: Dictionary[StringName, int] = {&"started": 0, &"finished": 0, &"cut": 0, &"resumed": 0}
 var broken_exchanges: PackedStringArray = PackedStringArray()
 ## The booth tells its story (see BoothStory). Off with the CPU playing both
 ## teams, so the headless tests leave the person's place in it alone.
@@ -185,6 +192,13 @@ var _story_thread: StringName = &""
 var _told: Dictionary[StringName, int] = {}
 var _huddles: int = 0
 var _story_huddle: int = 0
+## A chapter that a call interrupted: its id and its lines still to come, from
+## the last one said, which is said again. The last line of the chapter being
+## told that was started, and whether this huddle may take the held one up.
+var _story_held_id: StringName = &""
+var _story_held: Array[Array] = []
+var _story_last: Array = []
+var _story_resume: bool = false
 ## The half (1 or 2, 0 for none yet) in which Jim last said time was short,
 ## in which he last called the last play, and in which Tony got his say on it.
 var _late_called_half: int = 0
@@ -276,9 +290,9 @@ func remark(sound: StringName, chance: float) -> void:
 
 ## The announcer shouts `sound` next, ahead of anything else he had lined up.
 ## Whoever is talking finishes the sentence first, and the rest of an exchange
-## between the two is dropped.
+## between the two is dropped; a chapter of the story is held for later.
 func shout(sound: StringName) -> void:
-	_cut_exchange()
+	_cut_exchange(true)
 	_show_lines = 0
 	_announcer_queue.clear()
 	_announcer_queue.append(sound)
@@ -380,7 +394,7 @@ func play_show(id: StringName, tony_first: bool) -> bool:
 		return false
 	if not tuning.audio_enabled:
 		return false
-	_cut_exchange()
+	_cut_exchange(true)
 	_announcer_queue.clear()
 	_quip_pending = &""
 	var tony: bool = tony_first
@@ -492,6 +506,8 @@ func _update_booth(delta: float) -> void:
 		_say_part()
 	elif not _announcer_queue.is_empty():
 		_speak(_announcer_queue.pop_front())
+	elif _story_resume:
+		_resume_story()
 	elif _story_pending != &"":
 		_tell_story()
 	elif _quip_pending != &"":
@@ -534,23 +550,66 @@ func _say_part() -> void:
 	player.play()
 	# The wait before Tony's next thought counts from the end of the exchange.
 	_last_quip = Time.get_ticks_msec()
+	# A line of the chapter itself, not the "as I was saying" before it.
+	if _story_playing != &"" and part.size() < 3:
+		_story_last = part
 	if _exchange_parts.is_empty():
 		exchange_counts[&"finished"] += 1
 		if _story_playing != &"":
 			BoothStory.mark_heard(_story_playing)
 			_story_playing = &""
+			_story_last = []
 			stories_told += 1
 			_told[_story_thread] = _told.get(_story_thread, 0) + 1
 			_story_huddle = _huddles
 
 
-## Drops the lines still to come of the exchange going on, if there is one. A
-## chapter of the story cut short this way has not been heard, and comes again.
-func _cut_exchange() -> void:
+## Drops the lines still to come of the exchange going on, if there is one.
+## With `hold`, a chapter of the story cut short this way is kept, from the
+## last line said, and taken up again in a later huddle (_resume_story);
+## without it the chapter, and any that was being held, has not been heard and
+## comes again from the start.
+func _cut_exchange(hold: bool = false) -> void:
+	if not hold:
+		_story_held.clear()
+	elif _story_playing != &"" and not _exchange_parts.is_empty():
+		_story_held.clear()
+		_story_held_id = _story_playing
+		if not _story_last.is_empty():
+			_story_held.append(_story_last)
+		for part: Array in _exchange_parts:
+			if part.size() < 3:
+				_story_held.append(part)
 	if not _exchange_parts.is_empty():
 		_exchange_parts.clear()
 		exchange_counts[&"cut"] += 1
 	_story_playing = &""
+	_story_last = []
+	_story_resume = false
+
+
+## Takes up the chapter a call interrupted, if the ball is still dead: whoever
+## had the last word says "as I was saying", says it again, and the chapter
+## carries on from there. One that misses its huddle waits for the next.
+func _resume_story() -> void:
+	_story_resume = false
+	if _story_held.is_empty() or not game.play_controller.ball_dead:
+		return
+	var thread: StringName = BoothStory.thread_of_next(_story_held_id)
+	if thread == &"":
+		_story_held.clear()
+		return
+	var tony: bool = _story_held[0][0]
+	var bridge: StringName = QUIP_RESUME if tony else CALL_RESUME
+	if has_sound(bridge):
+		_exchange_parts.append([tony, _pick_fresh(bridge, true), true])
+	_exchange_parts.append_array(_story_held)
+	_story_held = []
+	_story_playing = _story_held_id
+	_story_thread = thread
+	_story_last = []
+	exchange_counts[&"resumed"] += 1
+	_say_part()
 
 
 ## The chapter of the story that is due in this huddle, or none: the match has
@@ -561,7 +620,7 @@ func _cut_exchange() -> void:
 func _story_due() -> StringName:
 	if not story_on or not tuning.audio_enabled or game.conversion:
 		return &""
-	if _quip_pending != &"" or not _exchange_parts.is_empty() or _story_pending != &"":
+	if _quip_pending != &"" or not _exchange_parts.is_empty() or _story_pending != &"" or not _story_held.is_empty():
 		return &""
 	if stories_told >= tuning.story_per_match or _huddles < tuning.story_first_huddle:
 		return &""
@@ -726,14 +785,37 @@ func _speak(sound: StringName) -> void:
 	_announcer.play()
 
 
-## A line from the quarterback. A new line cuts off the one before it.
-func say(sound: StringName) -> void:
+## A line from the quarterback. A new line cuts off the one before it. `fresh`
+## goes through all the takes before one comes up again. Returns the line's
+## length in seconds, 0 if nothing is heard.
+func say(sound: StringName, fresh: bool = false) -> float:
 	play_counts[sound] = play_counts.get(sound, 0) + 1
-	var stream: AudioStream = _pick(sound)
+	var stream: AudioStream = (_pick_fresh(sound, true) as AudioStream) if fresh else _pick(sound)
 	if stream == null or not tuning.audio_enabled:
-		return
+		return 0.0
 	_voice.stream = stream
 	_voice.play()
+	return stream.get_length()
+
+
+## The quarterback's cadence as the teams line up, now and then a silly line
+## instead. Returns the length of a silly line, which is worth hearing out
+## before the snap, and 0 for the usual cadence.
+func qb_open() -> float:
+	if has_sound(QB_SILLY) and randf() < tuning.qb_silly_open_chance:
+		return say(QB_SILLY, true)
+	say(&"qb_cadence")
+	return 0.0
+
+
+## One more shout from the quarterback before the snap, some of them silly.
+func qb_call() -> void:
+	var sound: StringName = QB_CALL
+	if has_sound(QB_SILLY) and randf() < tuning.qb_silly_chance:
+		sound = QB_SILLY
+	elif not has_sound(QB_CALL):
+		sound = &"qb_cadence"
+	say(sound, true)
 
 
 ## Stirs the crowd without a cheer or a groan.
@@ -846,16 +928,16 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 			if blaze_down():
 				_insist(QUIP_BLAZE)
 			_huddles += 1
+			# A chapter a call interrupted is taken up before anything new.
+			_story_resume = not _story_held.is_empty() and _quip_pending == &"" and _exchange_parts.is_empty() and tuning.audio_enabled
 			_story_pending = _story_due()
-			if _story_pending == &"":
+			if _story_pending == &"" and not _story_resume:
 				quip(_idle_quip(), tuning.audio_color_idle_chance)
 			if game.human.is_active():
 				_huddle_on = true
 				if not _huddle.playing and tuning.audio_enabled:
 					_huddle.play()
 			_plan_chant()
-		&"PreSnap":
-			say(&"qb_cadence")
 		&"Live":
 			_breakaway_called = false
 			_chant_in = -1.0

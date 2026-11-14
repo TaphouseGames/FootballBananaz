@@ -34,6 +34,7 @@ func enter() -> void:
 
 func exit() -> void:
 	game.hud.hide_play_select()
+	game.hud.hide_countdown()
 	game.hud.set_hint("")
 
 
@@ -63,10 +64,15 @@ func _show_page() -> void:
 	game.hud.set_play_flipped(_flipped)
 
 
-func physics_update(_delta: float) -> void:
+func physics_update(delta: float) -> void:
 	if not game.human.is_active():
 		if time_in_state >= 0.3:
 			_confirm(-1)
+		return
+	# Out of time: the highlighted play it is.
+	if count_down(game.tuning.play_select_time, delta):
+		game.audio.play(&"ui_confirm")
+		_confirm(_page * HUD.PAGE_SIZE + _cursor)
 		return
 	if time_in_state < INPUT_LOCK:
 		return

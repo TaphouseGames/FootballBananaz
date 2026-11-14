@@ -12,6 +12,7 @@ const CARD_BORDER: Color = Color(0.32, 0.38, 0.35)
 const CARD_SELECTED_BORDER: Color = Color(1.0, 1.0, 1.0)
 const NAME_COLOR: Color = Color(0.82, 0.84, 0.82)
 const NAME_SELECTED_COLOR: Color = Color(1.0, 0.9, 0.2)
+const COUNTDOWN_WARN_COLOR: Color = Color(1.0, 0.3, 0.25)
 
 var game: Game
 
@@ -36,6 +37,7 @@ var _halftime_card: HalftimeCard
 @onready var play_select: Control = $PlaySelect
 @onready var play_title: Label = $PlaySelect/Margin/Column/Title
 @onready var play_grid: GridContainer = $PlaySelect/Margin/Column/PlayGrid
+@onready var countdown: Label = $Countdown
 @onready var pause_menu: PauseMenu = $PauseMenu
 
 
@@ -44,6 +46,7 @@ func setup(p_game: Game) -> void:
 	pause_menu.setup(p_game)
 	hide_banner()
 	hide_play_select()
+	hide_countdown()
 	set_hint("")
 
 
@@ -194,6 +197,18 @@ func _make_card_style(fill: Color, border: Color, border_width: int) -> StyleBox
 	# Thinner borders get more padding, so every card's contents line up.
 	style.set_content_margin_all(float(10 - border_width))
 	return style
+
+
+## The play clock and the play-select timer: whole seconds left, red when
+## `warn`.
+func set_countdown(seconds_left: float, warn: bool) -> void:
+	countdown.text = str(ceili(seconds_left))
+	countdown.add_theme_color_override(&"font_color", COUNTDOWN_WARN_COLOR if warn else Color.WHITE)
+	countdown.visible = true
+
+
+func hide_countdown() -> void:
+	countdown.visible = false
 
 
 func hide_play_select() -> void:

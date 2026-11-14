@@ -128,12 +128,30 @@ func _check_cut() -> void:
 	var second: StringName = BoothStory.chapters(BoothStory.CAROL)[1][&"id"]
 	_audio._tell_story()
 	_expect(_audio._story_playing == second, "'%s' did not start" % second)
+	var lines: int = (BoothStory.chapters(BoothStory.CAROL)[1][&"lines"] as Array).size()
 	_audio.shout(&"announcer_touchdown")
 	_expect(_audio._story_playing == &"" and _audio._exchange_parts.is_empty(), "a shout did not cut the chapter short")
 	_expect(BoothStory.heard(BoothStory.CAROL) == 1, "a chapter cut short moved the story on to %d" % BoothStory.heard(BoothStory.CAROL))
-	_expect(_huddle() == second, "the chapter cut short did not come again")
-	_tell(second)
+	# It is held from the line just said, and the next huddle takes it up
+	# again behind an "as I was saying" instead of starting anything new.
+	_expect(_audio._story_held.size() == lines, "%d lines of the chapter were held, not %d" % [_audio._story_held.size(), lines])
+	_expect(_huddle() == &"" and _audio._story_resume, "the next huddle did not take the chapter up again")
+	_audio._resume_story()
+	var bridge: int = 1 if _audio.has_sound(AudioDirector.CALL_RESUME) else 0
+	_expect(_audio._story_playing == second, "'%s' was not taken up again" % second)
+	_expect(_audio._exchange_parts.size() == lines + bridge - 1, "%d lines were left after the first of the chapter taken up again" % _audio._exchange_parts.size())
+	# Interrupted again two lines on: held from the second line this time.
+	_audio._say_part()
+	_audio._say_part()
+	_audio.shout(&"announcer_touchdown")
+	_expect(_audio._story_held.size() == lines - bridge, "held a second time, %d lines were kept" % _audio._story_held.size())
+	_expect(_huddle() == &"" and _audio._story_resume, "the chapter held a second time was not taken up")
+	_audio._resume_story()
+	while not _audio._exchange_parts.is_empty():
+		_audio._say_part()
+	_expect(_audio._story_playing == &"" and _audio._story_held.is_empty(), "the chapter taken up again did not end")
 	_expect(BoothStory.heard(BoothStory.CAROL) == 2, "after two chapters the Carol thread is at %d" % BoothStory.heard(BoothStory.CAROL))
+	_expect(_audio.exchange_counts[&"resumed"] == 2, "the chapter was taken up %d times, not 2" % _audio.exchange_counts[&"resumed"])
 	for huddle: int in _game.tuning.story_huddle_gap * 2:
 		_expect(_huddle() == &"", "a chapter past the match's share came up")
 	# A chapter that misses its huddle is dropped, not told over the play.

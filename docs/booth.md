@@ -66,8 +66,13 @@ How they are paced:
   thread that has had least of its share goes first: Carol, the
   commissioner, Carol. Fourth and twenty and the end of a half come first.
 - The place in each thread is kept in `user://booth_story.cfg`, so it
-  carries on from one session to the next. A chapter cut short by a call has
-  not been heard and comes again.
+  carries on from one session to the next.
+- A chapter interrupted by a call (a touchdown, a sack, a turnover, the
+  warning) is held, not lost. At the next huddle whoever had the last word
+  says "as I was saying" (`announcer_resume` for Jim, `color_resume` for
+  Tony), says that line again, and the chapter carries on. Nothing new
+  starts while one is held. A chapter still held when the half or the match
+  ends has not been heard, and comes again from the start.
 - A thread waits at a chapter that has no recording of every line.
 - Once a thread's last chapter has been heard, its chapters join the idle
   chatter.
@@ -137,6 +142,35 @@ find the files by name, so adding a line is adding a file.
   two takes of a line come out within a tenth of a second of each other, so
   nothing picks between them by ear: listen to a new batch once, and swap in
   the other take from the flow where a line lands badly.
+
+## The quarterback
+
+Not the booth, but recorded the same way: flow "Arcade football SFX"
+(`tNUiyj1Oo2WBOsJHqy3V`), voice "Damyen — Gravel & Velvet", `eleven_v4`,
+prompt `[shouting] ...`, one take, levelled to the `qb_cadence` files (RMS
+0.134). Both teams' quarterbacks share the lines.
+
+- `qb_cadence_<n>`: the cadence as the teams line up. `qb_hut_<n>`: the snap.
+- `qb_call_<n>`: one more shout each time the person presses (B) before the
+  snap. Short, and real enough to pass for football.
+- `qb_silly_<n>`: said in place of a shout or of the opening cadence now and
+  then (`Tuning.qb_silly_chance`, `qb_silly_open_chance`). A CPU quarterback
+  holds the snap for one, up to `cpu_silly_hold_max` seconds, so keep them
+  under four seconds.
+
+`qb_call` (2026-11-13): Blue forty-two! · Ohio! Ohio! · Hut! Hut! · Set! Set! ·
+Omaha! Omaha! · Red nineteen! Red nineteen! · Green eighty! Green eighty! ·
+Ready! Ready! · Easy! Easy! · Watch the blitz! Watch the blitz! · Fifty-four
+is the Mike! Fifty-four! · Kill! Kill! Kill! · Check, check! Check, check! ·
+Alaska! Alaska! · Tango twenty-two! Tango twenty-two! · On me! On me!
+
+`qb_silly` (2026-11-13): Banana! Banana! · Blue forty-two! ...no wait,
+forty-three! · Lasagna! Lasagna! · Does anybody remember the play?! · Mom! I'm
+on TV! · Hut! Hut! GOOSE! · I left the oven on! · Spaghetti twenty-two!
+Spaghetti twenty-two! · Nobody tackle me, okay?! · Is it Tuesday? TUESDAY! ·
+Wi-fi password! Wi-fi password! · My hands are cold! Hurry up! · Purple!
+Seven... teen... ish! · Who ordered the nachos?! Who ordered the nachos?! ·
+Ohio! No, the OTHER Ohio! · I forgot the snap count!
 
 ## Script
 

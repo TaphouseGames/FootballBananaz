@@ -48,9 +48,10 @@ const CONTROLS: Array[Array] = [
 	]],
 	["PLAY SELECT", [
 		["Stick / D-pad", "Choose"],
-		["(A)", "Confirm, then (A) again to snap"],
+		["(A)", "Confirm, then (A) again to snap. Both are on a clock"],
 		["(X)", "Flip the play"],
 		["(LB) (RB)", "Other page"],
+		["(B)", "Before the snap on offense: the quarterback shouts"],
 	]],
 ]
 const CONTROLS_LEFT: int = 3

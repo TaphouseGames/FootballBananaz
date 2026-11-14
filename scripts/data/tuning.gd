@@ -607,6 +607,19 @@ extends Resource
 @export var pre_snap_delay: float = 0.5
 @export var cpu_snap_delay_min: float = 1.0
 @export var cpu_snap_delay_max: float = 1.8
+## Seconds the person has to snap the ball before it is snapped for them, and
+## to pick a play before the highlighted one is taken. 0: no limit.
+@export var play_clock: float = 8.0
+@export var play_select_time: float = 10.0
+## The last seconds of either, shown in red with a tick each second.
+@export var clock_warning: float = 3.0
+## Shortest time between two shouts of the person's quarterback (B).
+@export var qb_call_gap: float = 0.25
+## How often a shout, and the cadence that opens a line-up, is a silly line.
+@export_range(0.0, 1.0) var qb_silly_chance: float = 0.2
+@export_range(0.0, 1.0) var qb_silly_open_chance: float = 0.15
+## Longest a CPU quarterback holds the snap to finish a silly line.
+@export var cpu_silly_hold_max: float = 4.0
 ## Seconds after the whistle during which late hits are allowed.
 @export var late_hit_window: float = 1.6
 @export var scored_banner_time: float = 5.0
