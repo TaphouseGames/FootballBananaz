@@ -112,7 +112,10 @@ func _check_book() -> void:
 
 		var sum: PlayerLine = PlayerLine.new()
 		var defense: PlayerLine = PlayerLine.new()
-		for player: Player in team.players:
+		# The seven and the mascot, which can lose a fumble in a scramble.
+		var everyone: Array[Player] = team.squad.duplicate()
+		everyone.append(team.mascot)
+		for player: Player in everyone:
 			var p: PlayerLine = book.player_line(player)
 			sum.pass_att += p.pass_att
 			sum.pass_comp += p.pass_comp
@@ -130,7 +133,7 @@ func _check_book() -> void:
 			sum.targets += p.targets
 			sum.fumbles_lost += p.fumbles_lost
 			_expect(p.pass_comp <= p.pass_att and p.rec <= p.targets, "%s: more caught than thrown for %s" % [who, StatBook.label_of(player)])
-		for player: Player in team.opponent.players:
+		for player: Player in team.opponent.squad:
 			var p: PlayerLine = book.player_line(player)
 			defense.sacks += p.sacks
 			defense.interceptions += p.interceptions
@@ -153,6 +156,11 @@ func _check_book() -> void:
 		_expect(t.red_zone_made <= t.red_zone_att and t.red_zone_att <= t.drives, "%s: red zone %d-%d in %d drives" % [who, t.red_zone_made, t.red_zone_att, t.drives])
 		_expect(t.pass_td + t.rush_td + t.return_td == t.touchdowns, "%s: touchdowns by kind do not add up" % who)
 		_expect(t.plays > 0, "%s never ran a play" % who)
+		# The mascots: each half opens with a scramble, and one of the two wins it.
+		var other: TeamLine = book.team_line(team.opponent)
+		_expect(t.scrambles >= 2 and t.scrambles == other.scrambles, "%s: %d scrambles, the other team %d" % [who, t.scrambles, other.scrambles])
+		_expect(t.scrambles_won + other.scrambles_won == t.scrambles, "%s: %d + %d scrambles won out of %d" % [who, t.scrambles_won, other.scrambles_won, t.scrambles])
+		_expect(t.scramble_td <= t.return_td and t.scramble_yds >= 0, "%s: the mascot's touchdowns or yards do not fit" % who)
 		# Every table ends with the team's row and is as wide as its heading.
 		for table: Array in [
 			[StatBook.PASSING_HEAD, book.passing_rows(team)], [StatBook.RUSHING_HEAD, book.rushing_rows(team)],
@@ -187,11 +195,12 @@ func _check_menu() -> void:
 	for side: int in 2:
 		menu.show_screen(PauseMenu.Screen.ROSTER, side)
 		var team: Team = _game.home if side == 0 else _game.away
-		for i: int in team.players.size():
+		# The seven: a game that ends on a touchdown has the mascot out there too.
+		for i: int in team.squad.size():
 			menu._roster_cursor = i
 			menu._refresh()
-			var ratings: PlayerRatings = team.players[i].ratings
-			_expect(ratings.overall() > 0 and ratings.card_ratings().size() >= 10, "%s has no card" % StatBook.label_of(team.players[i]))
+			var ratings: PlayerRatings = team.squad[i].ratings
+			_expect(ratings.overall() > 0 and ratings.card_ratings().size() >= 10, "%s has no card" % StatBook.label_of(team.squad[i]))
 			_expect(ratings.number > 0 and ratings.display_name != "", "player %d of %s has no name or number" % [i, team.short_name])
 	menu.show_screen(PauseMenu.Screen.CONTROLS)
 	_expect(menu.screen == PauseMenu.Screen.CONTROLS and menu._body.get_child_count() == 1, "the controls screen did not build")

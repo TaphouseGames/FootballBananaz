@@ -27,7 +27,7 @@ func setup(home: Team, away: Team) -> void:
 		for player: Player in team.squad:
 			players[player] = PlayerLine.new()
 		# The mascot can come up with a scramble's ball and score: it has a line
-		# to write to, which no table shows.
+		# to write to, which no table shows (its scrambles are in the team's line).
 		players[team.mascot] = PlayerLine.new()
 
 
@@ -111,9 +111,18 @@ func record_play(game: Game) -> void:
 	if pc.scramble:
 		# Nobody's play: only what came of it counts.
 		_record_fumble(pc, final_team)
+		var winner: Team = pc.scramble_team
+		# One that nobody came up with goes up again and counts for nothing.
+		if winner != null:
+			for team: Team in teams:
+				teams[team].scrambles += 1
+			teams[winner].scrambles_won += 1
+			if final_team == winner:
+				teams[winner].scramble_yds += maxi(roundi((pc.dead_spot_x - pc.return_from_x) * float(winner.attack_dir)), 0)
 		if touchdown:
 			teams[final_team].touchdowns += 1
 			teams[final_team].return_td += 1
+			teams[final_team].scramble_td += 1
 			if holder != null:
 				players[holder].return_td += 1
 		return
@@ -330,6 +339,8 @@ func team_rows() -> Array[Array]:
 		["Turnovers", str(h.turnovers()), str(a.turnovers()), false],
 		["Fumbles lost", str(h.fumbles_lost), str(a.fumbles_lost), true],
 		["Possession", _clock(h.possession), _clock(a.possession), false],
+		["Mascot Scrambles (Won-Played)", "%d-%d" % [h.scrambles_won, h.scrambles], "%d-%d" % [a.scrambles_won, a.scrambles], false],
+		["Mascot return yards", str(h.scramble_yds), str(a.scramble_yds), true],
 	]
 
 

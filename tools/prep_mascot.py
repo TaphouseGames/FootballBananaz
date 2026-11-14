@@ -23,8 +23,8 @@ its shape instead (thin limbs, fat body). Where either is fooled, `joints`
 in mascots.json overrides a joint by name ("elbow.L": [x, y, z], height = 1,
 front = -Y; names as printed after JOINTS).
 
-The same clips are written onto every skeleton: `idle`, `cheer`, `sulk` and
-`wave`. They are made from each skeleton's own rest pose, so the arms end up
+The same clips are written onto every skeleton: `idle`, `cheer`, `sulk`,
+`wave`, `run`, `point`, `flex` and `faint`. They are made from each skeleton's own rest pose, so the arms end up
 in the same places whatever pose the model was generated in.
 
 With `preview`, the rest pose and a few frames of each clip are rendered
@@ -672,6 +672,48 @@ RUN_FRAMES = 16
 CLIPS["run"] = [stride(frame, RUN_FRAMES) for frame in range(0, RUN_FRAMES + 1, 2)]
 
 
+def reach(forward):
+    """Both arms down and swung `forward` degrees to the front."""
+    return {"UpperArm." + side: [("Y", arm_turn(side, 172.0)), ("X", -forward)] for side in ("L", "R")}
+
+
+def flexed(bend):
+    """Both arms straight out with the forearms bent up by `bend` degrees."""
+    return {**arms(92.0, 92.0), "Forearm.L": [("Y", -bend)], "Forearm.R": [("Y", bend)]}
+
+
+# What the sideline mascot acts out (Stadium.mascot_react): "point" pushes
+# both arms at the field twice (a first down), "flex" shows its muscles (a
+# sack, a turnover won), and "faint" goes over backwards and stays down (a
+# turnover lost, a touchdown against). The first two loop; "faint" is played
+# once and held on its last frame.
+CLIPS["point"] = [
+    (0, {"Body": [("X", 8.0)], **reach(86.0)}, 0.0),
+    (8, {"Body": [("X", -2.0)], **reach(30.0)}, 0.0),
+    (15, {"Body": [("X", 9.0)], **reach(88.0)}, 0.03),
+    (30, {"Body": [("X", 8.0)], **reach(86.0)}, 0.0),
+]
+CLIPS["flex"] = [
+    (0, {"Body": [("X", -6.0), ("Y", 3.0)], **flexed(70.0)}, 0.0),
+    (8, {**soft, "Body": [("X", -9.0)], **flexed(100.0)}, soft_drop),
+    (15, {"Body": [("X", -6.0), ("Y", -3.0)], **flexed(72.0)}, 0.03),
+    (23, {**soft, "Body": [("X", -9.0)], **flexed(100.0)}, soft_drop),
+    (30, {"Body": [("X", -6.0), ("Y", 3.0)], **flexed(70.0)}, 0.0),
+]
+# Flat on its back the figure lies on the back of its costume: the root comes
+# up by how far that is behind the feet (the back is +Y here).
+back = max((body_obj.matrix_world @ v.co).y for v in mesh.vertices)
+CLIPS["faint"] = [
+    (0, {}, 0.0),
+    (6, {"Body": [("X", -7.0)], **arms(20.0, 20.0)}, 0.0),
+    (13, {"Body": [("X", 6.0)], **arms(35.0, 35.0)}, 0.0),
+    (23, {"Root": [("X", -42.0)], **arms(60.0, 60.0)}, back * 0.55),
+    (30, {"Root": [("X", -88.0)], **arms(100.0, 100.0)}, back),
+    (34, {"Root": [("X", -83.0)], **arms(92.0, 92.0)}, back + 0.03),
+    (38, {"Root": [("X", -88.0)], **arms(100.0, 100.0)}, back),
+]
+
+
 def set_pose(pose, height):
     for bone in rig.pose.bones:
         rest = bone.bone.matrix_local.to_3x3()
@@ -755,7 +797,8 @@ if preview_dir:
     views = {"front": Vector((0.0, -6.0, 0.0)), "angle": Vector((3.6, -6.0, 2.4))}
     shots = [(None, 0, "front"), (None, 0, "angle"), ("idle", 30, "front"), ("cheer", 7, "angle"),
              ("cheer", 14, "front"), ("sulk", 0, "front"), ("sulk", 0, "angle"), ("wave", 10, "front"),
-             ("run", 4, "angle"), ("run", 12, "angle"), ("run", 4, "front")]
+             ("run", 4, "angle"), ("run", 12, "angle"), ("run", 4, "front"),
+             ("point", 0, "angle"), ("flex", 8, "front"), ("faint", 23, "angle"), ("faint", 38, "angle")]
     for clip_name, frame, view in shots:
         show(clip_name, frame)
         cam.location = aim + views[view]

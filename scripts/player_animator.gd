@@ -305,6 +305,13 @@ func shoulders() -> Vector3:
 	return skeleton.global_transform * mid
 
 
+## Top of his neck, in world space, as he is posed now.
+func head_position() -> Vector3:
+	if _bone[B.HEAD] < 0:
+		return shoulders() + Vector3(0.0, 0.25, 0.0)
+	return skeleton.global_transform * skeleton.get_bone_global_pose(_bone[B.HEAD]).origin
+
+
 ## How far straight out from there he can get both hands on a ball, in metres.
 func hands_reach() -> float:
 	return _hands_reach * skeleton.global_basis.get_scale().x
@@ -1578,6 +1585,14 @@ func _dive() -> void:
 	_pose[B.SHIN_R] = Vector3(8.0, 0.0, 0.0)
 	_pose[B.FOOT_L] = Vector3(40.0, 0.0, 0.0)
 	_pose[B.FOOT_R] = Vector3(40.0, 0.0, 0.0)
+	if player.jump_dive:
+		# Out of a jump: flat out, legs straight behind him.
+		_pose[B.SPINE] = Vector3(-14.0, 0.0, 0.0)
+		_pose[B.HEAD] = Vector3(-45.0, 0.0, 0.0)
+		_pose[B.THIGH_L] = Vector3(20.0, 0.0, 10.0)
+		_pose[B.THIGH_R] = Vector3(14.0, 0.0, 10.0)
+		_pose[B.SHIN_L] = Vector3(6.0, 0.0, 0.0)
+		_pose[B.SHIN_R] = Vector3(2.0, 0.0, 0.0)
 	_turn_to_ball(0.6)
 	if player.has_ball:
 		_pose[B.ARM_L] = Vector3(-150.0, -20.0, -80.0)
@@ -1610,6 +1625,11 @@ func _down() -> void:
 		_stash()
 		_gather(fall.on_back)
 		_blend_from_stash(sin(PI * fall.rise))
+	if player.is_dazed():
+		# Seeing stars: the head lolls round and round.
+		var woozy: float = player.dazed_timer * 5.0
+		_pose[B.HEAD] += Vector3(sin(woozy) * 16.0, cos(woozy * 0.7) * 10.0, cos(woozy) * 20.0)
+		_pose[B.NECK] += Vector3(0.0, 0.0, sin(woozy * 0.5) * 8.0)
 	if player.has_ball:
 		_pose[B.ARM_L] = Vector3(-30.0, -35.0, -70.0)
 		_pose[B.FORE_L] = Vector3(0.0, -112.0, 0.0)

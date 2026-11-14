@@ -60,13 +60,24 @@ func _run() -> void:
 	await _shoot("signs_close", Vector3(60.0, 7.5, -16.0), Vector3(62.0, 7.0, -34.0))
 	await _shoot("aisle_close", Vector3(55.0, 9.0, 12.0), Vector3(62.0, 6.0, 32.0))
 	await _shoot("corner", Vector3(80.0, 6.0, 0.0), Vector3(116.0, 6.0, 26.0))
+	# The mascots follow the ball along their sidelines, and are on the field
+	# themselves for the scramble that opens the match. So the play is stopped,
+	# the ball left on the 36, and the two put back on their sidelines, where
+	# they come to stand level with it.
+	_game.play_controller.process_mode = Node.PROCESS_MODE_DISABLED
+	_game.ball.process_mode = Node.PROCESS_MODE_DISABLED
+	_game.ball.position = Vector3(36.0, 0.0, 0.0)
+	_game.home.mascot.visible = false
+	_game.away.mascot.visible = false
+	stadium.set_mascots_visible(true)
+	await _wait(4.0)
 	await _shoot("mascot", Vector3(42.0, 2.5, -14.0), Vector3(36.0, 1.5, -23.0))
-	await _shoot("mascot_away", Vector3(58.0, 2.5, 14.0), Vector3(64.0, 1.5, 23.0))
-	# Both from the game camera at midfield, then each in turn up close:
-	# cheering, sulking, waving.
-	await _shoot("mascots_cam", Vector3(40.0, 0.0, 0.0) + back, Vector3(40.0, 0.0, 0.0) + ahead)
+	await _shoot("mascot_away", Vector3(42.0, 2.5, 14.0), Vector3(36.0, 1.5, 23.0))
+	# Both from the game camera, then each in turn up close: cheering,
+	# sulking, waving, and the three it acts out on its own.
+	await _shoot("mascots_cam", Vector3(30.0, 0.0, 0.0) + back, Vector3(30.0, 0.0, 0.0) + ahead)
 	var close_home: Array[Vector3] = [Vector3(38.5, 1.8, -19.0), Vector3(36.0, 1.5, -24.5)]
-	var close_away: Array[Vector3] = [Vector3(61.5, 1.8, 19.0), Vector3(64.0, 1.5, 24.5)]
+	var close_away: Array[Vector3] = [Vector3(38.5, 1.8, 19.0), Vector3(36.0, 1.5, 24.5)]
 	stadium.react(true, 1.0)
 	await _wait(0.45)
 	await _shoot("mascot_cheer", close_home[0], close_home[1], 0.0)
@@ -78,6 +89,17 @@ func _run() -> void:
 	await _shoot("mascot_wave", close_home[0], close_home[1], 0.0)
 	stadium.wave_progress = -1.0
 	await _wait(0.5)
+	for act: Array in [[&"point", 0.5], [&"flex", 0.5], [&"faint", 1.4]]:
+		stadium.mascot_react(true, act[0], 6.0)
+		await _wait(act[1])
+		await _shoot("mascot_%s" % act[0], close_home[0], close_home[1], 0.0)
+	stadium.mascot_react(true, &"idle", 0.0)
+	# On the run after a ball that has gone up the field.
+	await _wait(0.5)
+	_game.ball.position = Vector3(70.0, 0.0, 0.0)
+	await _wait(1.0)
+	await _shoot("mascot_run", Vector3(45.0, 1.8, -19.0), Vector3(42.0, 1.5, -24.5), 0.0)
+	await _wait(6.0)
 	await _shoot("jumbotron", Vector3(70.0, 8.0, 0.0), Vector3(140.0, 24.0, 0.0))
 	await _shoot("hot_dog_stand", Vector3(20.0, 16.0, -30.0), Vector3(17.0, 12.0, -48.0))
 	# The home crowd up, the visitors sunk; then the same a little later.

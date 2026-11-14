@@ -139,6 +139,30 @@ extends Resource
 ## toward it.
 @export var jump_ball_range: float = 3.5
 
+@export_group("Jump dive")
+## A dive started in the air (dive pressed during a jump) goes this much faster
+## than dive_speed.
+@export var jump_dive_speed_scale: float = 1.25
+## Seconds added to dive_time for one started at the top of the jump; less in
+## proportion from lower down.
+@export var jump_dive_extra_time: float = 0.14
+## He ploughs into the turf: this share of his speed is left for the slide.
+@export var jump_dive_landing_speed_scale: float = 0.5
+## He lands dazed: this long on the turf, in place of dive_recover_time.
+@export var jump_dive_daze_time: float = 2.6
+## In place of dive_get_up_time after a daze.
+@export var jump_dive_get_up_time: float = 1.2
+## Once he is up from a daze he is injured: every rating is multiplied by
+## this for the rest of the play and for this many plays after it. Hurting
+## himself again while injured only starts that count again.
+@export var injury_rating_scale: float = 0.5
+@export var injury_plays: int = 1
+## Added to dive_tackle_bonus for a tackle made with a jump dive.
+@export var jump_dive_tackle_bonus: float = 0.1
+## A CPU player who went up meaning to jump dive lets go when this share of
+## the jump is left: just past the top.
+@export var jump_dive_ai_release: float = 0.5
+
 @export_group("Diving catch")
 ## Catch and interception radius multiplier for a player diving at the ball.
 @export var dive_catch_radius_scale: float = 2.2
@@ -527,6 +551,8 @@ extends Resource
 ## playoffs or the cup.
 @export_range(0.0, 1.0) var season_intro_chance: float = 0.5
 @export_range(0.0, 1.0) var season_idle_chance: float = 0.35
+## How much of the idle chatter is about the mascots.
+@export_range(0.0, 1.0) var mascot_idle_chance: float = 0.12
 ## His idle chatter is about a rout when the margin is at least this many
 ## points, and about a tight one in the second half within this many.
 @export var audio_blowout_points: int = 17
@@ -654,6 +680,15 @@ extends Resource
 @export var celebration_ring_radius: float = 2.4
 ## Seconds after the whistle that the scorer spikes the ball.
 @export var celebration_spike_time: float = 0.5
+## The scoring team's mascot runs in from its sideline and joins the huddle
+## round the scorer.
+@export var mascot_joins_party: bool = true
+## The person's player dives during his team's celebration and the rest pile on
+## him: how far from where he ends up they leave their feet (the dive and the
+## slide after it carry them the rest), and the seconds between one going and
+## the next (four waves).
+@export var pile_on_dive_range: float = 6.0
+@export var pile_on_stagger: float = 0.12
 ## Chance per score that one of the beaten team takes a run at a celebrating
 ## player, how long he stews first, how close to the scorer he has to be at
 ## the whistle to be the one, and how far out he leaves his feet.
@@ -885,6 +920,19 @@ extends Resource
 @export var ai_dive_reach: float = 3.0
 @export var ai_dive_goal_pressure: float = 2.6
 @export var ai_dive_marker_pressure: float = 1.8
+## Chance that a CPU player goes for a jump dive where one fits: a tackle
+## nothing else will make, a line an ordinary dive is short of, a pass a dive
+## does not reach. He lands dazed, so never where a plain dive would do.
+@export var ai_jump_dive_chance: float = 0.1
+## A defender jump dives at a carrier who is getting away from him between
+## ai_dive_range and this many yards off, with nobody else left to stop him.
+@export var ai_jump_dive_range: float = 5.5
+## A carrier jump dives for the goal line or the marker between ai_dive_reach
+## and this many yards short of it.
+@export var ai_jump_dive_reach: float = 6.0
+## The tackler has to be this close for it (further than for a plain dive:
+## going up takes a moment).
+@export var ai_jump_dive_pressure: float = 4.0
 @export var ai_carrier_avoid_radius: float = 9.0
 ## Chance per second that a CPU player takes a cheap shot after the whistle.
 @export var ai_late_hit_chance: float = 0.1
@@ -943,6 +991,8 @@ extends Resource
 @export var ai_edge_move_wrong_side_chance: float = 0.02
 @export var ai_edge_move_chance: float = 0.85
 @export var ai_edge_dive_chance: float = 0.95
+## At full edge this takes the place of ai_jump_dive_chance.
+@export var ai_edge_jump_dive_chance: float = 0.25
 ## A carrier jumps over a tackler who dives at him from within this range,
 ## with this chance (at full edge).
 @export var ai_edge_hurdle_range: float = 3.5

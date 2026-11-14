@@ -34,6 +34,23 @@ const SLOT_X: Array[float] = [180.0, 500.0, 820.0]
 ## Player one's row and player two's.
 const ROW_Y: Array[float] = [275.0, 352.0]
 const SLIDE_TIME: float = 0.14
+## Each team's mascot stands on the top edge of its panel, at the outer end:
+## the size of its picture, how far that hangs over the panel's side, how far
+## its feet come down over the edge, and how many times finer than that it is
+## drawn (the screen is scaled up on a big window).
+const MASCOT_VIEW: Vector2 = Vector2(230.0, 190.0)
+const MASCOT_OVERHANG: float = 30.0
+const MASCOT_FEET: float = 9.0
+const MASCOT_RENDER_SCALE: int = 2
+## Yards of the mascot's world the picture is tall (the banana is 2.8, and
+## leaves the ground when it cheers), and how far it is turned to the middle.
+const MASCOT_FRAME: float = 3.6
+const MASCOT_TURN: float = 0.38
+## On the sideline a round mascot is kept small so as not to hide the front
+## rows (Stadium.MASCOT_WIDTH). Here each is as big as fits: this tall, unless
+## that makes it wider than this.
+const MASCOT_TALL: float = 2.8
+const MASCOT_WIDE: float = 2.7
 
 ## Where player one's controller is: -1 the left team, 0 the middle, 1 the right team.
 var side: int = 0
@@ -42,6 +59,10 @@ var side: int = 0
 var picks: Array[int] = [0, 1]
 ## Per panel: the bars of its team's ratings (see Roster.team_ratings()).
 var rating_bars: Array[Array] = []
+## Per panel: the short name of the team whose mascot stands on it, and the
+## clip that one is in ("cheer" on the side the controller is under).
+var mascot_names: PackedStringArray = PackedStringArray()
+var mascot_clips: PackedStringArray = PackedStringArray()
 
 var _font: SystemFont
 var _teams: Array[TeamData] = []
@@ -56,6 +77,11 @@ var _name_labels: Array[Label] = []
 var _rating_names: Array[Array] = []
 var _rating_numbers: Array[Array] = []
 var _bar_fills: Array[StyleBoxFlat] = []
+## Per panel: the little world its mascot is drawn in, where the model goes in
+## it, and the model's AnimationPlayer (null without one).
+var _mascot_views: Array[SubViewport] = []
+var _mascot_stands: Array[Node3D] = []
+var _mascot_players: Array[AnimationPlayer] = []
 var _icon: ControllerIcon
 var _choose_hint: Label
 var _start_hint: Label
@@ -93,6 +119,9 @@ func setup(font: SystemFont, teams: Array[TeamData]) -> void:
 	column.add_child(header)
 	column.add_child(_build_board())
 	column.add_child(_build_hints())
+	# The mascots are only drawn while the screen is up.
+	visibility_changed.connect(_on_visibility_changed)
+	_on_visibility_changed()
 
 
 ## Shows the screen with the controller back in the middle.
@@ -224,6 +253,7 @@ func _refresh(animated: bool) -> void:
 		_styles[i].border_color = Color.WHITE if mine else color
 		_styles[i].set_border_width_all(5 if mine else 3)
 		_panels[i].modulate = Color.WHITE if mine or side == 0 else Color(0.5, 0.5, 0.5)
+		_show_mascot(i, team.short_name, mine)
 	_start_hint.modulate.a = 0.35 if side == 0 else 1.0
 
 	var x: float = SLOT_X[side + 1] - ICON_SIZE.x * 0.5
@@ -305,7 +335,98 @@ func _team_panel(index: int) -> Panel:
 	_short_labels.append(short_label)
 	_name_labels.append(name_label)
 	_build_ratings(panel)
+	_build_mascot(panel, index)
 	return panel
+
+
+## The picture of the side's mascot, standing on the panel's top edge: a small
+## world of its own with a camera and a light, drawn into a texture. The model
+## is put in by _show_mascot().
+func _build_mascot(panel: Panel, index: int) -> void:
+	var picture: TextureRect = TextureRect.new()
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_SCALE
+	picture.size = MASCOT_VIEW
+	picture.position = Vector2(-MASCOT_OVERHANG if index == 0 else PANEL_SIZE.x - MASCOT_VIEW.x + MASCOT_OVERHANG, MASCOT_FEET - MASCOT_VIEW.y)
+	panel.add_child(picture)
+
+	var view: SubViewport = SubViewport.new()
+	view.size = Vector2i(MASCOT_VIEW) * MASCOT_RENDER_SCALE
+	view.own_world_3d = true
+	view.transparent_bg = true
+	view.msaa_3d = Viewport.MSAA_4X
+	view.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	picture.add_child(view)
+	picture.texture = view.get_texture()
+
+	var camera: Camera3D = Camera3D.new()
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = MASCOT_FRAME
+	# The ground a little above the bottom of the picture.
+	camera.position = Vector3(0.0, MASCOT_FRAME * 0.5 - 0.08, 8.0)
+	view.add_child(camera)
+	var sun: DirectionalLight3D = DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-38.0, 28.0 if index == 0 else -28.0, 0.0)
+	sun.light_energy = 1.25
+	view.add_child(sun)
+	var sky: Environment = Environment.new()
+	sky.background_mode = Environment.BG_CLEAR_COLOR
+	sky.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	sky.ambient_light_color = Color(0.86, 0.9, 1.0)
+	sky.ambient_light_energy = 0.75
+	var world: WorldEnvironment = WorldEnvironment.new()
+	world.environment = sky
+	view.add_child(world)
+	# Turned a little to the middle of the screen, where the other one stands.
+	var stand: Node3D = Node3D.new()
+	stand.rotation.y = MASCOT_TURN if index == 0 else -MASCOT_TURN
+	view.add_child(stand)
+
+	_mascot_views.append(view)
+	_mascot_stands.append(stand)
+	_mascot_players.append(null)
+	mascot_names.append("")
+	mascot_clips.append("")
+
+
+## Stands `short_name`'s mascot on panel `index` (the model of the sidelines,
+## see Stadium.mascot_model) and has it cheer on the side the controller is
+## under, idle on the other.
+func _show_mascot(index: int, short_name: String, mine: bool) -> void:
+	if index >= _mascot_stands.size():
+		return
+	if mascot_names[index] != short_name:
+		mascot_names[index] = short_name
+		mascot_clips[index] = ""
+		_mascot_players[index] = null
+		var stand: Node3D = _mascot_stands[index]
+		for old: Node in stand.get_children():
+			stand.remove_child(old)
+			old.queue_free()
+		var model: Node3D = Stadium.mascot_model(short_name)
+		if model != null:
+			var size: Vector3 = model.get_meta(&"size", Vector3.ONE * MASCOT_TALL)
+			model.scale = Vector3.ONE * minf(MASCOT_TALL / maxf(size.y, 0.01), MASCOT_WIDE / maxf(size.x, 0.01))
+			stand.add_child(model)
+			var found: Array[Node] = model.find_children("*", "AnimationPlayer", true, false)
+			if not found.is_empty():
+				var player: AnimationPlayer = found[0] as AnimationPlayer
+				for clip: StringName in player.get_animation_list():
+					player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+				_mascot_players[index] = player
+	var clip: String = "cheer" if mine else "idle"
+	var clips: AnimationPlayer = _mascot_players[index]
+	if clips == null or clip == mascot_clips[index] or not clips.has_animation(clip):
+		return
+	mascot_clips[index] = clip
+	clips.play(clip, 0.2)
+
+
+func _on_visibility_changed() -> void:
+	var mode: SubViewport.UpdateMode = SubViewport.UPDATE_ALWAYS if is_visible_in_tree() else SubViewport.UPDATE_DISABLED
+	for view: SubViewport in _mascot_views:
+		view.render_target_update_mode = mode
 
 
 ## A row for each of the team's ratings: what it is, a bar and the number.

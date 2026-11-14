@@ -108,33 +108,37 @@ func _tick() -> void:
 			_save("players")
 			_press(JOY_BUTTON_RIGHT_SHOULDER)
 		10:
+			_expect(hub.page == SeasonHub.Page.MASCOTS, "RB did not turn to MASCOTS")
+			_save("mascots")
+			_press(JOY_BUTTON_RIGHT_SHOULDER)
+		11:
 			_expect(hub.page == SeasonHub.Page.SCHEDULE, "RB did not turn to SCHEDULE")
 			_save("schedule")
 			_press(JOY_BUTTON_Y)
-		11:
+		12:
 			_expect(Season.current != null, "one press of (Y) threw the season away")
 			_press(JOY_BUTTON_B)
-		12:
+		13:
 			_expect(hub.visible and Season.current != null, "(B) on the question left the season's screen")
 			_press(JOY_BUTTON_RIGHT_SHOULDER)
-		13:
+		14:
 			_expect(hub.page == SeasonHub.Page.WEEK, "the pages do not go round")
 			_fixture = Season.current.fixture()
 			_expect(not _fixture.is_empty(), "the person has no game to play")
 			_press(JOY_BUTTON_A)
 			_waiting = &"match"
 			_waited = 0
-		14:
+		15:
 			# Back on the menu after the game.
 			_expect(hub != null and hub.visible and hub.page == SeasonHub.Page.WEEK, "the menu did not come back up on the season's screen")
 			_expect(not _menu.season_button.is_visible_in_tree(), "the buttons are up behind the season's screen")
 			_save("after")
 			_press(JOY_BUTTON_B)
-		15:
+		16:
 			_expect(not hub.visible and _menu.season_button.has_focus(), "(B) did not go back to the title")
 			_expect(_menu.season_button.text == "CONTINUE SEASON", "the button reads %s with a season on" % _menu.season_button.text)
 			_check_playoff_pages(hub)
-		16:
+		17:
 			_save("champion")
 			_finish()
 

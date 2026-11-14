@@ -232,6 +232,49 @@ sudden death, a scramble for the ball and the first score wins.
 
 `chat_overtime_t1`: OVERTIME, Jim! How long does it go? / Until somebody scores, Tony. / What if NOBODY scores? / Then we live here now.
 
+### The mascots
+
+Recorded on 2026-11-14 (19 lines, one take each). Any match: each half opens
+with the two mascots scrambling for the ball, and the rest of the time they
+work the sidelines (see `docs/stadium.md`). No line names a team or a fruit,
+since any team can be playing, and a mascot is "it" or "the mascot".
+
+`announcer_scramble` (Jim, as the two line up; a remark, so it is not said
+over an opening or a halftime exchange)
+
+- 1: The mascots are out there. Whoever gets the ball, keeps it!
+- 2: Mascot scramble! One ball, two pieces of fruit!
+- 3: Here come the mascots. This is how a half starts in this league!
+
+`color_scramble` (Tony, the same moment)
+
+- 1: FRUIT FIGHT, Jim! My FAVORITE kind of fight!
+- 2: That's somebody's JOB, Jim! They went to SCHOOL for that!
+- 3: I've got MONEY on the mascot, Jim! I don't know WHICH one!
+
+`announcer_scramble_won` (Jim, one of them comes up with the ball)
+
+- 1: The mascot has it!
+- 2: Got it! And away goes the mascot!
+
+`color_mascot_td` (Tony, a touchdown in the scramble)
+
+- 1: THE MASCOT SCORED, Jim! Put it in the LINEUP!
+- 2: A TOUCHDOWN by a piece of FRUIT! I LOVE this league!
+- 3: That mascot is faster than my whole FANTASY team, Jim!
+
+`color_idle_mascot` (Tony, between plays, `Tuning.mascot_idle_chance` of the
+idle chatter)
+
+- 1: Is that a PERSON in a fruit, Jim, or a FRUIT with legs? Nobody will TELL me!
+- 2: Biscuit BARKS at the mascot, Jim! Biscuit KNOWS something!
+- 3: I asked the mascot for an autograph, Jim! It signed with a GLOVE!
+
+`chat_idle_mascot`
+
+- j1: The mascot is working that sideline hard, Tony! / It's got more ENERGY than me, Jim! And I had NACHOS!
+- t1: Jim, is there a PERSON in that mascot? / I have never asked, Tony! / So it could just be a really big FRUIT!
+
 ### On the season's screen
 
 Played by `MenuBooth`, asked for by `MainMenu` and `SeasonHub`.
@@ -349,7 +392,9 @@ find the files by name, so adding a line is adding a file.
 ## Recording
 
 - ElevenLabs flow "Tony and Jim booth" (`LzwEkf4e5N3rDFizXQ88`), model
-  `eleven_v4`, one node per line, 2 takes.
+  `eleven_v4`, one node per line, 2 takes. That flow is full (a flow holds
+  1,000 nodes, reached on 2026-11-14 part way through the mascot lines): new
+  lines go into the second booth flow, `JamcL4nKxuzgYPgcZQ3h`.
 - Tony: "Ryan - Event VOG / Announcer". Prompt `[excited] [shouting] ...`, or
   `[screaming]` when he panics. Exclamation marks, CAPS on the stressed words.
 - Jim: "David - Sports Arena Announcer". Prompt `[excited] ...` with an
@@ -414,6 +459,40 @@ only in the flow, where a node shows the first few words of its prompt.
 `chat_lawn_chair_t2`: Did you SEE that hit, Jim?! / I heard it. / My FILLINGS heard it!
 
 `chat_lawn_chair_j2` (nobody in this game wears a helmet): And THAT is why they wear the helmets! / Jim, they're not WEARING helmets! / They're NOT? Oh, no! Somebody get a DOCTOR down there! Get ALL the doctors! / (sobbing) They're so BRAVE, Jim! They're so BRAVE!
+
+`announcer_daze` (Jim, a jump dive comes down and the diver lies dazed; recorded 2026-11-14)
+
+- 1: That landing is going to need a minute!
+- 2: Flew beautifully! Landed less so!
+- 3: Seeing stars down there!
+- 4: The dive was the EASY part!
+- 5: Full marks for the flight! None for the landing!
+- 6: Somebody is counting stars!
+
+`color_daze` (Tony, the same moment)
+
+- 1: They're seeing STARS, Jim! I can see them TOO!
+- 2: That's a FACE full of LAWN!
+- 3: Somebody just tried to tackle the PLANET!
+- 4: BISCUIT lands better than that, and he's got SHORT LEGS!
+- 5: Night-night! Somebody get a PILLOW out there!
+- 6: The GROUND won that one!
+
+`chat_daze_t1`: Jim, how many FINGERS am I holding up?! / You are not the one who hit the ground, Tony! / FOUR! It's FOUR, Jim!
+
+`chat_daze_j1`: And that is why most people dive from the GROUND! / But Jim, it goes so much FURTHER! / So does the headache!
+
+`announcer_woozy` (Jim, the dazed player gets up injured: half the player they were until the end of the next play)
+
+- 1: Back up! Not all the way back, but up!
+- 2: On their feet! Mostly!
+- 3: Up again, at about HALF speed!
+
+`color_woozy` (Tony, the same moment)
+
+- 1: Still got the STARS, Jim! They're KEEPING them!
+- 2: Walking like ME after NACHOS!
+- 3: That one's running on HALF a tank!
 
 `announcer_break` (Jim, a broken tackle)
 

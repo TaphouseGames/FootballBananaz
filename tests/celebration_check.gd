@@ -24,6 +24,16 @@ var _sampled: bool = false
 var _gathered_total: int = 0
 var _mates_total: int = 0
 var _floored: int = 0
+var _mascots_there: int = 0
+## Every other score one of the scorer's teammates dives during the party, as
+## the person's player might, and the rest are to pile on him.
+var _pile_diver: Player
+var _pile_joined: Dictionary[Player, bool] = {}
+var _pile_worst: float = 0.0
+var _pile_rest: Vector3 = Vector3.ZERO
+var _piles: int = 0
+var _pile_joined_total: int = 0
+var _pile_mates_total: int = 0
 
 
 func _initialize() -> void:
@@ -68,11 +78,15 @@ func _tick() -> void:
 			carrier.position = Vector3(_game.tuning.goal_x(carrier.team.attack_dir) + dir * 3.0, 0.0, 0.0)
 			_scorer_start = carrier.position
 			_sampled = false
+			_pile_diver = null
+			_pile_joined.clear()
+			_pile_worst = 0.0
 			_step = 2
 		2:
 			if state == &"Live":
 				return
 			if state == &"Scored":
+				_pile()
 				if not _sampled and _pc.state_machine.current.time_in_state >= _game.tuning.scored_banner_time - 0.2:
 					_sample()
 				return
@@ -93,8 +107,48 @@ func _snap() -> void:
 	_game.clock = 100.0
 	_game.start_drive(team, _game.tuning.yard_to_x(team.attack_dir, 92.0))
 	_pc.line_up(_game.offense_playbook.plays[0], _game.defense_playbook.plays[0])
+	# The mascot that joined the last party is back on its sideline.
+	if _pc.players.size() != 14 or team.players.size() != 7 or team.mascot.visible:
+		_failures.append("score %d: %d players lined up, %d of them the home team's" % [_scores + 1, _pc.players.size(), team.players.size()])
+	for prop: String in ["Mascot", "MascotAway"]:
+		if _game.tuning.stadium_enabled and not (_game.field.stadium.props.get_node(NodePath(prop)) as Node3D).visible:
+			_failures.append("score %d: %s is not on its sideline at the line-up" % [_scores + 1, prop])
 	_pc.snap()
 	_pc.state_machine.transition(&"Live")
+
+
+## Starts the pile-on on every other score and keeps track of who dives in and
+## how far from the man at the bottom each of them comes down.
+func _pile() -> void:
+	var scorer: Player = _pc.scorer
+	if scorer == null or _scores % 2 == 0:
+		return
+	if _pile_diver == null:
+		if _pc.dead_time < 1.5:
+			return
+		for mate: Player in scorer.team.players:
+			if mate != scorer and mate.can_act():
+				_pile_diver = mate
+				break
+		if _pile_diver == null:
+			return
+		_pc.do_dive(_pile_diver, _pile_diver.facing)
+		_pc.start_pile_on(_pile_diver)
+		if _pc.pile_target != _pile_diver:
+			_failures.append("score %d: a dive in the celebration did not start a pile-on" % (_scores + 1))
+		return
+	# Where the man at the bottom lies once he has stopped sliding.
+	if _pile_diver.state == Player.State.DIVING or (_pile_diver.is_down() and _pile_diver.velocity.length() > 0.2):
+		_pile_rest = _pile_diver.position
+	for mate: Player in scorer.team.players:
+		if mate == _pile_diver:
+			continue
+		if mate.state == Player.State.DIVING:
+			_pile_joined[mate] = true
+		elif _pile_joined.get(mate, false) and mate.is_down() and mate.velocity.length() < 0.2:
+			# Counted once, when he has come to rest.
+			_pile_joined[mate] = false
+			_pile_worst = maxf(_pile_worst, _flat(mate.position, _pile_rest))
 
 
 ## The picture just before the celebration is over.
@@ -111,11 +165,28 @@ func _sample() -> void:
 		hit = hit or mate.is_down()
 		if mate != scorer and _flat(mate.position, scorer.position) <= ring + 1.5:
 			gathered += 1
-	_gathered_total += gathered
-	_mates_total += scorer.team.players.size() - 1
+	var piled: bool = _pile_diver != null
+	if piled:
+		# Everybody has been on the turf and is on his way back to the ring.
+		_piles += 1
+		_pile_joined_total += _pile_joined.size()
+		_pile_mates_total += scorer.team.players.size() - 1
+		if _pile_worst > 2.5:
+			_failures.append("score %d: somebody landed %.1f yd from the man he piled on" % [_scores + 1, _pile_worst])
+	else:
+		_gathered_total += gathered
+		_mates_total += scorer.team.players.size() - 1
+	# The scorer's mascot has come off its sideline and into the huddle.
+	if _game.tuning.mascot_joins_party and _game.tuning.stadium_enabled:
+		var guest: Mascot = scorer.team.mascot
+		var prop: Node3D = _game.field.stadium.props.get_node(^"Mascot" if scorer.team == _game.home else ^"MascotAway") as Node3D
+		if not scorer.team.players.has(guest) or not guest.visible or prop.visible:
+			_failures.append("score %d: the scorer's mascot did not come onto the field" % (_scores + 1))
+		elif _flat(guest.position, scorer.position) <= ring + 1.5:
+			_mascots_there += 1
 	if hit:
 		_floored += 1
-	elif _flat(scorer.position, _scorer_start) > 4.0:
+	elif not piled and _flat(scorer.position, _scorer_start) > 4.0:
 		_failures.append("score %d: the scorer wandered %.1f yd off" % [_scores + 1, _flat(scorer.position, _scorer_start)])
 	if scorer.has_ball and not hit:
 		_failures.append("score %d: the scorer never spiked the ball" % (_scores + 1))
@@ -138,6 +209,16 @@ func _finish() -> void:
 	print("%d scores: %d spikes, %.0f%% of teammates in the huddle at the end, %d cheap shots landed (chance %.2f), %d ended with a celebrating player on the turf" % [_scores, _game.get_stat(&"spikes"), share * 100.0, shots, chance, _floored])
 	if share < 0.7:
 		_failures.append("only %.0f%% of the scorer's teammates reached him" % (share * 100.0))
+	if _piles > 0:
+		var joined: float = float(_pile_joined_total) / maxf(float(_pile_mates_total), 1.0)
+		print("%d pile-ons: %.0f%% of the diver's teammates dived on him." % [_piles, joined * 100.0])
+		if joined < 0.7:
+			_failures.append("only %.0f%% of the team piled on" % (joined * 100.0))
+		if _game.get_stat(&"pile_ons") != _piles:
+			_failures.append("%d pile-ons counted in %d started" % [_game.get_stat(&"pile_ons"), _piles])
+	print("The mascot was in the huddle at the end of %d of them." % _mascots_there)
+	if _game.tuning.mascot_joins_party and _game.tuning.stadium_enabled and float(_mascots_there) < 0.7 * float(_scores):
+		_failures.append("the mascot reached the huddle in only %d of %d scores" % [_mascots_there, _scores])
 	if _game.get_stat(&"spikes") < _scores - shots:
 		_failures.append("%d spikes in %d scores" % [_game.get_stat(&"spikes"), _scores])
 	if chance <= 0.0 and shots > 0:

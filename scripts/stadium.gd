@@ -80,6 +80,24 @@ const MASCOT_HEIGHT: float = 2.8
 const MASCOT_WIDTH: float = 2.0
 ## How loud its side's cheer or slump has to be (0..1) for a mascot to join in.
 const MASCOT_REACTS_FROM: float = 0.2
+## A mascot works its sideline this far inside the wall, clear of the two yards
+## past the line the players can reach.
+const MASCOT_INSIDE: float = -WALL_THICKNESS - 1.6
+## It follows the ball along the sideline: it sets off once the ball is this
+## many yards up or down the field from it, runs at this speed (slower than a
+## footballer, so a breakaway leaves it behind), and stays this far from the
+## ends of the straight.
+const MASCOT_FOLLOW_SLACK: float = 3.0
+const MASCOT_SPEED: float = 6.0
+const MASCOT_END_MARGIN: float = 3.0
+## How fast it turns to run and back to face the field.
+const MASCOT_TURN_RATE: float = 9.0
+## Seconds a clip asked for with mascot_react() is held.
+const MASCOT_ACT_TIME: float = 2.6
+## Clips played once and held on their last frame; the others loop.
+const MASCOT_ONE_SHOT: PackedStringArray = ["faint"]
+## What a model without one of the newer clips does in its place.
+const MASCOT_STAND_INS: Dictionary[String, String] = {"point": "cheer", "flex": "cheer", "faint": "sulk"}
 
 ## Yards from the sidelines and the end lines to the wall.
 const WALL_GAP_SIDE: float = 6.0
@@ -236,6 +254,15 @@ var _mascots: Array[Node3D] = []
 var _mascot_y: PackedFloat32Array = PackedFloat32Array()
 var _mascot_players: Array[AnimationPlayer] = []
 var _mascot_clips: PackedStringArray = PackedStringArray()
+## The straight each one works, how far along it it is, the way it faces
+## (without the rock), and whether it is running after the ball.
+var _mascot_runs: Array[Run] = []
+var _mascot_at: PackedFloat32Array = PackedFloat32Array()
+var _mascot_facing: Array[Basis] = []
+var _mascot_running: Array[bool] = []
+## The clip asked for with mascot_react() and the seconds it has left.
+var _mascot_act: PackedStringArray = PackedStringArray()
+var _mascot_act_left: PackedFloat32Array = PackedFloat32Array()
 var _font: Font
 var _clock: float = 0.0
 ## The picture of the signs, once it has been drawn (never when headless).
@@ -259,6 +286,12 @@ func setup(p_tuning: Tuning, home: Team, away: Team, left_is_home: bool) -> void
 	_mascot_y.clear()
 	_mascot_players.clear()
 	_mascot_clips.clear()
+	_mascot_runs.clear()
+	_mascot_at.clear()
+	_mascot_facing.clear()
+	_mascot_running.clear()
+	_mascot_act.clear()
+	_mascot_act_left.clear()
 	if not tuning.stadium_enabled:
 		set_process(false)
 		return
@@ -353,11 +386,81 @@ func _process(_delta: float) -> void:
 		if _wave_in <= 0.0 and between_plays:
 			start_wave()
 	for i: int in _mascots.size():
-		var hop: float = absf(sin(_clock * 3.0 + float(i))) * (0.12 + 0.9 * cheer[i])
-		_mascots[i].position.y = _mascot_y[i] + hop
-		_mascots[i].rotation.z = sin(_clock * 1.5 + float(i)) * 0.06
+		_mascot_act_left[i] = maxf(_mascot_act_left[i] - delta, 0.0)
+		_follow_ball(i, delta)
+		# The hop and the rock are for standing about: not on the run, and not
+		# on top of a clip of its own.
+		var loose: bool = not _mascot_running[i] and _mascot_act_left[i] <= 0.0
+		var hop: float = absf(sin(_clock * 3.0 + float(i))) * (0.12 + 0.9 * cheer[i]) if loose else 0.0
+		var rock: float = sin(_clock * 1.5 + float(i)) * 0.06 if loose else 0.0
+		var run: Run = _mascot_runs[i]
+		var at: Vector3 = run.point(_mascot_at[i], MASCOT_INSIDE)
+		_mascots[i].transform = Transform3D(_mascot_facing[i] * Basis(Vector3.BACK, rock), Vector3(at.x, _mascot_y[i] + hop, at.z))
 		_play_mascot(i)
 	_push_uniforms()
+
+
+## Moves a mascot along its sideline after the ball and turns it the way it is
+## going, or back to the field once it is level with the ball again.
+func _follow_ball(side: int, delta: float) -> void:
+	var run: Run = _mascot_runs[side]
+	var gap: float = 0.0
+	if _game != null and _game.ball != null and _mascots[side].visible and _mascot_act_left[side] <= 0.0:
+		var level: float = clampf((_game.ball.position - run.start).dot(run.dir), MASCOT_END_MARGIN, run.length - MASCOT_END_MARGIN)
+		gap = level - _mascot_at[side]
+	# It sets off past the slack and then runs until it is level.
+	_mascot_running[side] = absf(gap) > (0.2 if _mascot_running[side] else MASCOT_FOLLOW_SLACK)
+	var facing: Basis = _facing_field(run, _mascot_at[side])
+	if _mascot_running[side]:
+		_mascot_at[side] += signf(gap) * minf(MASCOT_SPEED * delta, absf(gap))
+		var ahead: Vector3 = run.dir * signf(gap)
+		facing = Basis(Vector3.UP.cross(ahead), Vector3.UP, ahead)
+	elif _mascot_act_left[side] > 0.0 and MASCOT_ONE_SHOT.has(_mascot_act[side]):
+		# It goes over backwards: side on, so that it lands along the wall and
+		# not in it.
+		facing = Basis(Vector3.UP.cross(run.dir), Vector3.UP, run.dir)
+	_mascot_facing[side] = _mascot_facing[side].slerp(facing, minf(MASCOT_TURN_RATE * delta, 1.0)).orthonormalized()
+
+
+## Has the home team's mascot (or the visitors') play `clip` for `seconds` where
+## it stands: "point", "flex", "faint" or any other clip of the model. A model
+## without it plays its stand-in (MASCOT_STAND_INS).
+func mascot_react(for_home: bool, clip: StringName, seconds: float = MASCOT_ACT_TIME) -> void:
+	var side: int = 0 if for_home else 1
+	if side >= _mascots.size():
+		return
+	_mascot_act[side] = String(clip)
+	_mascot_act_left[side] = seconds
+	# The same one twice running starts again.
+	_mascot_clips[side] = ""
+
+
+## Where the home team's mascot (or the visitors') stands on its sideline now.
+func mascot_position(for_home: bool) -> Vector3:
+	var side: int = 0 if for_home else 1
+	if side >= _mascots.size():
+		return Vector3.ZERO
+	return _mascot_runs[side].point(_mascot_at[side], MASCOT_INSIDE)
+
+
+## Puts the home team's mascot (or the visitors') on its sideline level with
+## `spot`, as far as the straight goes, and returns where that is: the place it
+## steps onto the field from. A long score leaves it far behind otherwise.
+func mascot_entry(for_home: bool, spot: Vector3) -> Vector3:
+	var side: int = 0 if for_home else 1
+	if side >= _mascots.size():
+		return Vector3.ZERO
+	var run: Run = _mascot_runs[side]
+	_mascot_at[side] = clampf((spot - run.start).dot(run.dir), MASCOT_END_MARGIN, run.length - MASCOT_END_MARGIN)
+	_mascot_running[side] = false
+	return mascot_position(for_home)
+
+
+## Takes one of the two off its sideline, or puts it back.
+func set_mascot_visible(for_home: bool, shown: bool) -> void:
+	var side: int = 0 if for_home else 1
+	if side < _mascots.size():
+		_mascots[side].visible = shown
 
 
 func _push_uniforms() -> void:
@@ -1067,8 +1170,8 @@ func _build_props() -> void:
 	stand.transform = Transform3D(_facing_field(home_stand, stand_at), home_stand.point(stand_at, depth() - CONCOURSE_DEPTH * 0.45) + Vector3(0.0, top, 0.0))
 	props.add_child(stand)
 
-	# The home team's mascot works the home sideline, inside the wall and
-	# clear of the two yards past the line the players can reach. The
+	# The home team's mascot works the home sideline, inside the wall
+	# (MASCOT_INSIDE), and follows the ball along it (_follow_ball). The
 	# visitors' does the same across the field.
 	for side: int in 2:
 		var mascot: Node3D = mascot_model(_names[side])
@@ -1080,17 +1183,23 @@ func _build_props() -> void:
 		mascot.name = "Mascot" if side == 0 else "MascotAway"
 		var sideline: Run = home_stand if side == 0 else runs[2]
 		var mascot_at: float = sideline.length * 0.5 - 14.0
-		mascot.transform = Transform3D(_facing_field(sideline, mascot_at), sideline.point(mascot_at, -WALL_THICKNESS - 1.6))
+		mascot.transform = Transform3D(_facing_field(sideline, mascot_at), sideline.point(mascot_at, MASCOT_INSIDE))
 		props.add_child(mascot)
 		var players: Array[Node] = mascot.find_children("*", "AnimationPlayer", true, false)
 		var player: AnimationPlayer = players[0] as AnimationPlayer if not players.is_empty() else null
 		if player != null:
 			for clip: StringName in player.get_animation_list():
-				player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+				player.get_animation(clip).loop_mode = Animation.LOOP_NONE if MASCOT_ONE_SHOT.has(String(clip)) else Animation.LOOP_LINEAR
 		_mascots.append(mascot)
 		_mascot_y.append(mascot.position.y)
 		_mascot_players.append(player)
 		_mascot_clips.append("")
+		_mascot_runs.append(sideline)
+		_mascot_at.append(mascot_at)
+		_mascot_facing.append(mascot.basis)
+		_mascot_running.append(false)
+		_mascot_act.append("")
+		_mascot_act_left.append(0.0)
 		_play_mascot(side)
 
 	# Where the commentary booth would go: top of the home stand, at midfield.
@@ -1128,14 +1237,23 @@ func set_mascots_visible(shown: bool) -> void:
 		mascot.visible = shown
 
 
-## The clip a mascot should be in: up with its own crowd, down when the other
-## side has scored, waving along with a wave, else idling.
+## The clip a mascot should be in: the one asked for (mascot_react), running
+## after the ball, up with its own crowd, down when the other side has scored,
+## waving along with a wave, else idling.
 func _play_mascot(side: int) -> void:
 	var player: AnimationPlayer = _mascot_players[side]
 	if player == null:
 		return
 	var clip: String = "idle"
-	if cheer[side] > MASCOT_REACTS_FROM:
+	var rate: float = 1.0
+	if _mascot_act_left[side] > 0.0:
+		clip = _mascot_act[side]
+		if not player.has_animation(clip):
+			clip = MASCOT_STAND_INS.get(clip, "idle")
+	elif _mascot_running[side]:
+		clip = "run"
+		rate = MASCOT_SPEED / Mascot.RUN_CLIP_SPEED
+	elif cheer[side] > MASCOT_REACTS_FROM:
 		clip = "cheer"
 	elif slump[side] > MASCOT_REACTS_FROM:
 		clip = "sulk"
@@ -1144,6 +1262,7 @@ func _play_mascot(side: int) -> void:
 	if clip == _mascot_clips[side] or not player.has_animation(clip):
 		return
 	_mascot_clips[side] = clip
+	player.speed_scale = rate
 	player.play(clip, 0.25)
 
 

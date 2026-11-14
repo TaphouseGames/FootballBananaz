@@ -1,6 +1,6 @@
 # The stadium
 
-The bowl round the field: wall, tiered stands with aisles and tunnel mouths, about 3,600 fans the size of the players, ad boards, two jumbotrons, four light towers, a hot dog stand and the two teams' mascots. It is scenery only. Nothing in it collides and no gameplay code reads it, with one exception: the mascots also play the scramble that opens a half (see Mascots, On the field).
+The bowl round the field: wall, tiered stands with aisles and tunnel mouths, about 3,600 fans the size of the players, ad boards, two jumbotrons, four light towers, a hot dog stand and the two teams' mascots. It is scenery only. Nothing in it collides and no gameplay code reads it, with one exception: the mascots. They play the scramble that opens a half, follow the ball along their sidelines, act out what happens on the field, and the scoring team's joins the huddle after a touchdown (see Mascots).
 
 ## How it is put together
 
@@ -37,7 +37,7 @@ All under `Field/Stadium/Props` at run time (the nodes are made in `Stadium._bui
 - `Jumbotrons/Jumbotron0` and `Jumbotron4`: behind the back wall at each end. The score is a `Label3D` on a quad in front of the model's screen (`SCREEN_RECT`). Hidden on the main menu, where the title stands in front of one.
 - `LightTowers/LightTower1, 3, 5, 7`: outside the four corners.
 - `HotDogStand`: on the walkway at the top of the home stand (-Z), about 30 % of the way along.
-- `Mascot`: the home team's mascot, inside the wall on the home sideline, 14 yards from midfield. `MascotAway`: the visitors', at the same place on the far sideline.
+- `Mascot`: the home team's mascot, inside the wall on the home sideline (`MASCOT_INSIDE`). It starts 14 yards from midfield and then follows the ball along the sideline. `MascotAway`: the visitors', on the far sideline.
 - `BoothAnchor`: an empty marker at the top of the home stand at midfield. There is no booth model yet; this is where one would go.
 
 ## Assets and how to rebuild them
@@ -80,15 +80,35 @@ Every team has a fruit mascot: `assets/stadium/mascot_<team>.glb`, where `<team>
 
 - **Same build for all.** A fruit body with the face on it, thin black arms and legs, white gloves, sneakers, arms raised. 5,000 triangles or fewer, one 1024 px texture, one unit tall, feet on the origin, facing +Z.
 - **Same skeleton.** `Root`, `Body`, and `UpperArm`, `Forearm`, `Hand`, `Thigh`, `Shin`, `Foot` with `.L` and `.R`. The legs hang from `Root`, so the feet stay put when the body sways.
-- **Same clips.** `idle`, `cheer`, `sulk`, `wave`, `run`, 30 frames a second. `run` is for the field (see below); the sideline never plays it. `Stadium._play_mascot()` picks one: `cheer` while that side's crowd is up, `sulk` while it is slumped, `wave` during a wave, else `idle`. The hop and rock from code go on top.
+- **Same clips.** `idle`, `cheer`, `sulk`, `wave`, `run`, `point`, `flex`, `faint`, 30 frames a second. `Stadium._play_mascot()` picks one: a clip it has been asked to act out, `run` while it is following the ball, `cheer` while that side's crowd is up, `sulk` while it is slumped, `wave` during a wave, else `idle`. The hop and rock from code go on top while it is standing about.
 - **Size.** `MASCOT_HEIGHT` (2.8 yards, the banana), but no wider than `MASCOT_WIDTH` (2 yards), so the round ones stand about 2 yards tall.
+
+### On the sideline
+
+- **It follows the ball.** `Stadium._follow_ball()` keeps each mascot level with the ball along its sideline: it sets off once the ball is `MASCOT_FOLLOW_SLACK` (3 yards) up or down the field from it and runs at `MASCOT_SPEED` (6 yards a second, slower than a footballer, so a breakaway leaves it behind), never nearer than `MASCOT_END_MARGIN` to an end of the straight. On the main menu, where there is no match, it stays where it is.
+- **It acts things out.** `Game.mascot_moment(team, clip)` calls `Stadium.mascot_react()`, which holds a clip for `MASCOT_ACT_TIME` seconds and stops the mascot where it is meanwhile:
+
+  | What happened | The team's own mascot | The other one |
+  | --- | --- | --- |
+  | A first down | `point` | |
+  | A sack, a stop on fourth down | `flex` (the defense's) | |
+  | An interception, a fumble lost | `flex` (the taker's) | `faint` |
+  | A touchdown | joins the huddle (below) | `faint` |
+
+  `faint` is played once and held (`MASCOT_ONE_SHOT`), and the mascot turns side on first so that it lands along the wall, not in it. A model without one of the three plays a stand-in (`MASCOT_STAND_INS`).
+- **It joins the touchdown huddle.** `PlayController._invite_mascot()` takes the sideline mascot away and brings the team's `Mascot` player on from the sideline level with the scorer (`Stadium.mascot_entry()`). It is one of `Team.players` until the next line-up, so it gets a place in the ring like any teammate and can be the victim of a cheap shot, and it dives onto the heap with the rest when the person's player dives during the celebration (`PlayController.start_pile_on()`); `_dismiss_mascot()` (from `_reset_play()`) puts it back. `Tuning.mascot_joins_party` turns it off. Not after a scramble's touchdown: the mascots are out there already.
+
+### On the team select
+
+`TeamSelect` stands each side's mascot on the top edge of its panel (`_build_mascot()`, `_show_mascot()`): the same model, drawn in a small world of its own (a `SubViewport` with a camera and a light) only while the screen is up. It cheers on the side the controller is under and idles on the other. Here a round mascot is not kept small as on the sideline: each is scaled to `MASCOT_TALL`, unless that makes it wider than `MASCOT_WIDE`. `tests/menu_check.gd` checks that each side shows its own team's.
 
 ### On the field
 
 The scramble that opens each half (and sudden death) is mascot against mascot: nobody else is on the field. Each team has a `Mascot` (`scripts/mascot.gd`, `scenes/mascot.tscn`), a `Player` that wears the model from `Stadium.mascot_model()` and plays its clips (`run` while moving, `cheer` or `sulk` after a score) in place of a `PlayerAnimator`. The one that comes up with the ball runs it back and the other one tackles it.
 
 - **Equal.** Every mascot is rated 50 in everything (`Mascot.ratings_for()`), and the CPU's skill edge is off during a scramble (`PlayController.team_edge()`).
-- **Who is on the field.** `Team.players` is whoever is playing: the mascot alone during a scramble, the seven otherwise. `Team.squad` is always the seven; the box score and the roster screen go by it. `PlayController._field()` swaps them, hides the seven and the two sideline mascots for the scramble, and `_reset_play()` puts everything back at the next line-up.
+- **The book.** Each team's line (`TeamLine`) keeps its mascot's scrambles: played (`scrambles`, only the ones somebody came up with), won, the yards it ran them back and the touchdowns. They are on the pause menu's team stats and, over a season, on the MASCOTS page of the season's screen (`SeasonTables.mascot_rows()`).
+- **Who is on the field.** `Team.players` is whoever is playing: the mascot alone during a scramble, the seven otherwise (and the seven with their mascot while a touchdown is celebrated). `Team.squad` is always the seven; the box score and the roster screen go by it. `PlayController._field()` swaps them, hides the seven and the two sideline mascots for the scramble, and `_reset_play()` puts everything back at the next line-up.
 - `tests/scramble_check.gd` checks that only the two mascots are out there, that both are rated 50, and that neither team wins nearly all of them.
 
 To add a mascot for a new team:
@@ -102,8 +122,9 @@ To add a mascot for a new team:
 
 ## Checks
 
-- `godot --headless --path . --script res://tests/stadium_check.gd` (real time, about 10 s): built, fans behind the wall, shares per side, reactions, both mascots and their clips, jumbotron, density, off switch.
-- `godot --path . --resolution 1280x720 --script res://tests/stadium_gallery.gd -- out=<dir> [only=<text>]` (window): screenshots from the game camera, the intro shot, each prop, both mascots (`only=mascot home=<team> away=<team>` picks the teams), a cheer and a wave.
+- `godot --headless --path . --script res://tests/stadium_check.gd` (real time, about 15 s): built, fans behind the wall, shares per side, reactions, both mascots and their clips, the home mascot following the ball and fainting on request, jumbotron, density, off switch.
+- `godot --path . --resolution 1280x720 --script res://tests/stadium_gallery.gd -- out=<dir> [only=<text>]` (window): screenshots from the game camera, the intro shot, each prop, both mascots (`only=mascot home=<team> away=<team>` picks the teams) in every clip and on the run, a cheer and a wave.
+- `tests/celebration_check.gd` checks that the scorer's mascot reaches the huddle and is back on its sideline at the next line-up; `tests/stats_check.gd` that the scrambles in the book add up.
 - `godot --path . --resolution 1400x1000 --script res://tests/crowd_gallery.gd -- out=<dir>` (window): every head on every outfit with the crowd's shader, from the front, behind, the side and in a cheer, each row close up, a fan with a sign and the plainest level.
 - `godot --path . --resolution 1280x720 --script res://tests/stadium_perf.gd` (window): frame times with the stadium off and on.
 

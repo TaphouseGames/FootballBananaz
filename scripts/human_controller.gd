@@ -178,6 +178,11 @@ func update_live() -> void:
 				_switch_to_nearest()
 			return
 
+	# In the air from a jump the action is a jump dive. Not for a quarterback who
+	# can still throw: his action button is a pass button up there too.
+	if player.state == Player.State.JUMPING and not is_passer and Input.is_action_just_pressed(&"action"):
+		pc.do_jump_dive(player, _jump_dive_aim(player, move, moving, carrier))
+		return
 	if not player.can_act():
 		return
 	if Input.is_action_just_pressed(&"jump"):
@@ -234,6 +239,23 @@ func _carrier_moves(player: Player, move: Vector3, moving: bool) -> void:
 		pc.do_dive(player, move.normalized() if moving else player.facing)
 
 
+## Where a jump dive goes: the same choices as a dive off the ground (the pass,
+## the loose ball, the carrier), each from a little further off.
+func _jump_dive_aim(player: Player, move: Vector3, moving: bool, carrier: Player) -> Vector3:
+	var free: Vector3 = move.normalized() if moving else player.facing
+	if player.has_ball:
+		return free
+	var at_ball: Vector3 = pc.ball_dive_direction(player, pc.jump_dive_ball_range())
+	if at_ball != Vector3.ZERO:
+		return at_ball
+	if pc.phase == PlayController.Phase.LOOSE:
+		var at_loose: Vector3 = pc.loose_dive_direction(player)
+		return at_loose if at_loose != Vector3.ZERO else free
+	if is_defending() and carrier != null and carrier.team != team:
+		return _dive_direction(player, move, moving, carrier, tuning.jump_dive_speed_scale)
+	return free
+
+
 ## After the whistle: free movement and cheap shots.
 func update_dead() -> void:
 	assist = false
@@ -266,6 +288,8 @@ func update_dead() -> void:
 		pc.do_shove(player, to.normalized() if to.length_squared() > 0.01 else player.facing)
 	else:
 		pc.do_dive(player, move.normalized() if moving else player.facing)
+	# A dive while his team celebrates brings the rest of them down on him.
+	pc.start_pile_on(player)
 
 
 # --- Helpers -----------------------------------------------------------------
@@ -312,9 +336,10 @@ func _default_defender() -> Player:
 
 
 ## Where a defender's dive goes: at `target` (led a little) if he is within the
-## auto-aim range, otherwise along the stick, otherwise straight ahead.
-func _dive_direction(player: Player, move: Vector3, moving: bool, target: Player) -> Vector3:
-	if target != null and _flat_distance(player.position, target.position) <= tuning.dive_trigger_range:
+## auto-aim range (times `range_scale`), otherwise along the stick, otherwise
+## straight ahead.
+func _dive_direction(player: Player, move: Vector3, moving: bool, target: Player, range_scale: float = 1.0) -> Vector3:
+	if target != null and _flat_distance(player.position, target.position) <= tuning.dive_trigger_range * range_scale:
 		var aim: Vector3 = target.position + target.velocity * 0.15 - player.position
 		aim.y = 0.0
 		if aim.length_squared() > 0.01:

@@ -45,7 +45,7 @@ func _run() -> void:
 			_failures.append("%s has no AnimationPlayer" % mascot)
 			continue
 		var player: AnimationPlayer = players[0] as AnimationPlayer
-		for clip: String in ["idle", "cheer", "sulk", "wave", "run"]:
+		for clip: String in ["idle", "cheer", "sulk", "wave", "run", "point", "flex", "faint"]:
 			if not player.has_animation(clip):
 				_failures.append("%s has no clip %s" % [mascot, clip])
 		if not player.is_playing():
@@ -122,6 +122,43 @@ func _run() -> void:
 		_failures.append("the jumbotron says '%s' at %d-%d" % [score_text.replace("\n", " / "), game.home.score, game.away.score])
 	if stadium._flash <= 0.0:
 		_failures.append("no TOUCHDOWN! flash on the jumbotron")
+
+	# The home mascot follows the ball along its sideline and acts out what it
+	# is asked to. The play is stopped, and the ball held where the check wants it.
+	game.play_controller.process_mode = Node.PROCESS_MODE_DISABLED
+	stadium.set_mascots_visible(true)
+	stadium._mascot_act_left[0] = 0.0
+	var sideline: Stadium.Run = stadium._mascot_runs[0]
+	var level: float = stadium._mascot_at[0] + 12.0
+	var ran: bool = false
+	var until: int = Time.get_ticks_msec() + 3500
+	while Time.get_ticks_msec() < until:
+		game.ball.position = sideline.point(level, -10.0)
+		ran = ran or stadium._mascot_clips[0] == "run"
+		await process_frame
+	var mascot: Node3D = stadium.props.get_node(^"Mascot") as Node3D
+	if absf(stadium._mascot_at[0] - level) > 0.5 or not ran:
+		_failures.append("the mascot did not run after the ball: %.1f yd from level with it, run clip %s" % [absf(stadium._mascot_at[0] - level), ran])
+	if stadium._mascot_running[0] or stadium._mascot_clips[0] == "run":
+		_failures.append("the mascot is still running when level with the ball")
+	var stands_at: Vector3 = stadium.mascot_position(true)
+	if Vector2(stands_at.x - mascot.position.x, stands_at.z - mascot.position.z).length() > 0.01:
+		_failures.append("mascot_position() is not where the mascot stands")
+	# A ball far past the end of the stand does not take it off the straight.
+	until = Time.get_ticks_msec() + 800
+	while Time.get_ticks_msec() < until:
+		game.ball.position = sideline.point(sideline.length + 300.0, -10.0)
+		await process_frame
+	if stadium._mascot_at[0] > sideline.length - Stadium.MASCOT_END_MARGIN + 0.01:
+		_failures.append("the mascot ran off the end of its sideline")
+	stadium.mascot_react(true, &"faint", 0.6)
+	await process_frame
+	await process_frame
+	if stadium._mascot_clips[0] != "faint" or stadium._mascot_running[0]:
+		_failures.append("the mascot asked to faint is in '%s'" % stadium._mascot_clips[0])
+	await _real_wait(0.9)
+	if stadium._mascot_clips[0] == "faint":
+		_failures.append("the mascot was still out after its faint was over")
 	game.free()
 
 	# On its own, with teams made up like the main menu's.

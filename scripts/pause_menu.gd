@@ -33,16 +33,19 @@ const CONTROLS: Array[Array] = [
 		["(LB) (RB)", "Stiff arm to the left, to the right"],
 		["(X)", "Dive, down where you land. On a kick return in your own end zone: touchback"],
 		["(Y) (A)", "Jump"],
+		["(X) in the air", "Jump dive: faster and further, but you get up injured"],
 	]],
 	["DEFENSE", [
 		["(B)", "Switch defender. Before the snap: pick another one"],
 		["(X)", "Dive at the carrier, at a pass or on a loose ball"],
 		["(Y) (A)", "Jump"],
+		["(X) in the air", "Jump dive: faster and further, but you land dazed and get up injured"],
 	]],
 	["OFFENSE WITHOUT THE BALL", [
 		["(X)", "Shove. With a pass in the air: dive at it"],
 		["(B)", "Switch to the teammate nearest the ball"],
 		["(Y) (A)", "Jump"],
+		["(X) in the air", "Jump dive: faster and further, but you land dazed and get up injured"],
 	]],
 	["AFTER THE WHISTLE", [
 		["(X)", "Late hit"],

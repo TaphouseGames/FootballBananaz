@@ -46,6 +46,13 @@ var kick_return_yds: int = 0
 var touchdowns: int = 0
 var return_td: int = 0
 var safeties: int = 0
+## The mascot's numbers: the scrambles that ended with somebody holding the
+## ball, the ones it came up with it in, how far it then ran it back, and the
+## touchdowns scored in a scramble.
+var scrambles: int = 0
+var scrambles_won: int = 0
+var scramble_yds: int = 0
+var scramble_td: int = 0
 ## Seconds of game clock with the ball.
 var possession: float = 0.0
 

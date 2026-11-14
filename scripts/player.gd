@@ -114,6 +114,26 @@ var dive_reach_timer: float = 0.0
 ## Set when a dive lands; counts down once he is back on his feet and is
 ## running. While above 0 he picks up speed more slowly.
 var dive_get_up_timer: float = 0.0
+## The current dive was started in the air, from a jump.
+var jump_dive: bool = false
+## Height of the feet when a jump dive began, and how long it lasts in all.
+var dive_start_height: float = 0.0
+var dive_duration: float = 0.0
+## Above 0 while he lies dazed after landing a jump dive.
+var dazed_timer: float = 0.0
+## Stars round his head while he is dazed, and a couple left over it while he
+## is injured. Made the first time he is.
+var daze_fx: DazeFx
+## Hurt by landing a jump dive: `ratings` is a weakened copy until he is over
+## it, `injured_plays` is how many more plays after this one it lasts.
+var injured: bool = false
+var injured_plays: int = 0
+## How many times he has been hurt this game, hurt again while injured included.
+var injuries: int = 0
+## He has landed a jump dive and will be injured once he is up.
+var _injury_pending: bool = false
+## His own ratings, kept while `ratings` holds the injured copy.
+var _healthy_ratings: PlayerRatings
 ## Counts down from tuning.catch_blend_time after a catch, while the hands bring
 ## the ball in.
 var catch_timer: float = 0.0
@@ -182,6 +202,9 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	tackle_cooldown = 0.0
 	dive_reach_timer = 0.0
 	dive_get_up_timer = 0.0
+	jump_dive = false
+	dive_start_height = 0.0
+	dazed_timer = 0.0
 	catch_timer = 0.0
 	ball_grab_cooldown = 0.0
 	drag_partner = null
@@ -386,8 +409,58 @@ func is_tucked() -> bool:
 	return has_ball and wants_turbo
 
 
-## Height of the feet above the turf during a jump.
+## Lying dazed after a jump dive.
+func is_dazed() -> bool:
+	return state == State.DOWN and dazed_timer > 0.0
+
+
+## Up from a daze: his ratings drop for the rest of this play and the plays
+## after it that tuning.injury_plays says. Already injured, they stay as they
+## are and only the count starts again.
+func injure() -> void:
+	_injury_pending = false
+	injured_plays = tuning.injury_plays
+	injuries += 1
+	if injured or ratings == null:
+		return
+	injured = true
+	_healthy_ratings = ratings
+	ratings = ratings.duplicate() as PlayerRatings
+	for key: StringName in PlayerRatings.CARD_ORDER:
+		var value: int = _healthy_ratings.get(key)
+		ratings.set(key, roundi(float(value) * tuning.injury_rating_scale))
+
+
+## Called once for every new play, before the line-up.
+func next_play() -> void:
+	if _injury_pending:
+		# The whistle went while he was still lying there: the play now starting
+		# is the one he is injured for.
+		injure()
+		injured_plays = maxi(injured_plays - 1, 0)
+	elif injured:
+		if injured_plays > 0:
+			injured_plays -= 1
+		else:
+			heal()
+
+
+func heal() -> void:
+	_injury_pending = false
+	injured_plays = 0
+	if not injured:
+		return
+	injured = false
+	ratings = _healthy_ratings
+	_healthy_ratings = null
+
+
+## Height of the feet above the turf during a jump, and on the way down from
+## one in a jump dive.
 func air_height() -> float:
+	if state == State.DIVING and jump_dive and dive_duration > 0.0:
+		var fallen: float = clampf(1.0 - state_timer / dive_duration, 0.0, 1.0)
+		return dive_start_height * (1.0 - fallen * fallen)
 	if state != State.JUMPING:
 		return 0.0
 	var t: float = clampf(1.0 - state_timer / tuning.jump_time, 0.0, 1.0)
@@ -411,10 +484,36 @@ func start_dive(dir: Vector3, speed: float = -1.0) -> void:
 	if not can_act():
 		return
 	state = State.DIVING
+	jump_dive = false
 	state_timer = tuning.dive_time
 	dive_reach_timer = tuning.dive_time + tuning.dive_catch_grace
 	facing = dir
 	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed)
+
+
+## How long a jump dive started right now would stay in the air: longer from
+## higher up.
+func jump_dive_time() -> float:
+	var share: float = clampf(air_height() / maxf(tuning.jump_height, 0.01), 0.0, 1.0)
+	return tuning.dive_time + tuning.jump_dive_extra_time * share
+
+
+## A dive out of a jump: faster and further than one off the ground, and he
+## lands dazed. `speed` below 0 means the full jump-dive speed.
+func start_jump_dive(dir: Vector3, speed: float = -1.0) -> bool:
+	if state != State.JUMPING or frozen:
+		return false
+	dive_duration = jump_dive_time()
+	dive_start_height = air_height()
+	state = State.DIVING
+	jump_dive = true
+	state_timer = dive_duration
+	dive_reach_timer = dive_duration + tuning.dive_catch_grace
+	jump_cooldown = tuning.jump_cooldown
+	turbo_active = false
+	facing = dir
+	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed * tuning.jump_dive_speed_scale)
+	return true
 
 
 ## Where he will be `time` seconds from now if he keeps doing what he is doing.
@@ -541,6 +640,8 @@ func knock_down(impulse: Vector3, duration: float, kind: PlayerFall.Kind = Playe
 	state = State.DOWN
 	state_timer = duration
 	dive_reach_timer = 0.0
+	jump_dive = false
+	dazed_timer = 0.0
 	velocity = impulse
 	velocity.y = 0.0
 	turbo_active = false
@@ -580,9 +681,19 @@ func integrate(delta: float) -> void:
 			state_timer -= delta
 			if state_timer <= 0.0:
 				state = State.DOWN
-				state_timer = tuning.dive_recover_time
-				dive_get_up_timer = tuning.dive_get_up_time
-				fall.start_dive_landing(state_timer)
+				if jump_dive:
+					# Came down from a height at speed: he is seeing stars.
+					jump_dive = false
+					_injury_pending = true
+					velocity *= tuning.jump_dive_landing_speed_scale
+					state_timer = tuning.jump_dive_daze_time
+					dazed_timer = state_timer
+					dive_get_up_timer = tuning.jump_dive_get_up_time
+					fall.start_dive_landing(state_timer, true)
+				else:
+					state_timer = tuning.dive_recover_time
+					dive_get_up_timer = tuning.dive_get_up_time
+					fall.start_dive_landing(state_timer)
 		State.SPINNING:
 			state_timer -= delta
 			if state_timer <= 0.0:
@@ -608,6 +719,8 @@ func integrate(delta: float) -> void:
 			state_timer -= delta
 			if state_timer <= 0.0:
 				state = State.NORMAL
+				if _injury_pending:
+					injure()
 		State.DRAGGING:
 			# Legs still driving: steerable, or straight for the goal line.
 			var dir: Vector3 = move_input.limit_length(1.0)
@@ -678,6 +791,7 @@ func _tick_timers(delta: float) -> void:
 	jump_cooldown = maxf(jump_cooldown - delta, 0.0)
 	tackle_cooldown = maxf(tackle_cooldown - delta, 0.0)
 	dive_reach_timer = maxf(dive_reach_timer - delta, 0.0)
+	dazed_timer = maxf(dazed_timer - delta, 0.0)
 	catch_timer = maxf(catch_timer - delta, 0.0)
 	ball_grab_cooldown = maxf(ball_grab_cooldown - delta, 0.0)
 	block_immune_timer = maxf(block_immune_timer - delta, 0.0)
@@ -712,3 +826,22 @@ func _update_visual(delta: float, instant: bool) -> void:
 	fall.update(self, body, delta, instant)
 	if animator != null:
 		animator.update(delta, instant)
+	_update_daze(delta, instant)
+
+
+## Stars round the head for as long as he is dazed. Visual only.
+func _update_daze(delta: float, instant: bool) -> void:
+	var dazed: bool = is_dazed() and not instant
+	if daze_fx == null:
+		if not dazed and not injured:
+			return
+		daze_fx = DazeFx.new()
+		add_child(daze_fx)
+	daze_fx.update(self, dazed, dazed_timer, delta, injured)
+
+
+## Where his head is, in world space.
+func head_position() -> Vector3:
+	if animator != null:
+		return animator.head_position()
+	return global_position + Vector3(0.0, body.position.y + 0.75, 0.0)

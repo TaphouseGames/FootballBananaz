@@ -64,6 +64,7 @@ func _tick() -> void:
 		2:
 			_expect_select(0, "after EXHIBITION")
 			_expect_ratings("after EXHIBITION")
+			_expect_mascots("after EXHIBITION")
 			_expect_better_defense("GRAPEZ", "BERRIEZ")
 			if _menu.start_button.is_visible_in_tree():
 				_failures.append("the buttons are still up behind the team select")
@@ -122,11 +123,13 @@ func _tick() -> void:
 		19:
 			_expect_picks(2, _last_team(), "after down twice on the left")
 			_expect_ratings("after both sides changed team")
+			_expect_mascots("after both sides changed team")
 			_press(JOY_BUTTON_DPAD_RIGHT)
 		20:
 			_press(JOY_BUTTON_DPAD_RIGHT)
 		21:
 			_expect_select(1, "back on the right")
+			_expect_mascots("back on the right")
 			_save("_select")
 			_press(JOY_BUTTON_A)
 			_pressed_at = _frame
@@ -184,6 +187,23 @@ func _expect_picks(left: int, right: int, when: String) -> void:
 	var select: TeamSelect = _menu.team_select
 	if select != null and (select.picks[0] != left or select.picks[1] != right):
 		_failures.append("the teams are %d and %d, not %d and %d, %s" % [select.picks[0], select.picks[1], left, right, when])
+
+
+## Each side has its own team's mascot standing on it, cheering on the side
+## the controller is under and idling on the other.
+func _expect_mascots(when: String) -> void:
+	var select: TeamSelect = _menu.team_select
+	if select == null:
+		return
+	for i: int in 2:
+		var team: TeamData = _menu.league.teams[select.picks[i]]
+		var mine: bool = select.side == (-1 if i == 0 else 1)
+		if select.mascot_names[i] != team.short_name or select._mascot_stands[i].get_child_count() != 1:
+			_failures.append("side %d shows the mascot of '%s', not of %s, %s" % [i, select.mascot_names[i], team.short_name, when])
+		elif select.mascot_clips[i] != ("cheer" if mine else "idle"):
+			_failures.append("the mascot of side %d is in '%s' %s" % [i, select.mascot_clips[i], when])
+		if select._mascot_views[i].render_target_update_mode != SubViewport.UPDATE_ALWAYS:
+			_failures.append("the mascot of side %d is not being drawn %s" % [i, when])
 
 
 ## Each side shows four bars, at what the roster of its team comes to.

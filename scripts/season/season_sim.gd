@@ -109,7 +109,12 @@ func run(home: Roster, away: Roster, tuning: Tuning = null) -> void:
 ## The ball goes up at midfield and somebody comes down with it.
 func _scramble() -> void:
 	var side: int = randi() % 2
-	_start_drive(side, FIELD / 2 + randi_range(-SCRAMBLE_SPREAD, SCRAMBLE_SPREAD))
+	var gain: int = randi_range(-SCRAMBLE_SPREAD, SCRAMBLE_SPREAD)
+	for line: TeamLine in _lines:
+		line.scrambles += 1
+	_lines[side].scrambles_won += 1
+	_lines[side].scramble_yds += maxi(gain, 0)
+	_start_drive(side, FIELD / 2 + gain)
 
 
 func _start_drive(side: int, spot: int) -> void:

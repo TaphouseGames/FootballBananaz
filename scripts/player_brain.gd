@@ -58,6 +58,15 @@ var _bail_rolled: bool = false
 ## thinks about jumping a dive.
 var _lane_timer: float = 0.0
 var _hurdle_timer: float = 0.0
+## What he went up meaning to jump dive at: a man (`_leap_target`), the pass
+## coming down, or straight ahead for the line.
+enum Leap { NONE, MAN, BALL, AHEAD }
+var _leap: Leap = Leap.NONE
+var _leap_target: Player
+## He has made up his mind, once this play, about a jump dive at the carrier or
+## for the line; and once this pass about one at the ball.
+var _leap_decided: bool = false
+var _ball_leap_decided: bool = false
 ## He is out of the pocket to get away from a rusher, still looking to throw.
 var _escaping: bool = false
 ## Why the CPU quarterback took off, for the tests: keeper, escape, lane or
@@ -79,6 +88,9 @@ var cheap_shot_delay: float = -1.0
 var cheap_shot_scorer: bool = true
 ## He has reached his place in the huddle round the scorer.
 var _at_party: bool = false
+## How many of the celebration's pile-ons (PlayController.pile_count) he has
+## dived into.
+var _piles_answered: int = 0
 var _delta: float = 0.0
 ## What a coverage defender believes his receiver is doing. It follows the real
 ## velocity with a short delay, so a sharp cut buys the receiver a step.
@@ -154,6 +166,8 @@ func think(pc: PlayController, delta: float) -> void:
 	_decision_timer = maxf(_decision_timer - delta, 0.0)
 	_lane_timer = maxf(_lane_timer - delta, 0.0)
 	_hurdle_timer = maxf(_hurdle_timer - delta, 0.0)
+	if _leap != Leap.NONE:
+		_think_leap(pc)
 	# A stiff arm is done on the run, so the brain keeps steering through it.
 	if not player.can_act() and player.state != Player.State.STIFF_ARM:
 		return
@@ -199,6 +213,133 @@ func on_tip() -> void:
 	_contest_decided = false
 
 
+# --- Jump dive ---------------------------------------------------------------
+
+## Goes up now and dives out of the jump once he is past the top of it. He
+## lands dazed, so this is only for what nothing else will get.
+func _leap_at(pc: PlayController, kind: Leap, target: Player = null) -> void:
+	if not player.can_act() or player.jump_cooldown > 0.0:
+		return
+	_leap = kind
+	_leap_target = target
+	pc.game.add_stat([&"", &"leaps_at_carrier", &"leaps_at_ball", &"leaps_for_line"][kind])
+	pc.do_jump(player)
+
+
+## In the air with a jump dive in mind: lets go at the right moment, aimed at
+## where the man or the ball is by now.
+func _think_leap(pc: PlayController) -> void:
+	if player.state != Player.State.JUMPING:
+		# The jump never came off, or he was hit out of it.
+		_leap = Leap.NONE
+		_leap_target = null
+		return
+	if player.state_timer > tuning.jump_time * tuning.jump_dive_ai_release:
+		return
+	var kind: Leap = _leap
+	var target: Player = _leap_target
+	_leap = Leap.NONE
+	_leap_target = null
+	if pc.ball_dead:
+		return
+	match kind:
+		Leap.MAN:
+			# Somebody else got him, or he is no longer worth a daze.
+			if target == null or target.is_down() or pc.ball.carrier != target:
+				return
+			var speed: float = tuning.dive_speed * tuning.jump_dive_speed_scale
+			var lead: float = minf(_flat_distance(player.position, target.position) / speed, 0.45)
+			pc.do_jump_dive(player, _direction_to(target.position + target.velocity * lead))
+		Leap.BALL:
+			var at_ball: Vector3 = pc.ball_dive_direction(player, pc.jump_dive_ball_range())
+			if at_ball != Vector3.ZERO:
+				pc.do_jump_dive(player, at_ball)
+		Leap.AHEAD:
+			if player.has_ball:
+				pc.do_jump_dive(player, Vector3(float(player.team.attack_dir), 0.0, 0.0))
+
+
+func _jump_dive_roll() -> bool:
+	return randf() < _sharp(tuning.ai_jump_dive_chance, tuning.ai_edge_jump_dive_chance)
+
+
+## Seconds from leaving the ground to landing a jump dive let go at the usual
+## moment.
+func _leap_time() -> float:
+	return tuning.jump_time * (1.0 - tuning.jump_dive_ai_release) + tuning.dive_time + tuning.jump_dive_extra_time
+
+
+## The pass comes down further off than he can run or dive to: he may go up and
+## dive out of the jump for it. Decided once per pass, early enough for both.
+func _leap_for_ball(pc: PlayController) -> void:
+	if _ball_leap_decided or _contest_decided:
+		return
+	var time_left: float = pc.ball.air_time_left()
+	if time_left > _leap_time():
+		return
+	_ball_leap_decided = true
+	var landing: Vector3 = pc.ball.target_point
+	var dist: float = _flat_distance(player.position, landing)
+	if dist > pc.jump_dive_ball_range():
+		return
+	# How far off he would be on his feet, and what a plain dive adds to that.
+	var short: float = _flat_distance(player.position + player.velocity * time_left, landing)
+	var plain_dive: float = pc.catch_reach(player, landing) * tuning.dive_catch_radius_scale + tuning.dive_speed * tuning.dive_time * 0.5
+	if short <= plain_dive:
+		return
+	var effort: float = PlayerRatings.blend(player.ratings.catching, tuning.catch_scale_low, tuning.catch_scale_high)
+	if pc.human.team == player.team:
+		effort *= tuning.ai_catch_effort_human_scale
+	if randf() >= effort or not _jump_dive_roll():
+		return
+	_contest_decided = true
+	pc.game.add_stat(&"catch_efforts")
+	_leap_at(pc, Leap.BALL)
+
+
+## The carrier is getting away from this defender, out of reach of a dive off
+## the ground, and nobody on his side is left between the carrier and the goal
+## line: a jump dive is the last thing that can stop him.
+func _leap_at_carrier(pc: PlayController, target: Player, dist: float) -> void:
+	if _leap_decided or dist < tuning.ai_dive_range or dist > tuning.ai_jump_dive_range:
+		return
+	if player.block_slow_timer > 0.0 or target.state != Player.State.NORMAL:
+		return
+	var to: Vector3 = _direction_to(target.position)
+	if (player.velocity - target.velocity).dot(to) > 0.5:
+		# Still gaining on him: he will get there on his feet.
+		return
+	var goal_dir: float = float(target.team.attack_dir)
+	for mate: Player in player.team.players:
+		if mate != player and mate.can_act() and (mate.position.x - target.position.x) * goal_dir > 0.0:
+			return
+	_leap_decided = true
+	if _jump_dive_roll():
+		_leap_at(pc, Leap.MAN, target)
+
+
+## The goal line or the marker is further off than a dive reaches but not than
+## a jump dive does, and a tackler is closing: the play ends where he lands
+## anyway, so the daze costs him nothing.
+func _leap_for_the_line(pc: PlayController, nearest: float) -> bool:
+	if _leap_decided or nearest > tuning.ai_jump_dive_pressure:
+		return false
+	var dir: float = float(player.team.attack_dir)
+	var goal_x: float = tuning.field_length if dir > 0.0 else 0.0
+	var to_line: float = (goal_x - player.position.x) * dir
+	if player.team == pc.offense and not pc.game.goal_to_go:
+		var to_marker: float = (pc.game.first_down_x - player.position.x) * dir
+		if to_marker > 0.0:
+			to_line = minf(to_line, to_marker)
+	if to_line <= tuning.ai_dive_reach or to_line > tuning.ai_jump_dive_reach:
+		return false
+	_leap_decided = true
+	if not _jump_dive_roll():
+		return false
+	_leap_at(pc, Leap.AHEAD)
+	return true
+
+
 ## The ball is in the air off a tip. The few nearest where it comes down go and
 ## get under it, and leave their feet for it if that is what it takes; the rest
 ## come over and get in the way.
@@ -220,6 +361,7 @@ func _think_tipped(pc: PlayController) -> void:
 		return
 	_seek(landing)
 	player.wants_turbo = dist > 1.0
+	_leap_for_ball(pc)
 	if _contest_decided:
 		return
 	var time_left: float = pc.ball.air_time_left()
@@ -1001,6 +1143,8 @@ func _carry(pc: PlayController) -> void:
 	if _dive_for_the_line(pc, nearest):
 		pc.do_dive(player, forward)
 		return
+	if _leap_for_the_line(pc, nearest):
+		return
 	if _hurdles(pc):
 		return
 	if _decision_timer <= 0.0 and _move_due(pc, nearest_opponent, nearest):
@@ -1385,6 +1529,8 @@ func _pursue(pc: PlayController, target: Player, allow_turbo: bool = true) -> vo
 		# and big hits are what knock the ball loose.
 		if randf() < _sharp(tuning.ai_dive_chance, tuning.ai_edge_dive_chance):
 			pc.do_dive(player, _direction_to(target.position + target.velocity * 0.12))
+	elif target.has_ball:
+		_leap_at_carrier(pc, target, dist)
 
 
 # --- Ball in the air / dead ball ------------------------------------------------
@@ -1440,6 +1586,7 @@ func _think_air(pc: PlayController) -> void:
 ## it, with a jump if that gets him there and a dive if it takes more. Most of
 ## the time he just keeps running. Decided once per pass.
 func _go_for_ball(pc: PlayController) -> void:
+	_leap_for_ball(pc)
 	var time_left: float = pc.ball.flight_time - pc.ball.flight_elapsed
 	if _contest_decided or time_left > tuning.ai_catch_effort_time:
 		return
@@ -1486,6 +1633,8 @@ func _think_dead(pc: PlayController, delta: float) -> void:
 ## the field; everyone else runs to his place round him and joins in.
 func _celebrate(pc: PlayController) -> void:
 	var scorer: Player = pc.scorer
+	if _pile_on(pc):
+		return
 	if player == scorer:
 		player.look_dir = Vector3(-float(player.team.attack_dir), 0.0, 0.0)
 		return
@@ -1502,6 +1651,27 @@ func _celebrate(pc: PlayController) -> void:
 	player.move_input = _direction_to(slot)
 	player.wants_turbo = gap > 8.0
 	player.ai_speed_scale = clampf(gap / 3.0, 0.3, 1.0)
+
+
+## One of his team has dived in the middle of the party: he runs over and dives
+## on top of him, the scorer too. They go in one after another, not all at once.
+## True while that is what he is doing.
+func _pile_on(pc: PlayController) -> bool:
+	if pc.pile_target == null or player == pc.pile_target or _piles_answered >= pc.pile_count:
+		return false
+	if pc.dead_time < pc.pile_time + tuning.pile_on_stagger * float(pc.celebration_variant(player, 4)):
+		return true
+	var spot: Vector3 = pc.pile_spot()
+	var dir: Vector3 = _direction_to(spot)
+	var dist: float = _flat_distance(player.position, spot)
+	if dist > tuning.pile_on_dive_range:
+		player.move_input = dir
+		player.wants_turbo = true
+		return true
+	_piles_answered = pc.pile_count
+	_at_party = false
+	pc.do_dive(player, dir, pc.pile_dive_speed(dist))
+	return true
 
 
 ## The other team has scored. Mostly he stands and takes it badly; one kind
@@ -1571,8 +1741,13 @@ func _reset() -> void:
 	cheap_shot_delay = -1.0
 	cheap_shot_scorer = true
 	_at_party = false
+	_piles_answered = 0
 	_read_velocity = Vector3.ZERO
 	_contest_decided = false
+	_leap = Leap.NONE
+	_leap_target = null
+	_leap_decided = false
+	_ball_leap_decided = false
 	_scrambling = false
 	_rollout = 0.0
 	_keep_ball = false

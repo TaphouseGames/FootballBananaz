@@ -64,6 +64,8 @@ var _get_up_time: float = GET_UP_TIME
 
 var _quat: Quaternion = Quaternion.IDENTITY
 var _out_height: float = STAND_HEIGHT
+## Body height of a jump dive without the height left from the jump.
+var _dive_base: float = STAND_HEIGHT
 
 
 func reset() -> void:
@@ -147,8 +149,10 @@ func start(hit_dir: Vector3, p_power: float, p_kind: Kind, p_airborne: bool, vel
 
 
 ## The belly flop at the end of the player's own dive.
-func start_dive_landing(duration: float) -> void:
-	_begin(Kind.DIVE, 0.3, duration)
+## `hard` is the landing of a jump dive: he hits the turf at speed, bounces and
+## skids round a little.
+func start_dive_landing(duration: float, hard: bool = false) -> void:
+	_begin(Kind.DIVE, 0.9 if hard else 0.3, duration)
 	airborne = false
 	dir = Vector3.RIGHT
 	on_back = false
@@ -156,6 +160,11 @@ func start_dive_landing(duration: float) -> void:
 	_tip_vel = 2.5
 	_twist_end = 0.0
 	spin_speed = _rng.randf_range(-1.0, 1.0)
+	if hard:
+		_tip_vel = 6.0
+		_height_vel = 3.2
+		spin_speed = _rng.randf_range(2.5, 4.5) * (1.0 if _rng.randf() < 0.5 else -1.0)
+		impact = 1.0
 
 
 func _begin(p_kind: Kind, p_power: float, duration: float) -> void:
@@ -224,6 +233,11 @@ func update(player: Player, body: Node3D, delta: float, instant: bool) -> void:
 	if player.state == Player.State.JUMPING:
 		# The arc is exact, not eased, so take-off and landing look crisp.
 		_out_height = STAND_HEIGHT + player.air_height()
+		_dive_base = STAND_HEIGHT
+	elif player.state == Player.State.DIVING and player.jump_dive:
+		# Down from the jump on an arc, laying out as he comes.
+		_dive_base = lerpf(_dive_base, DIVE_HEIGHT, blend)
+		_out_height = _dive_base + player.air_height()
 	else:
 		_out_height = lerpf(_out_height, target_height, blend)
 	body.quaternion = _quat

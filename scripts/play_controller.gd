@@ -73,6 +73,11 @@ var celebration_style: int = 0
 var celebration_seed: int = 0
 ## Where on the ring round the scorer each of his teammates stands.
 var _party_angles: Dictionary[Player, float] = {}
+## One of the celebrating team has dived and the rest pile on him: who, when
+## (in dead_time), and how many times it has happened since the whistle.
+var pile_target: Player
+var pile_time: float = 0.0
+var pile_count: int = 0
 var live_time: float = 0.0
 var throw_time: float = 0.0
 var handoff_done: bool = false
@@ -88,6 +93,9 @@ var scramble: bool = false
 var scramble_team: Team
 ## The mascots are on the field in place of the teams (see _field).
 var _mascots_out: bool = false
+## The scoring team's mascot while it is on the field for the party round the
+## scorer (see _invite_mascot); null while it is on its sideline.
+var _mascot_guest: Mascot
 var returner: Player
 ## The returner gave himself up in his own end zone, or ran out of the back of it.
 var was_touchback: bool = false
@@ -276,6 +284,13 @@ func _def_point(point: Vector2, deepest: float, room: float) -> Vector2:
 
 ## Clears everything left over from the last play.
 func _reset_play() -> void:
+	# Injuries last by the play. Only a play that was played counts one off: the
+	# teams line up more than once before a snap (play select does it twice).
+	if live_time > 0.0:
+		for team: Team in [game.home, game.away]:
+			for player: Player in team.players:
+				player.next_play()
+	_dismiss_mascot()
 	_field(false)
 	offense = game.offense
 	defense = game.defense
@@ -308,6 +323,9 @@ func _reset_play() -> void:
 	was_dive = false
 	scorer = null
 	dead_time = 0.0
+	pile_target = null
+	pile_time = 0.0
+	pile_count = 0
 	_party_angles.clear()
 	game.field.reset_pylons()
 	live_time = 0.0
@@ -778,6 +796,8 @@ func _start_celebration() -> void:
 	celebration_seed = randi()
 	if scorer == null:
 		return
+	game.mascot_moment(scorer.team.opponent, &"faint")
+	_invite_mascot()
 	# Each teammate comes in on the side he is already on: places go round the
 	# ring in the order the players stand round the scorer now.
 	var mates: Array[Player] = []
@@ -797,6 +817,47 @@ func _start_celebration() -> void:
 	for i: int in mates.size():
 		_party_angles[mates[i]] = first + step * float(i)
 	_roll_cheap_shot()
+
+
+## The scoring team's mascot comes off its sideline and joins the party round
+## the scorer: it is one of the team until the next line-up (_dismiss_mascot).
+## Not after a scramble's touchdown, where the mascots are out there already.
+func _invite_mascot() -> void:
+	if scramble or _mascot_guest != null or not tuning.mascot_joins_party or not tuning.stadium_enabled:
+		return
+	var team: Team = scorer.team
+	var stadium: Stadium = game.field.stadium
+	var for_home: bool = team == game.home
+	var from: Vector3 = stadium.mascot_entry(for_home, scorer.position)
+	var spot: Vector3 = Vector3(from.x, 0.0, from.z)
+	var guest: Mascot = team.mascot
+	var toward: Vector3 = Vector3(scorer.position.x - spot.x, 0.0, scorer.position.z - spot.z)
+	guest.reset_for_play(spot, toward.normalized() if toward.length_squared() > 0.01 else Vector3.RIGHT)
+	# Nothing to do but what the dead ball asks of everybody: this only clears
+	# what its brain kept from the scramble.
+	guest.brain.assign_offense(OffenseAssignment.new(), spot, PackedVector3Array())
+	guest.frozen = false
+	guest.play = self
+	guest.visible = true
+	team.players.append(guest)
+	players.append(guest)
+	stadium.set_mascot_visible(for_home, false)
+	_mascot_guest = guest
+	game.add_stat(&"mascot_parties")
+
+
+## Sends the mascot that joined a celebration back to its sideline.
+func _dismiss_mascot() -> void:
+	if _mascot_guest == null:
+		return
+	var team: Team = _mascot_guest.team
+	team.players.erase(_mascot_guest)
+	players.erase(_mascot_guest)
+	_mascot_guest.visible = false
+	if human.controlled == _mascot_guest:
+		human.set_controlled(null)
+	game.field.stadium.set_mascot_visible(team == game.home, true)
+	_mascot_guest = null
 
 
 func _roll_cheap_shot() -> void:
@@ -839,6 +900,41 @@ func celebration_variant(player: Player, count: int) -> int:
 	return posmod(player.index + celebration_seed, count)
 
 
+## `player` has dived in the middle of his own team's celebration: everybody
+## else on the team comes and dives on top of him. Each new dive calls them in
+## again.
+func start_pile_on(player: Player) -> void:
+	if not is_celebrating(player) or player.state != Player.State.DIVING:
+		return
+	pile_target = player
+	pile_time = dead_time
+	pile_count += 1
+	game.add_stat(&"pile_ons")
+
+
+## Where the player being piled on ends up: the rest of his dive, and the slide
+## after it.
+func pile_spot() -> Vector3:
+	if pile_target == null:
+		return Vector3.ZERO
+	var spot: Vector3 = pile_target.position
+	var flat: Vector3 = Vector3(pile_target.velocity.x, 0.0, pile_target.velocity.z)
+	if pile_target.state == Player.State.DIVING:
+		spot += flat * maxf(pile_target.state_timer, 0.0)
+	if pile_target.state == Player.State.DIVING or pile_target.is_down():
+		spot += flat.normalized() * flat.length_squared() / (2.0 * tuning.knockdown_friction)
+	spot.y = 0.0
+	return spot
+
+
+## The speed to leave his feet at for a dive, slide and all, to end `dist` away.
+func pile_dive_speed(dist: float) -> float:
+	var rub: float = tuning.knockdown_friction
+	var air: float = tuning.dive_time
+	var speed: float = rub * (sqrt(air * air + 2.0 * dist / rub) - air)
+	return clampf(speed, tuning.dive_speed * 0.35, tuning.dive_speed)
+
+
 ## The scorer holds the ball up for a moment, then slams it into the turf.
 func _spike_ball() -> void:
 	if scorer == null or ball.carrier != scorer or dead_time < tuning.celebration_spike_time:
@@ -864,7 +960,18 @@ func _think_and_move(delta: float) -> void:
 	_queued_actions.clear()
 	_aim_quarterback()
 	for player: Player in players:
+		var was_dazed: bool = player.is_dazed()
+		var injury_count: int = player.injuries
 		player.integrate(delta)
+		if player.injuries != injury_count:
+			# Up from the daze, and not the player they were.
+			game.add_stat(&"injuries")
+			game.audio.woozy()
+		if player.is_dazed() and not was_dazed:
+			# A jump dive has just come down.
+			game.add_stat(&"dazes")
+			game.audio.dazed(player)
+			game.field.fx.daze_impact(player.position, player.facing, player.velocity.length())
 	game.field.fx.track(players)
 	game.field.touch_pylons(players)
 
@@ -988,6 +1095,9 @@ func pass_completed() -> bool:
 func _pick_touchdown_quip(scorer: Player, spot_x: float) -> StringName:
 	if game.conversion:
 		return &""
+	# A mascot's score in the scramble has lines of its own.
+	if scramble and game.audio.has_sound(AudioDirector.QUIP_MASCOT_TD):
+		return AudioDirector.QUIP_MASCOT_TD
 	var nearest: float = INF
 	for opponent: Player in scorer.team.opponent.players:
 		if not opponent.is_down():
@@ -1591,6 +1701,8 @@ func _intercept(defender: Player) -> void:
 	game.audio.shout(&"announcer_interception")
 	game.audio.quip(&"color_interception", AudioDirector.QUIP_INTERCEPTION)
 	game.audio.crowd_react(defender.team, 0.9)
+	game.mascot_moment(defender.team, &"flex")
+	game.mascot_moment(defender.team.opponent, &"faint")
 	_add_placement_stat("interceptions")
 	human.on_carrier_changed(defender)
 
@@ -1605,15 +1717,38 @@ func _add_placement_stat(what: String) -> void:
 
 # --- Actions ---------------------------------------------------------------------
 
-func do_dive(player: Player, dir: Vector3) -> void:
+## `speed` below 0 means the usual one: full, or what gets him to a pass.
+func do_dive(player: Player, dir: Vector3, speed: float = -1.0) -> void:
 	if _thinking:
-		_queued_actions.append(do_dive.bind(player, dir))
+		_queued_actions.append(do_dive.bind(player, dir, speed))
 		return
 	if not player.can_act():
 		return
-	player.start_dive(dir, _ball_dive_speed(player, dir))
-	game.stat_book.add_dive(player.team)
+	player.start_dive(dir, speed if speed >= 0.0 else _ball_dive_speed(player, dir))
+	# A dive into the party is not one for the book.
+	if not is_celebrating(player):
+		game.stat_book.add_dive(player.team)
 	game.audio.action(player, &"dive")
+
+
+## A dive out of a jump: only for a player who is in the air.
+func do_jump_dive(player: Player, dir: Vector3) -> void:
+	if _thinking:
+		_queued_actions.append(do_jump_dive.bind(player, dir))
+		return
+	if player.state != Player.State.JUMPING:
+		return
+	var top: float = tuning.dive_speed * tuning.jump_dive_speed_scale
+	if not player.start_jump_dive(dir, _ball_dive_speed(player, dir, jump_dive_ball_range(), player.jump_dive_time(), top)):
+		return
+	game.stat_book.add_dive(player.team)
+	game.add_stat(&"jump_dives")
+	game.audio.action(player, &"jump_dive")
+
+
+## How far off a pass may come down for a jump dive to be aimed at it.
+func jump_dive_ball_range() -> float:
+	return tuning.dive_ball_range * tuning.jump_dive_speed_scale
 
 
 func do_jump(player: Player) -> void:
@@ -1648,9 +1783,11 @@ func _gap_to_pass(player: Player) -> Vector3:
 
 ## Direction for a dive at the pass in the air, or Vector3.ZERO when there is
 ## none within reach of a dive.
-func ball_dive_direction(player: Player) -> Vector3:
+func ball_dive_direction(player: Player, ball_range: float = -1.0) -> Vector3:
 	var gap: Vector3 = _gap_to_pass(player)
-	if gap == Vector3.INF or gap.length() > tuning.dive_ball_range or gap.length_squared() < 0.01:
+	if ball_range < 0.0:
+		ball_range = tuning.dive_ball_range
+	if gap == Vector3.INF or gap.length() > ball_range or gap.length_squared() < 0.01:
 		return Vector3.ZERO
 	return gap.normalized()
 
@@ -1670,15 +1807,21 @@ func loose_dive_direction(player: Player) -> Vector3:
 
 
 ## A dive aimed at a pass is paced to end at the ball: a full-speed dive at one
-## that is close would sail past it. Returns -1 for an ordinary dive.
-func _ball_dive_speed(player: Player, dir: Vector3) -> float:
+## that is close would sail past it. Returns -1 for an ordinary dive. The last
+## three are the reach, air time and top speed of the dive, a ground dive's
+## when left out.
+func _ball_dive_speed(player: Player, dir: Vector3, ball_range: float = -1.0, air_time: float = -1.0, top_speed: float = -1.0) -> float:
+	if ball_range < 0.0:
+		ball_range = tuning.dive_ball_range
+		air_time = tuning.dive_time
+		top_speed = tuning.dive_speed
 	var gap: Vector3 = _gap_to_pass(player)
-	if gap == Vector3.INF or gap.length() > tuning.dive_ball_range:
+	if gap == Vector3.INF or gap.length() > ball_range:
 		return -1.0
 	if gap.length_squared() > 0.01 and gap.normalized().dot(dir) < 0.7:
 		return -1.0
 	var left: float = ball.air_time_left()
-	return clampf(gap.length() / clampf(left, 0.1, tuning.dive_time), tuning.dive_ball_min_speed, tuning.dive_speed)
+	return clampf(gap.length() / clampf(left, 0.1, air_time), tuning.dive_ball_min_speed, top_speed)
 
 
 ## `side` is +1 for the player's own left, -1 for his right. With `juke` the
@@ -1873,6 +2016,8 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 	var chance: float = tuning.tackle_base_chance
 	if big_hit:
 		chance += tuning.dive_tackle_bonus
+	if tackler.state == Player.State.DIVING and tackler.jump_dive:
+		chance += tuning.jump_dive_tackle_bonus
 	chance *= PlayerRatings.blend(skills.strength, tuning.strength_tackle_scale_low, tuning.strength_tackle_scale_high)
 	chance *= PlayerRatings.blend(tackler.ratings.tackling, tuning.tackling_scale_low, tuning.tackling_scale_high)
 	if tackler.block_slow_timer > 0.0:
@@ -1937,6 +2082,7 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 		game.audio.shout(&"announcer_sack")
 		game.audio.quip(&"color_sack", AudioDirector.QUIP_SACK)
 		game.audio.crowd_react(carrier.team.opponent, 0.7)
+		game.mascot_moment(carrier.team.opponent, &"flex")
 	end_play(Result.TACKLED, _carrier_spot_x(carrier))
 
 
@@ -2081,6 +2227,8 @@ func _grab_loose_ball(player: Player) -> void:
 		game.add_stat(&"scramble_recoveries")
 		game.add_stat(StringName("scrambles_won_" + player.team.short_name.to_lower()))
 		game.audio.play(&"catch")
+		if game.audio.has_sound(AudioDirector.CALL_SCRAMBLE_WON):
+			game.audio.remark(AudioDirector.CALL_SCRAMBLE_WON, AudioDirector.REMARK_SCRAMBLE_WON)
 		game.audio.crowd_react(player.team, 0.85)
 		human.on_carrier_changed(player)
 		return
@@ -2092,6 +2240,8 @@ func _grab_loose_ball(player: Player) -> void:
 	if player.team != fumbler.team:
 		was_fumble = true
 		game.add_stat(&"fumbles_lost")
+		game.mascot_moment(player.team, &"flex")
+		game.mascot_moment(fumbler.team, &"faint")
 	human.on_carrier_changed(player)
 
 

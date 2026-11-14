@@ -15,6 +15,8 @@ const SPLAT_HEIGHT: float = 0.02
 const PRINT_COLOR: Color = Color(0.06, 0.12, 0.04, 0.55)
 const DIRT_COLOR: Color = Color(0.25, 0.18, 0.09, 0.62)
 const BLOOD_COLOR: Color = Color(0.42, 0.015, 0.02, 0.93)
+## Jump dives that can land at nearly the same moment and each get their burst.
+const IMPACT_POOL: int = 4
 
 
 ## A MultiMesh of ground quads used as a ring buffer.
@@ -53,6 +55,11 @@ var _last_pos: PackedVector3Array = PackedVector3Array()
 var _travelled: PackedFloat32Array = PackedFloat32Array()
 var _foot_side: PackedFloat32Array = PackedFloat32Array()
 var _last_state: PackedInt32Array = PackedInt32Array()
+
+## Emitters for jump-dive landings, made at the first one and used in turn.
+var _dust: Array[CPUParticles3D] = []
+var _star_bursts: Array[CPUParticles3D] = []
+var _next_impact: int = 0
 
 
 func setup(p_tuning: Tuning) -> void:
@@ -102,6 +109,105 @@ func blood_burst(pos: Vector3, dir: Vector3, drops: int, pool: bool) -> void:
 	if pool:
 		var size: float = _rng.randf_range(0.9, 1.4)
 		_splat(pos + dir * 0.7, dir, size * 1.3, size)
+
+
+## A jump dive coming down at `pos`, sliding along `dir` at `speed`: turf and
+## dust thrown up the way he is going, stars knocked out of his head, and a
+## long gouge in the grass.
+func daze_impact(pos: Vector3, dir: Vector3, speed: float) -> void:
+	if tuning == null:
+		return
+	var along: Vector3 = Vector3(dir.x, 0.0, dir.z)
+	along = along.normalized() if along.length_squared() > 0.01 else Vector3.RIGHT
+	# `speed` is what he slides on at: the dust goes with him.
+	var force: float = clampf(speed / 6.0, 0.5, 1.6)
+	if _dust.is_empty():
+		for i: int in IMPACT_POOL:
+			_dust.append(_make_dust())
+			_star_bursts.append(_make_star_burst())
+	var dust: CPUParticles3D = _dust[_next_impact]
+	dust.position = Vector3(pos.x, 0.12, pos.z) + along * 0.5
+	dust.direction = (along + Vector3(0.0, 0.7, 0.0)).normalized()
+	dust.initial_velocity_min = 1.5 * force
+	dust.initial_velocity_max = 6.0 * force
+	dust.restart()
+	var stars: CPUParticles3D = _star_bursts[_next_impact]
+	stars.position = Vector3(pos.x, 0.5, pos.z) + along * 1.2
+	stars.direction = (Vector3.UP + along * 0.5).normalized()
+	stars.restart()
+	_next_impact = (_next_impact + 1) % IMPACT_POOL
+	_mark(pos + along * 1.2, along, _rng.randf_range(2.6, 3.4), _rng.randf_range(1.0, 1.4), DIRT_COLOR, 1.0)
+
+
+func _make_dust() -> CPUParticles3D:
+	var puff: QuadMesh = QuadMesh.new()
+	puff.size = Vector2(0.5, 0.5)
+	var fill: Gradient = Gradient.new()
+	fill.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
+	fill.set_color(1, Color(1.0, 1.0, 1.0, 0.0))
+	var round_spot: GradientTexture2D = GradientTexture2D.new()
+	round_spot.gradient = fill
+	round_spot.fill = GradientTexture2D.FILL_RADIAL
+	round_spot.fill_from = Vector2(0.5, 0.5)
+	round_spot.fill_to = Vector2(1.0, 0.5)
+	round_spot.width = 32
+	round_spot.height = 32
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.vertex_color_use_as_albedo = true
+	material.albedo_texture = round_spot
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	material.billboard_keep_scale = true
+	var fade: Gradient = Gradient.new()
+	fade.set_color(0, Color(0.62, 0.52, 0.34, 0.85))
+	fade.set_color(1, Color(0.45, 0.5, 0.3, 0.0))
+	var grow: Curve = Curve.new()
+	grow.add_point(Vector2(0.0, 0.4))
+	grow.add_point(Vector2(1.0, 1.6))
+
+	var dust: CPUParticles3D = _make_burst(puff, material, 30, 0.8)
+	dust.spread = 40.0
+	dust.gravity = Vector3(0.0, -5.0, 0.0)
+	dust.damping_min = 3.0
+	dust.damping_max = 6.0
+	dust.scale_amount_min = 0.5
+	dust.scale_amount_max = 1.2
+	dust.scale_amount_curve = grow
+	dust.color_ramp = fade
+	return dust
+
+
+func _make_star_burst() -> CPUParticles3D:
+	var shrink: Curve = Curve.new()
+	shrink.add_point(Vector2(0.0, 1.0))
+	shrink.add_point(Vector2(0.6, 0.9))
+	shrink.add_point(Vector2(1.0, 0.0))
+	var stars: CPUParticles3D = _make_burst(DazeFx.star_mesh(), DazeFx.star_material(true), 9, 0.85)
+	stars.direction = Vector3.UP
+	stars.spread = 65.0
+	stars.gravity = Vector3(0.0, -11.0, 0.0)
+	stars.initial_velocity_min = 3.0
+	stars.initial_velocity_max = 6.5
+	stars.scale_amount_min = 0.09
+	stars.scale_amount_max = 0.17
+	stars.scale_amount_curve = shrink
+	return stars
+
+
+## A one-shot emitter that fires its whole `amount` at once on restart().
+func _make_burst(mesh: Mesh, material: Material, amount: int, lifetime: float) -> CPUParticles3D:
+	var burst: CPUParticles3D = CPUParticles3D.new()
+	burst.mesh = mesh
+	burst.material_override = material
+	burst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	burst.amount = amount
+	burst.lifetime = lifetime
+	burst.one_shot = true
+	burst.explosiveness = 0.95
+	burst.emitting = false
+	add_child(burst)
+	return burst
 
 
 ## Call once per physics tick, after the players have moved.

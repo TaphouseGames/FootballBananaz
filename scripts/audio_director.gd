@@ -42,6 +42,9 @@ const REMARK_PANCAKE: float = 0.25
 const REMARK_TACKLE: float = 0.5
 const REMARK_SPIN: float = 0.45
 const REMARK_STIFF_ARM: float = 0.45
+## A jump dive landing with the diver dazed, and the same player getting up hurt.
+const REMARK_DAZE: float = 0.5
+const REMARK_WOOZY: float = 0.35
 ## Chance the color commentator has something to say about each kind of moment.
 const QUIP_BOLD: float = 0.6
 const QUIP_FOURTH: float = 0.6
@@ -66,6 +69,8 @@ const QUIP_DROP: float = 0.5
 const QUIP_TACKLE: float = 0.4
 const QUIP_SPIN: float = 0.4
 const QUIP_STIFF_ARM: float = 0.4
+const QUIP_DAZE: float = 0.5
+const QUIP_WOOZY: float = 0.35
 ## Real seconds a quip waits for the announcer before it is too late to say it.
 const QUIP_STALE: float = 8.0
 ## Real seconds of quiet between one voice finishing and the next starting.
@@ -116,6 +121,17 @@ const CUP_SUFFIX: String = "_cup"
 const CALL_OVERTIME: StringName = &"announcer_overtime"
 const OVERTIME_MOMENT: String = "overtime"
 const QUIP_OVERTIME_CHANCE: float = 0.9
+## The mascots: Jim and Tony as the two line up for the scramble that opens a
+## half, Jim as one comes up with the ball, Tony when a mascot scores, and the
+## idle chatter about the one on the sideline (Tuning.mascot_idle_chance).
+const CALL_SCRAMBLE: StringName = &"announcer_scramble"
+const QUIP_SCRAMBLE: StringName = &"color_scramble"
+const CALL_SCRAMBLE_WON: StringName = &"announcer_scramble_won"
+const QUIP_MASCOT_TD: StringName = &"color_mascot_td"
+const QUIP_IDLE_MASCOT: StringName = &"color_idle_mascot"
+const REMARK_SCRAMBLE: float = 0.8
+const REMARK_SCRAMBLE_WON: float = 0.7
+const QUIP_SCRAMBLE_CHANCE: float = 0.7
 const CHAT_PREFIX: String = "chat_"
 ## The halftime report's exchanges: files `show_<id>_<part>`, picked by id
 ## (see HalftimeExchanges), not at random.
@@ -159,6 +175,9 @@ var stories_told: int = 0
 
 var _streams: Dictionary[StringName, Array] = {}
 var _last_played: Dictionary[StringName, int] = {}
+## One entry per dazed player still owed his second round of stars:
+## [seconds to go, volume, the player].
+var _star_repeats: Array[Array] = []
 var _pool: Array[AudioStreamPlayer] = []
 var _next_voice: int = 0
 var _bed: AudioStreamPlayer
@@ -751,6 +770,9 @@ func _idle_quip() -> StringName:
 		var special: StringName = _season_take(QUIP_IDLE)
 		if special != QUIP_IDLE:
 			return special
+	# And now and then the mascot.
+	if has_sound(QUIP_IDLE_MASCOT) and randf() < tuning.mascot_idle_chance:
+		return QUIP_IDLE_MASCOT
 	var margin: int = absi(game.home.score - game.home.opponent.score)
 	var sound: StringName = QUIP_IDLE
 	if margin >= tuning.audio_blowout_points:
@@ -892,7 +914,44 @@ func hit(attacker: Player, victim: Player, big: bool) -> void:
 ## An action by `player` (dive, jump, spin...), quieter for the players the
 ## person is not controlling.
 func action(player: Player, sound: StringName) -> void:
-	play(sound, 1.0 if player == game.human.controlled or player.has_ball else 0.45)
+	play(sound, _action_volume(player))
+
+
+func _action_volume(player: Player) -> float:
+	return 1.0 if player == game.human.controlled or player.has_ball else 0.45
+
+
+## `player` has just landed a jump dive and lies dazed: the thump, then the
+## stars round his head, twice over while he is down.
+func dazed(player: Player) -> void:
+	var volume: float = _action_volume(player)
+	play(&"daze_land", volume)
+	play(&"body_fall", volume * 0.8)
+	play(&"daze_stars", volume * 0.9)
+	_star_repeats.append([tuning.jump_dive_daze_time * 0.5, volume * 0.7, player])
+	remark(&"announcer_daze", REMARK_DAZE)
+	quip(&"color_daze", QUIP_DAZE)
+
+
+## A player is back on their feet after a daze, and hurt.
+func woozy() -> void:
+	remark(&"announcer_woozy", REMARK_WOOZY)
+	quip(&"color_woozy", QUIP_WOOZY)
+
+
+## Called every frame with real seconds: the second round of stars of each
+## daze, if he is still lying there.
+func _tick_stars(delta: float) -> void:
+	var i: int = _star_repeats.size() - 1
+	while i >= 0:
+		var repeat: Array = _star_repeats[i]
+		repeat[0] -= delta
+		if repeat[0] <= 0.0:
+			var who: Player = repeat[2]
+			if is_instance_valid(who) and who.is_dazed():
+				play(&"daze_stars", repeat[1])
+			_star_repeats.remove_at(i)
+		i -= 1
 
 
 # --- Following the game --------------------------------------------------------------
@@ -904,8 +963,10 @@ func _process(_delta: float) -> void:
 	var now: int = Time.get_ticks_usec()
 	var delta: float = minf(float(now - _last_tick) / 1000000.0, 0.1)
 	_last_tick = now
+	if not _star_repeats.is_empty():
+		_tick_stars(delta)
 
-	excitement = maxf(maxf(excitement - tuning.audio_crowd_decay * delta, 0.0), _live_excitement())
+	excitement =maxf(maxf(excitement - tuning.audio_crowd_decay * delta, 0.0), _live_excitement())
 	# Quick to rise, slow to settle.
 	var rate: float = 3.0 if excitement > _roar_level else 0.8
 	_roar_level = move_toward(_roar_level, excitement, rate * delta)
@@ -981,6 +1042,13 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 				if not _huddle.playing and tuning.audio_enabled:
 					_huddle.play()
 			_plan_chant()
+		&"Scramble":
+			# Not over an opening or a halftime exchange still being said, nor
+			# over the call of sudden death: remark() and quip() keep quiet then.
+			if has_sound(CALL_SCRAMBLE):
+				remark(CALL_SCRAMBLE, REMARK_SCRAMBLE)
+			if has_sound(QUIP_SCRAMBLE):
+				quip(QUIP_SCRAMBLE, QUIP_SCRAMBLE_CHANCE)
 		&"Live":
 			_breakaway_called = false
 			_chant_in = -1.0
