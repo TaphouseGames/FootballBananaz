@@ -6,7 +6,7 @@ signal state_changed(from: StringName, to: StringName)
 
 ## States whose enter() moves the teams or cuts the camera: the screen dips to
 ## black on the way into them (see ScreenFade).
-const FADE_INTO: Array[StringName] = [&"PlaySelect", &"PreSnap", &"Kickoff"]
+const FADE_INTO: Array[StringName] = [&"PlaySelect", &"PreSnap", &"Kickoff", &"Scramble"]
 ## Longest wait for the black, in case something else held the fade up.
 const FADE_WAIT: float = 1.0
 

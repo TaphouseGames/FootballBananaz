@@ -40,8 +40,9 @@ var warning_half: int = 0
 var conversion: bool = false
 ## Team that receives the kickoff that is due, or null when none is.
 var kickoff_to: Team
-## Team that received the opening kickoff. The other one gets the second half's.
-var opening_receiver: Team
+## A scramble is due: the ball goes up from midfield and both teams go for it.
+## Each half opens with one (see the Scramble state).
+var scramble_due: bool = false
 ## Message for the banner shown by the Turnover state.
 var banner_text: String = ""
 var stats: Dictionary[StringName, int] = {}
@@ -88,9 +89,8 @@ func _ready() -> void:
 	audio.setup(self)
 
 	clock = tuning.game_length * 0.5
-	opening_receiver = home if randf() < 0.5 else away
-	kickoff_to = opening_receiver
-	var opening: StringName = &"Intro" if show_intro and tuning.intro_enabled and not autoplay else &"Kickoff"
+	scramble_due = true
+	var opening: StringName = &"Intro" if show_intro and tuning.intro_enabled and not autoplay else &"Scramble"
 	show_intro = false
 	play_controller.state_machine.transition(opening)
 	camera_rig.snap_to(_camera_target(), _camera_facing())
@@ -181,6 +181,18 @@ func start_kickoff(receiving: Team) -> void:
 	goal_to_go = false
 
 
+## Nobody has the ball in a scramble, but the game needs an offense: the
+## person's team, so the camera starts behind it, or either.
+func start_scramble() -> void:
+	var side: Team = home if randf() < 0.5 else away
+	if human.is_active() and human.team != null:
+		side = human.team
+	offense = side
+	defense = side.opponent
+	down = 1
+	goal_to_go = false
+
+
 ## Halftime is the full report, not just the banner.
 func has_halftime_show() -> bool:
 	return tuning.halftime_show_enabled and not autoplay
@@ -189,7 +201,8 @@ func has_halftime_show() -> bool:
 func start_second_half() -> void:
 	half = 2
 	clock = tuning.game_length * 0.5
-	kickoff_to = opening_receiver.opponent
+	kickoff_to = null
+	scramble_due = true
 
 
 ## Applies the result of a finished play and returns the next state.
@@ -209,6 +222,22 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 			audio.shout(&"announcer_trymissed")
 		kickoff_to = defense
 		return next_play_state()
+	if play_controller.scramble:
+		if play_controller.scramble_team == null:
+			# Out of bounds, or nobody could get hold of it: up it goes again.
+			scramble_due = true
+			add_stat(&"scramble_do_overs")
+			banner_text = "DO-OVER!"
+			return &"Turnover"
+		var x: float = spot_x
+		if _in_own_end_zone(final_team, x):
+			x = tuning.yard_to_x(final_team.attack_dir, tuning.touchback_yard)
+		var lost: bool = final_team != play_controller.scramble_team
+		start_drive(final_team, x)
+		if lost:
+			add_stat(&"turnovers")
+		banner_text = "FUMBLE!" if lost else "SCRAMBLE WON!"
+		return &"Turnover"
 	if play_controller.kickoff:
 		var x: float = spot_x
 		if _in_own_end_zone(final_team, x):
@@ -269,6 +298,8 @@ func next_play_state() -> StringName:
 		return &"Halftime" if half == 1 else &"GameOver"
 	if warning_due():
 		return &"Warning"
+	if scramble_due:
+		return &"Scramble"
 	return &"Kickoff" if kickoff_to != null else &"PlaySelect"
 
 
@@ -295,6 +326,8 @@ func offense_plays() -> Array[OffensePlay]:
 func down_text() -> String:
 	if conversion:
 		return "2-POINT TRY"
+	if play_controller.scramble:
+		return "SCRAMBLE"
 	if play_controller.kickoff:
 		return "KICKOFF"
 	var ordinal: String = DOWN_NAMES[clampi(down - 1, 0, DOWN_NAMES.size() - 1)]
@@ -356,6 +389,10 @@ func _camera_target() -> Vector3:
 	var pc: PlayController = play_controller
 	if pc.kickoff and pc.returner != null and ball.carrier == null and pc.result == PlayController.Result.NONE:
 		return Vector3(pc.returner.position.x, 0.0, pc.returner.position.z)
+	# In a scramble the ball starts a long way from everybody: the camera stays
+	# behind the person's player until somebody has it.
+	if pc.scramble_open() and pc.result == PlayController.Result.NONE and human.controlled != null:
+		return Vector3(human.controlled.position.x, 0.0, human.controlled.position.z)
 	# After a score it stays on the scorer, wherever the spiked ball bounces to.
 	if pc.ball_dead and pc.scorer != null:
 		return Vector3(pc.scorer.position.x, 0.0, pc.scorer.position.z)

@@ -2,8 +2,7 @@ extends GameState
 ## The first half's clock has run out and its last play is over. The halftime
 ## report comes up: the score, the teams' numbers and a word from Jim and Tony
 ## about the half (see HalftimeExchanges). After Tuning.halftime_show_time, or
-## when (A) is pressed, the second half starts with a kickoff to the team that
-## kicked off the first.
+## when (A) is pressed, the second half starts with a scramble, as the first did.
 ## With the report off, or the CPU playing both teams, it is just a banner.
 
 ## Seconds before a press of (A) counts, so one meant for the last play of the
@@ -59,7 +58,7 @@ func physics_update(delta: float) -> void:
 			game.audio.hush()
 	if done:
 		game.start_second_half()
-		machine.transition(&"Kickoff")
+		machine.transition(&"Scramble")
 
 
 func hold_update(delta: float) -> void:

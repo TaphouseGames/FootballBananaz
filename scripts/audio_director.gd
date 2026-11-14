@@ -903,12 +903,14 @@ func _live_excitement() -> float:
 			if carrier == null:
 				return 0.2
 			var start: float = tuning.own_goal_x(carrier.team.attack_dir) if pc.kickoff else pc.los_x
+			if pc.scramble:
+				start = pc.return_from_x
 			var gain: float = (carrier.position.x - start) * float(carrier.team.attack_dir)
 			if not _breakaway_called and gain >= (BREAKAWAY_RETURN_YARDS if pc.kickoff else BREAKAWAY_YARDS):
 				_breakaway_called = true
 				remark(&"announcer_room", REMARK_ROOM)
 				# A handed-off back breaking loose gets his own line.
-				if not pc.kickoff and pc.handoff_done and not pc.pass_completed() and carrier.ratings.position == "RB":
+				if not pc.kickoff and not pc.scramble and pc.handoff_done and not pc.pass_completed() and carrier.ratings.position == "RB":
 					quip(&"color_juice", QUIP_JUICE)
 				else:
 					quip(&"color_breakaway", QUIP_BREAKAWAY)

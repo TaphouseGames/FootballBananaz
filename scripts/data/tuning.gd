@@ -34,6 +34,22 @@ extends Resource
 @export var conversion_points: int = 2
 @export var conversion_distance: float = 3.0
 
+@export_group("Scramble")
+## Each half opens with the ball going straight up from midfield and both teams
+## running in for it. They line up on this yard line, from their own goal.
+@export var scramble_line_yard: float = 20.0
+## Seconds between the line-up and the ball going up.
+@export var scramble_delay: float = 1.5
+## Seconds the ball is in the air.
+@export var scramble_hang_time: float = 2.8
+## It comes down within this many yards of the middle of the field.
+@export var scramble_drift: float = 4.0
+## On the turf this long with nobody holding it, it is whistled dead and goes
+## up again.
+@export var scramble_dead_time: float = 8.0
+## Those not after the ball go for an opponent within this many yards of it.
+@export var scramble_hit_range: float = 10.0
+
 @export_group("Kickoff")
 ## Yard line (from the kicking team's own goal) the ball is kicked from.
 @export var kickoff_yard: float = 35.0

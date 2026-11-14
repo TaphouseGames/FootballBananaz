@@ -260,7 +260,53 @@ func on_fumble(pc: PlayController) -> void:
 		pc.game.add_stat(&"fumble_clueless")
 
 
+## The scramble that opens a half: everybody has watched the ball go up.
+func on_scramble() -> void:
+	_loose_decided = false
+	sees_ball = true
+
+
+## The scramble's ball is up or on the turf and nobody's yet. The few nearest
+## where it is (or is coming down) go for it; the rest pick out an opponent near
+## it and knock him over.
+func _think_scramble(pc: PlayController) -> bool:
+	var falling: bool = not pc.ball.grounded
+	var spot: Vector3 = pc.ball.target_point if falling else pc.ball.flat_position()
+	var dist: float = _flat_distance(player.position, spot)
+	var closer: int = 0
+	for mate: Player in player.team.players:
+		if mate != player and mate.can_act() and _flat_distance(mate.position, spot) < dist:
+			closer += 1
+	if closer < tuning.ai_fumble_chasers:
+		if not falling:
+			return false
+		# Under it, and no leaving his feet before it is down.
+		_seek(spot)
+		player.wants_turbo = dist > 1.5
+		return true
+	var target: Player = null
+	var nearest: float = INF
+	for opponent: Player in player.team.opponent.players:
+		if opponent.is_down() or _flat_distance(opponent.position, spot) > tuning.scramble_hit_range:
+			continue
+		var away: float = _flat_distance(opponent.position, player.position)
+		if away < nearest:
+			nearest = away
+			target = opponent
+	if target == null:
+		_seek(spot)
+		player.wants_turbo = dist > 4.0
+		return true
+	player.move_input = _direction_to(target.position)
+	player.wants_turbo = true
+	if nearest < tuning.shove_radius * 1.4:
+		pc.do_shove(player, _direction_to(target.position))
+	return true
+
+
 func _think_loose(pc: PlayController) -> void:
+	if pc.scramble_open() and _think_scramble(pc):
+		return
 	var spot: Vector3 = pc.ball.flat_position()
 	var dist: float = _flat_distance(player.position, spot)
 	if not sees_ball:

@@ -105,6 +105,16 @@ func record_play(game: Game) -> void:
 				teams[final_team].tries_returned += 1
 		return
 
+	if pc.scramble:
+		# Nobody's play: only what came of it counts.
+		_record_fumble(pc, final_team)
+		if touchdown:
+			teams[final_team].touchdowns += 1
+			teams[final_team].return_td += 1
+			if holder != null:
+				players[holder].return_td += 1
+		return
+
 	var dir: float = pc.off_dir
 	var kept: bool = final_team == offense
 	_record_fumble(pc, final_team)

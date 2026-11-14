@@ -16,16 +16,17 @@ func _initialize() -> void:
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	_game = scene.instantiate() as Game
 	root.add_child(_game)
-	# The opening kickoff is a coin toss; the tour needs the person to receive it.
-	if _game.human.team != null and _game.opening_receiver != _game.human.team:
-		_game.opening_receiver = _game.human.team
+	# A half opens with a scramble that either team can win; the tour needs the
+	# person to get the ball, so it starts from a kickoff to them instead.
+	if _game.human.team != null:
+		_game.scramble_due = false
 		_game.kickoff_to = _game.human.team
 		_game.play_controller.state_machine.transition(&"Kickoff")
 	_tour()
 
 
 func _tour() -> void:
-	# The game opens with a kickoff: the line-up, the kick in the air, the return.
+	# The kickoff: the line-up, the kick in the air, the return.
 	await _wait(0.6)
 	await _shot("0_kickoff")
 	await _wait(2.6)

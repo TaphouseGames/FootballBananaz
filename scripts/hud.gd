@@ -56,8 +56,8 @@ func _process(_delta: float) -> void:
 	var home_marker: String = "> " if game.offense == game.home else ""
 	var away_marker: String = " <" if game.offense == game.away else ""
 	score_label.text = "%s%s  %d  -  %d  %s%s" % [home_marker, game.home.short_name, game.home.score, game.away.score, game.away.short_name, away_marker]
-	# A kickoff has no spot yet.
-	if game.play_controller.kickoff:
+	# A kickoff has no spot yet, and neither has a scramble.
+	if game.play_controller.kickoff or game.play_controller.scramble:
 		down_label.text = game.down_text()
 	else:
 		down_label.text = "%s   |   %s" % [game.down_text(), game.ball_on_text()]

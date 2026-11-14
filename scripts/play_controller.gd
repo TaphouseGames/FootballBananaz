@@ -77,6 +77,11 @@ var handoff_time: float = 0.0
 ## This play is a kickoff: `offense` is the receiving team, `returner` the man
 ## the kick goes to, and there is no quarterback or play call.
 var kickoff: bool = false
+## This play is the scramble that opens a half: the ball goes up from midfield
+## and is anybody's. `offense` is only the side the camera starts behind.
+var scramble: bool = false
+## The team that came up with the scramble's ball, or null while it is still out.
+var scramble_team: Team
 var returner: Player
 ## The returner gave himself up in his own end zone, or ran out of the back of it.
 var was_touchback: bool = false
@@ -267,6 +272,8 @@ func _reset_play() -> void:
 	off_dir = float(offense.attack_dir)
 	off_flipped = false
 	kickoff = false
+	scramble = false
+	scramble_team = null
 	returner = null
 	was_touchback = false
 	phase = Phase.POCKET
@@ -412,6 +419,91 @@ func kick_off() -> void:
 	game.audio.play(&"kick")
 	game.audio.excite(0.45)
 	_update_markers()
+
+
+# --- Scramble --------------------------------------------------------------------
+
+## Lines both teams up for the scramble that opens a half: the ball in the
+## middle of the field, each team in a row across its own side of it.
+func line_up_scramble() -> void:
+	_reset_play()
+	scramble = true
+	handoff_done = true
+	los_x = tuning.field_length * 0.5
+	# Nobody has the ball; these only stand in where a play needs somebody.
+	qb = offense.players[0]
+	runner = qb
+
+	off_play = OffensePlay.new()
+	off_play.play_name = "Scramble"
+	off_play.category = OffensePlay.Category.RUN
+	off_play.is_run = true
+	def_play = DefensePlay.new()
+	def_play.play_name = "Scramble"
+
+	for team: Team in [offense, defense]:
+		var dir: float = float(team.attack_dir)
+		var line_x: float = tuning.yard_to_x(team.attack_dir, tuning.scramble_line_yard)
+		var lane: float = tuning.field_width / float(maxi(team.players.size(), 1))
+		# Who stands where changes from one to the next.
+		var places: Array = range(team.players.size())
+		places.shuffle()
+		for i: int in team.players.size():
+			var player: Player = team.players[i]
+			var place: int = places[i]
+			var spot: Vector3 = Vector3(line_x, 0.0, (float(place) + 0.5) * lane - tuning.half_width())
+			player.reset_for_play(spot, Vector3(dir, 0.0, 0.0))
+			if team == offense:
+				var assignment: OffenseAssignment = OffenseAssignment.new()
+				assignment.label = "S"
+				assignment.job = OffenseAssignment.Job.BLOCK
+				off_play.assignments.append(assignment)
+				player.brain.assign_offense(assignment, spot, PackedVector3Array())
+			else:
+				var assignment: DefenseAssignment = DefenseAssignment.new()
+				assignment.label = "S"
+				assignment.job = DefenseAssignment.Job.RUSH
+				def_play.assignments.append(assignment)
+				player.brain.assign_defense(assignment, spot, null, spot)
+
+	ball.place_on_ground(Vector3(los_x, 0.0, 0.0))
+	game.field.set_markers(los_x, los_x, false)
+	human.on_line_up()
+	if human.is_active():
+		# The person gets the man in the middle of the row, straight behind the
+		# ball: the one they would be switched to when it goes up anyway.
+		var middle: Player = human.team.players[0]
+		for player: Player in human.team.players:
+			if absf(player.position.z) < absf(middle.position.z):
+				middle = player
+		human.set_controlled(middle)
+	_update_markers()
+
+
+## Up it goes, to come down somewhere near the middle, and everybody runs.
+func start_scramble() -> void:
+	ball_dead = false
+	live_time = 0.0
+	for player: Player in players:
+		player.frozen = false
+		player.ball_grab_cooldown = 0.0
+		player.brain.on_scramble()
+	var drift: float = tuning.scramble_drift
+	var point: Vector3 = Vector3(los_x + randf_range(-drift, drift), 0.0, randf_range(-drift, drift))
+	ball.pop_up(point, tuning.scramble_hang_time, tuning)
+	phase = Phase.LOOSE
+	loose_time = 0.0
+	_loose_untouched = 0.0
+	game.add_stat(&"scrambles_started")
+	game.audio.play(&"kick")
+	game.audio.excite(0.6)
+	human.on_fumble()
+	_update_markers()
+
+
+## The scramble's ball has not been picked up by anybody yet.
+func scramble_open() -> bool:
+	return scramble and scramble_team == null
 
 
 ## A defense that has seen this before adjusts. A play it recognises: tighter on
@@ -606,11 +698,12 @@ func snap() -> void:
 ## One tick of live play.
 func simulate(delta: float) -> void:
 	live_time += delta
-	# On a kickoff the clock starts at the catch.
-	if not (kickoff and phase == Phase.AIR):
+	# On a kickoff the clock starts at the catch, in a scramble when somebody
+	# has the ball.
+	if not (kickoff and phase == Phase.AIR) and not scramble_open():
 		game.tick_clock(delta)
 		if not game.conversion:
-			game.stat_book.add_possession(offense, delta)
+			game.stat_book.add_possession(scramble_team if scramble else offense, delta)
 	_try_handoff()
 	human.update_live()
 	_think_and_move(delta)
@@ -870,7 +963,7 @@ func _pick_touchdown_quip(scorer: Player, spot_x: float) -> StringName:
 			nearest = minf(nearest, _flat_distance(opponent.position, scorer.position))
 	if nearest >= tuning.audio_walk_in_yards:
 		return &"color_td_walk"
-	if kickoff or scorer.team != offense:
+	if kickoff or scramble or scorer.team != offense:
 		return &""
 	if (spot_x - los_x) * off_dir >= tuning.audio_long_score_yards:
 		return &"color_td_long"
@@ -904,7 +997,7 @@ func end_play(p_result: Result, spot_x: float) -> void:
 		final_team = fumbler.team if fumbler != null else offense
 	if phase == Phase.LOOSE:
 		game.hud.hide_banner()
-	if not kickoff:
+	if not kickoff and not scramble:
 		var gain: float = (spot_x - los_x) * off_dir if final_team == offense else 0.0
 		game.play_caller.record(offense, off_play, gain, live_time)
 		game.scout.record(offense, off_play, _pass_target, _qb_ran, gain)
@@ -1616,7 +1709,7 @@ func _resolve_contacts(delta: float) -> void:
 	for i: int in players.size():
 		players[i].position += _pushes[i]
 	_separate_bodies()
-	if fumbler != null:
+	if fumbler != null or scramble:
 		# Half of both teams end up in one heap around a fumble: that takes more
 		# than one pass to pull apart.
 		_separate_bodies()
@@ -1848,15 +1941,19 @@ func sees_loose_ball(player: Player) -> bool:
 func _check_loose_ball(delta: float) -> void:
 	if phase != Phase.LOOSE or ball.carrier != null:
 		return
+	# The scramble's ball is nobody's to fall on before it has come down.
+	var opening: bool = scramble_open()
+	if opening and not ball.grounded:
+		return
 	loose_time += delta
 	_loose_untouched += delta
 	var spot: Vector3 = ball.flat_position()
 	if absf(spot.z) > tuning.half_width() or spot.x < -tuning.end_zone_depth or spot.x > tuning.field_length + tuning.end_zone_depth:
-		game.add_stat(&"fumbles_out_of_bounds")
+		game.add_stat(&"scrambles_out_of_bounds" if opening else &"fumbles_out_of_bounds")
 		end_play(Result.OUT_OF_BOUNDS, spot.x)
 		return
-	if loose_time >= tuning.fumble_dead_time:
-		game.add_stat(&"fumbles_whistled_dead")
+	if loose_time >= (tuning.scramble_dead_time if opening else tuning.fumble_dead_time):
+		game.add_stat(&"scrambles_whistled_dead" if opening else &"fumbles_whistled_dead")
 		end_play(Result.TACKLED, spot.x)
 		return
 	if _loose_untouched < tuning.fumble_pickup_delay or ball.position.y > tuning.fumble_pickup_height:
@@ -1907,10 +2004,21 @@ func _grab_loose_ball(player: Player) -> void:
 		game.add_stat(&"fumble_bobbles")
 		game.audio.play(&"ball_bounce", 0.8)
 		return
+	var opening: bool = scramble_open()
 	_take_pass(player)
 	fumble_recoverer = player
 	phase = Phase.RUN
 	game.hud.hide_banner()
+	if opening:
+		# Nobody lost it: it is his team's ball from here.
+		scramble_team = player.team
+		return_from_x = player.position.x
+		game.add_stat(&"scramble_recoveries")
+		game.add_stat(StringName("scrambles_won_" + player.team.short_name.to_lower()))
+		game.audio.play(&"catch")
+		game.audio.crowd_react(player.team, 0.85)
+		human.on_carrier_changed(player)
+		return
 	game.add_stat(&"fumble_recoveries")
 	game.audio.play(&"catch")
 	game.audio.crowd_react(player.team, 0.85 if player.team != fumbler.team else 0.5)

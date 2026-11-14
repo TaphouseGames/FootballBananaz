@@ -221,7 +221,7 @@ func _process(_delta: float) -> bool:
 	var hud: HUD = _game.hud
 	var state: StringName = _game.play_controller.state_machine.current_name()
 	if not _sent:
-		if state == &"Kickoff" or state == &"Live":
+		if state == &"Scramble" or state == &"Live":
 			_send_to_halftime()
 		return false
 	# A switch already under way can swallow the one to Halftime; with the clock
@@ -285,13 +285,14 @@ func _process(_delta: float) -> bool:
 	return false
 
 
-## The second half is on: its clock, the scoreboard back, and the kickoff going
-## to the team that kicked off the first.
+## The second half is on: its clock, the scoreboard back, and a scramble to
+## open it.
 func _check_second_half() -> void:
 	if _game.half != 2 or not is_equal_approx(_game.clock, _game.tuning.game_length * 0.5):
 		_failures.append("the second half did not start with a full clock")
-	if _game.offense != _game.opening_receiver.opponent:
-		_failures.append("the second half's kickoff goes to the team that got the first")
+	var pc: PlayController = _game.play_controller
+	if not pc.scramble and not _game.scramble_due:
+		_failures.append("the second half did not open with a scramble")
 	if not _game.hud.top_bar.visible or _game.hud._halftime_card != null:
 		_failures.append("the scoreboard did not come back")
 

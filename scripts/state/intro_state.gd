@@ -1,15 +1,15 @@
 extends GameState
-## The opening of the broadcast, before the first kickoff of a match started
-## from the main menu: the teams stand ready for the kick, the camera comes
+## The opening of the broadcast, before the scramble that opens a match started
+## from the main menu: the teams stand ready for it, the camera comes
 ## down over the field, and Jim and Tony say how much they are looking forward
 ## to it. (A) skips it.
 
 ## Seconds before a press of (A) counts: the one that started the match is
 ## still on its way up.
 const SKIP_AFTER: float = 0.5
-## Where the camera starts and ends, from the ball on its tee: x behind the
-## kicking team, z out past the sideline. It looks at AIM, a little way down
-## the field, so the kickers fill the picture with the returners beyond them.
+## Where the camera starts and ends, from the ball in the middle of the field:
+## x behind one team, z out past the sideline. It looks at AIM, a little way
+## down the field, so that team fills the picture with the other beyond it.
 const CAMERA_FROM: Vector3 = Vector3(-38.0, 24.0, 54.0)
 const CAMERA_TO: Vector3 = Vector3(-12.0, 4.5, 25.0)
 const AIM: Vector3 = Vector3(9.0, 1.5, 0.0)
@@ -25,8 +25,8 @@ func enter() -> void:
 	_asked = false
 	_talking = false
 	_quiet = 0.0
-	game.start_kickoff(game.opening_receiver)
-	pc.line_up_kickoff()
+	game.start_scramble()
+	pc.line_up_scramble()
 	_place_camera(true)
 	game.hud.set_hint("")
 	game.hud.show_intro()
@@ -57,7 +57,7 @@ func physics_update(delta: float) -> void:
 		game.audio.hush()
 		done = true
 	if done:
-		machine.transition(&"Kickoff")
+		machine.transition(&"Scramble")
 
 
 ## A crane move: down and in toward the field, quick at first and then
@@ -65,7 +65,7 @@ func physics_update(delta: float) -> void:
 func _place_camera(cut: bool) -> void:
 	var tuning: Tuning = game.tuning
 	var tee: Vector3 = Vector3(pc.los_x, 0.0, 0.0)
-	# Mirrored when the kick goes the other way.
+	# Mirrored when the sides are the other way round.
 	var along: Vector3 = Vector3(float(game.defense.attack_dir), 1.0, 1.0)
 	var t: float = clampf(time_in_state / maxf(tuning.intro_shot_time, 0.1), 0.0, 1.0)
 	var eye: Vector3 = tee + CAMERA_FROM.lerp(CAMERA_TO, ease(t, 0.4)) * along

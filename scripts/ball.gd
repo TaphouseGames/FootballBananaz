@@ -287,6 +287,29 @@ func fumble(p_velocity: Vector3) -> void:
 	landing_marker.visible = false
 
 
+## Straight up from where it lies, more or less, to come down on `point` after
+## `time` seconds and bounce wherever it likes: the scramble that opens a half.
+func pop_up(point: Vector3, time: float, tuning: Tuning) -> void:
+	_release()
+	thrower = null
+	intended = null
+	state = State.LOOSE
+	_wild = true
+	grounded = false
+	_gravity = tuning.pass_gravity
+	var air: float = maxf(time, 0.2)
+	target_point = Vector3(point.x, 0.0, point.z)
+	_loose_velocity = (target_point - flat_position()) / air
+	# Up from just clear of the turf, so the first tick is not a landing.
+	position.y = GROUND_HEIGHT + 0.05
+	_loose_velocity.y = 0.5 * _gravity * air
+	_tip_time = air
+	_tip_elapsed = 0.0
+	landing_marker.visible = true
+	landing_marker.global_position = target_point + Vector3(0.0, 0.06, 0.0)
+	landing_marker.reset_physics_interpolation()
+
+
 ## Thrown down after a score: it bounces where it lands and stays about there.
 func spike(p_velocity: Vector3) -> void:
 	_release()

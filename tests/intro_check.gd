@@ -102,7 +102,7 @@ func _process(_delta: float) -> bool:
 			_step = Step.PLAIN
 			_open(false)
 		Step.PLAIN:
-			if state != &"Kickoff":
+			if state != &"Scramble":
 				_failures.append("a match without the flag opened in '%s'" % state)
 			return _report()
 	return false

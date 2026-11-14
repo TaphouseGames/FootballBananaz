@@ -131,6 +131,7 @@ func _next() -> void:
 		return
 	_notes.clear()
 	_game.kickoff_to = null
+	_game.scramble_due = false
 	_game.start_drive(_game.home, _game.tuning.yard_to_x(_game.home.attack_dir, 25.0))
 	_pc.line_up(_game.offense_playbook.plays[0], _game.defense_playbook.plays[0])
 	# The game cuts to the new offense between plays; here the snap comes in the

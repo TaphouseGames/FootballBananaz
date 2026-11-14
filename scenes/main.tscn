@@ -17,6 +17,7 @@
 [ext_resource type="Script" path="res://scripts/state/turnover_state.gd" id="15_turnover"]
 [ext_resource type="Script" path="res://scripts/state/game_over_state.gd" id="16_gameover"]
 [ext_resource type="Script" path="res://scripts/state/kickoff_state.gd" id="22_kickoff"]
+[ext_resource type="Script" path="res://scripts/state/scramble_state.gd" id="28_scramble"]
 [ext_resource type="Script" path="res://scripts/state/halftime_state.gd" id="23_halftime"]
 [ext_resource type="Script" path="res://scripts/state/intro_state.gd" id="25_intro"]
 [ext_resource type="Script" path="res://scripts/state/warning_state.gd" id="27_warning"]
@@ -96,6 +97,9 @@ script = ExtResource("16_gameover")
 
 [node name="Kickoff" type="Node" parent="PlayController/StateMachine"]
 script = ExtResource("22_kickoff")
+
+[node name="Scramble" type="Node" parent="PlayController/StateMachine"]
+script = ExtResource("28_scramble")
 
 [node name="Halftime" type="Node" parent="PlayController/StateMachine"]
 script = ExtResource("23_halftime")

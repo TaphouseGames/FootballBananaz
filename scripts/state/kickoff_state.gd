@@ -4,7 +4,7 @@ extends GameState
 
 
 func enter() -> void:
-	var receiving: Team = game.kickoff_to if game.kickoff_to != null else game.opening_receiver
+	var receiving: Team = game.kickoff_to if game.kickoff_to != null else game.home
 	game.kickoff_to = null
 	game.start_kickoff(receiving)
 	pc.line_up_kickoff()
