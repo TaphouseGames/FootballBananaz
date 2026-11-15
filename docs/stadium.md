@@ -18,7 +18,7 @@ The bowl round the field: wall, tiered stands with aisles and tunnel mouths, abo
 | Team colours | Nothing to set. Fans, seats and props take `team_color` from the two teams, so they follow the team select. |
 | Crowd density | `crowd_density` in the Stadium group of `resources/tuning.tres` (0..1 of about 3,900 seats). |
 | A different crowd | `crowd_seed`: who sits where and what they look like. The same number gives the same crowd. |
-| One head, outfit or pair of legs for everybody | `crowd_head`, `crowd_torso` and `crowd_legs`: the id of a fan in `tools/crowd_parts.json` (`m5`, `m8`: the heads; `m6`, `m9`, `m10`: the outfits; `m7`: the legs). Empty, as they are now, for one at random out of the kit: with two heads and three outfits in it, the crowd is split evenly between them. A fan keeps its head and its outfit at every level of detail: the plainest level is drawn in parts too (the kit's one whole fan at that level, with the parts named by `far_head`, `far_torso` and `far_legs`, is only for the viewer and the gallery). |
+| One head, outfit or pair of legs for everybody | `crowd_head`, `crowd_torso` and `crowd_legs`: the id of a fan in `tools/crowd_parts.json` (`m5`, `m8`, `m11`: the heads; `m6`, `m9`, `m10`: the outfits; `m7`: the legs). Empty, as they are now, for one at random out of the kit: with three heads and three outfits in it, the crowd is split evenly between them. A fan keeps its head and its outfit at every level of detail: the plainest level is drawn in parts too (the kit's one whole fan at that level, with the parts named by `far_head`, `far_torso` and `far_legs`, is only for the viewer and the gallery). |
 | Rows | `stadium_rows`. Past about 18 the stand reaches the game camera. |
 | Size of the fans and room each one gets | `FAN_SCALE` (the players' scale in `player.tscn`), `SEAT_PITCH`, `ROW_DEPTH`, `ROW_RISE` in `scripts/stadium.gd`. |
 | Who sits where | `crowd_home_share` (the -Z stand and the home end), `crowd_away_share` (the +Z stand and the other end), `crowd_neutral_share` (fans in no team's colour). Corners are half and half. `crowd_female_share` once the kit has women. |
@@ -156,7 +156,7 @@ So the kit is a little faster than the one man it replaced: about a third fewer 
 - The game camera looks down at the field and never sees above the top rows, so the jumbotrons and light towers only show in the intro, on the menu (towers) and in shots from further out.
 - When the ball carrier is deep in their own end zone, the front rows of the stand behind come into the bottom of the picture. They do not cover the field.
 - The ball does not collide with the wall or the stands; thrown far out of bounds it passes through them.
-- The kit has men only so far (2 heads, 3 outfits, 1 pair of legs, all in the colours of their own textures, so shirts do not show the teams' colours); the women are to come. Until then `crowd_female_share` does nothing.
+- The kit has men only so far (3 heads, 3 outfits, 1 pair of legs, all in the colours of their own textures, so shirts do not show the teams' colours); the women are to come. Until then `crowd_female_share` does nothing.
 - A fan with a sign always wears the first outfit (the jersey): only that one is made with the arms up, to save draw calls.
 - Beyond `crowd_lod_far` every fan of a gender has the same shape (colours still differ), and at the middle level the faces are rough. Neither shows from the game camera; they do in a close shot of a far stand.
 - A head keeps its own size, and the first fan's is big: on the lean hoodie it looks a little heavy.

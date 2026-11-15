@@ -39,6 +39,18 @@
       "budgets": {"near": {"head": 600}, "mid": {"head": 160}, "far": {"head": 160}},
       "keys": {"skin": null, "hair": null}
     },
+    "m11": {
+      "gender": "m",
+      "only": "head",
+      "who": "(a head by itself, not from the template: a clean-shaven man with swept-back blond hair and a wide grin)",
+      "source": "TripoModels/stylized_head_3d_model_1/stylized_head_3d_model_1.fbx",
+      "yaw": 0,
+      "use": ["head"],
+      "neck": 0.15,
+      "size": 1.0,
+      "budgets": {"near": {"head": 600}, "mid": {"head": 160}, "far": {"head": 160}},
+      "keys": {"skin": null, "hair": null}
+    },
     "m6": {
       "gender": "m",
       "only": "torso",
