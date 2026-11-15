@@ -2,7 +2,7 @@ class_name Stadium
 extends Node3D
 ## The bowl round the field: a wall, tiered stands with aisles, a crowd in the
 ## teams' colours, and the dressing (ad boards, jumbotrons, light towers, hot
-## dog stand, mascot). Built from Tuning by Field.setup(), so it follows the
+## dog stand). Built from Tuning by Field.setup(), so it follows the
 ## field's size, and it takes no part in the game: nothing here collides.
 ##
 ## The outline is a rectangle with rounded corners, made of eight runs (four
@@ -80,40 +80,35 @@ const MASCOT_FALLBACK: String = "mascot_bananaz.glb"
 ## tall as the banana would hide the front rows.
 const MASCOT_HEIGHT: float = 2.8
 const MASCOT_WIDTH: float = 2.0
-## How loud its side's cheer or slump has to be (0..1) for a mascot to join in.
-const MASCOT_REACTS_FROM: float = 0.2
-## A mascot works its sideline this far inside the wall, clear of the two yards
-## past the line the players can reach.
-const MASCOT_INSIDE: float = -WALL_THICKNESS - 1.6
-## It follows the ball along the sideline: it sets off once the ball is this
-## many yards up or down the field from it, runs at this speed (slower than a
-## footballer, so a breakaway leaves it behind), and stays this far from the
-## ends of the straight.
-const MASCOT_FOLLOW_SLACK: float = 3.0
-const MASCOT_SPEED: float = 6.0
-const MASCOT_END_MARGIN: float = 3.0
-## How fast it turns to run and back to face the field.
-const MASCOT_TURN_RATE: float = 9.0
-## Seconds a clip asked for with mascot_react() is held.
-const MASCOT_ACT_TIME: float = 2.6
-## Clips played once and held on their last frame; the others loop.
-const MASCOT_ONE_SHOT: PackedStringArray = ["faint"]
-## What a model without one of the newer clips does in its place.
-const MASCOT_STAND_INS: Dictionary[String, String] = {"point": "cheer", "flex": "cheer", "faint": "sulk"}
-
-## Yards from the sidelines and the end lines to the wall.
-const WALL_GAP_SIDE: float = 6.0
-const WALL_GAP_END: float = 8.0
-const CORNER_RADIUS: float = 10.0
-const WALL_HEIGHT: float = 1.7
+## The wall stands Tuning.wall_gap past the lines, on all four sides. The
+## corners are tight: any rounder and they would cut across the end zone corners.
+const CORNER_RADIUS: float = 1.5
+## A little taller than a player (1.95): nobody gets over it, and a ball has to
+## be well up in the air to.
+const WALL_HEIGHT: float = 2.3
 const WALL_THICKNESS: float = 0.4
 ## Height of the first row's floor; each row is ROW_DEPTH deep and ROW_RISE higher.
-const FIRST_ROW_HEIGHT: float = 1.1
+const FIRST_ROW_HEIGHT: float = 1.7
 const ROW_DEPTH: float = 1.5
 const ROW_RISE: float = 0.75
 ## A fan's seat above the floor of its row, and the room each one gets.
 const SEAT_HEIGHT: float = 0.48
 const SEAT_PITCH: float = 1.2
+## A fan sits this far back from the front of his row, as a share of its depth.
+const SEAT_AT: float = 0.55
+## The seat under him: how wide it is, how far it reaches to the front and to
+## the back of where he sits, how thick it is, and the back it hangs from (how
+## thick, and how high above the floor of the row). tools/prep_crowd.py seats
+## the fans on y = 0 with their backs 0.4 yards behind their middles.
+const SEAT_WIDTH: float = 0.92
+const SEAT_FRONT: float = 0.22
+const SEAT_BACK: float = 0.42
+const SEAT_THICKNESS: float = 0.1
+## The top of the seat is this far below where the fan sits: his thighs hang
+## a little lower than that.
+const SEAT_SINK: float = 0.09
+const SEAT_REST_THICKNESS: float = 0.08
+const SEAT_REST_HEIGHT: float = 1.05
 const AISLE_WIDTH: float = 1.8
 const BAY_SEATS: int = 9
 ## The walkway behind the top row, and the wall behind that.
@@ -251,21 +246,9 @@ var _scores: Vector2i = Vector2i(-1, -1)
 var _flash: float = 0.0
 var _score_labels: Array[Label3D] = []
 var _flash_labels: Array[Label3D] = []
-## The home team's mascot and the visitors', with the height each stands at,
-## its AnimationPlayer (null for a model without clips) and the clip it is in.
-var _mascots: Array[Node3D] = []
-var _mascot_y: PackedFloat32Array = PackedFloat32Array()
-var _mascot_players: Array[AnimationPlayer] = []
-var _mascot_clips: PackedStringArray = PackedStringArray()
-## The straight each one works, how far along it it is, the way it faces
-## (without the rock), and whether it is running after the ball.
-var _mascot_runs: Array[Run] = []
-var _mascot_at: PackedFloat32Array = PackedFloat32Array()
-var _mascot_facing: Array[Basis] = []
-var _mascot_running: Array[bool] = []
-## The clip asked for with mascot_react() and the seconds it has left.
-var _mascot_act: PackedStringArray = PackedStringArray()
-var _mascot_act_left: PackedFloat32Array = PackedFloat32Array()
+## Half the outline's length and width, to the stand side of the wall.
+var _half_x: float = 0.0
+var _half_z: float = 0.0
 var _font: Font
 var _clock: float = 0.0
 ## The picture of the signs, once it has been drawn (never when headless).
@@ -285,16 +268,8 @@ func setup(p_tuning: Tuning, home: Team, away: Team, left_is_home: bool) -> void
 	fan_positions.clear()
 	_score_labels.clear()
 	_flash_labels.clear()
-	_mascots.clear()
-	_mascot_y.clear()
-	_mascot_players.clear()
-	_mascot_clips.clear()
-	_mascot_runs.clear()
-	_mascot_at.clear()
-	_mascot_facing.clear()
-	_mascot_running.clear()
-	_mascot_act.clear()
-	_mascot_act_left.clear()
+	_half_x = 0.0
+	_half_z = 0.0
 	if not tuning.stadium_enabled:
 		set_process(false)
 		return
@@ -311,6 +286,7 @@ func setup(p_tuning: Tuning, home: Team, away: Team, left_is_home: bool) -> void
 
 	_lay_out(left_is_home)
 	_build_shell()
+	_build_seats()
 	_build_boards()
 	_build_crowd()
 	_bake_signs()
@@ -364,6 +340,66 @@ func depth() -> float:
 	return float(rows()) * ROW_DEPTH + CONCOURSE_DEPTH
 
 
+## Yards from (x, z) to the face of the wall that looks onto the field: below 0
+## on the field, above 0 in the wall or behind it. The wall is solid whether
+## the stadium is drawn or not, so this goes by the Tuning alone.
+static func wall_distance(p_tuning: Tuning, x: float, z: float) -> float:
+	var corner: Vector2 = _from_corner(p_tuning, x, z)
+	return Vector2(maxf(corner.x, 0.0), maxf(corner.y, 0.0)).length() + minf(maxf(corner.x, corner.y), 0.0) - CORNER_RADIUS + WALL_THICKNESS
+
+
+## The way the wall nearest to (x, z) faces: a flat unit vector pointing from
+## it onto the field. It turns with the wall round the corners.
+static func wall_normal(p_tuning: Tuning, x: float, z: float) -> Vector3:
+	var corner: Vector2 = _from_corner(p_tuning, x, z)
+	var side_x: float = 1.0 if x >= p_tuning.field_length * 0.5 else -1.0
+	var side_z: float = 1.0 if z >= 0.0 else -1.0
+	if corner.x > 0.0 and corner.y > 0.0:
+		return -Vector3(corner.x * side_x, 0.0, corner.y * side_z).normalized()
+	if corner.x > corner.y:
+		return Vector3(-side_x, 0.0, 0.0)
+	return Vector3(0.0, 0.0, -side_z)
+
+
+## `spot` if it is at least `margin` yards in from the face of the wall, else
+## the nearest place that is.
+static func keep_inside(p_tuning: Tuning, spot: Vector3, margin: float) -> Vector3:
+	var over: float = wall_distance(p_tuning, spot.x, spot.z) + margin
+	if over <= 0.0:
+		return spot
+	return spot + wall_normal(p_tuning, spot.x, spot.z) * over
+
+
+## (x, z) folded into one quarter of the field and measured from the middle of
+## that quarter's rounded corner: along the field, across it.
+static func _from_corner(p_tuning: Tuning, x: float, z: float) -> Vector2:
+	var half_x: float = p_tuning.field_length * 0.5 + p_tuning.end_zone_depth + p_tuning.wall_gap + WALL_THICKNESS
+	var half_z: float = p_tuning.half_width() + p_tuning.wall_gap + WALL_THICKNESS
+	return Vector2(absf(x - p_tuning.field_length * 0.5) - (half_x - CORNER_RADIUS), absf(z) - (half_z - CORNER_RADIUS))
+
+
+## How high the ground is at (x, z): the turf inside the wall, the top of the
+## wall, the floor of whichever row is there, the walkway, the back wall. What
+## a ball that leaves the field comes down on.
+func surface_height(x: float, z: float) -> float:
+	if tuning == null or not tuning.stadium_enabled or _half_x <= 0.0:
+		return 0.0
+	# Yards out from the outline, as `d` in Run.point().
+	var d: float = wall_distance(tuning, x, z) - WALL_THICKNESS
+	if d < -WALL_THICKNESS:
+		return 0.0
+	if d < 0.0:
+		return WALL_HEIGHT
+	var seats: float = float(rows()) * ROW_DEPTH
+	if d < seats:
+		return FIRST_ROW_HEIGHT + floorf(d / ROW_DEPTH) * ROW_RISE
+	if d < depth():
+		return top_height()
+	if d < depth() + BACK_WALL_THICKNESS:
+		return top_height() + BACK_WALL_HEIGHT
+	return 0.0
+
+
 func _process(_delta: float) -> void:
 	# Real time, like the audio: hit-stop and the tests' fast-forward bend delta.
 	var now: int = Time.get_ticks_usec()
@@ -388,82 +424,7 @@ func _process(_delta: float) -> void:
 		_wave_in -= delta
 		if _wave_in <= 0.0 and between_plays:
 			start_wave()
-	for i: int in _mascots.size():
-		_mascot_act_left[i] = maxf(_mascot_act_left[i] - delta, 0.0)
-		_follow_ball(i, delta)
-		# The hop and the rock are for standing about: not on the run, and not
-		# on top of a clip of its own.
-		var loose: bool = not _mascot_running[i] and _mascot_act_left[i] <= 0.0
-		var hop: float = absf(sin(_clock * 3.0 + float(i))) * (0.12 + 0.9 * cheer[i]) if loose else 0.0
-		var rock: float = sin(_clock * 1.5 + float(i)) * 0.06 if loose else 0.0
-		var run: Run = _mascot_runs[i]
-		var at: Vector3 = run.point(_mascot_at[i], MASCOT_INSIDE)
-		_mascots[i].transform = Transform3D(_mascot_facing[i] * Basis(Vector3.BACK, rock), Vector3(at.x, _mascot_y[i] + hop, at.z))
-		_play_mascot(i)
 	_push_uniforms()
-
-
-## Moves a mascot along its sideline after the ball and turns it the way it is
-## going, or back to the field once it is level with the ball again.
-func _follow_ball(side: int, delta: float) -> void:
-	var run: Run = _mascot_runs[side]
-	var gap: float = 0.0
-	if _game != null and _game.ball != null and _mascots[side].visible and _mascot_act_left[side] <= 0.0:
-		var level: float = clampf((_game.ball.position - run.start).dot(run.dir), MASCOT_END_MARGIN, run.length - MASCOT_END_MARGIN)
-		gap = level - _mascot_at[side]
-	# It sets off past the slack and then runs until it is level.
-	_mascot_running[side] = absf(gap) > (0.2 if _mascot_running[side] else MASCOT_FOLLOW_SLACK)
-	var facing: Basis = _facing_field(run, _mascot_at[side])
-	if _mascot_running[side]:
-		_mascot_at[side] += signf(gap) * minf(MASCOT_SPEED * delta, absf(gap))
-		var ahead: Vector3 = run.dir * signf(gap)
-		facing = Basis(Vector3.UP.cross(ahead), Vector3.UP, ahead)
-	elif _mascot_act_left[side] > 0.0 and MASCOT_ONE_SHOT.has(_mascot_act[side]):
-		# It goes over backwards: side on, so that it lands along the wall and
-		# not in it.
-		facing = Basis(Vector3.UP.cross(run.dir), Vector3.UP, run.dir)
-	_mascot_facing[side] = _mascot_facing[side].slerp(facing, minf(MASCOT_TURN_RATE * delta, 1.0)).orthonormalized()
-
-
-## Has the home team's mascot (or the visitors') play `clip` for `seconds` where
-## it stands: "point", "flex", "faint" or any other clip of the model. A model
-## without it plays its stand-in (MASCOT_STAND_INS).
-func mascot_react(for_home: bool, clip: StringName, seconds: float = MASCOT_ACT_TIME) -> void:
-	var side: int = 0 if for_home else 1
-	if side >= _mascots.size():
-		return
-	_mascot_act[side] = String(clip)
-	_mascot_act_left[side] = seconds
-	# The same one twice running starts again.
-	_mascot_clips[side] = ""
-
-
-## Where the home team's mascot (or the visitors') stands on its sideline now.
-func mascot_position(for_home: bool) -> Vector3:
-	var side: int = 0 if for_home else 1
-	if side >= _mascots.size():
-		return Vector3.ZERO
-	return _mascot_runs[side].point(_mascot_at[side], MASCOT_INSIDE)
-
-
-## Puts the home team's mascot (or the visitors') on its sideline level with
-## `spot`, as far as the straight goes, and returns where that is: the place it
-## steps onto the field from. A long score leaves it far behind otherwise.
-func mascot_entry(for_home: bool, spot: Vector3) -> Vector3:
-	var side: int = 0 if for_home else 1
-	if side >= _mascots.size():
-		return Vector3.ZERO
-	var run: Run = _mascot_runs[side]
-	_mascot_at[side] = clampf((spot - run.start).dot(run.dir), MASCOT_END_MARGIN, run.length - MASCOT_END_MARGIN)
-	_mascot_running[side] = false
-	return mascot_position(for_home)
-
-
-## Takes one of the two off its sideline, or puts it back.
-func set_mascot_visible(for_home: bool, shown: bool) -> void:
-	var side: int = 0 if for_home else 1
-	if side < _mascots.size():
-		_mascots[side].visible = shown
 
 
 func _push_uniforms() -> void:
@@ -495,8 +456,10 @@ func _push_uniforms() -> void:
 func _lay_out(left_is_home: bool) -> void:
 	runs.clear()
 	var mid_x: float = tuning.field_length * 0.5
-	var half_x: float = mid_x + tuning.end_zone_depth + WALL_GAP_END
-	var half_z: float = tuning.half_width() + WALL_GAP_SIDE
+	var half_x: float = mid_x + tuning.end_zone_depth + tuning.wall_gap + WALL_THICKNESS
+	var half_z: float = tuning.half_width() + tuning.wall_gap + WALL_THICKNESS
+	_half_x = half_x
+	_half_z = half_z
 	var inner_x: float = half_x - CORNER_RADIUS
 	var inner_z: float = half_z - CORNER_RADIUS
 	var home: float = tuning.crowd_home_share
@@ -608,6 +571,83 @@ func _build_shell() -> void:
 	shell.material_override = material
 	shell.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(shell)
+
+
+## Where the seats of one row of a run are: for each, the slice it is in (x)
+## and how far along the run (y). The seats are built here and the fans sit
+## here, so the two cannot come apart. None in the aisles or over a tunnel.
+func _seat_spots(run: Run, row: int) -> PackedVector2Array:
+	var spots: PackedVector2Array = PackedVector2Array()
+	var d: float = (float(row) + SEAT_AT) * ROW_DEPTH
+	var stretches: Array = run.slices
+	if run.arc:
+		stretches = [[0.0, PI * 0.5, false, false]]
+	for slice_index: int in stretches.size():
+		var slice: Array = stretches[slice_index]
+		if slice[2]:
+			continue
+		var s0: float = slice[0]
+		var s1: float = slice[1]
+		var yards: float = (s1 - s0) * (CORNER_RADIUS + d) if run.arc else s1 - s0
+		var seats: int = int(yards / SEAT_PITCH)
+		var in_tunnel: bool = slice[3] and row >= TUNNEL_ROWS.x and row < TUNNEL_ROWS.y
+		for seat: int in seats:
+			var s: float = s0 + (float(seat) + 0.5) * (s1 - s0) / float(seats)
+			if in_tunnel and absf(s - (s0 + s1) * 0.5) < TUNNEL_HALF_WIDTH + SEAT_PITCH * 0.5:
+				continue
+			spots.append(Vector2(float(slice_index), s))
+	return spots
+
+
+## A seat at every place a fan can sit, taken or not: the part he sits on and
+## the back it hangs from, which stands on the floor of the row. One mesh.
+func _build_seats() -> void:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half: float = SEAT_WIDTH * 0.5
+	for run: Run in runs:
+		var color: Color = SEAT_GREY.lerp(_home_color.lerp(_away_color, 1.0 - run.home_chance), 0.55)
+		for row: int in rows():
+			var d: float = (float(row) + SEAT_AT) * ROW_DEPTH
+			var floor_y: float = FIRST_ROW_HEIGHT + float(row) * ROW_RISE
+			# Under the fan's thighs, which hang a little below where he sits.
+			var top: float = floor_y + SEAT_HEIGHT - SEAT_SINK
+			for spot: Vector2 in _seat_spots(run, row):
+				var out: Vector3 = run.outward(spot.y)
+				var along: Vector3 = Vector3(-out.z, 0.0, out.x)
+				var at: Vector3 = run.point(spot.y, d)
+				_box(st, at, along, out, half, -SEAT_FRONT, SEAT_BACK, top - SEAT_THICKNESS, top, color, true)
+				_box(st, at, along, out, half, SEAT_BACK, SEAT_BACK + SEAT_REST_THICKNESS, floor_y, floor_y + SEAT_REST_HEIGHT, color.darkened(0.15), false)
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.vertex_color_is_srgb = true
+	material.roughness = 1.0
+	material.metallic_specular = 0.0
+	var seats: MeshInstance3D = MeshInstance3D.new()
+	seats.name = "Seats"
+	seats.mesh = st.commit()
+	seats.material_override = material
+	seats.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(seats)
+
+
+## A box standing at `at`: `half` wide to either side along `along`, from d0
+## to d1 along `out` (away from the field) and from y0 to y1. `under`: with
+## its underside, for one that hangs in the air.
+func _box(st: SurfaceTool, at: Vector3, along: Vector3, out: Vector3, half: float, d0: float, d1: float, y0: float, y1: float, color: Color, under: bool) -> void:
+	var corners: Array[Vector3] = []
+	for y: float in [y0, y1]:
+		for d: float in [d0, d1]:
+			for side: float in [-half, half]:
+				corners.append(at + along * side + out * d + Vector3(0.0, y, 0.0))
+	# 0-3 the bottom (front left, front right, back left, back right), 4-7 the top.
+	_quad(st, corners[4], corners[5], corners[7], corners[6], Vector3.UP, color)
+	_quad(st, corners[0], corners[1], corners[5], corners[4], -out, color.darkened(0.2))
+	_quad(st, corners[2], corners[3], corners[7], corners[6], out, color.darkened(0.3))
+	_quad(st, corners[0], corners[2], corners[6], corners[4], -along, color.darkened(0.25))
+	_quad(st, corners[1], corners[3], corners[7], corners[5], along, color.darkened(0.25))
+	if under:
+		_quad(st, corners[0], corners[1], corners[3], corners[2], Vector3.DOWN, color.darkened(0.4))
 
 
 ## A strip along a slice of a run, between (d0, y0) and (d1, y1) in the run's
@@ -773,34 +813,20 @@ func _build_crowd() -> void:
 		# _new_chunk() makes, filled by _seat().
 		var chunks: Dictionary = {}
 		for row: int in rows():
-			var d: float = (float(row) + 0.55) * ROW_DEPTH
+			var d: float = (float(row) + SEAT_AT) * ROW_DEPTH
 			var y: float = FIRST_ROW_HEIGHT + float(row) * ROW_RISE + SEAT_HEIGHT
-			var stretches: Array = run.slices
-			if run.arc:
-				stretches = [[0.0, PI * 0.5, false, false]]
-			for slice_index: int in stretches.size():
-				var slice: Array = stretches[slice_index]
-				if slice[2]:
+			for spot: Vector2 in _seat_spots(run, row):
+				if _rng.randf() >= tuning.crowd_density:
 					continue
-				var s0: float = slice[0]
-				var s1: float = slice[1]
-				var yards: float = (s1 - s0) * (CORNER_RADIUS + d) if run.arc else s1 - s0
-				var seats: int = int(yards / SEAT_PITCH)
-				var in_tunnel: bool = slice[3] and row >= TUNNEL_ROWS.x and row < TUNNEL_ROWS.y
-				for seat: int in seats:
-					var s: float = s0 + (float(seat) + 0.5) * (s1 - s0) / float(seats)
-					if in_tunnel and absf(s - (s0 + s1) * 0.5) < TUNNEL_HALF_WIDTH + SEAT_PITCH * 0.5:
-						continue
-					if _rng.randf() >= tuning.crowd_density:
-						continue
-					var at: Vector3 = run.point(s, d) + Vector3(0.0, y, 0.0)
-					var chunk: int = slice_index
-					if run.arc:
-						chunk = mini(int(s / (PI * 0.5) * float(ARC_CHUNKS)), ARC_CHUNKS - 1)
-					if not chunks.has(chunk):
-						chunks[chunk] = _new_chunk()
-					_seat(chunks[chunk], _fan(run, s, at, mid_x))
-					fan_positions.append(at)
+				var s: float = spot.y
+				var at: Vector3 = run.point(s, d) + Vector3(0.0, y, 0.0)
+				var chunk: int = int(spot.x)
+				if run.arc:
+					chunk = mini(int(s / (PI * 0.5) * float(ARC_CHUNKS)), ARC_CHUNKS - 1)
+				if not chunks.has(chunk):
+					chunks[chunk] = _new_chunk()
+				_seat(chunks[chunk], _fan(run, s, at, mid_x))
+				fan_positions.append(at)
 		for chunk: int in chunks:
 			_add_chunk(crowd, "Chunk%d_%d" % [index, chunk], chunks[chunk])
 
@@ -1222,38 +1248,6 @@ func _build_props() -> void:
 	stand.transform = Transform3D(_facing_field(home_stand, stand_at), home_stand.point(stand_at, depth() - CONCOURSE_DEPTH * 0.45) + Vector3(0.0, top, 0.0))
 	props.add_child(stand)
 
-	# The home team's mascot works the home sideline, inside the wall
-	# (MASCOT_INSIDE), and follows the ball along it (_follow_ball). The
-	# visitors' does the same across the field.
-	for side: int in 2:
-		var mascot: Node3D = mascot_model(_names[side])
-		if mascot == null:
-			# No file at all: a plain box.
-			mascot = _prop("Mascot", "", MASCOT_HEIGHT, Vector3(1.2, MASCOT_HEIGHT, 1.2), _home_color if side == 0 else _away_color)
-		else:
-			_no_shadows(mascot)
-		mascot.name = "Mascot" if side == 0 else "MascotAway"
-		var sideline: Run = home_stand if side == 0 else runs[2]
-		var mascot_at: float = sideline.length * 0.5 - 14.0
-		mascot.transform = Transform3D(_facing_field(sideline, mascot_at), sideline.point(mascot_at, MASCOT_INSIDE))
-		props.add_child(mascot)
-		var players: Array[Node] = mascot.find_children("*", "AnimationPlayer", true, false)
-		var player: AnimationPlayer = players[0] as AnimationPlayer if not players.is_empty() else null
-		if player != null:
-			for clip: StringName in player.get_animation_list():
-				player.get_animation(clip).loop_mode = Animation.LOOP_NONE if MASCOT_ONE_SHOT.has(String(clip)) else Animation.LOOP_LINEAR
-		_mascots.append(mascot)
-		_mascot_y.append(mascot.position.y)
-		_mascot_players.append(player)
-		_mascot_clips.append("")
-		_mascot_runs.append(sideline)
-		_mascot_at.append(mascot_at)
-		_mascot_facing.append(mascot.basis)
-		_mascot_running.append(false)
-		_mascot_act.append("")
-		_mascot_act_left.append(0.0)
-		_play_mascot(side)
-
 	# Where the commentary booth would go: top of the home stand, at midfield.
 	booth_anchor = Marker3D.new()
 	booth_anchor.name = "BoothAnchor"
@@ -1262,7 +1256,7 @@ func _build_props() -> void:
 
 
 ## The model of the mascot of the team with this short name (the banana for a
-## team without one), as it stands on the sideline and runs on the field:
+## team without one), as it stands and runs on the field:
 ## MASCOT_HEIGHT tall but no wider than MASCOT_WIDTH, on its origin, facing +Z.
 ## Its size is in the meta "size". Null with no file to load.
 static func mascot_model(short_name: String) -> Node3D:
@@ -1280,42 +1274,6 @@ static func mascot_model(short_name: String) -> Node3D:
 	holder.add_child(model)
 	holder.set_meta(&"size", bounds.size * scale_by)
 	return holder
-
-
-## The two on the sidelines are out of sight while they are on the field for
-## the scramble (see Mascot).
-func set_mascots_visible(shown: bool) -> void:
-	for mascot: Node3D in _mascots:
-		mascot.visible = shown
-
-
-## The clip a mascot should be in: the one asked for (mascot_react), running
-## after the ball, up with its own crowd, down when the other side has scored,
-## waving along with a wave, else idling.
-func _play_mascot(side: int) -> void:
-	var player: AnimationPlayer = _mascot_players[side]
-	if player == null:
-		return
-	var clip: String = "idle"
-	var rate: float = 1.0
-	if _mascot_act_left[side] > 0.0:
-		clip = _mascot_act[side]
-		if not player.has_animation(clip):
-			clip = MASCOT_STAND_INS.get(clip, "idle")
-	elif _mascot_running[side]:
-		clip = "run"
-		rate = MASCOT_SPEED / Mascot.RUN_CLIP_SPEED
-	elif cheer[side] > MASCOT_REACTS_FROM:
-		clip = "cheer"
-	elif slump[side] > MASCOT_REACTS_FROM:
-		clip = "sulk"
-	elif wave_progress >= 0.0:
-		clip = "wave"
-	if clip == _mascot_clips[side] or not player.has_animation(clip):
-		return
-	_mascot_clips[side] = clip
-	player.speed_scale = rate
-	player.play(clip, 0.25)
 
 
 ## A model from assets/stadium scaled to `height`, standing on its origin and

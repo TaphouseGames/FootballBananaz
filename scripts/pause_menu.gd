@@ -25,7 +25,7 @@ const CONTROLS: Array[Array] = [
 		["Hold (LB)", "Lead him"],
 		["Hold (RB)", "Underthrow"],
 		["Hold RT", "Tuck and run, let go to throw again"],
-		["LT", "Throw it away, out of bounds"],
+		["LT", "Throw it away, into the stands"],
 		["(Y)", "Jump"],
 	]],
 	["RUNNING WITH THE BALL", [

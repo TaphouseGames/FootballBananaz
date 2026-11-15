@@ -166,6 +166,9 @@ func think(pc: PlayController, delta: float) -> void:
 	_decision_timer = maxf(_decision_timer - delta, 0.0)
 	_lane_timer = maxf(_lane_timer - delta, 0.0)
 	_hurdle_timer = maxf(_hurdle_timer - delta, 0.0)
+	if player.bystander:
+		_stand_by(pc)
+		return
 	if _leap != Leap.NONE:
 		_think_leap(pc)
 	# A stiff arm is done on the run, so the brain keeps steering through it.
@@ -203,6 +206,22 @@ func think(pc: PlayController, delta: float) -> void:
 			_think_loose(pc)
 		PlayController.Phase.TIPPED:
 			_think_tipped(pc)
+
+
+## A mascot on the field with its team: it stays where it was put and watches
+## the ball, and hangs its head when the other side scores.
+func _stand_by(pc: PlayController) -> void:
+	if not player.can_act():
+		return
+	if pc.ball_dead:
+		player.look_dir = Vector3.ZERO
+		if pc.result == PlayController.Result.TOUCHDOWN and pc.scorer != null and not pc.is_celebrating(player):
+			_sulk(pc)
+		return
+	var to_ball: Vector3 = pc.ball.flat_position() - player.position
+	to_ball.y = 0.0
+	if to_ball.length_squared() > 1.0:
+		player.look_dir = to_ball.normalized()
 
 
 # --- Tipped pass ---------------------------------------------------------------
@@ -546,6 +565,9 @@ func _offense_pocket(pc: PlayController) -> void:
 		OffenseAssignment.Job.QB:
 			if player.has_ball:
 				_quarterback(pc)
+			elif pc.flicking():
+				# Flea flicker: he drops while the back has it.
+				_seek(route[route.size() - 1] if route.size() > 0 else start_point)
 		OffenseAssignment.Job.BLOCK:
 			_block(pc, pc.qb.position)
 		_:
@@ -575,7 +597,7 @@ func _quarterback(pc: PlayController) -> void:
 				pc.throw_ball(open_man, run_power, choose_placement(pc, open_man, run_power))
 		return
 	var drop_point: Vector3 = route[route.size() - 1] if route.size() > 0 else start_point
-	if pc.faking():
+	if pc.faking() and not pc.flick_returning():
 		# He stays for the fake, then drops (or rolls out).
 		drop_point = start_point
 	_seek(drop_point)
@@ -943,6 +965,12 @@ func _run_route(pc: PlayController) -> void:
 	if player == pc.runner and pc.selling_run():
 		# Play action: he hits the hole like a man with the ball.
 		player.wants_turbo = true
+	if player.has_ball and pc.flicking():
+		# Flea flicker: he plants at the first point of his route and waits to
+		# pitch it back.
+		if route.size() > 0 and _flat_distance(player.position, route[0]) > 0.6:
+			player.move_input = _direction_to(route[0])
+		return
 	if route_index < route.size():
 		var target: Vector3 = route[route_index]
 		if _flat_distance(player.position, target) < 0.9:

@@ -997,10 +997,10 @@ func _build_pose(delta: float) -> void:
 
 	if player.has_ball:
 		# A quarterback sprinting on turbo tucks it until his feet are set again.
-		if player == pc.qb and pc.faking() and not pc.ball_dead and not player.is_tucked():
+		if player == pc.qb and pc.faking() and not pc.flick_returning() and not pc.ball_dead and not player.is_tucked():
 			_mode = 4
 			_fake_handoff()
-		elif player == pc.qb and pc.phase == PlayController.Phase.POCKET and not pc.ball_dead and player.feet_set >= 1.0 and not player.is_tucked():
+		elif player == pc.qb and pc.phase == PlayController.Phase.POCKET and not pc.ball_dead and not pc.flick_returning() and player.feet_set >= 1.0 and not player.is_tucked():
 			_mode = 2
 			_qb_cocked()
 		else:
@@ -1625,6 +1625,16 @@ func _down() -> void:
 		_stash()
 		_gather(fall.on_back)
 		_blend_from_stash(sin(PI * fall.rise))
+	if fall.kind == PlayerFall.Kind.SPLAT and fall.stick > 0.0:
+		# Flat against the wall: arms and legs out, cheek to it.
+		_stash()
+		_set_arms(Vector3(0.0, 0.0, 32.0), Vector3(0.0, -8.0, 0.0))
+		_pose[B.THIGH_L] = Vector3(0.0, 0.0, 26.0)
+		_pose[B.THIGH_R] = Vector3(0.0, 0.0, 26.0)
+		_pose[B.SHIN_L] = Vector3(4.0, 0.0, 0.0)
+		_pose[B.SHIN_R] = Vector3(4.0, 0.0, 0.0)
+		_pose[B.HEAD] = Vector3(0.0, 65.0 if fall.on_back else 0.0, 0.0)
+		_blend_from_stash(fall.stick)
 	if player.is_dazed():
 		# Seeing stars: the head lolls round and round.
 		var woozy: float = player.dazed_timer * 5.0

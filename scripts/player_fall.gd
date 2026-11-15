@@ -10,8 +10,9 @@ extends RefCounted
 
 ## HIGH: shoved or hit up top. LOW: legs taken out by a dive. WRAP: dragged down
 ## by a standing tackler. BOUNCE_OFF: a tackler who missed. PANCAKE: a blocker
-## who got run over. DIVE: landing after the player's own dive.
-enum Kind { HIGH, LOW, WRAP, BOUNCE_OFF, PANCAKE, DIVE }
+## who got run over. DIVE: landing after the player's own dive. SPLAT: thrown
+## or diving into the wall, flattened against it and stuck there for a moment.
+enum Kind { HIGH, LOW, WRAP, BOUNCE_OFF, PANCAKE, DIVE, SPLAT }
 
 const STAND_HEIGHT: float = 0.95
 const DOWN_HEIGHT: float = 0.3
@@ -20,6 +21,15 @@ const DIVE_HEIGHT: float = 0.7
 const GRAVITY: float = 40.0
 const GET_UP_TIME: float = 0.42
 const VARIANTS: int = 4
+## Flat against the wall: yards from its face to the middle of the body, how
+## thin the body is pressed (1 = as he is), how much wider and taller that
+## makes him, how far down the wall he slides while he is stuck, and how long
+## he takes to come unstuck once he starts to peel off.
+const SPLAT_GAP: float = 0.14
+const SPLAT_THICKNESS: float = 0.2
+const SPLAT_SPREAD: float = 0.3
+const SPLAT_SLIDE: float = 0.22
+const SPLAT_PEEL_TIME: float = 0.25
 
 ## Separate from the global generator, so looks never change how a game plays out.
 static var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -49,6 +59,8 @@ var rise: float = 0.0
 var impact: float = 0.0
 ## Radians per second around the vertical axis.
 var spin_speed: float = 0.0
+## 1 while he is stuck flat against the wall, down to 0 as he peels off it.
+var stick: float = 0.0
 
 var _tip: float = 0.0
 var _tip_vel: float = 0.0
@@ -61,6 +73,14 @@ var _height_vel: float = 0.0
 var _tip_bounced: bool = false
 var _ground_bounced: bool = false
 var _get_up_time: float = GET_UP_TIME
+## Against the wall: how long he sticks and how much of that is left, the way
+## the wall faces (in the player's frame), and how thick the body is now (it
+## springs, so it wobbles when he hits and when he comes off).
+var _stick_time: float = 0.0
+var _stick_left: float = 0.0
+var _wall: Vector3 = Vector3.RIGHT
+var _thick: float = 1.0
+var _thick_vel: float = 0.0
 
 var _quat: Quaternion = Quaternion.IDENTITY
 var _out_height: float = STAND_HEIGHT
@@ -75,6 +95,10 @@ func reset() -> void:
 	rise = 0.0
 	impact = 0.0
 	spin_speed = 0.0
+	stick = 0.0
+	_stick_left = 0.0
+	_thick = 1.0
+	_thick_vel = 0.0
 	_quat = Quaternion.IDENTITY
 	_out_height = STAND_HEIGHT
 
@@ -167,6 +191,28 @@ func start_dive_landing(duration: float, hard: bool = false) -> void:
 		impact = 1.0
 
 
+## Into the wall. `normal` is the way the wall faces, in the player's frame.
+## He is flat against it, chest or back first whichever was nearer, for
+## `stick_time`; then he tips off it like a board and lands on the turf.
+func start_splat(normal: Vector3, p_power: float, stick_time: float, duration: float) -> void:
+	_begin(Kind.SPLAT, p_power, duration)
+	airborne = false
+	dir = Vector3(normal.x, 0.0, normal.z).normalized()
+	_wall = dir
+	# Chest to the wall, he comes off it onto his back.
+	on_back = dir.x < 0.0
+	var chest: Vector3 = -dir if on_back else dir
+	_twist_end = atan2(-chest.z, chest.x)
+	spin_speed = 0.0
+	_stick_time = maxf(stick_time, 0.01)
+	_stick_left = _stick_time
+	stick = 1.0
+	_height = STAND_HEIGHT
+	impact = 1.0
+	# The play need not wait for him to slide off: he is down where he hit.
+	landed = true
+
+
 func _begin(p_kind: Kind, p_power: float, duration: float) -> void:
 	active = true
 	kind = p_kind
@@ -177,6 +223,8 @@ func _begin(p_kind: Kind, p_power: float, duration: float) -> void:
 	settle = 0.0
 	rise = 0.0
 	impact = 0.0
+	stick = 0.0
+	_stick_left = 0.0
 	variant = _rng.randi_range(0, VARIANTS - 1)
 	mirror = _rng.randf() < 0.5
 	_tip = 0.0
@@ -200,7 +248,7 @@ func _blend_dir(a: Vector3, b: Vector3, b_weight: float) -> Vector3:
 func update(player: Player, body: Node3D, delta: float, instant: bool) -> void:
 	if instant:
 		reset()
-		body.quaternion = _quat
+		body.basis = Basis(_quat)
 		body.position.y = _out_height
 		return
 
@@ -211,6 +259,9 @@ func update(player: Player, body: Node3D, delta: float, instant: bool) -> void:
 		_simulate(delta)
 		var axis: Vector3 = Vector3.UP.cross(dir).normalized()
 		var twist: float = _twist_end * smoothstep(0.0, 1.0, _tip / (PI * 0.5))
+		if kind == Kind.SPLAT:
+			# Turned to the wall from the moment he hits it.
+			twist = _twist_end
 		target = Quaternion(Vector3.UP, _spin) * Quaternion(axis, _tip) * Quaternion(Vector3.UP, twist)
 		target_height = _height
 		rise = 0.0
@@ -227,6 +278,9 @@ func update(player: Player, body: Node3D, delta: float, instant: bool) -> void:
 		settle = 0.0
 		rise = 0.0
 		spin_speed = 0.0
+		stick = 0.0
+		_thick = 1.0
+		_thick_vel = 0.0
 
 	var blend: float = 1.0 - exp(-rate * delta)
 	_quat = _quat.slerp(target, blend).normalized()
@@ -240,8 +294,28 @@ func update(player: Player, body: Node3D, delta: float, instant: bool) -> void:
 		_out_height = _dive_base + player.air_height()
 	else:
 		_out_height = lerpf(_out_height, target_height, blend)
-	body.quaternion = _quat
+	body.basis = _pressed() * Basis(_quat)
 	body.position.y = _out_height
+
+
+## The body pressed thin against the wall, and wider and taller for it: a
+## stretch along the wall's normal in the player's frame. Nothing when he is
+## not against it.
+func _pressed() -> Basis:
+	if absf(_thick - 1.0) < 0.002:
+		return Basis.IDENTITY
+	var wide: float = 1.0 + (1.0 - _thick) * SPLAT_SPREAD
+	var squash: Basis = Basis.IDENTITY
+	for axis: int in 3:
+		var unit: Vector3 = Basis.IDENTITY[axis]
+		squash[axis] = unit * wide + _wall * (_thick - wide) * _wall.dot(unit)
+	return squash
+
+
+## The thickness of the body follows `target` on a spring.
+func _spring_thickness(target: float, delta: float) -> void:
+	_thick_vel += ((target - _thick) * 900.0 - _thick_vel * 34.0) * delta
+	_thick = clampf(_thick + _thick_vel * delta, 0.12, 1.3)
 
 
 ## Height of the body's centre when it rests on the turf, from how upright it is.
@@ -251,6 +325,19 @@ func _floor_height(up_y: float) -> float:
 
 func _simulate(delta: float) -> void:
 	elapsed += delta
+	if kind == Kind.SPLAT:
+		if _stick_left > 0.0:
+			# Stuck to the wall, sliding down it a little.
+			_stick_left -= delta
+			stick = 1.0
+			_height = STAND_HEIGHT - SPLAT_SLIDE * (1.0 - maxf(_stick_left, 0.0) / _stick_time)
+			_spring_thickness(SPLAT_THICKNESS, delta)
+			if _stick_left <= 0.0:
+				_tip_vel = 0.8
+				_height_vel = 0.0
+			return
+		stick = move_toward(stick, 0.0, delta / SPLAT_PEEL_TIME)
+		_spring_thickness(1.0, delta)
 
 	# Tipping over: a falling pole, shoved by the hit and pulled on by gravity.
 	if _tip < _tip_end:

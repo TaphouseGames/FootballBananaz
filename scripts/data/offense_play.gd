@@ -24,6 +24,15 @@ const GROUP_NAMES: PackedStringArray = ["RUN", "SHORT PASS", "DEEP PASS", "SHOTG
 ## route as a receiver. The fake lasts `handoff_delay` seconds: the quarterback
 ## cannot throw until it is over, and coverage defenders may come up for the run.
 @export var play_action: bool = false
+## Pass play on which the ball really is given to the RUNNER after
+## `handoff_delay` seconds. He holds it for `flick_delay` seconds and pitches it
+## back to the quarterback, who then throws. With the quarterback down by then,
+## the runner keeps it and the play is a run.
+@export var flea_flicker: bool = false
+@export var flick_delay: float = 0.55
+## How often the CPU play caller calls it, next to another play of its category.
+## Below 1 for a trick play, which works because it is not seen often.
+@export_range(0.0, 2.0) var cpu_weight: float = 1.0
 ## Drawn for the last few yards before the end zone. The CPU play caller calls
 ## it there (Tuning.ai_goal_line_distance) and hardly ever anywhere else.
 @export var goal_line: bool = false

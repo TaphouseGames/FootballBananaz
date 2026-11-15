@@ -115,7 +115,7 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 		var any: float = 0.0
 		for play: OffensePlay in plays:
 			var depth: float = play.deepest_route() if play.category == OffensePlay.Category.DEEP else 0.0
-			if play.play_action:
+			if play.play_action or play.flea_flicker:
 				depth *= 0.5
 			deep.append(depth * depth)
 			any += depth
@@ -141,7 +141,7 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 			weights.append(0.0)
 			continue
 		var weight: float = (want[play.category] + 0.05) / maxf(per_category[play.category], 1.0)
-		weight *= _goal_line_scale(play.goal_line, game)
+		weight *= _goal_line_scale(play.goal_line, game) * play.cpu_weight
 		# Do not call the same play three times in a row.
 		var repeats: int = 0
 		for i: int in range(history.size() - 1, -1, -1):

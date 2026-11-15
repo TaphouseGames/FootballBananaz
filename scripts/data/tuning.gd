@@ -195,7 +195,8 @@ extends Resource
 @export var pass_catch_height: float = 1.3
 @export var pass_max_lead_time: float = 2.6
 ## Throwing it away: flat speed of the ball, how many yards past the sideline it
-## comes down, and how many yards downfield of the quarterback.
+## comes down (over the wall, in the stands), and how many yards downfield of
+## the quarterback.
 @export var throwaway_speed: float = 24.0
 @export var throwaway_past_sideline: float = 4.0
 @export var throwaway_downfield: float = 12.0
@@ -680,7 +681,7 @@ extends Resource
 @export var celebration_ring_radius: float = 2.4
 ## Seconds after the whistle that the scorer spikes the ball.
 @export var celebration_spike_time: float = 0.5
-## The scoring team's mascot runs in from its sideline and joins the huddle
+## The scoring team's mascot leaves the spot it stands by at and joins the huddle
 ## round the scorer.
 @export var mascot_joins_party: bool = true
 ## The person's player dives during his team's celebration and the rest pile on
@@ -1086,18 +1087,38 @@ extends Resource
 ## changes sides in the middle of a play.
 @export var camera_swing_time: float = 0.8
 
-@export_group("Pylons")
-## Side and height of an end zone pylon. A real one is 0.1 x 0.46; scaled up
-## like the ball so it reads from the game camera.
-@export var pylon_size: float = 0.16
-@export var pylon_height: float = 0.65
-@export var pylon_mass: float = 0.5
-## How much of the speed of whatever hits a pylon goes into knocking it over.
-@export var pylon_knock_scale: float = 0.4
-## How close (yd) the ball has to come to a pylon's surface to touch it.
-@export var pylon_ball_margin: float = 0.1
+@export_group("Mascots")
+## Each team's mascot stands on the field with its side, out of the way: this
+## far behind the line of scrimmage with the offense, this far behind the
+## deepest defender with the defense, and this far in from its own sideline.
+@export var mascot_off_depth: float = 14.0
+@export var mascot_def_depth: float = 8.0
+@export var mascot_sideline_inset: float = 1.5
+## It is wider than a footballer by this much (yards added to its radius).
+@export var mascot_extra_radius: float = 0.4
+## Run into at this speed or more, it goes over; whoever did it is slowed for
+## this long.
+@export var mascot_bump_speed: float = 5.0
+@export var mascot_bump_slow_time: float = 0.5
 
 @export_group("Stadium")
+## Yards from the sidelines and the end lines to the face of the wall: the
+## stands are right on the field, as in an arena.
+@export var wall_gap: float = 0.7
+## How close to the face of the wall the middle of a player on his feet gets.
+## Whatever of him reaches further than that (an arm, or all of him when he is
+## lying with his head to it) holds him further off: see Player._wall_room().
+@export var wall_standoff: float = 0.4
+## Thrown, knocked or diving into the wall at this speed (yd/s, straight at
+## it) or more, a player is flattened against it; he stays stuck to it for
+## `wall_splat_stick_time` before he peels off and falls on the turf.
+@export var wall_splat_speed: float = 4.0
+@export var wall_splat_stick_time: float = 0.8
+## Once he has come off the wall he lies dazed for this long, and gets up
+## injured, as after a jump dive (see injury_rating_scale, injury_plays).
+@export var wall_splat_daze_time: float = 2.6
+## Share of his speed a player sliding into the wall any slower comes back with.
+@export var wall_bounce: float = 0.3
 ## The stands, the crowd and the dressing round the field (see Stadium).
 @export var stadium_enabled: bool = true
 ## Share of the seats with a fan in them, 0..1. There are about 11,000 seats.
@@ -1138,6 +1159,12 @@ extends Resource
 
 func half_width() -> float:
 	return field_width * 0.5
+
+
+## How far from the middle of the field a player can get before the side wall
+## stops him (see Player.keep_on_field).
+func side_limit() -> float:
+	return half_width() + wall_gap - wall_standoff
 
 
 ## X of the goal line a team attacking in `dir` is trying to reach.

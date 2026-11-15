@@ -159,7 +159,7 @@ func record_play(game: Game) -> void:
 		off.red_zone_att += 1
 	if touchdown and kept and off.in_red_zone:
 		off.red_zone_made += 1
-	if kept and (pc.result == PlayController.Result.TACKLED or pc.result == PlayController.Result.OUT_OF_BOUNDS):
+	if kept and (pc.result == PlayController.Result.TACKLED or pc.result == PlayController.Result.OUT_OF_PLAY):
 		if (pc.dead_spot_x - tuning.own_goal_x(offense.attack_dir)) * dir <= 0.0:
 			teams[offense.opponent].safeties += 1
 

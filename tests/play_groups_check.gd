@@ -1,6 +1,6 @@
 extends SceneTree
-## Headless check of the play-select tabs: every tab of both playbooks has plays
-## and no more than fit on the grid, the Hail Mary is an ordinary play on the
+## Headless check of the play-select tabs: every tab of both playbooks is full
+## (as many plays as fit on the grid), the Hail Mary is an ordinary play on the
 ## deep pass tab, and the CPU never calls it on an ordinary down.
 ##
 ## Run:  godot --headless --path . --script res://tests/play_groups_check.gd
@@ -76,8 +76,7 @@ func _process(_delta: float) -> bool:
 
 func _check_counts(side: String, names: PackedStringArray, counts: PackedInt32Array) -> void:
 	for i: int in names.size():
-		_expect(counts[i] > 0, "%s: no plays on the %s tab" % [side, names[i]])
-		_expect(counts[i] <= HUD.PAGE_SIZE, "%s: %d plays on the %s tab, room for %d" % [side, counts[i], names[i], HUD.PAGE_SIZE])
+		_expect(counts[i] == HUD.PAGE_SIZE, "%s: %d plays on the %s tab, wanted %d" % [side, counts[i], names[i], HUD.PAGE_SIZE])
 	print("%s tabs: %s %s" % [side, names, counts])
 
 

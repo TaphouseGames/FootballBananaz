@@ -74,6 +74,11 @@ var state: State = State.NORMAL
 var state_timer: float = 0.0
 ## True before the snap: the player holds his spot.
 var frozen: bool = true
+## On the field but not in the play: a mascot standing by with its team. It
+## has no assignment and leaves the ball alone, but it is as solid as anyone.
+var bystander: bool = false
+## Yards wider than a footballer (a mascot is).
+var extra_radius: float = 0.0
 var has_ball: bool = false
 
 ## Per-play speed factor from the player's job (linemen are slower).
@@ -121,6 +126,12 @@ var dive_start_height: float = 0.0
 var dive_duration: float = 0.0
 ## Above 0 while he lies dazed after landing a jump dive.
 var dazed_timer: float = 0.0
+## He was flattened against the wall on this tick: how fast he went into it
+## (yd/s). 0 on every other tick. PlayController reads it.
+var wall_hit: float = 0.0
+## How far his body reaches toward the wall from his middle, in yards: 0 when
+## he is nowhere near it. Measured from his pose (see _measure_reach).
+var _wall_reach: float = 0.0
 ## Stars round his head while he is dazed, and a couple left over it while he
 ## is injured. Made the first time he is.
 var daze_fx: DazeFx
@@ -130,7 +141,8 @@ var injured: bool = false
 var injured_plays: int = 0
 ## How many times he has been hurt this game, hurt again while injured included.
 var injuries: int = 0
-## He has landed a jump dive and will be injured once he is up.
+## He has landed a jump dive or been flattened against the wall, and will be
+## injured once he is up.
 var _injury_pending: bool = false
 ## His own ratings, kept while `ratings` holds the injured copy.
 var _healthy_ratings: PlayerRatings
@@ -409,7 +421,7 @@ func is_tucked() -> bool:
 	return has_ball and wants_turbo
 
 
-## Lying dazed after a jump dive.
+## Lying dazed after a jump dive, or after being flattened against the wall.
 func is_dazed() -> bool:
 	return state == State.DOWN and dazed_timer > 0.0
 
@@ -669,9 +681,11 @@ func _to_local(dir: Vector3) -> Vector3:
 
 func integrate(delta: float) -> void:
 	_tick_timers(delta)
+	wall_hit = 0.0
 	if frozen:
 		velocity = Vector3.ZERO
 		_update_visual(delta, false)
+		_clear_wall(delta)
 		return
 
 	match state:
@@ -738,13 +752,14 @@ func integrate(delta: float) -> void:
 				facing = drag_partner.facing
 
 	position += velocity * delta
-	_clamp_to_field()
+	_meet_wall()
 	if (state == State.NORMAL or state == State.JUMPING) and look_dir.length_squared() > 0.01:
 		facing = look_dir.normalized()
 	elif state != State.DOWN and state != State.SPINNING and velocity.length_squared() > 0.6:
 		# A spin keeps the facing it started with, sidestep or not.
 		facing = velocity.normalized()
 	_update_visual(delta, false)
+	_clear_wall(delta)
 
 
 func _move_normal(delta: float) -> void:
@@ -804,12 +819,107 @@ func _tick_timers(delta: float) -> void:
 			block_engaged_time = 0.0
 
 
-func _clamp_to_field() -> void:
-	var half_w: float = tuning.half_width() + 2.0
-	var back: float = tuning.end_zone_depth - 0.5
-	position.x = clampf(position.x, -back, tuning.field_length + back)
-	position.z = clampf(position.z, -half_w, half_w)
+## Yards of a limb round the bone in the middle of it, and how near the wall
+## (in yards) his middle has to be before his reach toward it is measured.
+const LIMB_THICKNESS: float = 0.1
+const WALL_REACH_RANGE: float = 2.6
+
+
+## The wall round the field is solid: nobody's middle gets closer to it than
+## _wall_room(), on any side.
+func keep_on_field() -> void:
+	position = Stadium.keep_inside(tuning, position, _wall_room())
 	position.y = 0.0
+
+
+## The room his middle needs from the face of the wall: what a man on his feet
+## takes up, less when he is pressed flat against it, and never less than his
+## body reaches toward it as it is posed now. So one lying with his head to the
+## wall, or diving at it, is held further off than one standing by it.
+func _wall_room() -> float:
+	return maxf(lerpf(tuning.wall_standoff + extra_radius, PlayerFall.SPLAT_GAP, fall.stick), _wall_reach)
+
+
+## After he is posed for this tick: no part of him is in the wall. Whatever
+## reaches into it moves the whole of him back out.
+func _clear_wall(delta: float) -> void:
+	var reach: float = _measure_reach()
+	if reach >= _wall_reach:
+		_wall_reach = reach
+	elif state == State.DOWN or state == State.DIVING:
+		_wall_reach = lerpf(_wall_reach, reach, 1.0 - exp(-20.0 * delta))
+	else:
+		# On his feet his arms swing: he is not moved in and out with them.
+		_wall_reach = move_toward(_wall_reach, reach, delta)
+	if fall.stick >= 1.0:
+		# Stuck to it: right up against it, as close as his body lets him.
+		position += Stadium.wall_normal(tuning, position.x, position.z) * (Stadium.wall_distance(tuning, position.x, position.z) + _wall_room())
+	elif _wall_reach > 0.0:
+		keep_on_field()
+
+
+## How far the furthest part of him is from his middle, toward the nearest
+## wall: every bone below the top of the wall, and the thickness of a limb.
+func _measure_reach() -> float:
+	if animator == null or Stadium.wall_distance(tuning, position.x, position.z) < -WALL_REACH_RANGE:
+		return 0.0
+	var toward: Vector3 = -Stadium.wall_normal(tuning, position.x, position.z)
+	var skeleton: Skeleton3D = animator.skeleton
+	var to_world: Transform3D = skeleton.global_transform
+	var from: Vector3 = global_position
+	var reach: float = 0.0
+	for i: int in skeleton.get_bone_count():
+		var at: Vector3 = to_world * skeleton.get_bone_global_pose(i).origin
+		if at.y < Stadium.WALL_HEIGHT:
+			reach = maxf(reach, (at - from).dot(toward))
+	return reach + LIMB_THICKNESS
+
+
+## After his own move this tick: the wall stops him. Going into it on his feet
+## he slides along it; thrown, knocked or diving into it he is flattened
+## against it if he is fast enough, and comes back off it a little if not.
+func _meet_wall() -> void:
+	if Stadium.wall_distance(tuning, position.x, position.z) + _wall_room() <= 0.0:
+		position.y = 0.0
+		return
+	var normal: Vector3 = Stadium.wall_normal(tuning, position.x, position.z)
+	keep_on_field()
+	var into: float = -velocity.dot(normal)
+	if into <= 0.0:
+		return
+	var thrown: bool = state == State.DIVING or state == State.DOWN
+	if thrown and into >= tuning.wall_splat_speed and fall.stick <= 0.0:
+		splat(normal, into)
+	elif state == State.DOWN:
+		velocity += normal * into * (1.0 + tuning.wall_bounce)
+	else:
+		velocity += normal * into
+
+
+## Flattened against the wall, which faces `normal`, having gone into it at
+## `speed`: he sticks to it for tuning.wall_splat_stick_time, then peels off
+## and lies on the turf seeing stars for tuning.wall_splat_daze_time. Like one
+## who has landed a jump dive, he gets up injured: for the rest of the play
+## and tuning.injury_plays after it.
+func splat(normal: Vector3, speed: float) -> void:
+	release_drag()
+	var down: float = tuning.wall_splat_daze_time
+	_injury_pending = true
+	dazed_timer = tuning.wall_splat_stick_time + down
+	dive_get_up_timer = tuning.jump_dive_get_up_time
+	state = State.DOWN
+	state_timer = tuning.wall_splat_stick_time + down
+	jump_dive = false
+	dive_reach_timer = 0.0
+	turbo_active = false
+	velocity = Vector3.ZERO
+	wall_hit = speed
+	fall.start_splat(_to_local(normal), clampf(speed / 12.0, 0.3, 1.0), tuning.wall_splat_stick_time, state_timer)
+	# Right up against it, as soon as he is turned flat to it.
+	position += normal * (Stadium.wall_distance(tuning, position.x, position.z) + PlayerFall.SPLAT_GAP)
+	keep_on_field()
+	if animator != null:
+		animator.jolt(-normal, 1.2)
 
 
 func _update_visual(delta: float, instant: bool) -> void:

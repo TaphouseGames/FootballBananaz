@@ -148,7 +148,7 @@ func update_live() -> void:
 	# The pass leaves on release: the longer the hold, the harder and flatter the
 	# throw. A tap is a lob; a full charge fires a bullet by itself.
 	if is_passer:
-		# Getting rid of it: out of bounds on the side the stick leans to, or else
+		# Getting rid of it: into the stands on the side the stick leans to, or else
 		# the nearer sideline. It beats a pass being wound up.
 		if Input.is_action_just_pressed(&"throw_away"):
 			_pass_slot = -1
@@ -199,6 +199,12 @@ func update_live() -> void:
 		return
 	if not Input.is_action_just_pressed(&"action"):
 		return
+	# A dive always goes where the stick points. The aiming below (at the pass,
+	# the loose ball, the carrier) is only for a stick left alone.
+	var in_air: bool = pc.phase == PlayController.Phase.AIR or pc.phase == PlayController.Phase.TIPPED
+	if moving and (in_air or pc.phase == PlayController.Phase.LOOSE or is_defending()):
+		pc.do_dive(player, move.normalized())
+		return
 	# With a pass in the air the action is a dive at the ball, for either side.
 	var at_ball: Vector3 = pc.ball_dive_direction(player)
 	if at_ball != Vector3.ZERO:
@@ -209,6 +215,11 @@ func update_live() -> void:
 		if at_loose == Vector3.ZERO:
 			at_loose = move.normalized() if moving else player.facing
 		pc.do_dive(player, at_loose)
+	elif in_air:
+		# A pass in the air that comes down too far off to aim at (or right where
+		# he stands): still a dive. A shove here would stop a receiver in the
+		# middle of his run at the ball.
+		pc.do_dive(player, player.facing)
 	elif is_defending():
 		# On defense (from the snap or after a turnover) the action is always a
 		# dive, aimed at the carrier when he is close.
@@ -239,11 +250,12 @@ func _carrier_moves(player: Player, move: Vector3, moving: bool) -> void:
 		pc.do_dive(player, move.normalized() if moving else player.facing)
 
 
-## Where a jump dive goes: the same choices as a dive off the ground (the pass,
-## the loose ball, the carrier), each from a little further off.
+## Where a jump dive goes: along the stick if it is held, otherwise the same
+## choices as a dive off the ground (the pass, the loose ball, the carrier),
+## each from a little further off.
 func _jump_dive_aim(player: Player, move: Vector3, moving: bool, carrier: Player) -> Vector3:
 	var free: Vector3 = move.normalized() if moving else player.facing
-	if player.has_ball:
+	if player.has_ball or moving:
 		return free
 	var at_ball: Vector3 = pc.ball_dive_direction(player, pc.jump_dive_ball_range())
 	if at_ball != Vector3.ZERO:
@@ -335,10 +347,12 @@ func _default_defender() -> Player:
 	return best
 
 
-## Where a defender's dive goes: at `target` (led a little) if he is within the
-## auto-aim range (times `range_scale`), otherwise along the stick, otherwise
-## straight ahead.
+## Where a defender's dive goes: along the stick if it is held. With the stick
+## left alone, at `target` (led a little) if he is within the auto-aim range
+## (times `range_scale`), otherwise straight ahead.
 func _dive_direction(player: Player, move: Vector3, moving: bool, target: Player, range_scale: float = 1.0) -> Vector3:
+	if moving:
+		return move.normalized()
 	if target != null and _flat_distance(player.position, target.position) <= tuning.dive_trigger_range * range_scale:
 		var aim: Vector3 = target.position + target.velocity * 0.15 - player.position
 		aim.y = 0.0

@@ -22,8 +22,10 @@ const MASCOT_SCENE: PackedScene = preload("res://scenes/mascot.tscn")
 var white_kit: bool = false
 var score: int = 0
 var opponent: Team
-## Who is on the field for this team: its seven, or for the scramble that opens
-## a half its mascot alone (see field_mascot). The seven are always in `squad`.
+## Who plays for this team: its seven, or for the scramble that opens a half
+## its mascot alone (see field_mascot). The seven are always in `squad`. The
+## mascot is on the field with the seven too, but only stands by (see
+## Player.bystander), so it is not one of these.
 var players: Array[Player] = []
 var squad: Array[Player] = []
 var mascot: Mascot
@@ -58,7 +60,8 @@ func setup(tuning: Tuning, p_opponent: Team) -> void:
 	field_mascot(false)
 
 
-## Puts the mascot on the field in place of the seven, or the seven back.
+## Has the mascot play in place of the seven, or the seven again with the
+## mascot standing by.
 func field_mascot(on: bool) -> void:
 	players.clear()
 	if on:
@@ -67,4 +70,5 @@ func field_mascot(on: bool) -> void:
 		players.append_array(squad)
 	for player: Player in squad:
 		player.visible = not on
-	mascot.visible = on
+	mascot.visible = true
+	mascot.bystander = not on

@@ -9,7 +9,10 @@ extends Node
 ## LOOSE: fumbled, on the turf, anybody's.
 ## TIPPED: a pass off somebody's hands (or past everybody), still in the air.
 enum Phase { POCKET, AIR, RUN, LOOSE, TIPPED }
-enum Result { NONE, TACKLED, OUT_OF_BOUNDS, INCOMPLETE, TOUCHDOWN }
+## OUT_OF_PLAY: the ball went over the wall into the stands, or a kick returner
+## took a knee at the back of his own end zone. The wall is solid, so there is
+## no stepping out of bounds.
+enum Result { NONE, TACKLED, OUT_OF_PLAY, INCOMPLETE, TOUCHDOWN }
 ## Where a pass is put: at the receiver, ahead of him to run on to, or short of
 ## him to come back for.
 enum Placement { NORMAL, LEAD, UNDER }
@@ -46,7 +49,7 @@ var was_fumble: bool = false
 ## out, where, and who got it back.
 var passer: Player
 var pass_intended: Player
-## The pass in the air was thrown out of bounds on purpose: nobody can get to it.
+## The pass in the air was thrown into the stands on purpose: nobody can get to it.
 var thrown_away: bool = false
 var catcher: Player
 var interceptor: Player
@@ -82,6 +85,11 @@ var live_time: float = 0.0
 var throw_time: float = 0.0
 var handoff_done: bool = false
 var handoff_time: float = 0.0
+## Flea flicker: 0 = the quarterback still has to give it to the back, 1 = the
+## back has it, 2 = over (pitched back, kept by the back, or never given). And
+## when (live_time) the pitch back is in the quarterback's hands.
+var _flick_stage: int = 0
+var _flick_ready: float = 0.0
 
 ## This play is a kickoff: `offense` is the receiving team, `returner` the man
 ## the kick goes to, and there is no quarterback or play call.
@@ -163,11 +171,7 @@ func setup(p_game: Game) -> void:
 	tuning = game.tuning
 	ball = game.ball
 	human = game.human
-	players.clear()
-	players.append_array(game.home.players)
-	players.append_array(game.away.players)
-	for player: Player in players:
-		player.play = self
+	_gather_players()
 	state_machine.setup(self)
 
 
@@ -261,6 +265,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 	_roll_blown_coverage()
 	_roll_takeout()
 	_roll_play_action()
+	_place_mascots()
 	var now: GameSituation = game.play_caller.situation(game)
 	qb_urgency = now.urgency
 	heave = now.heave and not p_off.is_run
@@ -327,9 +332,10 @@ func _reset_play() -> void:
 	pile_time = 0.0
 	pile_count = 0
 	_party_angles.clear()
-	game.field.reset_pylons()
 	live_time = 0.0
 	handoff_done = false
+	_flick_stage = 0
+	_flick_ready = 0.0
 	qb_tuck_time = 0.0
 	read = 0.0
 	read_target = null
@@ -420,6 +426,7 @@ func line_up_kickoff() -> void:
 			spot = Vector3(los_x - float(kick_dir) * 0.7, 0.0, 0.0)
 		player.reset_for_play(spot, -face_off)
 		player.brain.assign_defense(assignment, spot, null, spot)
+	_place_mascots()
 
 	ball.place_on_ground(Vector3(los_x, 0.0, 0.0))
 	game.field.set_markers(los_x, los_x, false)
@@ -459,13 +466,47 @@ func _field(mascots: bool) -> void:
 	if mascots == _mascots_out:
 		return
 	_mascots_out = mascots
-	players.clear()
 	for team: Team in [game.home, game.away]:
 		team.field_mascot(mascots)
+	_gather_players()
+
+
+## Everybody on the field: who plays for each team and, when that is its seven,
+## its mascot standing by as well.
+func _gather_players() -> void:
+	players.clear()
+	for team: Team in [game.home, game.away]:
 		players.append_array(team.players)
+		if team.mascot != null and not players.has(team.mascot):
+			players.append(team.mascot)
 	for player: Player in players:
 		player.play = self
-	game.field.stadium.set_mascots_visible(not mascots)
+
+
+## Stands each mascot with its own team, out of the way: behind the offense,
+## or behind the deepest man of the defense (of either side at a kickoff), and
+## by its own sideline (the home team's is the one at -Z).
+func _place_mascots() -> void:
+	var back: float = tuning.end_zone_depth - 1.5
+	for team: Team in [offense, defense]:
+		var mascot: Mascot = team.mascot
+		if mascot == null:
+			continue
+		var dir: float = float(team.attack_dir)
+		# Yards up the field the way this team attacks.
+		var rear: float = los_x * dir
+		for player: Player in team.players:
+			rear = minf(rear, player.position.x * dir)
+		var along: float = rear - tuning.mascot_def_depth
+		if team == offense and not kickoff:
+			along = minf(rear - 2.0, los_x * dir - tuning.mascot_off_depth)
+		var side: float = -1.0 if team == game.home else 1.0
+		var spot: Vector3 = Vector3(clampf(along * dir, -back, tuning.field_length + back), 0.0, side * (tuning.half_width() - tuning.mascot_sideline_inset))
+		var toward: Vector3 = Vector3(los_x - spot.x, 0.0, -spot.z)
+		mascot.reset_for_play(spot, toward.normalized())
+		mascot.brain.assign_offense(OffenseAssignment.new(), spot, PackedVector3Array())
+		mascot.bystander = true
+		mascot.play = self
 
 
 ## Lines up the scramble that opens a half: the ball in the middle of the
@@ -682,9 +723,29 @@ func _roll_takeout() -> void:
 		game.add_stat(&"takeout_plans")
 
 
-## Play action: the handoff is still being faked.
+## The quarterback cannot throw yet: on play action the handoff is still being
+## faked, on a flea flicker the ball has not come back to him.
 func faking() -> bool:
-	return off_play != null and off_play.play_action and live_time < off_play.handoff_delay
+	if off_play == null:
+		return false
+	return (off_play.play_action and live_time < off_play.handoff_delay) or flicking()
+
+
+## Flea flicker: the ball is still to go to the back and come back from him.
+func flicking() -> bool:
+	return off_play != null and off_play.flea_flicker and runner != null and runner != qb 			and (_flick_stage < 2 or live_time < _flick_ready)
+
+
+## Flea flicker: the pitch back is on its way into the quarterback's hands.
+func flick_returning() -> bool:
+	return flicking() and _flick_stage >= 2
+
+
+## Seconds after the snap that the fake of this play is over.
+func fake_end() -> float:
+	if off_play.flea_flicker:
+		return off_play.handoff_delay + off_play.flick_delay
+	return off_play.handoff_delay
 
 
 ## Play action: the back is still running as if he had been given the ball.
@@ -697,12 +758,15 @@ func selling_run() -> bool:
 ## for the faked handoff. An offense that has been running sells it better; a
 ## play the defense recognises sells it worse.
 func _roll_play_action() -> void:
-	if not off_play.play_action or runner == null:
+	if not (off_play.play_action or off_play.flea_flicker) or runner == null:
 		return
 	var sold: float = lerpf(tuning.ai_play_action_run_scale_low, tuning.ai_play_action_run_scale_high, game.play_caller.run_share(offense))
 	for defender: Player in defense.players:
 		var assignment: DefenseAssignment = defender.brain.def_assign
 		var chance: float = tuning.ai_play_action_bite_chance * sold * (1.0 - read)
+		if off_play.flea_flicker:
+			# The back really has the ball: more of them come up for it.
+			chance *= tuning.ai_flea_flicker_bite_scale
 		match assignment.job:
 			DefenseAssignment.Job.MAN:
 				# The back's own man goes with him anyway.
@@ -715,7 +779,7 @@ func _roll_play_action() -> void:
 				continue
 		chance *= PlayerRatings.blend(defender.ratings.coverage, tuning.bust_coverage_scale_low, tuning.bust_coverage_scale_high)
 		if randf() < chance:
-			defender.brain.bite_time = off_play.handoff_delay + randf_range(tuning.ai_play_action_bite_time_min, tuning.ai_play_action_bite_time_max)
+			defender.brain.bite_time = fake_end() + randf_range(tuning.ai_play_action_bite_time_min, tuning.ai_play_action_bite_time_max)
 			game.add_stat(&"play_action_bites")
 
 
@@ -754,6 +818,7 @@ func simulate(delta: float) -> void:
 		if not game.conversion:
 			game.stat_book.add_possession(scramble_team if scramble else offense, delta)
 	_try_handoff()
+	_try_flea_flicker()
 	human.update_live()
 	_think_and_move(delta)
 	if phase == Phase.POCKET and ball.carrier == qb and qb.is_tucked():
@@ -764,14 +829,15 @@ func simulate(delta: float) -> void:
 	_update_drag()
 	_guide_pass()
 	var arrived: bool = ball.integrate(delta)
-	var hit_pylon: Pylon = game.field.touch_pylons_with_ball(ball.position, ball.velocity)
 	if not ball_dead:
+		if ball.hit_wall and phase == Phase.AIR:
+			_pass_off_wall()
 		if arrived:
 			_resolve_pass_arrival()
 		else:
 			_check_tipped_ball()
 		_check_loose_ball(delta)
-		_check_carrier(hit_pylon)
+		_check_carrier()
 	_update_markers()
 
 
@@ -783,7 +849,6 @@ func simulate_dead(delta: float) -> void:
 	_resolve_contacts(delta)
 	_spike_ball()
 	ball.integrate(delta)
-	game.field.touch_pylons_with_ball(ball.position, ball.velocity)
 
 
 # --- Celebration -----------------------------------------------------------------
@@ -819,44 +884,31 @@ func _start_celebration() -> void:
 	_roll_cheap_shot()
 
 
-## The scoring team's mascot comes off its sideline and joins the party round
-## the scorer: it is one of the team until the next line-up (_dismiss_mascot).
-## Not after a scramble's touchdown, where the mascots are out there already.
+## The scoring team's mascot leaves its spot and joins the party round the
+## scorer: it is one of the team until the next line-up (_dismiss_mascot). Not
+## after a scramble's touchdown, where the mascots are the teams already.
 func _invite_mascot() -> void:
-	if scramble or _mascot_guest != null or not tuning.mascot_joins_party or not tuning.stadium_enabled:
+	if scramble or _mascot_guest != null or not tuning.mascot_joins_party:
 		return
 	var team: Team = scorer.team
-	var stadium: Stadium = game.field.stadium
-	var for_home: bool = team == game.home
-	var from: Vector3 = stadium.mascot_entry(for_home, scorer.position)
-	var spot: Vector3 = Vector3(from.x, 0.0, from.z)
 	var guest: Mascot = team.mascot
-	var toward: Vector3 = Vector3(scorer.position.x - spot.x, 0.0, scorer.position.z - spot.z)
-	guest.reset_for_play(spot, toward.normalized() if toward.length_squared() > 0.01 else Vector3.RIGHT)
-	# Nothing to do but what the dead ball asks of everybody: this only clears
-	# what its brain kept from the scramble.
-	guest.brain.assign_offense(OffenseAssignment.new(), spot, PackedVector3Array())
+	if guest == null or team.players.has(guest):
+		return
+	guest.bystander = false
 	guest.frozen = false
-	guest.play = self
-	guest.visible = true
 	team.players.append(guest)
-	players.append(guest)
-	stadium.set_mascot_visible(for_home, false)
 	_mascot_guest = guest
 	game.add_stat(&"mascot_parties")
 
 
-## Sends the mascot that joined a celebration back to its sideline.
+## The mascot that joined a celebration is a bystander again.
 func _dismiss_mascot() -> void:
 	if _mascot_guest == null:
 		return
-	var team: Team = _mascot_guest.team
-	team.players.erase(_mascot_guest)
-	players.erase(_mascot_guest)
-	_mascot_guest.visible = false
+	_mascot_guest.team.players.erase(_mascot_guest)
+	_mascot_guest.bystander = true
 	if human.controlled == _mascot_guest:
 		human.set_controlled(null)
-	game.field.stadium.set_mascot_visible(team == game.home, true)
 	_mascot_guest = null
 
 
@@ -890,7 +942,7 @@ func celebration_slot(player: Player) -> Vector3:
 	var spot: Vector3 = scorer.position + Vector3(cos(angle), 0.0, sin(angle)) * tuning.celebration_ring_radius
 	var back: float = tuning.end_zone_depth - 1.0
 	spot.x = clampf(spot.x, -back, tuning.field_length + back)
-	spot.z = clampf(spot.z, -tuning.half_width() - 1.0, tuning.half_width() + 1.0)
+	spot.z = clampf(spot.z, -tuning.side_limit(), tuning.side_limit())
 	return spot
 
 
@@ -923,6 +975,8 @@ func pile_spot() -> Vector3:
 		spot += flat * maxf(pile_target.state_timer, 0.0)
 	if pile_target.state == Player.State.DIVING or pile_target.is_down():
 		spot += flat.normalized() * flat.length_squared() / (2.0 * tuning.knockdown_friction)
+	# The wall stops his slide (see Player.keep_on_field).
+	spot = Stadium.keep_inside(tuning, spot, tuning.wall_standoff)
 	spot.y = 0.0
 	return spot
 
@@ -968,12 +1022,31 @@ func _think_and_move(delta: float) -> void:
 			game.add_stat(&"injuries")
 			game.audio.woozy()
 		if player.is_dazed() and not was_dazed:
-			# A jump dive has just come down.
+			# A jump dive has just come down, or somebody has hit the wall.
 			game.add_stat(&"dazes")
 			game.audio.dazed(player)
 			game.field.fx.daze_impact(player.position, player.facing, player.velocity.length())
+		if player.wall_hit > 0.0:
+			_splat_on_wall(player)
 	game.field.fx.track(players)
-	game.field.touch_pylons(players)
+
+
+## `player` has just been flattened against the wall: the noise, the dust, the
+## shake and the crowd, bigger the faster he went in and when it is the
+## person's own player.
+func _splat_on_wall(player: Player) -> void:
+	var mine: bool = player == human.controlled
+	var hard: float = clampf(player.wall_hit / 12.0, 0.4, 1.0)
+	game.add_stat(&"wall_splats")
+	game.audio.play(&"big_hit", hard if mine or player.has_ball else hard * 0.6, 0.7)
+	game.audio.play(&"body_fall", hard * 0.8, 0.8)
+	var out: Vector3 = Stadium.wall_normal(tuning, player.position.x, player.position.z)
+	game.field.fx.daze_impact(player.position - out * 0.6, out, player.wall_hit * 0.5)
+	game.impact(tuning.shove_shake * (1.0 if mine else 0.4), 0.5 if mine else 0.0)
+	# Everybody enjoys it but his own fans.
+	if not player.bystander:
+		game.audio.crowd_react(player.team.opponent, 0.35 + 0.25 * hard)
+	game.audio.remark(&"announcer_hit", AudioDirector.REMARK_HIT)
 
 
 ## The quarterback looks downfield while he holds the ball in the pocket, even
@@ -996,6 +1069,11 @@ func _aim_quarterback() -> void:
 		var to_target: Vector3 = ball.target_point - qb.position
 		to_target.y = 0.0
 		qb.look_dir = to_target
+	elif phase == Phase.POCKET and flicking() and ball.carrier == runner:
+		# Flea flicker: he drops with his eyes on the back, ready for the pitch.
+		var to_ball: Vector3 = runner.position - qb.position
+		to_ball.y = 0.0
+		qb.look_dir = to_ball
 
 
 func _try_handoff() -> void:
@@ -1004,32 +1082,71 @@ func _try_handoff() -> void:
 	handoff_done = true
 	if ball.carrier != qb or qb.is_down() or runner.is_down() or qb.state == Player.State.DRAGGING:
 		return
-	var gap: float = _flat_distance(qb.position, runner.position)
-	if gap <= tuning.handoff_reach:
-		ball.give_to(runner, tuning.handoff_time)
-		runner.catch_timer = tuning.handoff_time
-		runner.flash(Color.WHITE, tuning.possession_flash)
-	else:
-		# Too far apart to hand it over: the quarterback turns and tosses it.
-		var time: float = clampf(gap / tuning.toss_speed, 0.15, 0.6)
-		ball.toss_to(runner, time, gap * tuning.toss_height)
-		runner.catch_timer = time
-		runner.flash(Color.WHITE, tuning.possession_flash)
-		var to_runner: Vector3 = runner.position - qb.position
-		to_runner.y = 0.0
-		qb.facing = to_runner.normalized()
-		if qb.animator != null:
-			qb.animator.toss()
-		game.add_stat(&"tosses")
-		game.audio.play(&"throw", 0.3, 0.85)
+	_hand_over(qb, runner)
 	phase = Phase.RUN
 	handoff_time = live_time
 	game.add_stat(&"handoffs")
 	human.on_carrier_changed(runner)
 
 
-## `hit_pylon` is the pylon the ball touched this tick, or null.
-func _check_carrier(hit_pylon: Pylon = null) -> void:
+## `from` gives the ball to his teammate `to`: handed over when they are close
+## enough, tossed otherwise. Returns the seconds until it is in his hands.
+func _hand_over(from: Player, to: Player) -> float:
+	var gap: float = _flat_distance(from.position, to.position)
+	to.flash(Color.WHITE, tuning.possession_flash)
+	if gap <= tuning.handoff_reach:
+		ball.give_to(to, tuning.handoff_time)
+		to.catch_timer = tuning.handoff_time
+		return tuning.handoff_time
+	# Too far apart to hand it over: he turns and tosses it.
+	var time: float = clampf(gap / tuning.toss_speed, 0.15, 0.6)
+	ball.toss_to(to, time, gap * tuning.toss_height)
+	to.catch_timer = time
+	var to_him: Vector3 = to.position - from.position
+	to_him.y = 0.0
+	from.facing = to_him.normalized()
+	if from.animator != null:
+		from.animator.toss()
+	game.add_stat(&"tosses")
+	game.audio.play(&"throw", 0.3, 0.85)
+	return time
+
+
+## Flea flicker: the quarterback gives the ball to the back, who holds it for a
+## moment and pitches it back. A quarterback who cannot take it by then leaves
+## the back with the ball, and the play is a run.
+func _try_flea_flicker() -> void:
+	if not off_play.flea_flicker or _flick_stage >= 2 or runner == null or runner == qb:
+		return
+	if _flick_stage == 0:
+		if live_time < off_play.handoff_delay:
+			return
+		if ball.carrier != qb or qb.is_down() or runner.is_down() or qb.state == Player.State.DRAGGING:
+			# No exchange: an ordinary pass play from here, if he still has it.
+			_flick_stage = 2
+			return
+		_flick_stage = 1
+		_hand_over(qb, runner)
+		game.add_stat(&"flea_flickers")
+		return
+	# Tackled with it, lost it, or over the line with it: nothing to pitch back.
+	if ball.carrier != runner or phase != Phase.POCKET:
+		_flick_stage = 2
+		return
+	if live_time < off_play.handoff_delay + off_play.flick_delay or runner.state == Player.State.DRAGGING:
+		return
+	_flick_stage = 2
+	if qb.can_act() and runner.can_act():
+		_flick_ready = live_time + _hand_over(runner, qb)
+		return
+	phase = Phase.RUN
+	handoff_done = true
+	handoff_time = live_time
+	game.add_stat(&"flea_flicker_kept")
+	human.on_carrier_changed(runner)
+
+
+func _check_carrier() -> void:
 	var carrier: Player = ball.carrier
 	if carrier == null:
 		return
@@ -1041,22 +1158,12 @@ func _check_carrier(hit_pylon: Pylon = null) -> void:
 	if (dir > 0 and spot_x >= tuning.field_length) or (dir < 0 and spot_x <= 0.0):
 		_score_touchdown(carrier, spot_x)
 		return
-	# The ball in his hands touched the pylon on the goal line he is going for:
-	# that is in the end zone. Checked before out of bounds, so a carrier going
-	# out on the same tick still scores.
-	if hit_pylon != null and hit_pylon.front and is_equal_approx(hit_pylon.line_x, tuning.goal_x(dir)):
-		game.add_stat(&"pylon_touchdowns")
-		game.audio.play(&"ball_bounce", 0.6)
-		_score_touchdown(carrier, hit_pylon.line_x)
-		return
 	var from_own_goal: float = (x - tuning.own_goal_x(dir)) * float(dir)
 	was_touchback = kickoff and carrier.team == offense and from_own_goal <= 0.0
-	if absf(carrier.position.z) > tuning.half_width():
-		end_play(Result.OUT_OF_BOUNDS, spot_x)
-		return
-	# Out of the back of his own end zone.
+	# Nobody goes out at the side: the wall is in the way (Player.keep_on_field).
+	# A returner at the back of his own end zone has taken the touchback.
 	if was_touchback and from_own_goal <= 1.0 - tuning.end_zone_depth:
-		end_play(Result.OUT_OF_BOUNDS, x)
+		end_play(Result.OUT_OF_PLAY, x)
 		return
 	if carrier.is_grounded():
 		# Only his own dive leaves a carrier on the turf with the ball still live,
@@ -1169,8 +1276,8 @@ func result_text() -> String:
 			if was_dive:
 				return "DOWN!"
 			return "SACKED!" if was_sack else "TACKLED!"
-		Result.OUT_OF_BOUNDS:
-			return "OUT OF BOUNDS"
+		Result.OUT_OF_PLAY:
+			return "OUT OF PLAY"
 		Result.INCOMPLETE:
 			return "INCOMPLETE"
 		Result.TOUCHDOWN:
@@ -1395,7 +1502,7 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	human.on_throw(target)
 
 
-## The quarterback gets rid of it: out of bounds past the sideline on `side`
+## The quarterback gets rid of it: over the wall into the stands on `side`
 ## (+1 or -1 along z), a little downfield. Nobody can catch it; it is incomplete
 ## when it lands.
 func throw_away(side: float) -> void:
@@ -1408,7 +1515,9 @@ func throw_away(side: float) -> void:
 	var point: Vector3 = Vector3(qb.position.x + off_dir * tuning.throwaway_downfield, 0.0, 0.0)
 	point.x = clampf(point.x, -back, tuning.field_length + back)
 	point.z = (1.0 if side >= 0.0 else -1.0) * (tuning.half_width() + tuning.throwaway_past_sideline)
-	ball.throw_to(qb, null, point, tuning.throwaway_speed, tuning)
+	# High enough to come down on the seats, clear of the wall on the way.
+	var seats: float = game.field.stadium.surface_height(point.x, point.z)
+	ball.throw_to(qb, null, point, tuning.throwaway_speed, tuning, maxf(seats, Stadium.WALL_HEIGHT) + 1.0)
 	thrown_away = true
 	pass_placement = Placement.NORMAL
 	pass_short = 0.0
@@ -1569,6 +1678,24 @@ func _tip_pass(toucher: Player, velocity: Vector3) -> void:
 		player.brain.on_tip()
 
 
+## The pass in flight has come back off the wall (the ball has turned itself
+## into a tipped one): it is live until it lands, and either team can come
+## down with it. A kick off the wall is the returner's, as when it lands.
+func _pass_off_wall() -> void:
+	game.add_stat(&"wall_passes")
+	game.audio.play(&"ball_bounce", 0.9, 0.8)
+	if kickoff:
+		_resolve_pass_arrival()
+		return
+	_tip_tried.clear()
+	_tip_bad_throw = false
+	phase = Phase.TIPPED
+	_tip_untouched = false
+	_tip_at = live_time
+	for player: Player in players:
+		player.brain.on_tip()
+
+
 ## Whether `player` can get a hand on the tipped ball where it is now.
 func reaches_tip(player: Player) -> bool:
 	if player.is_down() and player.dive_reach_timer <= 0.0:
@@ -1600,7 +1727,7 @@ func _check_tipped_ball() -> void:
 	var spot: Vector3 = ball.flat_position()
 	var near: Array[Player] = []
 	for candidate: Player in players:
-		if candidate == ball.thrower or _tip_tried.has(candidate.team) or absf(candidate.position.z) > tuning.half_width():
+		if candidate.bystander or candidate == ball.thrower or _tip_tried.has(candidate.team):
 			continue
 		if reaches_tip(candidate):
 			near.append(candidate)
@@ -1871,7 +1998,7 @@ func do_shove(player: Player, dir: Vector3) -> void:
 # --- Contacts --------------------------------------------------------------------
 
 func _resolve_contacts(delta: float) -> void:
-	var reach: float = maxf(maxf(tuning.dive_tackle_radius, tuning.tackle_radius), tuning.player_radius * 2.0)
+	var reach: float = maxf(maxf(tuning.dive_tackle_radius, tuning.tackle_radius), tuning.player_radius * 2.0) + tuning.mascot_extra_radius
 	# Pushes are summed from one snapshot of positions and applied afterwards, so
 	# the result does not depend on the order players are listed in. (Applying
 	# them pair by pair measurably favoured whichever team came first.)
@@ -1898,6 +2025,10 @@ func _resolve_contacts(delta: float) -> void:
 			var push: Vector3 = normal * (min_dist - dist) * 0.5
 			_pushes[i] -= push
 			_pushes[j] += push
+			if b.bystander and not a.bystander:
+				_bump_mascot(a, b, normal)
+			elif a.bystander and not b.bystander:
+				_bump_mascot(b, a, -normal)
 			if not enemies:
 				continue
 			if a.is_blocking or b.is_blocking:
@@ -1922,6 +2053,9 @@ func _resolve_contacts(delta: float) -> void:
 		# than one pass to pull apart.
 		_separate_bodies()
 		_separate_bodies()
+	# Nobody is pushed through the wall.
+	for player: Player in players:
+		player.keep_on_field()
 
 
 ## Closest two players' centres may be, or 0 when they pass through each other:
@@ -1934,9 +2068,21 @@ func _body_distance(a: Player, b: Player) -> float:
 		return 0.0
 	# Teammates and blocks stand off at full width. Other opponents keep less
 	# room, so a defender can run at his receiver's shoulder.
+	var extra: float = a.extra_radius + b.extra_radius
 	if a.team == b.team or a.is_blocking or b.is_blocking:
-		return tuning.player_radius * 2.0
-	return tuning.body_radius * 2.0
+		return tuning.player_radius * 2.0 + extra
+	return tuning.body_radius * 2.0 + extra
+
+
+## `runner` has run into a mascot that is standing by (`dir` points from him to
+## it) at some pace: it goes over, whichever team it is with, and he is slowed
+## for a moment.
+func _bump_mascot(runner: Player, mascot: Player, dir: Vector3) -> void:
+	if runner.is_down() or mascot.is_down() or runner.velocity.dot(dir) < tuning.mascot_bump_speed:
+		return
+	_knock_over(runner, mascot, dir)
+	runner.block_slow_timer = maxf(runner.block_slow_timer, tuning.mascot_bump_slow_time)
+	game.add_stat(&"mascot_bumps")
 
 
 ## A second pass over positions only. Pushing one pair apart can push either of
@@ -2147,7 +2293,7 @@ func sees_loose_ball(player: Player) -> bool:
 	return player == human.controlled or player.brain.sees_ball
 
 
-## The ball is on the loose: it can go out of bounds, and anyone who has seen it
+## The ball is on the loose: it can go over the wall, and anyone who has seen it
 ## and gets to it tries to pick it up or fall on it.
 func _check_loose_ball(delta: float) -> void:
 	if phase != Phase.LOOSE or ball.carrier != null:
@@ -2159,9 +2305,10 @@ func _check_loose_ball(delta: float) -> void:
 	loose_time += delta
 	_loose_untouched += delta
 	var spot: Vector3 = ball.flat_position()
-	if absf(spot.z) > tuning.half_width() or spot.x < -tuning.end_zone_depth or spot.x > tuning.field_length + tuning.end_zone_depth:
-		game.add_stat(&"scrambles_out_of_bounds" if opening else &"fumbles_out_of_bounds")
-		end_play(Result.OUT_OF_BOUNDS, spot.x)
+	# It bounces off the wall; only one that goes over it into the stands is gone.
+	if Stadium.wall_distance(tuning, spot.x, spot.z) > 0.0:
+		game.add_stat(&"scrambles_out_of_play" if opening else &"fumbles_out_of_play")
+		end_play(Result.OUT_OF_PLAY, clampf(spot.x, -tuning.end_zone_depth, tuning.field_length + tuning.end_zone_depth))
 		return
 	if loose_time >= (tuning.scramble_dead_time if opening else tuning.fumble_dead_time):
 		game.add_stat(&"scrambles_whistled_dead" if opening else &"fumbles_whistled_dead")
@@ -2171,7 +2318,7 @@ func _check_loose_ball(delta: float) -> void:
 		return
 	var near: Array[Player] = []
 	for candidate: Player in players:
-		if candidate.ball_grab_cooldown > 0.0 or not sees_loose_ball(candidate):
+		if candidate.bystander or candidate.ball_grab_cooldown > 0.0 or not sees_loose_ball(candidate):
 			continue
 		var reach: float = tuning.fumble_scoop_radius
 		if _is_diving(candidate):

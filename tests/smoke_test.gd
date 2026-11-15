@@ -212,12 +212,13 @@ func _report() -> bool:
 	if drives < 2 and _failures.is_empty():
 		_failures.append("possession never changed")
 
-	# Every touchdown is followed by a try, and both halves start with a scramble.
+	# Every touchdown is followed by a try, but the one that wins a game in
+	# sudden death (one a game at most), and both halves start with a scramble.
 	var tries: int = _totals.get(&"conversion_tries", 0)
 	var touchdowns: int = _totals.get(&"touchdowns", 0)
-	if tries != touchdowns and _failures.is_empty():
-		_failures.append("%d touchdowns but %d conversion tries" % [touchdowns, tries])
 	var halftimes: int = _totals.get(&"halftimes", 0)
+	if (tries > touchdowns or tries < touchdowns - halftimes) and _failures.is_empty():
+		_failures.append("%d touchdowns but %d conversion tries in %d games" % [touchdowns, tries, halftimes])
 	var scrambles: int = _totals.get(&"scrambles_started", 0)
 	var do_overs: int = _totals.get(&"scramble_do_overs", 0)
 	if scrambles - do_overs != 2 * halftimes and _failures.is_empty():

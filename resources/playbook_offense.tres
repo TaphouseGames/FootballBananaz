@@ -30,7 +30,24 @@
 [ext_resource type="Resource" path="res://resources/plays/offense/gl_dive.tres" id="28_gl_dive"]
 [ext_resource type="Resource" path="res://resources/plays/offense/gl_power.tres" id="29_gl_power"]
 [ext_resource type="Resource" path="res://resources/plays/offense/gl_pa.tres" id="30_gl_pa"]
+[ext_resource type="Resource" path="res://resources/plays/offense/crack_toss.tres" id="31_crack_toss"]
+[ext_resource type="Resource" path="res://resources/plays/offense/wildcat_jet.tres" id="32_wildcat_jet"]
+[ext_resource type="Resource" path="res://resources/plays/offense/hb_slot_out.tres" id="33_hb_slot_out"]
+[ext_resource type="Resource" path="res://resources/plays/offense/texas.tres" id="34_texas"]
+[ext_resource type="Resource" path="res://resources/plays/offense/drive.tres" id="35_drive"]
+[ext_resource type="Resource" path="res://resources/plays/offense/flea_flicker.tres" id="36_flea_flicker"]
+[ext_resource type="Resource" path="res://resources/plays/offense/mismatch_go.tres" id="37_mismatch_go"]
+[ext_resource type="Resource" path="res://resources/plays/offense/dagger.tres" id="38_dagger"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gun_empty_slants.tres" id="39_gun_empty_slants"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gun_trips_flood.tres" id="40_gun_trips_flood"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gun_flea_flicker.tres" id="41_gun_flea_flicker"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gun_draw.tres" id="42_gun_draw"]
+[ext_resource type="Resource" path="res://resources/plays/offense/wildcat_pass.tres" id="43_wildcat_pass"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gun_levels.tres" id="44_gun_levels"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_toss.tres" id="45_gl_toss"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_empty.tres" id="46_gl_empty"]
+[ext_resource type="Resource" path="res://resources/plays/offense/gl_boot.tres" id="47_gl_boot"]
 
 [resource]
 script = ExtResource("1_book")
-plays = Array[ExtResource("2_play")]([ExtResource("3_hb_dive"), ExtResource("4_power_sweep"), ExtResource("5_counter"), ExtResource("6_quick_slants"), ExtResource("7_curl_flat"), ExtResource("8_hb_screen"), ExtResource("9_crossfire"), ExtResource("10_flood"), ExtResource("11_deep_bomb"), ExtResource("12_off_tackle"), ExtResource("13_hb_toss"), ExtResource("14_draw"), ExtResource("15_end_around"), ExtResource("16_pa_post"), ExtResource("17_bootleg"), ExtResource("18_mesh"), ExtResource("19_smash"), ExtResource("20_sluggo"), ExtResource("22_gun_verts"), ExtResource("23_gun_stick"), ExtResource("24_gun_stretch"), ExtResource("25_gl_fade"), ExtResource("26_gl_rub"), ExtResource("27_gl_corner"), ExtResource("28_gl_dive"), ExtResource("29_gl_power"), ExtResource("30_gl_pa"), ExtResource("21_hail_mary")])
+plays = Array[ExtResource("2_play")]([ExtResource("3_hb_dive"), ExtResource("4_power_sweep"), ExtResource("5_counter"), ExtResource("6_quick_slants"), ExtResource("7_curl_flat"), ExtResource("8_hb_screen"), ExtResource("9_crossfire"), ExtResource("10_flood"), ExtResource("11_deep_bomb"), ExtResource("12_off_tackle"), ExtResource("13_hb_toss"), ExtResource("14_draw"), ExtResource("15_end_around"), ExtResource("16_pa_post"), ExtResource("17_bootleg"), ExtResource("18_mesh"), ExtResource("19_smash"), ExtResource("20_sluggo"), ExtResource("22_gun_verts"), ExtResource("23_gun_stick"), ExtResource("24_gun_stretch"), ExtResource("25_gl_fade"), ExtResource("26_gl_rub"), ExtResource("27_gl_corner"), ExtResource("28_gl_dive"), ExtResource("29_gl_power"), ExtResource("30_gl_pa"), ExtResource("31_crack_toss"), ExtResource("32_wildcat_jet"), ExtResource("33_hb_slot_out"), ExtResource("34_texas"), ExtResource("35_drive"), ExtResource("36_flea_flicker"), ExtResource("37_mismatch_go"), ExtResource("38_dagger"), ExtResource("39_gun_empty_slants"), ExtResource("40_gun_trips_flood"), ExtResource("41_gun_flea_flicker"), ExtResource("42_gun_draw"), ExtResource("43_wildcat_pass"), ExtResource("44_gun_levels"), ExtResource("45_gl_toss"), ExtResource("46_gl_empty"), ExtResource("47_gl_boot"), ExtResource("21_hail_mary")])

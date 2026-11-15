@@ -107,12 +107,9 @@ func _snap() -> void:
 	_game.clock = 100.0
 	_game.start_drive(team, _game.tuning.yard_to_x(team.attack_dir, 92.0))
 	_pc.line_up(_game.offense_playbook.plays[0], _game.defense_playbook.plays[0])
-	# The mascot that joined the last party is back on its sideline.
-	if _pc.players.size() != 14 or team.players.size() != 7 or team.mascot.visible:
+	# The mascot that joined the last party is standing by again.
+	if _pc.players.size() != 16 or team.players.size() != 7 or not team.mascot.bystander:
 		_failures.append("score %d: %d players lined up, %d of them the home team's" % [_scores + 1, _pc.players.size(), team.players.size()])
-	for prop: String in ["Mascot", "MascotAway"]:
-		if _game.tuning.stadium_enabled and not (_game.field.stadium.props.get_node(NodePath(prop)) as Node3D).visible:
-			_failures.append("score %d: %s is not on its sideline at the line-up" % [_scores + 1, prop])
 	_pc.snap()
 	_pc.state_machine.transition(&"Live")
 
@@ -176,12 +173,11 @@ func _sample() -> void:
 	else:
 		_gathered_total += gathered
 		_mates_total += scorer.team.players.size() - 1
-	# The scorer's mascot has come off its sideline and into the huddle.
-	if _game.tuning.mascot_joins_party and _game.tuning.stadium_enabled:
+	# The mascot standing by with the scorer's team has joined the huddle.
+	if _game.tuning.mascot_joins_party:
 		var guest: Mascot = scorer.team.mascot
-		var prop: Node3D = _game.field.stadium.props.get_node(^"Mascot" if scorer.team == _game.home else ^"MascotAway") as Node3D
-		if not scorer.team.players.has(guest) or not guest.visible or prop.visible:
-			_failures.append("score %d: the scorer's mascot did not come onto the field" % (_scores + 1))
+		if not scorer.team.players.has(guest) or not guest.visible or guest.bystander:
+			_failures.append("score %d: the mascot of the scorer's team did not join the party" % (_scores + 1))
 		elif _flat(guest.position, scorer.position) <= ring + 1.5:
 			_mascots_there += 1
 	if hit:
@@ -217,7 +213,7 @@ func _finish() -> void:
 		if _game.get_stat(&"pile_ons") != _piles:
 			_failures.append("%d pile-ons counted in %d started" % [_game.get_stat(&"pile_ons"), _piles])
 	print("The mascot was in the huddle at the end of %d of them." % _mascots_there)
-	if _game.tuning.mascot_joins_party and _game.tuning.stadium_enabled and float(_mascots_there) < 0.7 * float(_scores):
+	if _game.tuning.mascot_joins_party and float(_mascots_there) < 0.7 * float(_scores):
 		_failures.append("the mascot reached the huddle in only %d of %d scores" % [_mascots_there, _scores])
 	if _game.get_stat(&"spikes") < _scores - shots:
 		_failures.append("%d spikes in %d scores" % [_game.get_stat(&"spikes"), _scores])

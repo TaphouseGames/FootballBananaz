@@ -11,7 +11,7 @@ const SKIP_AFTER: float = 0.5
 ## x behind one team, z out past the sideline. It looks at AIM, a little way
 ## down the field, so that team fills the picture with the other beyond it.
 const CAMERA_FROM: Vector3 = Vector3(-38.0, 24.0, 54.0)
-const CAMERA_TO: Vector3 = Vector3(-12.0, 4.5, 25.0)
+const CAMERA_TO: Vector3 = Vector3(-12.0, 4.5, 17.0)
 const AIM: Vector3 = Vector3(9.0, 1.5, 0.0)
 
 ## The booth has been asked to speak, and had something to say.

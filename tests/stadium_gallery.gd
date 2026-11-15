@@ -1,7 +1,8 @@
 extends SceneTree
 ## Pictures of the stadium: the game camera at both ends and midfield, the
 ## looks across at each stand, the intro's opening shot, close-ups of the
-## crowd and the props, then a home cheer and a wave. Needs a window (no
+## crowd, the wall and the props, the mascots standing by, then a home cheer
+## and a wave. Needs a window (no
 ## --headless), since headless does not render.
 ##
 ## Run:  godot --path . --resolution 1280x720 --script res://tests/stadium_gallery.gd -- out=<folder> [only=<text>] [home=<team>] [away=<team>]
@@ -54,51 +55,83 @@ func _run() -> void:
 	await _shoot("swing_home_stand", Vector3(50.0, t.camera_height, t.camera_distance), Vector3(50.0, 0.0, -t.camera_look_ahead))
 	await _shoot("swing_away_stand", Vector3(50.0, t.camera_height, -t.camera_distance), Vector3(50.0, 0.0, t.camera_look_ahead))
 	await _shoot("intro_start", Vector3(50.0 - 38.0, 24.0, 54.0), Vector3(59.0, 1.5, 0.0))
+	await _shoot("intro_end", Vector3(50.0 - 12.0, 4.5, 17.0), Vector3(59.0, 1.5, 0.0))
 	await _shoot("overview", Vector3(length * 0.5, 120.0, 150.0), Vector3(length * 0.5, 0.0, 0.0))
-	await _shoot("crowd_close", Vector3(40.0, 4.0, -18.0), Vector3(47.0, 5.0, -32.0))
-	await _shoot("fans_front", Vector3(45.0, 3.2, -22.5), Vector3(45.0, 3.0, -30.0))
-	await _shoot("signs_close", Vector3(60.0, 7.5, -16.0), Vector3(62.0, 7.0, -34.0))
-	await _shoot("aisle_close", Vector3(55.0, 9.0, 12.0), Vector3(62.0, 6.0, 32.0))
-	await _shoot("corner", Vector3(80.0, 6.0, 0.0), Vector3(116.0, 6.0, 26.0))
-	# The mascots follow the ball along their sidelines, and are on the field
-	# themselves for the scramble that opens the match. So the play is stopped,
-	# the ball left on the 36, and the two put back on their sidelines, where
-	# they come to stand level with it.
-	_game.play_controller.process_mode = Node.PROCESS_MODE_DISABLED
+	await _shoot("crowd_close", Vector3(40.0, 4.0, -12.0), Vector3(47.0, 5.0, -32.0))
+	await _shoot("fans_front", Vector3(45.0, 2.6, -16.0), Vector3(45.0, 2.4, -24.0))
+	# Along a row from the aisle: the fans on their seats, and the empty ones.
+	await _shoot("seats_side", Vector3(49.7, 2.9, -22.6), Vector3(45.0, 2.2, -23.6))
+	await _shoot("signs_close", Vector3(60.0, 7.5, -12.0), Vector3(62.0, 7.0, -34.0))
+	await _shoot("aisle_close", Vector3(55.0, 9.0, 8.0), Vector3(62.0, 6.0, 32.0))
+	await _shoot("corner", Vector3(92.0, 5.0, 4.0), Vector3(111.0, 2.0, 21.0))
+	# The wall, right on the lines: along a sideline and at an end.
+	await _shoot("wall_sideline", Vector3(40.0, 1.8, 15.0), Vector3(60.0, 1.0, 20.5))
+	await _shoot("wall_end", Vector3(98.0, 2.2, -6.0), Vector3(111.0, 1.5, 4.0))
+	# What is painted on the turf: the mascots at the 50, the numbers from each
+	# side, and a corner of an end zone (no lines round the edge).
+	await _shoot("field_midfield", Vector3(50.0, 24.0, 16.0), Vector3(50.0, 0.0, 0.5))
+	await _shoot("field_numbers", Vector3(30.0, 13.0, 19.0), Vector3(30.0, 0.0, 12.0))
+	await _shoot("field_numbers_far", Vector3(70.0, 13.0, -19.0), Vector3(70.0, 0.0, -12.0))
+	await _shoot("field_corner", Vector3(88.0, 7.0, 6.0), Vector3(108.0, 0.0, 19.0))
+	await _shoot("field_overhead", Vector3(50.0, 95.0, 0.5), Vector3(50.0, 0.0, 0.0))
+	# The mascots stand by with their teams. A play is lined up at midfield and
+	# stopped there, so that they are where a play puts them.
+	var pc: PlayController = _game.play_controller
+	_game.start_drive(_game.home, 50.0)
+	pc.line_up(_game.offense_playbook.plays[0], _game.defense_playbook.plays[0])
+	await _wait(0.3)
+	pc.process_mode = Node.PROCESS_MODE_DISABLED
 	_game.ball.process_mode = Node.PROCESS_MODE_DISABLED
-	_game.ball.position = Vector3(36.0, 0.0, 0.0)
-	_game.home.mascot.visible = false
-	_game.away.mascot.visible = false
-	stadium.set_mascots_visible(true)
-	await _wait(4.0)
-	await _shoot("mascot", Vector3(42.0, 2.5, -14.0), Vector3(36.0, 1.5, -23.0))
-	await _shoot("mascot_away", Vector3(42.0, 2.5, 14.0), Vector3(36.0, 1.5, 23.0))
-	# Both from the game camera, then each in turn up close: cheering,
-	# sulking, waving, and the three it acts out on its own.
-	await _shoot("mascots_cam", Vector3(30.0, 0.0, 0.0) + back, Vector3(30.0, 0.0, 0.0) + ahead)
-	var close_home: Array[Vector3] = [Vector3(38.5, 1.8, -19.0), Vector3(36.0, 1.5, -24.5)]
-	var close_away: Array[Vector3] = [Vector3(38.5, 1.8, 19.0), Vector3(36.0, 1.5, 24.5)]
-	stadium.react(true, 1.0)
-	await _wait(0.45)
-	await _shoot("mascot_cheer", close_home[0], close_home[1], 0.0)
-	await _shoot("mascot_away_sulk", close_away[0], close_away[1], 0.3)
-	stadium.cheer[0] = 0.0
-	stadium.slump[1] = 0.0
-	stadium.start_wave()
-	await _wait(0.6)
-	await _shoot("mascot_wave", close_home[0], close_home[1], 0.0)
-	stadium.wave_progress = -1.0
-	await _wait(0.5)
+	var dir: Vector3 = Vector3(float(_game.home.attack_dir), 1.0, 1.0)
+	await _shoot("mascots_cam", Vector3(50.0, 0.0, 0.0) + back * dir, Vector3(50.0, 0.0, 0.0) + ahead * dir)
+	var home_mascot: Mascot = _game.home.mascot
+	var away_mascot: Mascot = _game.away.mascot
+	var close_home: Array[Vector3] = [home_mascot.position + Vector3(2.5, 1.8, 6.0), home_mascot.position + Vector3(0.0, 1.5, 0.0)]
+	var close_away: Array[Vector3] = [away_mascot.position + Vector3(2.5, 1.8, -6.0), away_mascot.position + Vector3(0.0, 1.5, 0.0)]
+	await _shoot("mascot", close_home[0], close_home[1])
+	await _shoot("mascot_away", close_away[0], close_away[1])
+	# What it acts out where it stands, and what it looks like run over.
 	for act: Array in [[&"point", 0.5], [&"flex", 0.5], [&"faint", 1.4]]:
-		stadium.mascot_react(true, act[0], 6.0)
+		home_mascot.react(act[0], 6.0)
+		home_mascot._update_visual(0.0, false)
 		await _wait(act[1])
 		await _shoot("mascot_%s" % act[0], close_home[0], close_home[1], 0.0)
-	stadium.mascot_react(true, &"idle", 0.0)
-	# On the run after a ball that has gone up the field.
-	await _wait(0.5)
-	_game.ball.position = Vector3(70.0, 0.0, 0.0)
-	await _wait(1.0)
-	await _shoot("mascot_run", Vector3(45.0, 1.8, -19.0), Vector3(42.0, 1.5, -24.5), 0.0)
+	home_mascot.react(&"idle", 0.0)
+	away_mascot.knock_down(Vector3(0.0, 0.0, 1.0), 5.0)
+	for i: int in 30:
+		away_mascot._update_visual(1.0 / 30.0, false)
+		await process_frame
+	await _shoot("mascot_down", close_away[0], close_away[1], 0.0)
+	# The wall is solid. One player stands by it for its height; one dives into
+	# it chest first and one is knocked into it backwards: flat against it, then
+	# peeling off.
+	if _only == "" or "wall_splat wall_peel wall_cam".contains(_only):
+		var side: float = t.half_width() + t.wall_gap
+		var men: Array[Player] = [_game.home.players[1], _game.home.players[2], _game.away.players[1]]
+		var spots: Array[Vector3] = [Vector3(46.5, 0.0, side - t.wall_standoff), Vector3(49.0, 0.0, side - 1.6), Vector3(51.5, 0.0, side - 1.5)]
+		var faces: Array[Vector3] = [Vector3(-1.0, 0.0, 0.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, -1.0)]
+		for i: int in men.size():
+			men[i].position = spots[i]
+			men[i].velocity = Vector3.ZERO
+			men[i].move_input = Vector3.ZERO
+			men[i].frozen = false
+			men[i].state = Player.State.NORMAL
+			men[i].facing = faces[i]
+			men[i]._update_visual(0.0, true)
+		men[1].start_dive(Vector3(0.0, 0.0, 1.0))
+		men[2].knock_down(Vector3(0.0, 0.0, 1.0) * t.shove_knockdown_impulse, t.knockdown_time)
+		var eye: Vector3 = Vector3(49.5, 1.7, side - 6.5)
+		var aim: Vector3 = Vector3(49.5, 1.1, side)
+		var shots: Dictionary = {8: "wall_splat_hit", 30: "wall_splat", 62: "wall_peel_0", 72: "wall_peel_1", 84: "wall_peel_2", 110: "wall_peel_3"}
+		for tick: int in 111:
+			for man: Player in men:
+				man.integrate(1.0 / 60.0)
+			await process_frame
+			if shots.has(tick):
+				await _shoot(shots[tick], eye, aim, 0.0)
+			if tick == 30:
+				await _shoot("wall_splat_side", Vector3(44.0, 1.6, side - 0.9), Vector3(52.0, 1.0, side - 0.3), 0.0)
+				await _shoot("wall_cam", Vector3(50.0, 0.0, side - 3.0) + back * dir, Vector3(50.0, 0.0, side - 3.0) + ahead * dir, 0.0)
 	await _wait(6.0)
 	await _shoot("jumbotron", Vector3(70.0, 8.0, 0.0), Vector3(140.0, 24.0, 0.0))
 	await _shoot("hot_dog_stand", Vector3(20.0, 16.0, -30.0), Vector3(17.0, 12.0, -48.0))

@@ -95,6 +95,8 @@ func _ready() -> void:
 	stat_book.setup(home, away)
 	field.setup(tuning, home, away)
 	field.stadium.watch(self)
+	ball.ground_at = field.stadium.surface_height
+	ball.wall_normal_at = func(x: float, z: float) -> Vector3: return Stadium.wall_normal(tuning, x, z)
 	camera_rig.setup(tuning)
 	human.setup(self)
 	play_controller.setup(self)
@@ -251,7 +253,7 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 		return next_play_state()
 	if play_controller.scramble:
 		if play_controller.scramble_team == null:
-			# Out of bounds, or nobody could get hold of it: up it goes again.
+			# Into the stands, or nobody could get hold of it: up it goes again.
 			scramble_due = true
 			add_stat(&"scramble_do_overs")
 			banner_text = "DO-OVER!"
@@ -279,7 +281,7 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 	match result:
 		PlayController.Result.INCOMPLETE:
 			down += 1
-		PlayController.Result.TACKLED, PlayController.Result.OUT_OF_BOUNDS:
+		PlayController.Result.TACKLED, PlayController.Result.OUT_OF_PLAY:
 			if final_team != offense:
 				# Interception or fumble return ended here.
 				var x: float = spot_x
@@ -393,10 +395,10 @@ func season() -> Season:
 	return Season.current if season_match and not autoplay else null
 
 
-## Something for `team`'s mascot to act out on its sideline: "point", "flex"
-## or "faint" (see Stadium.mascot_react).
+## Something for `team`'s mascot to act out where it stands: "point", "flex"
+## or "faint" (see Mascot.react).
 func mascot_moment(team: Team, clip: StringName) -> void:
-	field.stadium.mascot_react(team == home, clip)
+	team.mascot.react(clip)
 
 
 func add_stat(key: StringName, amount: int = 1) -> void:

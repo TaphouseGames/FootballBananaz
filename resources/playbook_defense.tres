@@ -20,7 +20,25 @@
 [ext_resource type="Resource" path="res://resources/plays/defense/safety_blitz.tres" id="18_safety_blitz"]
 [ext_resource type="Resource" path="res://resources/plays/defense/mike_blitz.tres" id="19_mike_blitz"]
 [ext_resource type="Resource" path="res://resources/plays/defense/overload.tres" id="20_overload"]
+[ext_resource type="Resource" path="res://resources/plays/defense/press_man.tres" id="21_press_man"]
+[ext_resource type="Resource" path="res://resources/plays/defense/double_wide.tres" id="22_double_wide"]
+[ext_resource type="Resource" path="res://resources/plays/defense/man_lurk.tres" id="23_man_lurk"]
+[ext_resource type="Resource" path="res://resources/plays/defense/cover_4.tres" id="24_cover_4"]
+[ext_resource type="Resource" path="res://resources/plays/defense/cover_6.tres" id="25_cover_6"]
+[ext_resource type="Resource" path="res://resources/plays/defense/tampa_2.tres" id="26_tampa_2"]
+[ext_resource type="Resource" path="res://resources/plays/defense/cover_2_sink.tres" id="27_cover_2_sink"]
+[ext_resource type="Resource" path="res://resources/plays/defense/cloud_flats.tres" id="28_cloud_flats"]
+[ext_resource type="Resource" path="res://resources/plays/defense/zone_spy.tres" id="29_zone_spy"]
+[ext_resource type="Resource" path="res://resources/plays/defense/edge_blitz.tres" id="30_edge_blitz"]
+[ext_resource type="Resource" path="res://resources/plays/defense/cross_dog.tres" id="31_cross_dog"]
+[ext_resource type="Resource" path="res://resources/plays/defense/fire_zone.tres" id="32_fire_zone"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_blitz.tres" id="33_gl_blitz"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_pinch.tres" id="34_gl_pinch"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_press.tres" id="35_gl_press"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_spy.tres" id="36_gl_spy"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_edge.tres" id="37_gl_edge"]
+[ext_resource type="Resource" path="res://resources/plays/defense/gl_double.tres" id="38_gl_double"]
 
 [resource]
 script = ExtResource("1_book")
-plays = Array[ExtResource("2_play")]([ExtResource("3_man_cover"), ExtResource("4_man_robber"), ExtResource("5_run_stuff"), ExtResource("6_zone_cover"), ExtResource("7_cover_3"), ExtResource("8_prevent"), ExtResource("9_all_out_blitz"), ExtResource("10_zone_blitz"), ExtResource("11_corner_blitz"), ExtResource("12_gl_stuff"), ExtResource("13_gl_man"), ExtResource("14_gl_zone"), ExtResource("15_two_man"), ExtResource("16_bracket"), ExtResource("17_cover_1_spy"), ExtResource("18_safety_blitz"), ExtResource("19_mike_blitz"), ExtResource("20_overload")])
+plays = Array[ExtResource("2_play")]([ExtResource("3_man_cover"), ExtResource("4_man_robber"), ExtResource("5_run_stuff"), ExtResource("6_zone_cover"), ExtResource("7_cover_3"), ExtResource("8_prevent"), ExtResource("9_all_out_blitz"), ExtResource("10_zone_blitz"), ExtResource("11_corner_blitz"), ExtResource("12_gl_stuff"), ExtResource("13_gl_man"), ExtResource("14_gl_zone"), ExtResource("15_two_man"), ExtResource("16_bracket"), ExtResource("17_cover_1_spy"), ExtResource("18_safety_blitz"), ExtResource("19_mike_blitz"), ExtResource("20_overload"), ExtResource("21_press_man"), ExtResource("22_double_wide"), ExtResource("23_man_lurk"), ExtResource("24_cover_4"), ExtResource("25_cover_6"), ExtResource("26_tampa_2"), ExtResource("27_cover_2_sink"), ExtResource("28_cloud_flats"), ExtResource("29_zone_spy"), ExtResource("30_edge_blitz"), ExtResource("31_cross_dog"), ExtResource("32_fire_zone"), ExtResource("33_gl_blitz"), ExtResource("34_gl_pinch"), ExtResource("35_gl_press"), ExtResource("36_gl_spy"), ExtResource("37_gl_edge"), ExtResource("38_gl_double")])

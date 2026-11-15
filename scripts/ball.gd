@@ -20,6 +20,10 @@ const TUMBLE_SPIN: float = 14.0
 const WILD_ROLL_SPEED: float = 2.0
 const WILD_BOUNCE_TURN: float = 0.9
 const WILD_ROLL_FRICTION: float = 5.0
+## A loose ball that meets something this much higher than what it is on bounces
+## back off it, keeping this share of its pace.
+const STEP_HEIGHT: float = 0.3
+const WALL_BOUNCE: float = 0.4
 
 var state: State = State.LOOSE
 var carrier: Player
@@ -44,6 +48,16 @@ var _tip_time: float = 0.0
 var _tip_elapsed: float = 0.0
 ## How fast the ball is moving right now, whatever it is doing.
 var velocity: Vector3 = Vector3.ZERO
+## How high whatever is under (x, z) stands above the turf: the wall and the
+## rows of the stands (Stadium.surface_height). Unset, it is turf everywhere.
+var ground_at: Callable
+## The way the wall nearest to (x, z) faces, as a flat unit vector pointing
+## onto the field (Stadium.wall_normal with the Tuning bound). Unset, a ball
+## comes straight back off whatever it runs into.
+var wall_normal_at: Callable
+## The pass in flight met the face of the wall on this tick and came back off
+## it: it is in the air like a tipped ball now. False on every other tick.
+var hit_wall: bool = false
 
 ## Late in its flight a pass bends toward the hands waiting for it: `_guide` is
 ## where its end point should move to (as an offset), `_guide_now` the eased
@@ -163,8 +177,10 @@ func place_on_ground(spot: Vector3) -> void:
 
 
 ## `speed` is the flat speed; gravity is fixed, so a slower pass arcs higher.
-func throw_to(p_thrower: Player, p_intended: Player, point: Vector3, speed: float, tuning: Tuning) -> void:
-	_launch(p_thrower, p_intended, p_thrower.position + Vector3(0.0, tuning.pass_release_height + p_thrower.air_height(), 0.0), point, speed, tuning)
+## `end_height` is how high it is when it gets to `point`: catching height, or
+## for a ball thrown into the stands the height of the row it comes down on.
+func throw_to(p_thrower: Player, p_intended: Player, point: Vector3, speed: float, tuning: Tuning, end_height: float = -1.0) -> void:
+	_launch(p_thrower, p_intended, p_thrower.position + Vector3(0.0, tuning.pass_release_height + p_thrower.air_height(), 0.0), point, speed, tuning, end_height)
 	_kicked = false
 
 
@@ -174,7 +190,7 @@ func kick_to(kicker: Player, p_intended: Player, point: Vector3, speed: float, t
 	_kicked = true
 
 
-func _launch(p_thrower: Player, p_intended: Player, from: Vector3, point: Vector3, speed: float, tuning: Tuning) -> void:
+func _launch(p_thrower: Player, p_intended: Player, from: Vector3, point: Vector3, speed: float, tuning: Tuning, end_height: float = -1.0) -> void:
 	_release()
 	thrower = p_thrower
 	intended = p_intended
@@ -192,7 +208,8 @@ func _launch(p_thrower: Player, p_intended: Player, from: Vector3, point: Vector
 	_guide_now = Vector3.ZERO
 	_guide_window = 0.0
 	_flight_velocity = flat / flight_time
-	_flight_vy = (tuning.pass_catch_height - _flight_start.y + 0.5 * _gravity * flight_time * flight_time) / flight_time
+	var height: float = end_height if end_height >= 0.0 else tuning.pass_catch_height
+	_flight_vy = (height - _flight_start.y + 0.5 * _gravity * flight_time * flight_time) / flight_time
 	position = _flight_start
 	landing_marker.visible = true
 	landing_marker.global_position = target_point + Vector3(0.0, 0.06, 0.0)
@@ -343,6 +360,7 @@ func integrate(delta: float) -> bool:
 	_update_visual(delta)
 	var before: Vector3 = position
 	var arrived: bool = false
+	hit_wall = false
 	match state:
 		State.HELD:
 			_settle_left = maxf(_settle_left - delta, 0.0)
@@ -351,14 +369,35 @@ func integrate(delta: float) -> bool:
 			flight_elapsed += delta
 			if _guide_window > 0.0:
 				_guide_now = _guide_now.lerp(_guide, 1.0 - exp(-30.0 * delta))
+			var pace: Vector3 = flight_velocity_now()
 			position = _flight_position(flight_elapsed)
-			arrived = flight_elapsed >= flight_time
+			var under: float = _floor_at(position)
+			if _floor_at(before) <= GROUND_HEIGHT + 0.01 and under > GROUND_HEIGHT + STEP_HEIGHT and position.y < under:
+				# Off the field into the face of the wall: it comes back off it,
+				# still in the air.
+				position.x = before.x
+				position.z = before.z
+				tip(_off_wall(pace))
+				hit_wall = true
+				bounced.emit(clampf(Vector2(pace.x, pace.z).length() / 16.0, 0.3, 1.0))
+			else:
+				# A ball thrown over the wall is down as soon as it meets the stands.
+				arrived = flight_elapsed >= flight_time or (under > GROUND_HEIGHT and position.y <= under)
 		State.LOOSE:
 			_loose_velocity.y -= _gravity * delta
+			var floor_before: float = _floor_at(position)
 			position += _loose_velocity * delta
 			_tip_elapsed += delta
-			if position.y <= GROUND_HEIGHT:
-				position.y = GROUND_HEIGHT
+			var floor_now: float = _floor_at(position)
+			if floor_now > floor_before + STEP_HEIGHT and position.y < floor_now:
+				# Into the wall, or the front of a row: it comes back off it.
+				position.x = before.x
+				position.z = before.z
+				_loose_velocity = _off_wall(_loose_velocity)
+				floor_now = floor_before
+				bounced.emit(clampf(Vector2(_loose_velocity.x, _loose_velocity.z).length() / 8.0, 0.0, 1.0))
+			if position.y <= floor_now:
+				position.y = floor_now
 				grounded = true
 				landing_marker.visible = false
 				if _wild:
@@ -374,6 +413,29 @@ func integrate(delta: float) -> bool:
 	if delta > 0.0:
 		velocity = (position - before) / delta
 	return arrived
+
+
+## `pace` after the ball, where it is now, has met the wall: what was going
+## into the wall comes back out at WALL_BOUNCE of it, and the rest (along the
+## wall, and up or down) carries on a little slower.
+func _off_wall(pace: Vector3) -> Vector3:
+	var flat: Vector3 = Vector3(pace.x, 0.0, pace.z)
+	if not wall_normal_at.is_valid():
+		return Vector3(-flat.x * WALL_BOUNCE, pace.y, -flat.z * WALL_BOUNCE)
+	var normal: Vector3 = wall_normal_at.call(position.x, position.z)
+	var into: float = -flat.dot(normal)
+	if into <= 0.0:
+		# Along it or away from it already (the round of a corner): turned back.
+		return Vector3(-flat.x * WALL_BOUNCE, pace.y, -flat.z * WALL_BOUNCE)
+	var along: Vector3 = flat + normal * into
+	return along * 0.8 + normal * into * WALL_BOUNCE + Vector3(0.0, pace.y, 0.0)
+
+
+## Height of the ball lying at `at`: on the turf, or on whatever stands there.
+func _floor_at(at: Vector3) -> float:
+	if not ground_at.is_valid():
+		return GROUND_HEIGHT
+	return GROUND_HEIGHT + float(ground_at.call(at.x, at.z))
 
 
 func flat_position() -> Vector3:
