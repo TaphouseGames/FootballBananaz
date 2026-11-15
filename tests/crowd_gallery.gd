@@ -63,7 +63,7 @@ func _run() -> void:
 
 	var shirts: Array[Color] = [home.team_color, away.team_color, Color(0.25, 0.45, 0.75), Color(0.9, 0.9, 0.88)]
 	for kit: Stadium.Kit in _stadium._kits:
-		for tier: int in 2:
+		for tier: int in 3:
 			var level: String = Stadium.TIER_NAMES[tier].to_lower()
 			var heads: Array = kit.heads[tier]
 			var torsos: Array = kit.torsos[tier]

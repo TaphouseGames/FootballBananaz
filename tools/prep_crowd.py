@@ -12,7 +12,11 @@ It reads tools/crowd_parts.json (every fan with a `source`) and writes
 
 To add a head or an outfit: add a fan to crowd_parts.json, generate its model
 with Tripo, fill in `source`, and run this again. It always rebuilds the whole
-kit.
+kit. A model of a head by itself goes in as a fan with `only`: "head": it
+skips steps 2 to 4 and is put on the gender's neck as it is. A torso with its
+arms, open at the neck and at the waist, goes in with `only`: "torso": only
+its arms are looked for, and its own collar and hem are the cut edges. Legs
+(trousers and shoes), open at the waist, go in with `only`: "legs".
 
 What happens to a fan:
 
@@ -42,7 +46,8 @@ The meshes, with the seat at y = 0 in Godot and the fan facing +Z:
     Head<G><n>, Torso<G><n>, Legs<G><n>   full detail      (G: M or F)
     ...Mid                                the middle level
     Torso<G><n>Sign[Mid]                  arms up, for a fan with a sign
-    Far<G>, Far<G>Sign                    one whole fan, the plainest level
+    ...Far                                the plainest level
+    Far<G>, Far<G>Sign                    one whole fan at the plainest level
 
 UV is the atlas. The second UV set, as Godot reads it, is for the shader:
 
@@ -393,6 +398,39 @@ def load_fan(fan_id, entry):
 
 # --- Where the joints are -------------------------------------------------------------
 
+def arm_joints(fan_id, points, centre_x, half_width, floor):
+    """The joints of the arms: what sticks out past the body (`half_width` to
+    each side of `centre_x`) above the height `floor`, below the head."""
+    joints = {}
+    for side, sign in (("L", 1.0), ("R", -1.0)):
+        out = (points[:, 0] - centre_x) * sign
+        candidates = points[(out > half_width * 1.2) & (points[:, 2] > floor)]
+        best = None
+        best_reach = 0.12
+        for group in clusters(candidates) if len(candidates) else []:
+            reach = float(np.linalg.norm(group.max(0) - group.min(0)))
+            if len(group) > 40 and group[:, 2].mean() < 0.8 and reach > best_reach:
+                best, best_reach = group, reach
+        if best is None:
+            print("WARNING: %s: no arm found on side %s; guessing" % (fan_id, side))
+            shoulder = np.array([centre_x + sign * half_width * 1.2, 0.0, 0.66])
+            tip = shoulder + np.array([sign * 0.3, 0.0, 0.0])
+        else:
+            centre = best.mean(0)
+            axis = np.linalg.svd(best - centre, full_matrices=False)[2][0]
+            along = (best - centre) @ axis
+            ends = [centre + axis * np.percentile(along, 2), centre + axis * np.percentile(along, 99)]
+            # The hand is the end further from the base of the neck.
+            ends.sort(key=lambda e: np.linalg.norm(e - np.array([centre_x, centre[1], 0.8])))
+            shoulder, tip = ends
+            shoulder = shoulder - (tip - shoulder) / np.linalg.norm(tip - shoulder) * 0.01
+        joints["shoulder." + side] = shoulder
+        joints["elbow." + side] = shoulder + (tip - shoulder) * 0.45
+        joints["wrist." + side] = shoulder + (tip - shoulder) * 0.8
+        joints["tip." + side] = tip
+    return joints
+
+
 def find_joints(fan_id, points, overrides):
     """The fan's joints, with the height = 1: name -> np.array, and the half
     width of its waist."""
@@ -445,34 +483,7 @@ def find_joints(fan_id, points, overrides):
         y = float((part[:, 1].min() + part[:, 1].max()) * 0.5) if len(part) else 0.0
         return np.array([centre_x, y, z])
 
-    joints = {}
-    # Arms: what sticks out past the body to each side, below the head.
-    for side, sign in (("L", 1.0), ("R", -1.0)):
-        out = (points[:, 0] - centre_x) * sign
-        candidates = points[(out > half_width * 1.2) & (points[:, 2] > crotch + 0.05)]
-        best = None
-        best_reach = 0.12
-        for group in clusters(candidates) if len(candidates) else []:
-            reach = float(np.linalg.norm(group.max(0) - group.min(0)))
-            if len(group) > 40 and group[:, 2].mean() < 0.8 and reach > best_reach:
-                best, best_reach = group, reach
-        if best is None:
-            print("WARNING: %s: no arm found on side %s; guessing" % (fan_id, side))
-            shoulder = np.array([centre_x + sign * half_width * 1.2, 0.0, 0.66])
-            tip = shoulder + np.array([sign * 0.3, 0.0, 0.0])
-        else:
-            centre = best.mean(0)
-            axis = np.linalg.svd(best - centre, full_matrices=False)[2][0]
-            along = (best - centre) @ axis
-            ends = [centre + axis * np.percentile(along, 2), centre + axis * np.percentile(along, 99)]
-            # The hand is the end further from the base of the neck.
-            ends.sort(key=lambda e: np.linalg.norm(e - np.array([centre_x, centre[1], 0.8])))
-            shoulder, tip = ends
-            shoulder = shoulder - (tip - shoulder) / np.linalg.norm(tip - shoulder) * 0.01
-        joints["shoulder." + side] = shoulder
-        joints["elbow." + side] = shoulder + (tip - shoulder) * 0.45
-        joints["wrist." + side] = shoulder + (tip - shoulder) * 0.8
-        joints["tip." + side] = tip
+    joints = arm_joints(fan_id, points, centre_x, half_width, crotch + 0.05)
 
     # The neck is where the middle of the body is narrowest above the shoulders.
     shoulder_z = (joints["shoulder.L"][2] + joints["shoulder.R"][2]) * 0.5
@@ -705,6 +716,20 @@ def find_keys(fan_id, texture, uvs, centres, normals, parts, ref, half_width, ov
     # perhaps a moustache in the middle of it.
     keys["skin"] = sample_key(texture, uvs, parts == HANDS)
     keys["hair"] = sample_key(texture, uvs, head & (z > neck + 0.85 * tall))
+    if keys["skin"] is None and head.any():
+        # A head by itself has no hands: its skin is what there is on its
+        # face that is not as dark as its hair (a beard, the eyebrows).
+        on_face = np.zeros(len(centres), dtype=bool)
+        on_face[head] = face_of(ref)(centres[head]) > 0.5
+        if keys["hair"] is not None and on_face.any():
+            middle = np.mod(uvs[on_face].mean(1), 1.0)
+            size = texture.shape[0]
+            found = texture[np.clip((middle[:, 1] * size).astype(int), 0, size - 1), np.clip((middle[:, 0] * size).astype(int), 0, size - 1)]
+            bare = found[found @ LUMA > 1.3 * float(keys["hair"] @ LUMA)]
+            if len(bare) >= 5:
+                keys["skin"] = np.median(bare, axis=0)
+        if keys["skin"] is None:
+            keys["skin"] = sample_key(texture, uvs, on_face)
     keys["shirt"] = sample_key(texture, uvs, (parts == PART_IDS["torso"]) & shirt_faces(centres, normals, ref, half_width))
     keys["pants"] = sample_key(texture, uvs, (parts == PART_IDS["legs"]) & (z > crotch - 0.02) & (z < waist - 0.01))
     if keys["skin"] is not None and keys["hair"] is not None:
@@ -834,6 +859,171 @@ def ring_of(mesh, z):
     xy = np.array([(c.x, c.y) for c in found])
     lo, hi = xy.min(0), xy.max(0)
     return np.concatenate([(lo + hi) * 0.5, (hi - lo) * 0.5])
+
+
+def open_loops(mesh):
+    """The open edges of `mesh`, loop by loop: the points of each (N, 3)."""
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    left = {e for e in bm.edges if e.is_boundary}
+    loops = []
+    while left:
+        stack = [left.pop()]
+        verts = set()
+        while stack:
+            edge = stack.pop()
+            for v in edge.verts:
+                if v in verts:
+                    continue
+                verts.add(v)
+                for other in v.link_edges:
+                    if other in left:
+                        left.discard(other)
+                        stack.append(other)
+        loops.append(np.array([v.co[:] for v in verts]))
+    bm.free()
+    return loops
+
+
+def ring_of_loop(loop):
+    """Middle and half size, in x and y, of an open edge (as ring_of gives)."""
+    lo, hi = loop[:, :2].min(0), loop[:, :2].max(0)
+    return np.concatenate([(lo + hi) * 0.5, (hi - lo) * 0.5])
+
+
+def collar_and_hem(fan_id, mesh):
+    """The open edge round the neck of a torso that came by itself, and the
+    one round its waist: the highest and the lowest of those in its middle."""
+    points = coords(mesh)
+    wide = points[:, 0].max() - points[:, 0].min()
+    middle = (points[:, 0].max() + points[:, 0].min()) * 0.5
+    loops = [l for l in open_loops(mesh) if len(l) >= 6 and abs(l[:, 0].mean() - middle) < wide * 0.08]
+    loops.sort(key=lambda l: l[:, 2].mean())
+    if len(loops) < 2:
+        raise SystemExit("%s: a torso by itself has to be open at the neck and at the waist (found %d open edges in its middle)" % (fan_id, len(loops)))
+    return loops[-1], loops[0]
+
+
+def fit_torso(fan_id, entry, obj, ref, ref_half_width):
+    """A torso (with its arms) that came by itself, put between the gender's
+    neck and waist and bent onto its skeleton like a whole fan. Returns the
+    sizes of its open edges at the neck and at the hem."""
+    neck, waist = ref["neck"][2], ref["waist"][2]
+    points = coords(obj.data)
+    collar, hem = collar_and_hem(fan_id, obj.data)
+    scale = (neck - (waist - HEM)) / max(collar[:, 2].mean() - hem[:, 2].mean(), 1e-6) * float(entry.get("size", 1.0))
+    ring = ring_of_loop(collar)
+    points = (points - np.array([ring[0], ring[1], collar[:, 2].mean()])) * scale
+    points += np.array([0.0, ref["neck"][1], neck]) + np.array(entry.get("shift", [0.0, 0.0, 0.0]), dtype=float)
+    set_coords(obj.data, points)
+
+    # Its trunk is where the gender's is; only its arms have to be found.
+    joints = {key: value.copy() for key, value in ref.items()}
+    samples = surface_points(obj.data)
+    band = samples[np.abs(samples[:, 2] - (waist + 0.03)) < 0.01]
+    half_width = ref_half_width
+    for span in spans(band[:, 0]) if len(band) else []:
+        if span[0] < 0.0 < span[1]:
+            half_width = (span[1] - span[0]) * 0.5
+    joints.update(arm_joints(fan_id, samples, 0.0, half_width, waist - 0.3))
+    for key, value in entry.get("joints", {}).items():
+        if key not in joints:
+            raise SystemExit("crowd_parts.json: %s: unknown joint %s (have %s)" % (fan_id, key, ", ".join(sorted(joints))))
+        joints[key] = np.array(value, dtype=float)
+    print("JOINTS %s %s" % (fan_id, json.dumps({k: [round(float(c), 3) for c in v] for k, v in sorted(joints.items()) if k.split(".")[0] in ("shoulder", "elbow", "wrist", "tip")})))
+    print("WAIST %s half width %.3f" % (fan_id, half_width))
+    set_coords(obj.data, conform(points, joints, half_width, ref, ref_half_width))
+    collar, hem = collar_and_hem(fan_id, obj.data)
+    print("FITTED %s: a torso from %.3f (hem) to %.3f (collar), %.2f of its size" % (fan_id, hem[:, 2].mean(), collar[:, 2].mean(), scale))
+    return ring_of_loop(collar), ring_of_loop(hem)
+
+
+def fit_legs(fan_id, entry, obj, ref, ref_half_width):
+    """Legs (trousers and shoes) that came by themselves, open at the waist:
+    stood on the ground with their top at the gender's waist, bent onto its
+    skeleton like a whole fan's and cut flat there. Returns the size of that
+    cut edge."""
+    waist = ref["waist"][2]
+    points = coords(obj.data)
+    middle = (points[:, 0].max() + points[:, 0].min()) * 0.5
+    wide = points[:, 0].max() - points[:, 0].min()
+    loops = [l for l in open_loops(obj.data) if len(l) >= 6 and abs(l[:, 0].mean() - middle) < wide * 0.08]
+    if not loops:
+        raise SystemExit("%s: legs by themselves have to be open at the waist" % fan_id)
+    top = max(loops, key=lambda l: l[:, 2].mean())
+    ring = ring_of_loop(top)
+    # The lowest point of the waistband a little over the waist, so that the
+    # cut there goes all the way round.
+    scale = (waist + 0.006) / max(top[:, 2].min() - points[:, 2].min(), 1e-6) * float(entry.get("size", 1.0))
+    points = (points - np.array([ring[0], ring[1], points[:, 2].min()])) * scale
+    points += np.array([0.0, ref["waist"][1], 0.0]) + np.array(entry.get("shift", [0.0, 0.0, 0.0]), dtype=float)
+    set_coords(obj.data, points)
+
+    samples = surface_points(obj.data)
+
+    def band(z, half=0.0075):
+        return samples[np.abs(samples[:, 2] - z) < half]
+
+    def covered(z):
+        return any(s[0] < -0.005 and s[1] > 0.005 for s in spans(band(z)[:, 0]))
+
+    # The crotch: going up from the shoes, where the two legs become one.
+    crotch = None
+    apart = False
+    z = 0.05
+    while z < waist:
+        if not covered(z):
+            apart = True
+        elif apart and covered(z + 0.015):
+            crotch = z
+            break
+        z += 0.01
+    if crotch is None:
+        print("WARNING: %s: the legs were not found apart; taking the gender's crotch" % fan_id)
+        crotch = ref["crotch"][2] - 0.03
+    half_width = ref_half_width
+    for span in spans(band(waist - 0.01)[:, 0]):
+        if span[0] < 0.0 < span[1]:
+            half_width = (span[1] - span[0]) * 0.5
+
+    joints = {key: value.copy() for key, value in ref.items()}
+    part = band(crotch + 0.03)
+    joints["crotch"] = np.array([0.0, float((part[:, 1].min() + part[:, 1].max()) * 0.5) if len(part) else ref["crotch"][1], crotch + 0.03])
+    for side, sign in (("L", 1.0), ("R", -1.0)):
+        def leg_point(z):
+            part = band(z, 0.01)
+            part = part[part[:, 0] * sign > 0.0]
+            if len(part) < 4:
+                return np.array([sign * half_width * 0.6, 0.0, z])
+            return np.array([(part[:, 0].min() + part[:, 0].max()) * 0.5, (part[:, 1].min() + part[:, 1].max()) * 0.5, z])
+        hip = leg_point(crotch - 0.02)
+        hip[2] = crotch + 0.03
+        ankle = leg_point(0.1)
+        joints["hip." + side] = hip
+        joints["knee." + side] = leg_point((hip[2] + ankle[2]) * 0.5)
+        joints["ankle." + side] = ankle
+        joints["toe." + side] = ankle + np.array([0.0, -0.1, -0.07])
+    for key, value in entry.get("joints", {}).items():
+        if key not in joints:
+            raise SystemExit("crowd_parts.json: %s: unknown joint %s (have %s)" % (fan_id, key, ", ".join(sorted(joints))))
+        joints[key] = np.array(value, dtype=float)
+    print("JOINTS %s %s" % (fan_id, json.dumps({k: [round(float(c), 3) for c in v] for k, v in sorted(joints.items()) if k.split(".")[0] in ("crotch", "hip", "knee", "ankle", "toe")})))
+    print("WAIST %s half width %.3f" % (fan_id, half_width))
+    set_coords(obj.data, conform(points, joints, half_width, ref, ref_half_width))
+
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], dist=1e-6,
+                           plane_co=(0.0, 0.0, waist), plane_no=(0.0, 0.0, 1.0), clear_outer=True)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bm.to_mesh(obj.data)
+    bm.free()
+    obj.data.update()
+    found = ring_of(obj.data, waist)
+    if found is None:
+        raise SystemExit("%s: no cut edge at the waist (z = %.3f); give it a `size` or a `shift`" % (fan_id, waist))
+    print("FITTED %s: legs up to the waist at %.3f, %.2f of their size" % (fan_id, waist, scale))
+    return found
 
 
 def head_faces(bm, neck, axis, core):
@@ -1062,19 +1252,49 @@ cell_of = {}
 for gender, ids in sorted(by_gender.items()):
     height = float(CONFIG["genders"][gender]["height"])
     letter = gender.upper()
+    # The whole characters, and the heads and torsos that came by themselves.
+    # The whole ones go first: the first fan is the plainest level too.
+    for fan_id in ids:
+        if fans[fan_id].get("only") not in (None, "head", "torso", "legs"):
+            raise SystemExit("crowd_parts.json: %s: `only` is head, torso or legs" % fan_id)
+    bodies = [i for i in ids if fans[i].get("only") is None]
+    loose = [i for i in ids if fans[i].get("only") == "head"]
+    loose_torsos = [i for i in ids if fans[i].get("only") == "torso"]
+    loose_legs = [i for i in ids if fans[i].get("only") == "legs"]
+    # Without whole fans the skeleton is the one written down for the gender.
+    kept = CONFIG["genders"][gender].get("skeleton")
+    if not bodies and kept is None:
+        raise SystemExit("crowd_parts.json: gender %s has no whole fan to take its skeleton from, and no `skeleton`" % gender)
+    ids[:] = bodies + loose + loose_torsos + loose_legs
+    # The fan whose part the plainest level gets, where it is not the first's.
+    far_from = {}
+    for kind in ("head", "torso", "legs"):
+        chosen = CONFIG["genders"][gender].get("far_" + kind)
+        if chosen is None:
+            continue
+        if chosen not in ids or fans[chosen].get("only") not in (None, kind):
+            raise SystemExit("crowd_parts.json: gender %s: far_%s %s is not one of its fans with a %s" % (gender, kind, chosen, kind))
+        far_from[kind] = chosen
     loaded = {}
     for fan_id in ids:
         obj, texture = load_fan(fan_id, fans[fan_id])
+        if fan_id not in bodies:
+            loaded[fan_id] = [obj, texture, None, None]
+            continue
         joints, half_width = find_joints(fan_id, surface_points(obj.data), fans[fan_id].get("joints", {}))
         loaded[fan_id] = [obj, texture, joints, half_width]
-    ref = reference_joints([loaded[i][2] for i in ids])
-    ref_half_width = float(np.mean([loaded[i][3] for i in ids]))
+    if bodies:
+        ref = reference_joints([loaded[i][2] for i in bodies])
+        ref_half_width = float(np.mean([loaded[i][3] for i in bodies]))
+    else:
+        ref = {key: np.array(value, dtype=float) for key, value in kept["joints"].items()}
+        ref_half_width = float(kept["half_width"])
     references[gender] = (ref, ref_half_width, height)
     print("REFERENCE %s %s" % (gender, json.dumps({k: [round(float(c), 3) for c in v] for k, v in sorted(ref.items())})))
 
     if preview_dir:
         # Kept as they came, to show the joints that were found.
-        for fan_id in ids:
+        for fan_id in bodies:
             loaded[fan_id].append(copy_of(loaded[fan_id][0], "Raw_" + fan_id))
 
     # Every fan bent onto the skeleton and cut into its three parts, still in
@@ -1082,7 +1302,26 @@ for gender, ids in sorted(by_gender.items()):
     rings = {"neck": {}, "waist": {}, "hem": {}}
     whole = {}
     neck, waist = ref["neck"][2], ref["waist"][2]
-    for fan_id in ids:
+    for fan_id in loose:
+        # Not cut: put on the neck as it is, with its own neck inside the torso.
+        entry = fans[fan_id]
+        obj = loaded[fan_id][0]
+        points = coords(obj.data)
+        line = float(entry.get("neck", 0.15))
+        below = points[points[:, 2] < line]
+        if len(below) < 3:
+            below = points
+        middle = (below.min(0) + below.max(0)) * 0.5
+        scale = (ref["top"][2] - neck) * float(entry.get("size", 1.0)) / (1.0 - line)
+        points = (points - np.array([middle[0], middle[1], line])) * scale
+        # Every head of the gender is moved by its `head_shift`, and a head's
+        # own `shift` comes on top of that.
+        points += np.array([0.0, ref["neck"][1], neck]) + np.array(CONFIG["genders"][gender].get("head_shift", [0.0, 0.0, 0.0]), dtype=float)
+        points += np.array(entry.get("shift", [0.0, 0.0, 0.0]), dtype=float)
+        set_coords(obj.data, points)
+        whole[fan_id] = {"head": copy_of(obj, "Whole_%s_head" % fan_id)}
+        print("FITTED %s: a head %.3f tall on a neck at %.3f" % (fan_id, points[:, 2].max() - neck, neck))
+    for fan_id in bodies:
         obj, _texture, joints, half_width = loaded[fan_id][:4]
         set_coords(obj.data, conform(coords(obj.data), joints, half_width, ref, ref_half_width))
         is_cloth = colour_test(fan_id, obj.data, _texture, ref, ref_half_width, "shirt")
@@ -1098,18 +1337,35 @@ for gender, ids in sorted(by_gender.items()):
             if ring is None:
                 raise SystemExit("%s: no cut edge at the %s (z = %.3f); check its joints" % (fan_id, seam, z))
             rings[seam][fan_id] = ring
-    standard = {seam: np.mean(list(found.values()), axis=0) for seam, found in rings.items()}
+    if bodies:
+        standard = {seam: np.mean(list(found.values()), axis=0) for seam, found in rings.items()}
+        for seam in ("neck", "waist"):
+            standard[seam][0] = 0.0
+        # What to keep under the gender's `skeleton` so that the kit can be
+        # built again once the whole fans are gone.
+        print("SKELETON %s %s" % (gender, json.dumps({
+            "joints": {k: [round(float(c), 5) for c in v] for k, v in sorted(ref.items())},
+            "half_width": round(ref_half_width, 5),
+            "seams": {seam: [round(float(c), 5) for c in standard[seam]] for seam in ("neck", "waist")}})))
+    else:
+        standard = {seam: np.array(kept["seams"][seam], dtype=float) for seam in ("neck", "waist")}
     # One waist for both sides of that seam.
     standard["hem"] = standard["waist"]
-    for seam in ("neck", "waist"):
-        standard[seam][0] = 0.0
+    for fan_id in loose_torsos:
+        # Not cut either: its own collar and hem are the edges that are fitted.
+        obj = loaded[fan_id][0]
+        rings["neck"][fan_id], rings["hem"][fan_id] = fit_torso(fan_id, fans[fan_id], obj, ref, ref_half_width)
+        whole[fan_id] = {"torso": copy_of(obj, "Whole_%s_torso" % fan_id)}
+    for fan_id in loose_legs:
+        obj = loaded[fan_id][0]
+        rings["waist"][fan_id] = fit_legs(fan_id, fans[fan_id], obj, ref, ref_half_width)
+        whole[fan_id] = {"legs": copy_of(obj, "Whole_%s_legs" % fan_id)}
 
-    counts = {"head": 0, "torso": 0, "legs": 0}
-    for order, fan_id in enumerate(ids):
+    # Every fan's texture first: the plainest level may take its head from a
+    # later fan, whose UVs have to be in their cell by then.
+    for fan_id in ids:
         entry = fans[fan_id]
-        obj, texture = loaded[fan_id][:2]
-        points = coords(obj.data)
-        head_radius = head_radius_of(points, ref)
+        texture = loaded[fan_id][1]
         cell = used.index(fan_id)
         cell_of[fan_id] = cell
         cell_x, cell_y = cell % columns, cell // columns
@@ -1117,6 +1373,8 @@ for gender, ids in sorted(by_gender.items()):
         # The texture: which part each pixel is on, what it is, and its cell.
         gathered = [[], [], [], []]
         for kind in ("legs", "torso", "head"):
+            if kind not in whole[fan_id]:
+                continue
             mesh = whole[fan_id][kind].data
             at = coords(mesh)
             tris, part_uvs = face_arrays(mesh)
@@ -1126,7 +1384,11 @@ for gender, ids in sorted(by_gender.items()):
             gathered[2].append(normal / np.maximum(np.linalg.norm(normal, axis=1, keepdims=True), 1e-12))
             face_parts = np.full(len(tris), PART_IDS[kind], dtype=np.int8)
             if kind == "torso":
-                face_parts[np.abs(at[tris].mean(1)[:, 0]) > abs(ref["wrist.L"][0])] = HANDS
+                # Bare from the wrist out, or from the elbow with short sleeves.
+                bare = entry.get("options", {}).get("bare", "wrist")
+                if bare not in ("wrist", "elbow"):
+                    raise SystemExit("crowd_parts.json: %s: options.bare is wrist or elbow" % fan_id)
+                face_parts[np.abs(at[tris].mean(1)[:, 0]) > abs(ref[bare + ".L"][0])] = HANDS
             gathered[3].append(face_parts)
         uvs, centres, normals, parts = (np.concatenate(g) for g in gathered)
         keys = find_keys(fan_id, texture, uvs, centres, normals, parts, ref, ref_half_width, entry.get("keys", {}))
@@ -1148,37 +1410,59 @@ for gender, ids in sorted(by_gender.items()):
             uv = (uv + np.array([cell_x, cell_y])) / np.array([columns, rows])
             layer.foreach_set("uv", uv.ravel())
 
+    # The plainest level is one whole fan: where the gender does not say whose
+    # part it gets, the first there is.
+    for kind in ("head", "torso", "legs"):
+        if kind not in far_from:
+            having = [i for i in ids if kind in whole[i]]
+            if not having:
+                raise SystemExit("crowd_parts.json: gender %s has no %s" % (gender, kind))
+            far_from[kind] = having[0]
+
+    counts = {"head": 0, "torso": 0, "legs": 0}
+    for order, fan_id in enumerate(ids):
+        entry = fans[fan_id]
+        head_radius = head_radius_of(coords(loaded[fan_id][0].data), ref) if fan_id in bodies else 0.1
         # The first fan of a gender is also its plainest level, whole.
-        wanted = set(entry.get("use", ["head", "torso", "legs"]))
+        wanted = set(entry.get("use", ["head", "torso", "legs"])) & set(whole[fan_id])
         index = {}
         for kind in ("head", "torso", "legs"):
             if kind in wanted:
                 index[kind] = counts[kind]
                 counts[kind] += 1
-        for tier, (suffix, budget_key) in enumerate(TIERS):
-            far = tier == 2
+        # The plainest level is built twice: in parts like the others (what
+        # the stands draw, so that a fan far off has the head and the outfit
+        # it has close up), and once as one whole fan (WHOLE).
+        for tier, suffix, budget_key, far in [(t, s, k, False) for t, (s, k) in enumerate(TIERS)] + [(2, "Far", "far", True)]:
             if far and order != 0:
                 continue
             pieces = {}
             for kind in ("head", "torso", "legs"):
                 if not far and kind not in wanted:
                     continue
-                part = copy_of(whole[fan_id][kind], "Cut")
+                # The plainest level may have another fan's head.
+                source = far_from.get(kind, fan_id) if far else fan_id
+                part = copy_of(whole[source][kind], "Cut")
                 # A fan may ask for more or fewer triangles than the rest.
-                budget = entry.get("budgets", {}).get(budget_key, {}).get(kind, BUDGETS[budget_key][kind])
-                part = thin(part, budget, face_of(ref) if kind == "head" and not far else None)
+                budget = fans[source].get("budgets", {}).get(budget_key, {}).get(kind, BUDGETS[budget_key][kind])
+                # (A head that came by itself is thinned with its face spared
+                # even here: thinned evenly, its tufts of hair end up across it.)
+                part = thin(part, budget, face_of(ref) if kind == "head" and (not far or source in loose) else None)
                 triangulate(part.data)
-                if kind == "head":
-                    ease_seam(part.data, neck, rings["neck"][fan_id], standard["neck"], 1.0)
+                if kind == "head" and source in loose:
+                    # Nothing was cut: its own neck goes down inside the torso.
+                    pass
+                elif kind == "head":
+                    ease_seam(part.data, neck, rings["neck"][source], standard["neck"], 1.0)
                     # A neck slants, so a stub would stick out of it: the head and
                     # the torso are both closed flat where they meet.
                     close_seam(part.data, neck, 0.0, 1.0, CUP_REACH)
                 elif kind == "torso":
-                    ease_seam(part.data, neck, rings["neck"][fan_id], standard["neck"], 1.0)
+                    ease_seam(part.data, neck, rings["neck"][source], standard["neck"], 1.0)
                     close_seam(part.data, neck, 0.0, 1.0, CUP_REACH)
-                    ease_seam(part.data, waist - HEM, rings["hem"][fan_id], standard["hem"], HEM_FLARE)
+                    ease_seam(part.data, waist - HEM, rings["hem"][source], standard["hem"], HEM_FLARE)
                 else:
-                    ease_seam(part.data, waist, rings["waist"][fan_id], standard["waist"], WAIST_TUCK)
+                    ease_seam(part.data, waist, rings["waist"][source], standard["waist"], WAIST_TUCK)
                     close_seam(part.data, waist, STUB, STUB_TAPER)
                 pieces[kind] = part
                 if tier == 0:
@@ -1262,7 +1546,7 @@ for tier in range(3):
     for gender in sorted(by_gender):
         total = {}
         for obj, g, kind, number, t, sign_pose in built:
-            if g == gender and t == tier and not sign_pose:
+            if g == gender and t == tier and not sign_pose and kind != "far":
                 total.setdefault(kind, []).append(len(obj.data.polygons))
         whole = sum(max(v) for v in total.values())
         print("TRIANGLES %s %s: at most %d a fan (%s)" % (gender, TIERS[tier][1], whole, ", ".join("%s %d" % (k, max(v)) for k, v in total.items())))
@@ -1361,6 +1645,8 @@ if preview_dir:
     red.diffuse_color = (1.0, 0.0, 0.0, 1.0)
     for gender, ids in sorted(by_gender.items()):
         for fan_id in ids:
+            if fans[fan_id].get("only") is not None:
+                continue
             raw = bpy.data.objects["Raw_" + fan_id]
             joints = find_joints(fan_id, surface_points(raw.data), fans[fan_id].get("joints", {}))[0]
             curve = bpy.data.curves.new("Bones_" + fan_id, "CURVE")

@@ -22,8 +22,9 @@ const KIT_ATLAS: String = "res://assets/stadium/crowd_atlas.png"
 const KIT_MASK: String = "res://assets/stadium/crowd_mask.png"
 ## Share of the fans who hold a sign over their heads.
 const SIGN_SHARE: float = 0.03
-## The levels of detail: up close and in the middle distance a fan is three
-## parts, far off one plain mesh for the whole fan.
+## The levels of detail. A fan is a head, an outfit and legs at each of them
+## (the same ones, so that nobody changes shirts as the camera comes closer),
+## with fewer triangles the farther off.
 const TIER_NAMES: PackedStringArray = ["Near", "Mid", "Far"]
 ## What a fan's hair may be painted. The shader has room for this many.
 const HAIR_COLORS: Array[Color] = [
@@ -51,7 +52,8 @@ const DEFAULT_HAND: Vector3 = Vector3(0.38, 1.09, -0.08)
 ## A quarter circle of the bowl is cut into this many pieces, each of which
 ## picks its level of detail by itself (a straight is cut at its aisles).
 const ARC_CHUNKS: int = 3
-## Yards over which one level of detail gives way to the next.
+## Yards over which two levels of detail are both drawn where one gives way
+## to the next, so that no fan is ever in neither.
 const LOD_BLEND: float = 4.0
 ## What the signs in the crowd say. One cell each of a picture SIGN_GRID cells
 ## across and down, drawn once at the start (see _bake_signs); a fan with a
@@ -192,13 +194,14 @@ class Run:
 ## torso on any legs: tools/prep_crowd.py cut them to fit.
 class Kit:
 	var gender: String = ""
-	## Per level of detail (near, mid), the meshes of each kind of part.
-	var heads: Array = [[], []]
-	var torsos: Array = [[], []]
-	var legs: Array = [[], []]
+	## Per level of detail (near, mid, far), the meshes of each kind of part.
+	var heads: Array = [[], [], []]
+	var torsos: Array = [[], [], []]
+	var legs: Array = [[], [], []]
 	## Torsos with the arms up, for a fan with a sign.
-	var sign_torsos: Array = [[], []]
-	## A whole fan at the plainest level, and one with the arms up.
+	var sign_torsos: Array = [[], [], []]
+	## A whole fan at the plainest level, and one with the arms up (not what
+	## the stands draw: they draw the parts there too).
 	var far: Mesh
 	var far_sign: Mesh
 	## Where the arms turn, and where the hands of a fan with a sign are.
@@ -209,7 +212,7 @@ class Kit:
 	var sign_mesh: Mesh
 
 	func complete() -> bool:
-		for tier: int in 2:
+		for tier: int in 3:
 			for parts: Array in [heads, torsos, legs, sign_torsos]:
 				if (parts[tier] as Array).is_empty() or (parts[tier] as Array).size() != (parts[0] as Array).size():
 					return false
@@ -756,6 +759,12 @@ func _build_crowd() -> void:
 				for mesh: Mesh in meshes:
 					mesh.set_meta(&"material", kit.material)
 	_material = _kits[0].material
+	if tuning.crowd_head != "" and not _kits.any(func(kit: Kit) -> bool: return head_index(kit, tuning.crowd_head) >= 0):
+		push_warning("Stadium: no head in %s is from the fan '%s' (crowd_head), so the fans get heads at random." % [KIT_SCENE, tuning.crowd_head])
+	if tuning.crowd_torso != "" and not _kits.any(func(kit: Kit) -> bool: return torso_index(kit, tuning.crowd_torso) >= 0):
+		push_warning("Stadium: no outfit in %s is from the fan '%s' (crowd_torso), so the fans get outfits at random." % [KIT_SCENE, tuning.crowd_torso])
+	if tuning.crowd_legs != "" and not _kits.any(func(kit: Kit) -> bool: return legs_index(kit, tuning.crowd_legs) >= 0):
+		push_warning("Stadium: no legs in %s are from the fan '%s' (crowd_legs), so the fans get legs at random." % [KIT_SCENE, tuning.crowd_legs])
 
 	var mid_x: float = tuning.field_length * 0.5
 	for index: int in runs.size():
@@ -816,21 +825,59 @@ func _seat(chunk: Array, fan: Array) -> void:
 		which = 1
 	var kit: Kit = _kits[which]
 	var holds_sign: bool = _rng.randf() < SIGN_SHARE
+	# Drawn even when everybody gets the same head, so that the rest of the
+	# crowd is the same with it and without.
 	var head: int = _rng.randi() % (kit.heads[0] as Array).size()
+	var same: int = head_index(kit, tuning.crowd_head)
+	if same >= 0:
+		head = same
 	var torso: int = _rng.randi() % (kit.torsos[0] as Array).size()
+	# Only the first outfit is worn with the arms up, unless everybody has
+	# the same one.
+	var sign_torso: int = 0
+	same = torso_index(kit, tuning.crowd_torso)
+	if same >= 0:
+		torso = same
+		sign_torso = same
 	var legs: int = _rng.randi() % (kit.legs[0] as Array).size()
+	same = legs_index(kit, tuning.crowd_legs)
+	if same >= 0:
+		legs = same
 	var tiers: Array = chunk[0]
-	for tier: int in 2:
+	for tier: int in 3:
 		var parts: Array[Mesh] = [kit.heads[tier][head], kit.torsos[tier][torso], kit.legs[tier][legs]]
 		if holds_sign:
-			# Only the first outfit is made with the arms up.
-			parts[1] = kit.sign_torsos[tier][0]
+			parts[1] = kit.sign_torsos[tier][sign_torso]
 		for mesh: Mesh in parts:
 			_enter(tiers[tier], mesh, fan)
-	_enter(tiers[2], kit.far_sign if holds_sign else kit.far, fan)
 	if holds_sign:
 		(chunk[1][which] as Array).append(fan)
 	(chunk[2] as Array).append(fan)
+
+
+## Which of `kit`'s heads was cut from the fan `fan_id` of
+## tools/crowd_parts.json, or -1 if none was (or `fan_id` is empty).
+func head_index(kit: Kit, fan_id: String) -> int:
+	return _part_index(kit.heads[0], fan_id)
+
+
+## The same for `kit`'s outfits.
+func torso_index(kit: Kit, fan_id: String) -> int:
+	return _part_index(kit.torsos[0], fan_id)
+
+
+## And for `kit`'s legs.
+func legs_index(kit: Kit, fan_id: String) -> int:
+	return _part_index(kit.legs[0], fan_id)
+
+
+func _part_index(parts: Array, fan_id: String) -> int:
+	if fan_id == "":
+		return -1
+	for index: int in parts.size():
+		if String((parts[index] as Mesh).get_meta(&"fan", "")) == fan_id:
+			return index
+	return -1
 
 
 func _enter(group: Dictionary, mesh: Mesh, fan: Array) -> void:
@@ -867,13 +914,17 @@ func _add_chunk(crowd: Node3D, chunk_name: String, record: Array) -> void:
 			instance.name = "%s%d" % [TIER_NAMES[tier], number]
 			instance.set_meta(&"kind", mesh.get_meta(&"kind"))
 			number += 1
-			instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+			# A straight swap, not a fade, and no slack either: with a fade a
+			# piece that sits at the swapping range for a camera that stands
+			# still (the main menu) stays half faded, and with slack it can be
+			# in neither level and not drawn at all. Instead the nearer level
+			# is drawn LOD_BLEND yards into the next one's range, so that there
+			# is no range at which a fan is in no level.
+			instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 			if tier > 0:
 				instance.visibility_range_begin = near if tier == 1 else far
-				instance.visibility_range_begin_margin = LOD_BLEND
 			if tier < 2:
-				instance.visibility_range_end = near if tier == 0 else far
-				instance.visibility_range_end_margin = LOD_BLEND
+				instance.visibility_range_end = (near if tier == 0 else far) + LOD_BLEND
 			chunk.add_child(instance)
 	# The signs are one flat board each: no levels of detail.
 	for which: int in _kits.size():
@@ -1059,6 +1110,7 @@ func _load_kits() -> Array[Kit]:
 		var kind: String = extras["kind"]
 		var holds_sign: bool = int(extras.get("sign", 0)) == 1
 		mesh.set_meta(&"kind", kind)
+		mesh.set_meta(&"fan", String(extras.get("fan", "")))
 		if not by_gender.has(gender):
 			var made: Kit = Kit.new()
 			made.gender = gender
@@ -1082,7 +1134,7 @@ func _load_kits() -> Array[Kit]:
 		if not by_gender.has(gender):
 			continue
 		var kit: Kit = by_gender[gender]
-		for tier: int in 2:
+		for tier: int in 3:
 			kit.heads[tier] = _in_order((found[gender] as Dictionary).get("head%d" % tier, {}))
 			kit.torsos[tier] = _in_order((found[gender] as Dictionary).get("torso%d" % tier, {}))
 			kit.legs[tier] = _in_order((found[gender] as Dictionary).get("legs%d" % tier, {}))

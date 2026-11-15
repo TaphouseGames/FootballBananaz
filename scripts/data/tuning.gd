@@ -859,6 +859,9 @@ extends Resource
 ## runs and `high` for one that only runs.
 @export var ai_play_action_run_scale_low: float = 0.3
 @export var ai_play_action_run_scale_high: float = 1.5
+## Flea flicker: the play-action bite chance is multiplied by this, since the
+## back really is given the ball.
+@export var ai_flea_flicker_bite_scale: float = 1.6
 ## Play action: seconds after the fake that the back keeps running as if he had
 ## the ball.
 @export var play_action_sell_time: float = 0.6
@@ -1098,7 +1101,7 @@ extends Resource
 ## The stands, the crowd and the dressing round the field (see Stadium).
 @export var stadium_enabled: bool = true
 ## Share of the seats with a fan in them, 0..1. There are about 11,000 seats.
-@export_range(0.0, 1.0) var crowd_density: float = 0.93
+@export_range(0.0, 1.0) var crowd_density: float = 0.85
 ## Rows of seats, counted up from the wall.
 @export var stadium_rows: int = 13
 ## Share of home fans on the home side (the stand at -Z and the left end) and
@@ -1111,6 +1114,13 @@ extends Resource
 @export_range(0.0, 1.0) var crowd_female_share: float = 0.45
 ## Who sits where and what they look like: another number, another crowd.
 @export var crowd_seed: int = 4242
+## The one head every fan gets: the id of a fan in tools/crowd_parts.json.
+## Empty: every fan a head at random, as with the outfits.
+@export var crowd_head: String = ""
+## The same for the outfit (the torso and the arms).
+@export var crowd_torso: String = ""
+## And for the legs (the trousers and the shoes).
+@export var crowd_legs: String = ""
 ## The crowd's colours are multiplied by `dim` and pulled toward grey by
 ## 1 - `saturation`, so the players and the ball stand out against the stands.
 @export_range(0.0, 1.0) var crowd_dim: float = 0.55
@@ -1118,8 +1128,8 @@ extends Resource
 ## Yards from the camera to a piece of the stands up to which its fans are
 ## drawn in full detail, and beyond which they are drawn at their plainest
 ## (in between: the middle level). Lower both on a weak graphics card.
-@export var crowd_lod_near: float = 30.0
-@export var crowd_lod_far: float = 65.0
+@export var crowd_lod_near: float = 45.0
+@export var crowd_lod_far: float = 110.0
 ## Seconds between two stadium waves, and how long one takes to go round.
 @export var wave_min_gap: float = 45.0
 @export var wave_max_gap: float = 90.0

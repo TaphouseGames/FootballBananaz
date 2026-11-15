@@ -11,10 +11,15 @@ extends Node3D
 ## To check a change to tools/prep_crowd.py: run it, come back to the editor
 ## (which re-imports the kit) and press F6 again.
 ##
-## From a command line, `-- shot=<file.png> [look=<head>,<outfit>,<legs>]`
-## saves one picture and quits.
+## It opens on the head, the outfit and the legs the whole crowd has
+## (Tuning.crowd_head, crowd_torso and crowd_legs), if there are such; B comes
+## back to them.
+##
+## From a command line, `-- shot=<file.png> [look=<head>,<outfit>,<legs>]
+## [view=<yaw>,<pitch>,<distance>]` saves one picture and quits.
 
 const KEYS: String = """Left / Right   head
+B              the parts the whole crowd has
 Up / Down      outfit
 L              legs
 G              gender
@@ -22,7 +27,7 @@ Tab            level of detail
 1  2  3        show / hide head, outfit, legs
 E              pull the parts apart
 C              cheer          X  sulk
-S              holding a sign (first outfit only)
+S              holding a sign (the first outfit, or the crowd's)
 T  K  H  P     shirt, skin, hair, trouser colour
 R              a random fan
 W              wireframe      F  flat (no lighting tricks: the raw atlas)
@@ -68,6 +73,10 @@ var _yaw: float = 0.35
 var _pitch: float = 0.15
 var _distance: float = 5.2
 var _shot: String = ""
+## The fan (of tools/crowd_parts.json) whose head the whole crowd has, or "".
+var _crowd_head: String = ""
+var _crowd_torso: String = ""
+var _crowd_legs: String = ""
 
 
 func _ready() -> void:
@@ -80,6 +89,9 @@ func _ready() -> void:
 	tuning.crowd_density = 0.0
 	tuning.wave_min_gap = 100000.0
 	tuning.wave_max_gap = 100000.0
+	_crowd_head = tuning.crowd_head
+	_crowd_torso = tuning.crowd_torso
+	_crowd_legs = tuning.crowd_legs
 	_home = Team.new()
 	_home.short_name = "HOME"
 	_home.team_color = SHIRTS[0]
@@ -125,6 +137,9 @@ func _ready() -> void:
 	_label.add_theme_font_override(&"font", mono)
 	layer.add_child(_label)
 
+	_head = maxi(_crowd_head_index(), 0)
+	_torso = maxi(_crowd_torso_index(), 0)
+	_legs = maxi(_crowd_legs_index(), 0)
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("shot="):
 			_shot = arg.trim_prefix("shot=")
@@ -133,9 +148,35 @@ func _ready() -> void:
 			_head = int(picks[0]) if picks.size() > 0 else 0
 			_torso = int(picks[1]) if picks.size() > 1 else 0
 			_legs = int(picks[2]) if picks.size() > 2 else 0
+		elif arg.begins_with("view="):
+			var view: PackedFloat64Array = arg.trim_prefix("view=").split_floats(",")
+			_yaw = view[0] if view.size() > 0 else _yaw
+			_pitch = view[1] if view.size() > 1 else _pitch
+			_distance = view[2] if view.size() > 2 else _distance
 	_build()
 	if _shot != "":
 		_save_shot()
+
+
+## Which head of the kit that is shown the whole crowd has, or -1.
+func _crowd_head_index() -> int:
+	if _stadium._kits.is_empty():
+		return -1
+	return _stadium.head_index(_stadium._kits[_kit], _crowd_head)
+
+
+## The same for the outfit.
+func _crowd_torso_index() -> int:
+	if _stadium._kits.is_empty():
+		return -1
+	return _stadium.torso_index(_stadium._kits[_kit], _crowd_torso)
+
+
+## And for the legs.
+func _crowd_legs_index() -> int:
+	if _stadium._kits.is_empty():
+		return -1
+	return _stadium.legs_index(_stadium._kits[_kit], _crowd_legs)
 
 
 func _exit_tree() -> void:
@@ -180,6 +221,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_head = posmod(_head + 1, (kit.heads[0] as Array).size())
 		KEY_LEFT:
 			_head = posmod(_head - 1, (kit.heads[0] as Array).size())
+		KEY_B:
+			_head = maxi(_crowd_head_index(), 0)
+			_torso = maxi(_crowd_torso_index(), 0)
+			_legs = maxi(_crowd_legs_index(), 0)
 		KEY_UP:
 			_torso = posmod(_torso + 1, (kit.torsos[0] as Array).size())
 		KEY_DOWN:
@@ -261,7 +306,10 @@ func _build() -> void:
 	if _tier == 2:
 		parts.append([kit.far_sign if _sign else kit.far, "whole fan", 0.0])
 	else:
-		var torso: Mesh = kit.sign_torsos[_tier][0] if _sign else kit.torsos[_tier][_torso]
+		# As in the stands: only the first outfit is worn with the arms up,
+		# unless it is the one the whole crowd has.
+		var sign_torso: int = _torso if _torso == _crowd_torso_index() else 0
+		var torso: Mesh = kit.sign_torsos[_tier][sign_torso] if _sign else kit.torsos[_tier][_torso]
 		if _shown[0]:
 			parts.append([kit.heads[_tier][_head], "head", APART])
 		if _shown[1]:
@@ -281,10 +329,19 @@ func _build() -> void:
 		total += triangles
 		lines.append("  %-10s %-18s %5d triangles" % [part[1], mesh.resource_name, triangles])
 
-	var text: String = "%s   %s   head %d/%d   outfit %d/%d   legs %d/%d\n" % [
+	var from: String = String((kit.heads[0][_head] as Mesh).get_meta(&"fan", "?"))
+	if _head == _crowd_head_index():
+		from += ", the whole crowd's"
+	var outfit: String = String((kit.torsos[0][_torso] as Mesh).get_meta(&"fan", "?"))
+	if _torso == _crowd_torso_index():
+		outfit += ", the whole crowd's"
+	var under: String = String((kit.legs[0][_legs] as Mesh).get_meta(&"fan", "?"))
+	if _legs == _crowd_legs_index():
+		under += ", the whole crowd's"
+	var text: String = "%s   %s   head %d/%d (%s)   outfit %d/%d (%s)   legs %d/%d (%s)\n" % [
 		"men" if kit.gender == "m" else "women", Stadium.TIER_NAMES[_tier].to_lower(),
-		_head + 1, (kit.heads[0] as Array).size(), _torso + 1, (kit.torsos[0] as Array).size(),
-		_legs + 1, (kit.legs[0] as Array).size()]
+		_head + 1, (kit.heads[0] as Array).size(), from, _torso + 1, (kit.torsos[0] as Array).size(), outfit,
+		_legs + 1, (kit.legs[0] as Array).size(), under]
 	text += "\n".join(lines) + "\n  %-29s %5d triangles\n" % ["in all", total]
 	var state: PackedStringArray = PackedStringArray()
 	for flag: Array in [[_cheer, "cheering"], [_sulk, "sulking"], [_sign, "holding a sign"], [_apart, "pulled apart"], [_wire, "wireframe"], [_raw, "raw atlas"]]:

@@ -1,69 +1,94 @@
 {
-  "_about": "The fans the crowd's parts are cut from (tools/prep_crowd.py makes assets/stadium/crowd_kit.glb from this). Every fan is one whole Tripo character; its head, torso (the outfit) and legs become parts that fit any other part of the same gender. `template` is the prompt, with `{who}` from the fan. `source` is the raw model, from the project root; a fan without one is skipped. `use` lists the parts of the fan that go into the kit. `yaw` turns the model to face -Y in Blender. `joints` overrides a joint prep_crowd.py found (names as printed after JOINTS; [x, y, z] with the height = 1, front = -Y, the fan's left = +X). `keys` overrides a colour it sampled (`skin`, `hair`, `shirt`, `pants`: [r, g, b] 0..1 as in the texture; `hair`: null for a bald head). `options` tunes how its texture is read: `chroma` (0.07: how far from a sampled colour a pixel may be and still count as it; lower when skin gets painted as shirt) and `luma` ([0.4, 1.8]: how much darker and brighter). `beard` (true for a fan whose beard hangs below the chin, so that it goes with the head and not with the shirt; only if the hair is not the colour of the shirt). `budgets` gives a fan triangle budgets of its own (same shape as the `budgets` below; what it leaves out is as for everybody). A `placeholder` fan is used only while its gender has no other fan with a source.",
+  "_about": "The fans the crowd's parts are cut from (tools/prep_crowd.py makes assets/stadium/crowd_kit.glb from this). Every fan is one whole Tripo character; its head, torso (the outfit) and legs become parts that fit any other part of the same gender. `template` is the prompt, with `{who}` from the fan. `source` is the raw model, from the project root; a fan without one is skipped. `use` lists the parts of the fan that go into the kit. `yaw` turns the model to face -Y in Blender. `joints` overrides a joint prep_crowd.py found (names as printed after JOINTS; [x, y, z] with the height = 1, front = -Y, the fan's left = +X). `keys` overrides a colour it sampled (`skin`, `hair`, `shirt`, `pants`: [r, g, b] 0..1 as in the texture; `hair`: null for a bald head). `options` tunes how its texture is read: `chroma` (0.07: how far from a sampled colour a pixel may be and still count as it; lower when skin gets painted as shirt) and `luma` ([0.4, 1.8]: how much darker and brighter); `bare` (\"wrist\": from which joint out the arms are bare and nothing on them is the shirt; \"elbow\" for short sleeves on arms whose skin is near the shirt's colour). `beard` (true for a fan whose beard hangs below the chin, so that it goes with the head and not with the shirt; only if the hair is not the colour of the shirt). `budgets` gives a fan triangle budgets of its own (same shape as the `budgets` below; what it leaves out is as for everybody). A `placeholder` fan is used only while its gender has no other fan with a source. A fan with `only`: \"head\" is a model of a head by itself (with its neck), not a whole character: it is not cut, only put on the gender's neck, with what is below its neck line inside the torso. `neck` says where that line is (0.15: that far up the model, 0 its bottom and 1 its top), `size` how big the head is beside the average head of the whole fans (1.0), `shift` moves it ([x, y, z], with the height = 1; front is -y), on top of the gender's `head_shift`, which moves every head that came by itself (so that a new one lands where the others are). Its skin colour is read off its face (what is lighter there than its hair), so give `keys.skin` if its hair is fair; with `keys` \"skin\": null and \"hair\": null it keeps the colours of its own texture, the same on every fan. A fan with `only`: \"torso\" is a torso with its arms by itself, open at the neck and at the waist: its collar goes to the gender's neck and its hem to the waist (times `size`, moved by `shift`), its arms are found and bent like a whole fan's (`joints` overrides `shoulder.L`, `tip.L`, ...), and its colours are read as usual. A fan with `only`: \"legs\" is a pair of legs (trousers and shoes) by itself, open at the waist: it stands on the ground with its waistband at the gender's waist (`size`, `shift`), and its legs are found and bent like a whole fan's (`joints` overrides `crotch`, `hip.L`, `knee.L`, `ankle.L`, ...). A gender's `skeleton` is the skeleton its parts are fitted to (joints with the height = 1, the half width of the waist, and the middle and half size in x and y of the cut edges at the neck and the waist): it is used when the gender has no whole fan, and prep_crowd.py prints a new one (SKELETON) whenever it has. A gender's `far_head`, `far_torso` and `far_legs` name the fans whose head, torso and legs the plainest level gets (otherwise the first fan's).",
   "template": "a sports fan, {who}, standing upright in a T-pose with arms straight out to the sides and legs slightly apart, clean shaven, smooth skin, chunky stylized cartoon character, simple shapes, single isolated figure",
   "genders": {
-    "m": {"height": 1.85},
+    "m": {
+      "height": 1.85, "head_shift": [0.0, -0.085, 0.0], "far_head": "m5", "far_torso": "m6", "far_legs": "m7",
+      "skeleton": {"joints": {"ankle.L": [0.11849, -0.01214, 0.1], "ankle.R": [-0.11849, -0.01214, 0.1], "chest": [0.0, 0.02653, 0.58566], "crotch": [0.0, 0.02399, 0.3625], "elbow.L": [0.34582, 0.06534, 0.68916], "elbow.R": [-0.34582, 0.06534, 0.68916], "hip.L": [0.07518, 0.02202, 0.3625], "hip.R": [-0.07518, 0.02202, 0.3625], "knee.L": [0.0902, 0.02515, 0.23125], "knee.R": [-0.0902, 0.02515, 0.23125], "neck": [0.0, 0.02693, 0.71916], "shoulder.L": [0.14942, 0.06534, 0.68916], "shoulder.R": [-0.14942, 0.06534, 0.68916], "tip.L": [0.58586, 0.06534, 0.68916], "tip.R": [-0.58586, 0.06534, 0.68916], "toe.L": [0.11849, -0.11214, 0.03], "toe.R": [-0.11849, -0.11214, 0.03], "top": [0.0, 0.02693, 1.0], "waist": [0.0, 0.02186, 0.4225], "wrist.L": [0.49858, 0.06534, 0.68916], "wrist.R": [-0.49858, 0.06534, 0.68916]}, "half_width": 0.12572, "seams": {"neck": [0.0, -0.00831, 0.07318, 0.05893], "waist": [0.0, 0.02479, 0.12612, 0.10098]}}
+    },
     "f": {"height": 1.72}
   },
   "budgets": {
     "near": {"head": 350, "torso": 350, "legs": 200},
     "mid": {"head": 120, "torso": 130, "legs": 70},
-    "far": {"head": 40, "torso": 56, "legs": 34}
+    "far": {"head": 40, "torso": 110, "legs": 64}
   },
   "atlas_cell": 512,
   "fans": {
-    "m0": {
+    "m5": {
       "gender": "m",
-      "placeholder": true,
-      "who": "(the dudeman player model, standing in until the real fans are generated)",
-      "source": "assets/player/dudeman.glb",
-      "mesh": "FootballPlayer",
+      "only": "head",
+      "who": "(a head by itself, not from the template: a man with short brown hair and a full brown beard)",
+      "source": "TripoModels/bearded_man_head_3d_model/bearded_man_head_3d_model.fbx",
       "yaw": 0,
-      "use": ["head", "torso", "legs"],
-      "joints": {},
-      "keys": {}
+      "use": ["head"],
+      "neck": 0.15,
+      "size": 1.0,
+      "budgets": {"near": {"head": 600}, "mid": {"head": 160}, "far": {"head": 160}},
+      "keys": {"skin": null, "hair": null}
     },
-    "m1": {
+    "m8": {
       "gender": "m",
-      "outfit": "jersey",
-      "who": "a stocky man with a round face and a big grin, short dark brown hair, light skin, wearing a plain light grey short-sleeved football jersey with a big number on the chest, blue jeans and white sneakers",
-      "source": "assets/stadium/source/tripo/fans/m1/tripo-out/fan-m1-dfb3144e/model.glb",
-      "yaw": -90,
-      "use": ["head", "torso", "legs"],
-      "joints": {},
-      "keys": {}
+      "only": "head",
+      "who": "(a head by itself, not from the template: the second head)",
+      "source": "TripoModels/stylized_head_3d_model/stylized_head_3d_model.fbx",
+      "yaw": 0,
+      "use": ["head"],
+      "neck": 0.15,
+      "size": 1.0,
+      "budgets": {"near": {"head": 600}, "mid": {"head": 160}, "far": {"head": 160}},
+      "keys": {"skin": null, "hair": null}
     },
-    "m2": {
+    "m6": {
       "gender": "m",
-      "outfit": "hoodie",
-      "who": "a tall lean young man with a long face and raised eyebrows, short black curly hair, brown skin, wearing a plain light grey hoodie with the hood down, dark blue shorts and sneakers",
-      "source": "assets/stadium/source/tripo/fans/m2/tripo-out/fan-m2-uv-38b0537c/model.glb",
-      "yaw": -90,
-      "use": ["head", "torso"],
+      "only": "torso",
+      "outfit": "v-neck with striped sleeves",
+      "who": "(a torso with its arms by itself, not from the template: a grey v-neck shirt with striped sleeves)",
+      "source": "TripoModels/torso_with_arms_3d_model/torso_with_arms_3d_model.fbx",
+      "yaw": 0,
+      "use": ["torso"],
+      "size": 1.0,
+      "budgets": {"near": {"torso": 700}},
       "joints": {},
-      "keys": {}
+      "keys": {"shirt": null, "skin": null}
     },
-    "m3": {
+    "m9": {
       "gender": "m",
-      "outfit": "tank top",
-      "who": "an older man with a square jaw, a bald head and a big grey moustache, tan skin, wearing a plain light grey tank top, khaki trousers and brown boots",
-      "source": "assets/stadium/source/tripo/fans/m3/tripo-out/fan-m3-01843d2d/model.glb",
-      "yaw": -90,
-      "use": ["head", "torso"],
+      "only": "torso",
+      "outfit": "blue v-neck with striped sleeves",
+      "who": "(a torso with its arms by itself, not from the template: a blue v-neck shirt with green and red striped sleeves)",
+      "source": "TripoModels/torso_3d_model_1/torso_3d_model_1.fbx",
+      "yaw": 0,
+      "use": ["torso"],
+      "size": 1.0,
+      "budgets": {"near": {"torso": 700}},
       "joints": {},
-      "keys": {}
+      "keys": {"shirt": null, "skin": null}
     },
-    "m4": {
+    "m10": {
       "gender": "m",
-      "outfit": "fan t-shirt",
-      "who": "(from concept art, not from the template: assets/stadium/source/tripo/fans/m4_concept/FAN.jpg, a burly bearded man in a white FAN shirt with striped sleeves, torn jeans and red sneakers)",
-      "source": "assets/stadium/source/tripo/fans/m4/tripo-out/fan-m4-uv-8e7edb88/model.glb",
-      "yaw": -90,
-      "use": ["head", "torso", "legs"],
-      "budgets": {"near": {"head": 500, "torso": 500, "legs": 500}},
-      "options": {"chroma": 0.05, "beard": true},
+      "only": "torso",
+      "outfit": "red v-neck with striped sleeves",
+      "who": "(a torso with its arms by itself, not from the template: a dark red v-neck shirt with blue and white striped sleeves)",
+      "source": "TripoModels/upper_body_3d_model/upper_body_3d_model.fbx",
+      "yaw": 0,
+      "use": ["torso"],
+      "size": 1.0,
+      "budgets": {"near": {"torso": 700}},
       "joints": {},
-      "keys": {}
+      "keys": {"shirt": null, "skin": null}
+    },
+    "m7": {
+      "gender": "m",
+      "only": "legs",
+      "who": "(legs by themselves, not from the template: torn blue jeans and red sneakers)",
+      "source": "TripoModels/jeans_with_sneakers_3d_model/jeans_with_sneakers_3d_model.fbx",
+      "yaw": 0,
+      "use": ["legs"],
+      "size": 1.0,
+      "budgets": {"near": {"legs": 600}},
+      "joints": {},
+      "keys": {"pants": null, "skin": null}
     }
   }
 }

@@ -18,6 +18,7 @@ The bowl round the field: wall, tiered stands with aisles and tunnel mouths, abo
 | Team colours | Nothing to set. Fans, seats and props take `team_color` from the two teams, so they follow the team select. |
 | Crowd density | `crowd_density` in the Stadium group of `resources/tuning.tres` (0..1 of about 3,900 seats). |
 | A different crowd | `crowd_seed`: who sits where and what they look like. The same number gives the same crowd. |
+| One head, outfit or pair of legs for everybody | `crowd_head`, `crowd_torso` and `crowd_legs`: the id of a fan in `tools/crowd_parts.json` (`m5`, `m8`: the heads; `m6`, `m9`, `m10`: the outfits; `m7`: the legs). Empty, as they are now, for one at random out of the kit: with two heads and three outfits in it, the crowd is split evenly between them. A fan keeps its head and its outfit at every level of detail: the plainest level is drawn in parts too (the kit's one whole fan at that level, with the parts named by `far_head`, `far_torso` and `far_legs`, is only for the viewer and the gallery). |
 | Rows | `stadium_rows`. Past about 18 the stand reaches the game camera. |
 | Size of the fans and room each one gets | `FAN_SCALE` (the players' scale in `player.tscn`), `SEAT_PITCH`, `ROW_DEPTH`, `ROW_RISE` in `scripts/stadium.gd`. |
 | Who sits where | `crowd_home_share` (the -Z stand and the home end), `crowd_away_share` (the +Z stand and the other end), `crowd_neutral_share` (fans in no team's colour). Corners are half and half. `crowd_female_share` once the kit has women. |
@@ -73,6 +74,15 @@ To add a head or an outfit:
 4. `godot --headless --path . --import`, then the crowd gallery (under Checks) for every head on every outfit with the real shader.
 
 Nothing in the game needs changing: `Stadium` reads what is in the kit.
+
+The kit is now made of parts that came by themselves, each a fan with `only` (the whole characters it was first cut from, `m1` to `m4`, are gone; the skeleton they gave is kept as the gender's `skeleton` in `crowd_parts.json`, and a run with whole fans prints a new one after SKELETON):
+
+- `"only": "head"`: a head with its neck (`TripoModels/bearded_man_head_3d_model`, fan `m5`). It is not cut, only put on the gender's neck: `neck` says how far up the model its neck line is, `size` and `shift` adjust it. With `"keys": {"skin": null, "hair": null}` it keeps the colours of its own texture, so every fan has the same face whatever the skin tone of the arms; without that it is repainted like the others, which needs clean, flat-coloured skin and hair to look right.
+- `"only": "torso"`: a torso with its arms, open at the neck and at the waist (`TripoModels/torso_with_arms_3d_model`, fan `m6`). Its collar goes to the gender's neck and its hem to the waist, its arms are found and bent like a whole fan's, and its shirt and skin are repainted as usual, unless `keys` says otherwise: `m6` has `"keys": {"shirt": null, "skin": null}` and keeps the colours of its own texture, so its shirt is the same grey on both teams. To repaint a torso like it, with short sleeves on arms whose skin is near the shirt's colour, give it `"options": {"bare": "elbow"}`.
+
+- `"only": "legs"`: trousers and shoes, open at the waist (`TripoModels/jeans_with_sneakers_3d_model`, fan `m7`). They stand on the ground with the waistband at the gender's waist, and the legs are found and bent like a whole fan's. `m7` keeps its own colours too (`"keys": {"pants": null, "skin": null}`).
+
+`tools/crowd_viewer.tscn` (F6) opens on the head, the outfit and the legs the whole crowd has; B comes back to them.
 
 ## Mascots
 
@@ -146,7 +156,7 @@ So the kit is a little faster than the one man it replaced: about a third fewer 
 - The game camera looks down at the field and never sees above the top rows, so the jumbotrons and light towers only show in the intro, on the menu (towers) and in shots from further out.
 - When the ball carrier is deep in their own end zone, the front rows of the stand behind come into the bottom of the picture. They do not cover the field.
 - The ball does not collide with the wall or the stands; thrown far out of bounds it passes through them.
-- The kit has men only so far (3 heads, 3 outfits, 1 pair of legs); the women are to come. Until then `crowd_female_share` does nothing.
+- The kit has men only so far (2 heads, 3 outfits, 1 pair of legs, all in the colours of their own textures, so shirts do not show the teams' colours); the women are to come. Until then `crowd_female_share` does nothing.
 - A fan with a sign always wears the first outfit (the jersey): only that one is made with the arms up, to save draw calls.
 - Beyond `crowd_lod_far` every fan of a gender has the same shape (colours still differ), and at the middle level the faces are rough. Neither shows from the game camera; they do in a close shot of a far stand.
 - A head keeps its own size, and the first fan's is big: on the lean hoodie it looks a little heavy.
