@@ -217,7 +217,7 @@ In `scripts/data/halftime_exchanges.gd`, conditions `season`, `playoff`, `cup`:
 ### Sudden death
 
 Any match, exhibition included: a second half that ends level goes to
-sudden death, a scramble for the ball and the first score wins.
+sudden death: a kickoff, and the first score wins.
 
 `announcer_overtime` (Jim, as it starts)
 
@@ -232,36 +232,34 @@ sudden death, a scramble for the ball and the first score wins.
 
 `chat_overtime_t1`: OVERTIME, Jim! How long does it go? / Until somebody scores, Tony. / What if NOBODY scores? / Then we live here now.
 
+### The kickoff
+
+Recorded on 2026-11-15 (6 lines, one take each). Any match: the kickoff that
+opens a half or sudden death (`Game.opening_kickoff`), as the teams line up.
+A kickoff after a score has no line. Both are passing thoughts (a remark and
+a quip), so they are not said over an opening, a halftime exchange or the
+call of sudden death. No line says which half it is.
+
+`announcer_kickoff` (Jim)
+
+- 1: Both teams are lined up. Here comes the kick!
+- 2: The ball is on the tee. Here we go!
+- 3: Kickoff time. Somebody is about to get the ball!
+
+`color_kickoff` (Tony)
+
+- 1: KICK IT, Jim! Kick it REALLY far!
+- 2: I LOVE a kickoff, Jim! Everybody runs at EVERYBODY!
+- 3: Biscuit chases a ball JUST like this, Jim! Never brings it BACK!
+
 ### The mascots
 
-Recorded on 2026-11-14 (19 lines, one take each). Any match: each half opens
-with the two mascots scrambling for the ball, and the rest of the time they
-work the sidelines (see `docs/stadium.md`). No line names a team or a fruit,
-since any team can be playing, and a mascot is "it" or "the mascot".
-
-`announcer_scramble` (Jim, as the two line up; a remark, so it is not said
-over an opening or a halftime exchange)
-
-- 1: The mascots are out there. Whoever gets the ball, keeps it!
-- 2: Mascot scramble! One ball, two pieces of fruit!
-- 3: Here come the mascots. This is how a half starts in this league!
-
-`color_scramble` (Tony, the same moment)
-
-- 1: FRUIT FIGHT, Jim! My FAVORITE kind of fight!
-- 2: That's somebody's JOB, Jim! They went to SCHOOL for that!
-- 3: I've got MONEY on the mascot, Jim! I don't know WHICH one!
-
-`announcer_scramble_won` (Jim, one of them comes up with the ball)
-
-- 1: The mascot has it!
-- 2: Got it! And away goes the mascot!
-
-`color_mascot_td` (Tony, a touchdown in the scramble)
-
-- 1: THE MASCOT SCORED, Jim! Put it in the LINEUP!
-- 2: A TOUCHDOWN by a piece of FRUIT! I LOVE this league!
-- 3: That mascot is faster than my whole FANTASY team, Jim!
+Recorded on 2026-11-14 (8 lines, one take each). Any match: the mascots work
+the sidelines (see `docs/stadium.md`). No line names a team or a fruit, since
+any team can be playing, and a mascot is "it" or "the mascot". The lines for
+the mascot scramble that used to open a half (`announcer_scramble`,
+`color_scramble`, `announcer_scramble_won`, `color_mascot_td`) went with it
+on 2026-11-15.
 
 `color_idle_mascot` (Tony, between plays, `Tuning.mascot_idle_chance` of the
 idle chatter)
@@ -482,7 +480,7 @@ only in the flow, where a node shows the first few words of its prompt.
 
 `chat_daze_j1`: And that is why most people dive from the GROUND! / But Jim, it goes so much FURTHER! / So does the headache!
 
-`announcer_woozy` (Jim, the dazed player gets up injured: half the player they were until the end of the next play)
+`announcer_woozy` (Jim, the dazed player gets up injured: three quarters of the player they were until the end of the next play)
 
 - 1: Back up! Not all the way back, but up!
 - 2: On their feet! Mostly!

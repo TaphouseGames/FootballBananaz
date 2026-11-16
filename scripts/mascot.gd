@@ -3,8 +3,8 @@ extends Player
 ## A team's mascot. It is on the field with its team on every play, standing
 ## by out of the way (Player.bystander, PlayController._place_mascots): no part
 ## of the play, but as solid as anyone, so it can be run into and knocked over.
-## In the scramble that opens a half it is the one who goes for the ball (see
-## PlayController.line_up_scramble). It is Stadium.mascot_model with that
+## After a touchdown the scorer's one joins the party round the scorer
+## (PlayController._invite_mascot). It is Stadium.mascot_model with that
 ## model's own clips, not a PlayerModel, so it has no PlayerAnimator. Every
 ## mascot has the same ratings: 50 in everything.
 

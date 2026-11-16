@@ -78,41 +78,33 @@ func _run(editor: TeamEditor) -> void:
 	_expect(editor.player_list.item_count == team.roster.players.size(), "the model view does not list every player")
 	_expect(editor.model.look == qb.look and qb.look != null, "the model does not show the player's look")
 	_expect(editor.model.number == 42 and editor.model.team_color.is_equal_approx(color), "the model's jersey is not the team's and the player's")
-	_choose(editor, &"base", PlayerLook.Base.FEMALE)
-	_expect(qb.look.base == PlayerLook.Base.FEMALE, "the base model picked did not reach the look")
-	var hair: OptionButton = editor.look_controls[&"hair_style"] as OptionButton
-	_expect(hair.item_count == 7 and hair.get_item_text(2) == PlayerLook.HAIR_NAMES[PlayerLook.Base.FEMALE][2], "the hairstyles are not the female base's")
-	_expect((editor.look_controls[&"facial_hair"] as OptionButton).disabled, "facial hair can be picked for the female base")
-	_choose(editor, &"base", PlayerLook.Base.MALE)
-	_expect(not (editor.look_controls[&"facial_hair"] as OptionButton).disabled, "facial hair cannot be picked for the male base")
-	_expect(hair.get_item_text(2) == PlayerLook.HAIR_NAMES[PlayerLook.Base.MALE][2], "the hairstyles are not the male base's")
-	var choices: Dictionary[StringName, int] = {
-		&"hair_style": 4, &"facial_hair": 3, &"eye_type": 5, &"glasses": PlayerLook.Glasses.EYEPATCH,
-		&"eyepatch_side": PlayerLook.Eye.RIGHT, &"nose_type": 2, &"mouth_type": 4,
-	}
-	for property: StringName in choices:
-		_choose(editor, property, choices[property])
-		var chosen: int = qb.look.get(property)
-		_expect(chosen == choices[property], "%s picked did not reach the look" % property)
-	var slides: Dictionary[StringName, float] = {
-		&"height_in": 77.0, &"weight_lb": 305.0, &"forehead_size": 0.8, &"chin_size": 0.2, &"nose_size": 0.9, &"mouth_size": 0.1,
-	}
-	for property: StringName in slides:
-		(editor.look_controls[property] as HSlider).value = slides[property]
-		var slid: float = qb.look.get(property)
-		_expect(is_equal_approx(slid, slides[property]), "%s set did not reach the look" % property)
-	var skin: Color = Color(0.4, 0.3, 0.2)
-	var hair_color: Color = Color(0.9, 0.1, 0.1)
-	for picked: Array in [[&"skin_color", skin], [&"hair_color", hair_color]]:
-		var picker: ColorPickerButton = editor.look_controls[picked[0]] as ColorPickerButton
-		picker.color = picked[1]
-		picker.color_changed.emit(picked[1])
-	_expect(qb.look.skin_color.is_equal_approx(skin) and qb.look.hair_color.is_equal_approx(hair_color), "the colours picked did not reach the look")
+	# The body types say which of them there is no model of, and one of those
+	# can still be picked: the model then shows the nearest there is.
+	var builds: OptionButton = editor.look_controls[&"build"] as OptionButton
+	_expect(builds.item_count == PlayerParts.BUILDS.size(), "not every body type can be picked")
+	for build: int in PlayerParts.BUILDS.size():
+		var marked: bool = builds.get_item_text(build).contains("no model")
+		_expect(marked != PlayerParts.has_body(qb.look.gender, build), "%s is wrongly marked as %s" % [PlayerParts.BUILDS[build], "missing" if marked else "there"])
+	_choose(editor, &"build", PlayerLook.Build.BIG)
+	_expect(qb.look.build == PlayerLook.Build.BIG, "the body type picked did not reach the look")
+	_choose(editor, &"build", PlayerLook.Build.LEAN)
+	_expect(qb.look.build == PlayerLook.Build.LEAN, "the body type picked did not reach the look")
+	# The heads are the gender's, and the one picked reaches the look by its id.
+	var heads: OptionButton = editor.look_controls[&"head"] as OptionButton
+	var male_heads: PackedStringArray = PlayerParts.heads_of(PlayerLook.Gender.MALE)
+	_expect(heads.item_count == male_heads.size() and heads.item_count > 0, "the heads listed are not the male ones")
+	_choose(editor, &"head", male_heads.size() - 1)
+	_expect(qb.look.head == male_heads[male_heads.size() - 1], "the head picked did not reach the look")
+	_choose(editor, &"gender", PlayerLook.Gender.FEMALE)
+	_expect(qb.look.gender == PlayerLook.Gender.FEMALE, "the gender picked did not reach the look")
+	_expect(heads.item_count == PlayerParts.heads_of(PlayerLook.Gender.FEMALE).size(), "the heads listed are not the female ones")
+	_choose(editor, &"gender", PlayerLook.Gender.MALE)
+	_expect(heads.item_count == male_heads.size(), "the heads listed did not go back to the male ones")
+	(editor.look_controls[&"height_in"] as HSlider).value = 77.0
+	_expect(qb.look.height_in == 77, "the height set did not reach the look")
 	await process_frame
-	_expect(editor.model.hair != null and editor.model.hair.mesh != null, "the model has no hair")
-	_expect(editor.model.nose != null and editor.model.nose.mesh != null, "the model has no nose")
-	_expect(editor.model.brows != null and editor.model.brows.mesh != null, "the model has no eyebrows")
-	_expect(editor.model.whiskers != null and editor.model.whiskers.mesh != null, "the model has no goatee")
+	_expect(editor.model.head != null and editor.model.head.mesh != null, "the model has no head")
+	_expect(editor.model.body_mesh != null and editor.model.body_mesh.mesh != null, "the model has no body")
 	_expect(is_equal_approx(editor.model.rig.scale.y * PlayerModel.RIG_HEIGHT, qb.look.height_m()), "the model is not as tall as the look says")
 	# Another player has a look of his own.
 	editor.select_player(1)
@@ -144,8 +136,7 @@ func _run(editor: TeamEditor) -> void:
 		var saved_look: PlayerLook = saved_qb.look
 		_expect(saved_look != null, "the saved player has no look")
 		if saved_look != null:
-			_expect(saved_look.hair_style == 4 and saved_look.glasses == PlayerLook.Glasses.EYEPATCH and saved_look.height_in == 77, "the saved look has other values")
-			_expect(saved_look.skin_color.is_equal_approx(skin) and is_equal_approx(saved_look.nose_size, 0.9), "the saved look has another skin or nose")
+			_expect(saved_look.build == PlayerLook.Build.LEAN and saved_look.height_in == 77 and saved_look.head == qb.look.head, "the saved look has other values")
 	for i: int in files.size():
 		_expect(FileAccess.get_file_as_string(files[i]) == before[i], "%s was written to" % files[i])
 

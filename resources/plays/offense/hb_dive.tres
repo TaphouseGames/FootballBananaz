@@ -31,13 +31,13 @@ start = Vector2(-0.9, 1.7)
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, -13)
+start = Vector2(-0.6, -17)
 
 [sub_resource type="Resource" id="wr_r"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, 13)
+start = Vector2(-0.6, 17)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")

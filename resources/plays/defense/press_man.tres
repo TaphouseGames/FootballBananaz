@@ -9,7 +9,7 @@ label = "S"
 job = 2
 start = Vector2(10, 0)
 zone_center = Vector2(10, 0)
-zone_radius = 10
+zone_radius = 13.5
 deep = true
 
 [sub_resource type="Resource" id="d1"]
@@ -34,14 +34,14 @@ start = Vector2(1, 1.9)
 script = ExtResource("2_assign")
 label = "CB"
 job = 1
-start = Vector2(1.5, -14)
+start = Vector2(1.5, -18.4)
 man_target = 0
 
 [sub_resource type="Resource" id="d5"]
 script = ExtResource("2_assign")
 label = "CB"
 job = 1
-start = Vector2(1.5, 14)
+start = Vector2(1.5, 18.4)
 man_target = 1
 
 [sub_resource type="Resource" id="d6"]

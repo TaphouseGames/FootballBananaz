@@ -204,7 +204,7 @@ func _finish_game() -> bool:
 
 
 func _report() -> bool:
-	for key: StringName in [&"snaps", &"passes", &"completions", &"tackles", &"handoffs", &"turnovers", &"drags", &"fumbles", &"kickoffs", &"kick_returns", &"halftimes", &"scramble_recoveries"]:
+	for key: StringName in [&"snaps", &"passes", &"completions", &"tackles", &"handoffs", &"turnovers", &"drags", &"fumbles", &"kickoffs", &"kick_returns", &"halftimes"]:
 		var count: int = _totals.get(key, 0)
 		if count <= 0 and _failures.is_empty():
 			_failures.append("no '%s' happened in the whole run" % key)
@@ -213,17 +213,15 @@ func _report() -> bool:
 		_failures.append("possession never changed")
 
 	# Every touchdown is followed by a try, but the one that wins a game in
-	# sudden death (one a game at most), and both halves start with a scramble.
+	# sudden death (one a game at most), and both halves start with a kickoff.
 	var tries: int = _totals.get(&"conversion_tries", 0)
 	var touchdowns: int = _totals.get(&"touchdowns", 0)
 	var halftimes: int = _totals.get(&"halftimes", 0)
 	if (tries > touchdowns or tries < touchdowns - halftimes) and _failures.is_empty():
 		_failures.append("%d touchdowns but %d conversion tries in %d games" % [touchdowns, tries, halftimes])
-	var scrambles: int = _totals.get(&"scrambles_started", 0)
-	var do_overs: int = _totals.get(&"scramble_do_overs", 0)
-	if scrambles - do_overs != 2 * halftimes and _failures.is_empty():
-		_failures.append("%d scrambles (%d of them do-overs) in %d games" % [scrambles, do_overs, halftimes])
-	print("scrambles: %d started, %d do-overs, %d recovered" % [scrambles, do_overs, _totals.get(&"scramble_recoveries", 0)])
+	var kickoffs: int = _totals.get(&"kickoffs", 0)
+	if kickoffs < 2 * halftimes and _failures.is_empty():
+		_failures.append("%d kickoffs in %d games" % [kickoffs, halftimes])
 	# A warning at most once a half; a play would have to run out the last
 	# thirty seconds on its own for a half to go without one.
 	var warnings: int = _totals.get(&"warnings", 0)

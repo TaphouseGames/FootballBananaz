@@ -121,17 +121,15 @@ const CUP_SUFFIX: String = "_cup"
 const CALL_OVERTIME: StringName = &"announcer_overtime"
 const OVERTIME_MOMENT: String = "overtime"
 const QUIP_OVERTIME_CHANCE: float = 0.9
-## The mascots: Jim and Tony as the two line up for the scramble that opens a
-## half, Jim as one comes up with the ball, Tony when a mascot scores, and the
-## idle chatter about the one on the sideline (Tuning.mascot_idle_chance).
-const CALL_SCRAMBLE: StringName = &"announcer_scramble"
-const QUIP_SCRAMBLE: StringName = &"color_scramble"
-const CALL_SCRAMBLE_WON: StringName = &"announcer_scramble_won"
-const QUIP_MASCOT_TD: StringName = &"color_mascot_td"
+## Jim and Tony as the teams line up for the kickoff that opens a half or
+## sudden death (Game.opening_kickoff). A kickoff after a score has no line.
+const CALL_KICKOFF: StringName = &"announcer_kickoff"
+const QUIP_KICKOFF: StringName = &"color_kickoff"
+const REMARK_KICKOFF: float = 0.8
+const QUIP_KICKOFF_CHANCE: float = 0.7
+## Tony's idle chatter about the mascot on the sideline
+## (Tuning.mascot_idle_chance).
 const QUIP_IDLE_MASCOT: StringName = &"color_idle_mascot"
-const REMARK_SCRAMBLE: float = 0.8
-const REMARK_SCRAMBLE_WON: float = 0.7
-const QUIP_SCRAMBLE_CHANCE: float = 0.7
 const CHAT_PREFIX: String = "chat_"
 ## The halftime report's exchanges: files `show_<id>_<part>`, picked by id
 ## (see HalftimeExchanges), not at random.
@@ -1005,14 +1003,12 @@ func _live_excitement() -> float:
 			if carrier == null:
 				return 0.2
 			var start: float = tuning.own_goal_x(carrier.team.attack_dir) if pc.kickoff else pc.los_x
-			if pc.scramble:
-				start = pc.return_from_x
 			var gain: float = (carrier.position.x - start) * float(carrier.team.attack_dir)
 			if not _breakaway_called and gain >= (BREAKAWAY_RETURN_YARDS if pc.kickoff else BREAKAWAY_YARDS):
 				_breakaway_called = true
 				remark(&"announcer_room", REMARK_ROOM)
 				# A handed-off back breaking loose gets his own line.
-				if not pc.kickoff and not pc.scramble and pc.handoff_done and not pc.pass_completed() and carrier.ratings.position == "RB":
+				if not pc.kickoff and pc.handoff_done and not pc.pass_completed() and carrier.ratings.position == "RB":
 					quip(&"color_juice", QUIP_JUICE)
 				else:
 					quip(&"color_breakaway", QUIP_BREAKAWAY)
@@ -1042,13 +1038,14 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 				if not _huddle.playing and tuning.audio_enabled:
 					_huddle.play()
 			_plan_chant()
-		&"Scramble":
+		&"Kickoff":
 			# Not over an opening or a halftime exchange still being said, nor
 			# over the call of sudden death: remark() and quip() keep quiet then.
-			if has_sound(CALL_SCRAMBLE):
-				remark(CALL_SCRAMBLE, REMARK_SCRAMBLE)
-			if has_sound(QUIP_SCRAMBLE):
-				quip(QUIP_SCRAMBLE, QUIP_SCRAMBLE_CHANCE)
+			if game.opening_kickoff:
+				if has_sound(CALL_KICKOFF):
+					remark(CALL_KICKOFF, REMARK_KICKOFF)
+				if has_sound(QUIP_KICKOFF):
+					quip(QUIP_KICKOFF, QUIP_KICKOFF_CHANCE)
 		&"Live":
 			_breakaway_called = false
 			_chant_in = -1.0

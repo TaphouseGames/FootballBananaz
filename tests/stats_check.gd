@@ -112,7 +112,7 @@ func _check_book() -> void:
 
 		var sum: PlayerLine = PlayerLine.new()
 		var defense: PlayerLine = PlayerLine.new()
-		# The seven and the mascot, which can lose a fumble in a scramble.
+		# The seven and the mascot, which can make a tackle where it stands.
 		var everyone: Array[Player] = team.squad.duplicate()
 		everyone.append(team.mascot)
 		for player: Player in everyone:
@@ -156,11 +156,6 @@ func _check_book() -> void:
 		_expect(t.red_zone_made <= t.red_zone_att and t.red_zone_att <= t.drives, "%s: red zone %d-%d in %d drives" % [who, t.red_zone_made, t.red_zone_att, t.drives])
 		_expect(t.pass_td + t.rush_td + t.return_td == t.touchdowns, "%s: touchdowns by kind do not add up" % who)
 		_expect(t.plays > 0, "%s never ran a play" % who)
-		# The mascots: each half opens with a scramble, and one of the two wins it.
-		var other: TeamLine = book.team_line(team.opponent)
-		_expect(t.scrambles >= 2 and t.scrambles == other.scrambles, "%s: %d scrambles, the other team %d" % [who, t.scrambles, other.scrambles])
-		_expect(t.scrambles_won + other.scrambles_won == t.scrambles, "%s: %d + %d scrambles won out of %d" % [who, t.scrambles_won, other.scrambles_won, t.scrambles])
-		_expect(t.scramble_td <= t.return_td and t.scramble_yds >= 0, "%s: the mascot's touchdowns or yards do not fit" % who)
 		# Every table ends with the team's row and is as wide as its heading.
 		for table: Array in [
 			[StatBook.PASSING_HEAD, book.passing_rows(team)], [StatBook.RUSHING_HEAD, book.rushing_rows(team)],

@@ -1,7 +1,7 @@
 extends GameState
 ## The second half's clock has run out with the score level. Nobody ties: the
-## game goes to sudden death, which opens with a scramble for the ball as each
-## half did, and whoever scores first (a touchdown or a safety) has won.
+## game goes to sudden death, which opens with a kickoff as each half did, and
+## whoever scores first (a touchdown or a safety) has won.
 
 
 func enter() -> void:
@@ -18,7 +18,7 @@ func exit() -> void:
 func physics_update(delta: float) -> void:
 	pc.simulate_dead(delta)
 	if time_in_state >= game.tuning.overtime_banner_time:
-		machine.transition(&"Scramble")
+		machine.transition(&"Kickoff")
 
 
 func hold_update(delta: float) -> void:

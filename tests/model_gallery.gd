@@ -1,12 +1,24 @@
 extends SceneTree
-## Pictures of the player models PlayerModel builds from a PlayerLook: both
-## base models with every hairstyle, eye, nose, mouth, facial hair and pair of
-## glasses, light and heavy, from in front, the side and behind.
+## Pictures of the player models PlayerModel builds from the bodies and heads
+## in PlayerParts, from in front, a quarter turned, the side and behind:
+##   body_<id>.png   one body in away and home kits, short and tall, with long
+##                   and short names
+##   heads_<gender>.png   every head of a gender close up, on the first body
+##                   of that gender
 ## Needs a window (no --headless), since headless does not render.
 ##
 ## Run:  godot --path . --script res://tests/model_gallery.gd -- out=<folder>
 ## Optional user args after "--":
-##   only=<text>   only the sheets whose name contains the text
+##   only=<text>      only the sheets whose name contains the text
+##   describe=<path>  no pictures: prints what the model at a res:// path is
+##                    made of (triangles, size, bones). Works headless.
+
+## The bones a body must have: what KitBase and PlayerAnimator go by.
+const BODY_BONES: PackedStringArray = [
+	"Hip", "Waist", "Spine02", "NeckTwist01", "Head",
+	"L_Upperarm", "L_Forearm", "L_Hand", "R_Upperarm", "R_Forearm", "R_Hand",
+	"L_Thigh", "L_Calf", "L_Foot", "R_Thigh", "R_Calf", "R_Foot",
+]
 
 var _out_dir: String = "user://model_gallery"
 var _only: String = ""
@@ -21,10 +33,15 @@ func _initialize() -> void:
 			_out_dir = arg.trim_prefix("out=")
 		elif arg.begins_with("only="):
 			_only = arg.trim_prefix("only=")
+		elif arg.begins_with("describe="):
+			_describe(arg.trim_prefix("describe="))
+			quit()
+			return
 	DirAccess.make_dir_recursive_absolute(_out_dir)
 	# Off screen, so a picture can be wider than the window.
 	_view = SubViewport.new()
 	_view.own_world_3d = true
+	_view.msaa_3d = Viewport.MSAA_4X
 	_view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(_view)
 	var world: WorldEnvironment = WorldEnvironment.new()
@@ -46,63 +63,31 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await process_frame
-	for base: int in 2:
-		var who: String = PlayerLook.BASE_NAMES[base].to_lower()
-		# Every hairstyle, from four sides.
-		var looks: Array[PlayerLook] = []
-		for style: int in 7:
-			var look: PlayerLook = _plain(base)
-			look.hair_style = style
-			look.hair_color = PlayerLook.HAIR_PRESETS[style % PlayerLook.HAIR_PRESETS.size()]
-			looks.append(look)
-		await _sheet("%s_hair" % who, looks, true)
-		# Every eye, nose and mouth, with the glasses and the sizes mixed in.
-		looks = []
-		for type: int in 6:
-			var look: PlayerLook = _plain(base)
-			look.hair_style = 1 + type
-			look.eye_type = type
-			look.nose_type = type
-			look.mouth_type = type
-			look.skin_color = PlayerLook.SKIN_PRESETS[type]
-			looks.append(look)
-		var patched: PlayerLook = _plain(base)
-		patched.glasses = PlayerLook.Glasses.EYEPATCH
-		patched.eyepatch_side = PlayerLook.Eye.RIGHT
-		looks.append(patched)
-		await _sheet("%s_faces" % who, looks, true)
-		looks = []
-		for type: int in 7:
-			var look: PlayerLook = _plain(base)
-			look.facial_hair = type
-			look.hair_style = 2
-			look.glasses = [0, 1, 2, 3, 0, 1, 2][type] as PlayerLook.Glasses
-			look.nose_type = type % 6
-			look.nose_size = [0.5, 0.0, 1.0, 0.5, 0.2, 0.8, 0.5][type]
-			look.mouth_size = [0.5, 0.0, 1.0, 0.5, 0.5, 0.5, 0.5][type]
-			look.mouth_type = [0, 1, 1, 2, 4, 5, 3][type]
-			looks.append(look)
-		await _sheet("%s_extras" % who, looks, true)
-		# The build and the sliders, whole body.
-		looks = []
-		var builds: Array[Vector2i] = [Vector2i(64, 135), Vector2i(70, 190), Vector2i(72, 215), Vector2i(76, 260), Vector2i(76, 340), Vector2i(82, 400), Vector2i(72, 215)]
-		for i: int in 7:
-			var look: PlayerLook = _plain(base)
-			look.height_in = builds[i].x
-			look.weight_lb = builds[i].y
-			look.forehead_size = [0.5, 0.0, 1.0, 0.5, 0.5, 0.5, 1.0][i]
-			look.chin_size = [0.5, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0][i]
-			look.hair_style = [1, 2, 3, 5, 0, 6, 4][i]
-			look.skin_color = PlayerLook.SKIN_PRESETS[i % 6]
-			looks.append(look)
-		await _sheet("%s_build" % who, looks, false)
+	for gender: int in PlayerParts.GENDERS.size():
+		for build: int in PlayerParts.BUILDS.size():
+			if not PlayerParts.has_body(gender, build):
+				continue
+			var looks: Array[PlayerLook] = []
+			for height: int in [64, 70, 72, 72, 76, 82]:
+				looks.append(_look(gender, build, "", height))
+			await _sheet("body_%s" % PlayerParts.body_id(gender, build), looks, false)
+		var heads: PackedStringArray = PlayerParts.heads_of(gender)
+		if heads.is_empty():
+			continue
+		var faces: Array[PlayerLook] = []
+		for head: String in heads:
+			faces.append(_look(gender, PlayerLook.Build.ATHLETIC, head, 72))
+		await _sheet("heads_%s" % PlayerParts.GENDERS[gender], faces, true)
 	print("model gallery saved to ", ProjectSettings.globalize_path(_out_dir))
 	quit()
 
 
-func _plain(base: int) -> PlayerLook:
+func _look(gender: int, build: int, head: String, height: int) -> PlayerLook:
 	var look: PlayerLook = PlayerLook.new()
-	look.base = base as PlayerLook.Base
+	look.gender = gender as PlayerLook.Gender
+	look.build = build as PlayerLook.Build
+	look.head = head
+	look.height_in = height
 	return look
 
 
@@ -119,8 +104,8 @@ func _sheet(sheet: String, looks: Array[PlayerLook], close: bool) -> void:
 	const TEAM_COLORS: Array[Color] = [Color(0.1, 0.3, 0.8), Color(0.98, 0.8, 0.1), Color(0.6, 0.1, 0.5), Color(0.1, 0.5, 0.25)]
 	const NAMES: PackedStringArray = ["Gee", "Longerman", "Ox", "Kay", "Banana", "Fly", "Wu"]
 	# Metres from one model to the next and from the bottom of a row to its top.
-	var spacing: float = 0.56 if close else 1.35
-	var tall: float = 0.66 if close else 2.35
+	var spacing: float = 0.7 if close else 2.1
+	var tall: float = 0.8 if close else 2.35
 	var row_px: int = 520 if close else 800
 	var cell_px: int = roundi(spacing / tall * float(row_px))
 	_view.size = Vector2i(cell_px * looks.size(), row_px)
@@ -128,11 +113,11 @@ func _sheet(sheet: String, looks: Array[PlayerLook], close: bool) -> void:
 	for i: int in looks.size():
 		var model: PlayerModel = PlayerModel.new()
 		_view.add_child(model)
-		model.show_look(looks[i], TEAM_COLORS[i % TEAM_COLORS.size()], 10 + i * 13, "Tester Mc%s" % NAMES[i])
+		model.show_look(looks[i], TEAM_COLORS[i % TEAM_COLORS.size()], 1 + i * 17, "Tester Mc%s" % NAMES[i % NAMES.size()], i % 2 == 1)
 		# Heads are lined up for a close look, feet for the whole body.
 		model.position = Vector3((float(i) - float(looks.size() - 1) / 2.0) * spacing, -model.head_height() if close else 0.0, 0.0)
 		_models.append(model)
-	var middle_y: float = 0.02 if close else tall / 2.0 - 0.08
+	var middle_y: float = -0.06 if close else tall / 2.0 - 0.08
 	_cam.look_at_from_position(Vector3(0.0, middle_y, 10.0), Vector3(0.0, middle_y, 0.0))
 	var picture: Image = Image.create_empty(_view.size.x, row_px * TURNS.size(), false, Image.FORMAT_RGBA8)
 	for row: int in TURNS.size():
@@ -146,3 +131,35 @@ func _sheet(sheet: String, looks: Array[PlayerLook], close: bool) -> void:
 		picture.blit_rect(shot, Rect2i(Vector2i.ZERO, shot.get_size()), Vector2i(0, row * row_px))
 	picture.save_png(_out_dir.path_join("%s.png" % sheet))
 	print("saved ", sheet)
+
+
+## Prints what the model at `path` is made of, and for a rigged one whether
+## it has the bones a body needs.
+func _describe(path: String) -> void:
+	var scene: PackedScene = load(path) as PackedScene
+	if scene == null:
+		print("NOT A MODEL: ", path)
+		return
+	var root_node: Node = scene.instantiate()
+	for node: Node in root_node.find_children("*", "MeshInstance3D", true, false):
+		var mesh: ArrayMesh = (node as MeshInstance3D).mesh as ArrayMesh
+		var arrays: Array = mesh.surface_get_arrays(0)
+		var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var size: Vector3 = mesh.get_aabb().size
+		@warning_ignore("integer_division")
+		print("mesh: %d vertices, %d triangles, %d surface(s), %.3f across, %.3f deep, %.3f tall" % [points.size(), indices.size() / 3, mesh.get_surface_count(), size.x, size.y, size.z])
+		var material: BaseMaterial3D = mesh.surface_get_material(0) as BaseMaterial3D
+		if material != null and material.albedo_texture != null:
+			print("texture: ", material.albedo_texture.get_size(), ", normal map: ", material.normal_texture != null)
+	var skeletons: Array[Node] = root_node.find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty():
+		print("rig: none (fine for a head, not for a body)")
+	else:
+		var skeleton: Skeleton3D = skeletons[0] as Skeleton3D
+		var missing: PackedStringArray = PackedStringArray()
+		for bone: String in BODY_BONES:
+			if skeleton.find_bone(bone) < 0:
+				missing.append(bone)
+		print("rig: %d bones, %s" % [skeleton.get_bone_count(), "all the bones a body needs" if missing.is_empty() else "MISSING " + ", ".join(missing)])
+	root_node.free()

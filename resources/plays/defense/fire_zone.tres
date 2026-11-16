@@ -31,18 +31,18 @@ start = Vector2(1, 1.9)
 script = ExtResource("2_assign")
 label = "CB"
 job = 2
-start = Vector2(8, -11)
-zone_center = Vector2(17, -9)
-zone_radius = 12
+start = Vector2(8, -14.1)
+zone_center = Vector2(17, -11.2)
+zone_radius = 16
 deep = true
 
 [sub_resource type="Resource" id="d5"]
 script = ExtResource("2_assign")
 label = "CB"
 job = 2
-start = Vector2(8, 11)
-zone_center = Vector2(17, 9)
-zone_radius = 12
+start = Vector2(8, 14.1)
+zone_center = Vector2(17, 11.2)
+zone_radius = 16
 deep = true
 
 [sub_resource type="Resource" id="d6"]

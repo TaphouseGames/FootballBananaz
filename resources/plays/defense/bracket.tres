@@ -7,7 +7,7 @@
 script = ExtResource("2_assign")
 label = "S"
 job = 1
-start = Vector2(3, -9)
+start = Vector2(3, -11.2)
 man_target = 0
 underneath = true
 
@@ -33,14 +33,14 @@ start = Vector2(1, 1.9)
 script = ExtResource("2_assign")
 label = "CB"
 job = 1
-start = Vector2(5, -13)
+start = Vector2(5, -17)
 man_target = 0
 
 [sub_resource type="Resource" id="d5"]
 script = ExtResource("2_assign")
 label = "CB"
 job = 1
-start = Vector2(5, 13)
+start = Vector2(5, 17)
 man_target = 1
 
 [sub_resource type="Resource" id="d6"]

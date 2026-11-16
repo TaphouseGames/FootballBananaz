@@ -6,7 +6,9 @@ extends Resource
 @export_group("Field")
 @export var field_length: float = 100.0
 @export var end_zone_depth: float = 10.0
-@export var field_width: float = 40.0
+## 160 feet, as in the NFL. The plays hold their lateral spacing in yards: after
+## changing this, run tools/stretch_plays.py.
+@export var field_width: float = 53.33
 ## Yard line (from own goal) where a new drive starts.
 @export var drive_start_yard: float = 25.0
 @export var touchback_yard: float = 20.0
@@ -28,22 +30,6 @@ extends Resource
 @export var conversion_points: int = 2
 @export var conversion_distance: float = 3.0
 
-@export_group("Scramble")
-## Each half opens with the ball going straight up from midfield and both teams
-## running in for it. They line up on this yard line, from their own goal.
-@export var scramble_line_yard: float = 20.0
-## Seconds between the line-up and the ball going up.
-@export var scramble_delay: float = 1.5
-## Seconds the ball is in the air.
-@export var scramble_hang_time: float = 2.8
-## It comes down within this many yards of the middle of the field.
-@export var scramble_drift: float = 4.0
-## On the turf this long with nobody holding it, it is whistled dead and goes
-## up again.
-@export var scramble_dead_time: float = 8.0
-## Those not after the ball go for an opponent within this many yards of it.
-@export var scramble_hit_range: float = 10.0
-
 @export_group("Kickoff")
 ## Yard line (from the kicking team's own goal) the ball is kicked from.
 @export var kickoff_yard: float = 35.0
@@ -60,7 +46,7 @@ extends Resource
 ## The kicking team lines up this far behind the ball.
 @export var kickoff_run_up: float = 2.0
 @export var halftime_banner_time: float = 4.0
-## Seconds the "overtime" banner stays up before the scramble that opens
+## Seconds the "overtime" banner stays up before the kickoff that opens
 ## sudden death (a second half that ends level).
 @export var overtime_banner_time: float = 4.0
 ## After the final whistle the menu waits at least `min` seconds, and for the
@@ -155,7 +141,7 @@ extends Resource
 ## Once he is up from a daze he is injured: every rating is multiplied by
 ## this for the rest of the play and for this many plays after it. Hurting
 ## himself again while injured only starts that count again.
-@export var injury_rating_scale: float = 0.5
+@export var injury_rating_scale: float = 0.75
 @export var injury_plays: int = 1
 ## Added to dive_tackle_bonus for a tackle made with a jump dive.
 @export var jump_dive_tackle_bonus: float = 0.1

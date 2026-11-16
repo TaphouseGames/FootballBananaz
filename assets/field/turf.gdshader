@@ -7,7 +7,7 @@ shader_type spatial;
 // Playing field: x = 0..field_length, z = -field_width/2..field_width/2.
 
 uniform float field_length = 100.0;
-uniform float field_width = 40.0;
+uniform float field_width = 53.33;
 uniform float end_zone_depth = 10.0;
 // How far past the lines the mown turf goes, on all four sides.
 uniform float margin = 0.9;
@@ -30,7 +30,10 @@ uniform float mascot_size = 8.0;
 uniform float mascot_gap = 0.5;
 // Yard numbers: how far in from the side the row's middle is, half the width
 // and height of one digit, the thickness of its strokes and its gap to the line.
-uniform float number_inset = 5.0;
+uniform float number_inset = 11.0;
+// The two inner rows of hash marks: yards from the middle of the field to each
+// (18 feet 6 inches apart, as in the NFL).
+uniform float hash_offset = 3.08;
 uniform vec2 digit_half = vec2(0.7, 1.15);
 uniform float digit_stroke = 0.34;
 uniform float digit_gap = 0.42;
@@ -156,7 +159,7 @@ void fragment() {
 	float paint = band(x - nearest5, line_w, aa_x) * in_play;
 	// Hash marks every yard: two inner rows and one down each side.
 	float tick = band(x - round(x), 0.045, aa_x) * in_play;
-	float hash_z = field_width * 0.125;
+	float hash_z = hash_offset;
 	float rows = max(band(az - hash_z, 0.3, aa_z), band(az - (half_w - 0.75), 0.3, aa_z));
 	paint = max(paint, tick * rows);
 

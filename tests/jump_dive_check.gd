@@ -165,16 +165,16 @@ func _tick_daze() -> void:
 	_next()
 
 
-## Up from the daze he is injured: every rating halved for the rest of this
+## Up from the daze he is injured: every rating scaled down for the rest of this
 ## play and the next, a few stars left over his head, and hurting himself again
 ## only makes it last a play longer.
 func _check_injury() -> void:
 	var own: PlayerRatings = _healthy
-	var half: int = roundi(float(own.speed) * _tuning.injury_rating_scale)
+	var hurt: int = roundi(float(own.speed) * _tuning.injury_rating_scale)
 	print("%-16s injured: %s, speed %d -> %d, tackling %d -> %d, %d more plays" % [CASE_NAMES[_case], _man.injured, own.speed, _man.ratings.speed, own.tackling, _man.ratings.tackling, _man.injured_plays])
 	_expect(_man.injured, "not injured once he is up")
 	_expect(_gained(&"injuries") == 1, "%d injuries counted" % _gained(&"injuries"))
-	_expect(_man.ratings != own and _man.ratings.speed == half, "speed is %d, half of %d is %d" % [_man.ratings.speed, own.speed, half])
+	_expect(_man.ratings != own and _man.ratings.speed == hurt, "speed is %d, injured %d should be %d" % [_man.ratings.speed, own.speed, hurt])
 	for key: StringName in PlayerRatings.CARD_ORDER:
 		var was: int = own.get(key)
 		var now: int = _man.ratings.get(key)
@@ -195,7 +195,7 @@ func _check_injury() -> void:
 	_expect(shown == DazeFx.INJURED_STARS, "%d stars over an injured player" % shown)
 	# Hurt again while injured: the same ratings, one more play of it.
 	_man.injure()
-	_expect(_man.ratings.speed == half, "a second injury changed his ratings again: speed %d" % _man.ratings.speed)
+	_expect(_man.ratings.speed == hurt, "a second injury changed his ratings again: speed %d" % _man.ratings.speed)
 	_expect(_man.injured_plays == _tuning.injury_plays, "a second injury did not add a play")
 	_man.next_play()
 	_expect(_man.injured, "healed a play early after a second injury")

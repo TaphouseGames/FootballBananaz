@@ -1,7 +1,7 @@
 extends SceneTree
 ## Headless check of sudden death. A CPU game is put level with a second left
 ## in the second half: it has to go to the Overtime state, open that with a
-## scramble, show "OT" for a clock, and end on the first score, a touchdown
+## kickoff, show "OT" for a clock, and end on the first score, a touchdown
 ## without its try, with the scores no longer level.
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/overtime_check.gd
@@ -68,7 +68,7 @@ func _finish() -> bool:
 	var overtime_at: int = _seen.find(&"Overtime")
 	_expect(overtime_at >= 0, "the level game did not go to overtime (%s)" % [_seen])
 	if overtime_at >= 0:
-		_expect(_seen.size() > overtime_at + 1 and _seen[overtime_at + 1] == &"Scramble", "overtime did not open with a scramble")
+		_expect(_seen.size() > overtime_at + 1 and _seen[overtime_at + 1] == &"Kickoff", "overtime did not open with a kickoff")
 		_expect(_seen.back() == &"GameOver", "the game did not end")
 		_expect(not _game.is_tied(), "the game ended level, %d - %d" % [_game.home.score, _game.away.score])
 		_expect(_game.get_stat(&"conversion_tries") == _tries_at_overtime, "a try was played in sudden death")

@@ -32,22 +32,22 @@ start = Vector2(-0.9, 1.7)
 script = ExtResource("2_assign")
 label = "WR"
 job = 1
-start = Vector2(-0.6, -15)
+start = Vector2(-0.6, -19.9)
 route = PackedVector2Array(40, 0)
 
 [sub_resource type="Resource" id="wr_r"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 1
-start = Vector2(-0.6, 15)
-route = PackedVector2Array(14, 0, 26, -22)
+start = Vector2(-0.6, 19.9)
+route = PackedVector2Array(14, 0, 26, -28.2)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
 job = 3
 start = Vector2(-7, 2.5)
-route = PackedVector2Array(1, 4.5, 3, 8, 6, 10)
+route = PackedVector2Array(1, 5.8, 3, 10.9, 6, 13.8)
 
 [resource]
 script = ExtResource("1_play")

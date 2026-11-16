@@ -43,36 +43,39 @@ func _run() -> void:
 	var back: Vector3 = Vector3(-t.camera_distance, t.camera_height, 0.0)
 	var ahead: Vector3 = Vector3(t.camera_look_ahead, 0.0, 0.0)
 	var flip: Vector3 = Vector3(-1.0, 1.0, 1.0)
+	# The shots at the sides were set up on a field 40 yards wide: `out` moves
+	# them with the sidelines.
+	var out: float = t.half_width() - 20.0
 	await _wait(2.0)
 	var stadium: Stadium = _game.field.stadium
 	# The game's own camera, behind a player at these places.
 	await _shoot("cam_own_goal", Vector3(-8.0, 0.0, 0.0) + back, Vector3(-8.0, 0.0, 0.0) + ahead)
 	await _shoot("cam_midfield", Vector3(50.0, 0.0, 0.0) + back, Vector3(50.0, 0.0, 0.0) + ahead)
-	await _shoot("cam_sideline", Vector3(50.0, 0.0, 17.0) + back, Vector3(50.0, 0.0, 17.0) + ahead)
+	await _shoot("cam_sideline", Vector3(50.0, 0.0, 17.0 + out) + back, Vector3(50.0, 0.0, 17.0 + out) + ahead)
 	await _shoot("cam_red_zone", Vector3(88.0, 0.0, -8.0) + back, Vector3(88.0, 0.0, -8.0) + ahead)
 	await _shoot("cam_other_way", Vector3(60.0, 0.0, 0.0) + back * flip, Vector3(60.0, 0.0, 0.0) + ahead * flip)
 	# Half way round a swing: looking across at each stand.
 	await _shoot("swing_home_stand", Vector3(50.0, t.camera_height, t.camera_distance), Vector3(50.0, 0.0, -t.camera_look_ahead))
 	await _shoot("swing_away_stand", Vector3(50.0, t.camera_height, -t.camera_distance), Vector3(50.0, 0.0, t.camera_look_ahead))
-	await _shoot("intro_start", Vector3(50.0 - 38.0, 24.0, 54.0), Vector3(59.0, 1.5, 0.0))
-	await _shoot("intro_end", Vector3(50.0 - 12.0, 4.5, 17.0), Vector3(59.0, 1.5, 0.0))
+	await _shoot("intro_start", Vector3(50.0 - 38.0, 24.0, 54.0 + out), Vector3(59.0, 1.5, 0.0))
+	await _shoot("intro_end", Vector3(50.0 - 12.0, 4.5, 17.0 + out), Vector3(59.0, 1.5, 0.0))
 	await _shoot("overview", Vector3(length * 0.5, 120.0, 150.0), Vector3(length * 0.5, 0.0, 0.0))
-	await _shoot("crowd_close", Vector3(40.0, 4.0, -12.0), Vector3(47.0, 5.0, -32.0))
-	await _shoot("fans_front", Vector3(45.0, 2.6, -16.0), Vector3(45.0, 2.4, -24.0))
+	await _shoot("crowd_close", Vector3(40.0, 4.0, -12.0 - out), Vector3(47.0, 5.0, -32.0 - out))
+	await _shoot("fans_front", Vector3(45.0, 2.6, -16.0 - out), Vector3(45.0, 2.4, -24.0 - out))
 	# Along a row from the aisle: the fans on their seats, and the empty ones.
-	await _shoot("seats_side", Vector3(49.7, 2.9, -22.6), Vector3(45.0, 2.2, -23.6))
-	await _shoot("signs_close", Vector3(60.0, 7.5, -12.0), Vector3(62.0, 7.0, -34.0))
-	await _shoot("aisle_close", Vector3(55.0, 9.0, 8.0), Vector3(62.0, 6.0, 32.0))
-	await _shoot("corner", Vector3(92.0, 5.0, 4.0), Vector3(111.0, 2.0, 21.0))
+	await _shoot("seats_side", Vector3(49.7, 2.9, -22.6 - out), Vector3(45.0, 2.2, -23.6 - out))
+	await _shoot("signs_close", Vector3(60.0, 7.5, -12.0 - out), Vector3(62.0, 7.0, -34.0 - out))
+	await _shoot("aisle_close", Vector3(55.0, 9.0, 8.0 + out), Vector3(62.0, 6.0, 32.0 + out))
+	await _shoot("corner", Vector3(92.0, 5.0, 4.0 + out), Vector3(111.0, 2.0, 21.0 + out))
 	# The wall, right on the lines: along a sideline and at an end.
-	await _shoot("wall_sideline", Vector3(40.0, 1.8, 15.0), Vector3(60.0, 1.0, 20.5))
+	await _shoot("wall_sideline", Vector3(40.0, 1.8, 15.0 + out), Vector3(60.0, 1.0, 20.5 + out))
 	await _shoot("wall_end", Vector3(98.0, 2.2, -6.0), Vector3(111.0, 1.5, 4.0))
 	# What is painted on the turf: the mascots at the 50, the numbers from each
 	# side, and a corner of an end zone (no lines round the edge).
 	await _shoot("field_midfield", Vector3(50.0, 24.0, 16.0), Vector3(50.0, 0.0, 0.5))
 	await _shoot("field_numbers", Vector3(30.0, 13.0, 19.0), Vector3(30.0, 0.0, 12.0))
 	await _shoot("field_numbers_far", Vector3(70.0, 13.0, -19.0), Vector3(70.0, 0.0, -12.0))
-	await _shoot("field_corner", Vector3(88.0, 7.0, 6.0), Vector3(108.0, 0.0, 19.0))
+	await _shoot("field_corner", Vector3(88.0, 7.0, 6.0 + out), Vector3(108.0, 0.0, 19.0 + out))
 	await _shoot("field_overhead", Vector3(50.0, 95.0, 0.5), Vector3(50.0, 0.0, 0.0))
 	# The mascots stand by with their teams. A play is lined up at midfield and
 	# stopped there, so that they are where a play puts them.
@@ -134,13 +137,13 @@ func _run() -> void:
 				await _shoot("wall_cam", Vector3(50.0, 0.0, side - 3.0) + back * dir, Vector3(50.0, 0.0, side - 3.0) + ahead * dir, 0.0)
 	await _wait(6.0)
 	await _shoot("jumbotron", Vector3(70.0, 8.0, 0.0), Vector3(140.0, 24.0, 0.0))
-	await _shoot("hot_dog_stand", Vector3(20.0, 16.0, -30.0), Vector3(17.0, 12.0, -48.0))
+	await _shoot("hot_dog_stand", Vector3(20.0, 16.0, -30.0 - out), Vector3(17.0, 12.0, -48.0 - out))
 	# The home crowd up, the visitors sunk; then the same a little later.
 	var across_eye: Vector3 = Vector3(50.0, 10.0, 6.0)
 	stadium.react(true, 1.0)
 	await _wait(0.5)
-	await _shoot("cheer_home", across_eye, Vector3(50.0, 5.0, -30.0), 0.0)
-	await _shoot("cheer_away_sulks", across_eye * Vector3(1.0, 1.0, -1.0), Vector3(50.0, 5.0, 30.0), 0.0)
+	await _shoot("cheer_home", across_eye, Vector3(50.0, 5.0, -30.0 - out), 0.0)
+	await _shoot("cheer_away_sulks", across_eye * Vector3(1.0, 1.0, -1.0), Vector3(50.0, 5.0, 30.0 + out), 0.0)
 	stadium.cheer[0] = 0.0
 	stadium.slump[1] = 0.0
 	stadium.start_wave()
@@ -152,7 +155,7 @@ func _run() -> void:
 	stadium._wave_from = 0.25
 	stadium.wave_progress = 0.48
 	await _wait(0.15)
-	await _shoot("wave_close", Vector3(50.0, 9.0, 2.0), Vector3(50.0, 6.0, -30.0), 0.0)
+	await _shoot("wave_close", Vector3(50.0, 9.0, 2.0), Vector3(50.0, 6.0, -30.0 - out), 0.0)
 	if stadium.sign_atlas != null and (_only == "" or "signs".contains(_only)):
 		stadium.sign_atlas.get_image().save_png(_out_dir.path_join("signs.png"))
 	print("STADIUM GALLERY DONE: ", _out_dir, "  fans ", stadium.fan_count)

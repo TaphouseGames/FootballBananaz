@@ -7,7 +7,7 @@
 script = ExtResource("2_assign")
 label = "QB"
 job = 2
-start = Vector2(-0.6, 14)
+start = Vector2(-0.6, 18.4)
 
 [sub_resource type="Resource" id="c"]
 script = ExtResource("2_assign")
@@ -31,14 +31,14 @@ start = Vector2(-0.9, 1.7)
 script = ExtResource("2_assign")
 label = "WR"
 job = 3
-start = Vector2(-3, -5)
-route = PackedVector2Array(-1.2, 5, -1, 11, 3, 17, 10, 20)
+start = Vector2(-3, -5.4)
+route = PackedVector2Array(-1.2, 5.4, -1, 12.3, 3, 21, 10, 25.3)
 
 [sub_resource type="Resource" id="wr_r"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, 8)
+start = Vector2(-0.6, 9.8)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")

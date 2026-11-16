@@ -7,7 +7,8 @@ extends Control
 ##
 ## The team's players are shown one of two ways: "Ratings", everybody's
 ## numbers side by side, and "Player models", one player's model (see
-## PlayerModel) with everything his PlayerLook sets next to it.
+## PlayerModel) with what his PlayerLook sets next to it: gender, body type,
+## head and height.
 ##
 ## Who plays where is fixed: every play lists its assignments by roster slot
 ## (see Roster), so positions are shown and not changed here.
@@ -36,25 +37,14 @@ const ZOOM_FAR: float = 7.0
 
 ## Everything of a PlayerLook there is to set, in the order shown: its
 ## property, what it is called, and what sets it. A slider gives its lowest
-## and highest value and its step; a choice gives its names, which for the
-## hair depend on the base model.
+## and highest value and its step; a choice gives its names. The builds say
+## which of them the gender has no model of yet, and the heads are the
+## gender's (see PlayerParts), so both are filled in for the player shown.
 var look_fields: Array[Dictionary] = [
-	{"property": &"base", "label": "Base model", "choices": PlayerLook.BASE_NAMES},
+	{"property": &"gender", "label": "Gender", "choices": PlayerParts.GENDER_NAMES},
+	{"property": &"build", "label": "Body type", "choices": PackedStringArray()},
+	{"property": &"head", "label": "Head", "choices": PackedStringArray()},
 	{"property": &"height_in", "label": "Height", "slider": [PlayerLook.HEIGHT_MIN, PlayerLook.HEIGHT_MAX, 1]},
-	{"property": &"weight_lb", "label": "Weight", "slider": [PlayerLook.WEIGHT_MIN, PlayerLook.WEIGHT_MAX, 5]},
-	{"property": &"skin_color", "label": "Skin", "presets": PlayerLook.SKIN_PRESETS},
-	{"property": &"forehead_size", "label": "Forehead", "slider": [0.0, 1.0, 0.01]},
-	{"property": &"chin_size", "label": "Chin", "slider": [0.0, 1.0, 0.01]},
-	{"property": &"hair_style", "label": "Hair", "choices": PackedStringArray()},
-	{"property": &"hair_color", "label": "Hair colour", "presets": PlayerLook.HAIR_PRESETS},
-	{"property": &"facial_hair", "label": "Facial hair", "choices": PlayerLook.FACIAL_HAIR_NAMES},
-	{"property": &"eye_type", "label": "Eyes", "choices": PlayerLook.EYE_NAMES},
-	{"property": &"glasses", "label": "Glasses", "choices": PlayerLook.GLASSES_NAMES},
-	{"property": &"eyepatch_side", "label": "Eyepatch on", "choices": PlayerLook.SIDE_NAMES},
-	{"property": &"nose_type", "label": "Nose", "choices": PlayerLook.NOSE_NAMES},
-	{"property": &"nose_size", "label": "Nose size", "slider": [0.0, 1.0, 0.01]},
-	{"property": &"mouth_type", "label": "Mouth", "choices": PlayerLook.MOUTH_NAMES},
-	{"property": &"mouth_size", "label": "Mouth size", "slider": [0.0, 1.0, 0.01]},
 ]
 
 ## Tests: when set, Save writes copies into this folder and leaves the files
@@ -81,7 +71,7 @@ var status: Label
 
 ## The "Player models" view: which player of the team shown it shows, the
 ## list he is picked from, his model, and per property of his PlayerLook the
-## control that sets it (an OptionButton, an HSlider or a ColorPickerButton).
+## control that sets it (an OptionButton or an HSlider).
 var selected_player: int = 0
 var player_list: ItemList
 var model: PlayerModel
@@ -265,12 +255,20 @@ func randomize_look() -> void:
 	var player: PlayerRatings = _player()
 	if player == null:
 		return
-	player.look = PlayerLook.random(randi(), player.position)
+	var fresh: PlayerLook = PlayerLook.random(randi(), player.position)
+	fresh.build = (randi() % PlayerParts.BUILDS.size()) as PlayerLook.Build
+	player.look = fresh
 	_show_player()
 	_touch()
 
 
 func _on_look_choice(index: int, property: StringName) -> void:
+	if property == &"head":
+		# The list shows the heads of the player's gender, in their order.
+		var heads: PackedStringArray = PlayerParts.heads_of(look().gender)
+		if index < heads.size():
+			_set_look(property, heads[index])
+		return
 	_set_look(property, index)
 
 
@@ -279,16 +277,13 @@ func _on_look_slider(value: float, property: StringName) -> void:
 	_set_look(property, roundi(value) if slider.step >= 1.0 else value)
 
 
-func _on_look_color(color: Color, property: StringName) -> void:
-	_set_look(property, color)
-
-
 func _set_look(property: StringName, value: Variant) -> void:
 	if _filling or look() == null:
 		return
 	look().set(property, value)
-	if property == &"base":
-		# The other base has other hairstyles: the same place in its list.
+	if property == &"gender":
+		# The other gender has other bodies and other heads.
+		look().head = look().head_id()
 		_fill_look_controls()
 	_refresh_look_notes()
 	_touch()
@@ -394,37 +389,44 @@ func _fill_look_controls() -> void:
 		var control: Control = look_controls[property]
 		if control is OptionButton:
 			var option: OptionButton = control as OptionButton
-			if property == &"hair_style":
+			var index: int = 0
+			if property == &"head":
+				var heads: PackedStringArray = PlayerParts.heads_of(shown.gender)
 				option.clear()
-				for style: String in PlayerLook.HAIR_NAMES[shown.base]:
-					option.add_item(style)
-			var index: int = shown.get(property)
-			option.select(clampi(index, 0, option.item_count - 1))
+				for head: String in heads:
+					option.add_item(PlayerParts.head_name(head))
+				index = heads.find(shown.head_id())
+			elif property == &"build":
+				option.clear()
+				for build: int in PlayerParts.BUILD_NAMES.size():
+					var missing: bool = not PlayerParts.has_body(shown.gender, build)
+					option.add_item(PlayerParts.BUILD_NAMES[build] + ("  (no model yet)" if missing else ""))
+				index = shown.build
+			else:
+				index = shown.get(property)
+			if option.item_count > 0:
+				option.select(clampi(index, 0, option.item_count - 1))
 		elif control is HSlider:
 			var number: float = shown.get(property)
 			(control as HSlider).value = number
-		elif control is ColorPickerButton:
-			var color: Color = shown.get(property)
-			(control as ColorPickerButton).color = color
 	_filling = false
 
 
-## What is written next to the sliders, and which controls have no say for
-## the look as it is.
+## What is written next to the slider, and what the body and the head shown
+## are when the look asks for one there is no model of.
 func _refresh_look_notes() -> void:
 	var shown: PlayerLook = look()
 	if shown == null:
 		return
 	_look_values[&"height_in"].text = shown.height_text()
-	_look_values[&"weight_lb"].text = "%d lb" % shown.weight_lb
-	for property: StringName in [&"forehead_size", &"chin_size", &"nose_size", &"mouth_size"]:
-		var size: float = shown.get(property)
-		_look_values[property].text = "%d" % roundi(size * 100.0)
-	var beard: OptionButton = look_controls[&"facial_hair"] as OptionButton
-	beard.disabled = shown.base != PlayerLook.Base.MALE
-	beard.tooltip_text = "Only the male base model grows it." if beard.disabled else ""
-	var patch: OptionButton = look_controls[&"eyepatch_side"] as OptionButton
-	patch.disabled = shown.glasses != PlayerLook.Glasses.EYEPATCH
+	var body: OptionButton = look_controls[&"build"] as OptionButton
+	body.tooltip_text = ""
+	if not PlayerParts.has_body(shown.gender, shown.build):
+		body.tooltip_text = "There is no model of this body yet: %s is shown." % shown.body_id().replace("_", " ")
+	var head: OptionButton = look_controls[&"head"] as OptionButton
+	head.tooltip_text = ""
+	if PlayerParts.heads_of(shown.gender).is_empty():
+		head.tooltip_text = "There is no head of this gender yet: %s is shown." % PlayerParts.head_name(shown.head_id())
 
 
 ## The preview's camera: round the player at the distance, turn and tip set by
@@ -717,7 +719,7 @@ func _build_models_view() -> Control:
 				option.add_item(choice)
 			option.item_selected.connect(_on_look_choice.bind(property))
 			control = option
-		elif field.has("slider"):
+		else:
 			var range_of: Array = field["slider"]
 			var slider: HSlider = HSlider.new()
 			slider.min_value = range_of[0]
@@ -726,14 +728,6 @@ func _build_models_view() -> Control:
 			slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			slider.value_changed.connect(_on_look_slider.bind(property))
 			control = slider
-		else:
-			var picker: ColorPickerButton = ColorPickerButton.new()
-			picker.edit_alpha = false
-			picker.custom_minimum_size.y = 28.0
-			for preset: Color in field["presets"]:
-				picker.get_picker().add_preset(preset)
-			picker.color_changed.connect(_on_look_color.bind(property))
-			control = picker
 		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		fields.add_child(control)
 		look_controls[property] = control

@@ -2,7 +2,7 @@ class_name SeasonSim
 extends RefCounted
 ## A game of the season played on paper: the ones the person is not in. It goes
 ## play by play, by the rules of the real thing (four downs for Tuning's yards,
-## two halves that each open with a scramble, a try after every touchdown,
+## two halves that each open with a kickoff, a try after every touchdown,
 ## sudden death if it ends level), with dice in place of the footballers. What
 ## the dice are loaded with comes from the two rosters (Roster.team_ratings()
 ## and call_bias()), and every play is written into the same TeamLine and
@@ -39,11 +39,9 @@ const TRY_CHANCE: float = 0.44
 ## rest are dives, which the book does not count).
 const TACKLE_CHANCE: float = 0.85
 const FORCED_FUMBLE_CHANCE: float = 0.7
-## Where a drive starts after a kickoff, and how far from midfield the
-## scramble that opens a half is won, in yards from the team's own goal.
+## Where a drive starts after a kickoff, in yards from the team's own goal.
 const KICKOFF_START_MIN: int = 18
 const KICKOFF_START_MAX: int = 42
-const SCRAMBLE_SPREAD: int = 14
 ## How much a point of rating between an offense and the defense in front of
 ## it moves the dice: yards (a share), and chances (added).
 const EDGE_YARDS: float = 0.003
@@ -75,7 +73,7 @@ static func play(season: Season, home: int, away: int) -> void:
 	season.record(home, away, sim._score[0], sim._score[1], sim._overtime, sim._lines, sim._players)
 
 
-## The game between the two rosters, from the first scramble to the last
+## The game between the two rosters, from the first kickoff to the last
 ## whistle. The score is in `_score`, the book in `_lines` and `_players`.
 func run(home: Roster, away: Roster, tuning: Tuning = null) -> void:
 	_tuning = tuning if tuning != null else Tuning.new()
@@ -88,14 +86,16 @@ func run(home: Roster, away: Roster, tuning: Tuning = null) -> void:
 		for i: int in roster.players.size():
 			lines.append(PlayerLine.new())
 		_players.append(lines)
+	# A coin for the opening kickoff; the other side gets the second half's.
+	var receiver: int = randi() % 2
 	for half: int in 2:
 		_clock = _tuning.game_length * 0.5
-		_scramble()
+		_kickoff_to(receiver if half == 0 else 1 - receiver)
 		while _clock > 0.0:
 			_play()
 	if _score[0] == _score[1]:
 		_overtime = true
-		_scramble()
+		_kickoff_to(randi() % 2)
 		var plays: int = 0
 		while _score[0] == _score[1] and plays < OVERTIME_PLAYS_MAX:
 			_play()
@@ -106,17 +106,6 @@ func run(home: Roster, away: Roster, tuning: Tuning = null) -> void:
 
 # --- The game ------------------------------------------------------------------------
 
-## The ball goes up at midfield and somebody comes down with it.
-func _scramble() -> void:
-	var side: int = randi() % 2
-	var gain: int = randi_range(-SCRAMBLE_SPREAD, SCRAMBLE_SPREAD)
-	for line: TeamLine in _lines:
-		line.scrambles += 1
-	_lines[side].scrambles_won += 1
-	_lines[side].scramble_yds += maxi(gain, 0)
-	_start_drive(side, FIELD / 2 + gain)
-
-
 func _start_drive(side: int, spot: int) -> void:
 	_offense = side
 	_spot = clampi(spot, 1, FIELD - 1)
@@ -126,7 +115,7 @@ func _start_drive(side: int, spot: int) -> void:
 	_lines[side].in_red_zone = false
 
 
-## The kickoff after a score: `side` receives and runs it back.
+## A kickoff, to open a half or after a score: `side` receives and runs it back.
 func _kickoff_to(side: int) -> void:
 	var start: int = randi_range(KICKOFF_START_MIN, KICKOFF_START_MAX)
 	_lines[side].kick_returns += 1

@@ -7,7 +7,6 @@ extends RefCounted
 
 const STANDINGS_HEAD: PackedStringArray = ["", "W", "L", "PCT", "PF", "PA", "DIFF", "STRK"]
 const TEAMS_HEAD: PackedStringArray = ["", "GP", "PTS", "YDS", "PASS", "RUSH", "ALLOW", "GIVE", "3RD %", "SACKED"]
-const MASCOTS_HEAD: PackedStringArray = ["", "WON", "LOST", "PCT", "YDS", "TD"]
 ## How many footballers a list of leaders names.
 const LEADERS: int = 5
 
@@ -39,35 +38,6 @@ static func team_rows(season: Season) -> Array[PackedStringArray]:
 			"%.1f" % (float(t.points_for) / games), "%.0f" % (float(t.total_yds()) / games),
 			"%.0f" % (float(t.net_pass_yds()) / games), "%.0f" % (float(t.rush_yds) / games),
 			"%.1f" % (float(t.points_against) / games), str(t.turnovers()), third, str(t.sacked)]))
-	return rows
-
-
-## The team of each row of mascot_rows(): the mascot that has won the most
-## scrambles first, then the one that has run them back furthest.
-static func mascot_order(season: Season) -> Array[int]:
-	var order: Array[int] = []
-	order.assign(range(season.teams.size()))
-	order.sort_custom(func(a: int, b: int) -> bool:
-		var left: TeamLine = season.team_line(a)
-		var right: TeamLine = season.team_line(b)
-		if left.scrambles_won != right.scrambles_won:
-			return left.scrambles_won > right.scrambles_won
-		if left.scramble_yds != right.scramble_yds:
-			return left.scramble_yds > right.scramble_yds
-		return a < b)
-	return order
-
-
-## Every team's mascot in the scrambles that open a half: won, lost, the share
-## won, the yards it ran them back and the touchdowns it scored.
-static func mascot_rows(season: Season) -> Array[PackedStringArray]:
-	var rows: Array[PackedStringArray] = []
-	for team: int in mascot_order(season):
-		var t: TeamLine = season.team_line(team)
-		var pct: String = ("%.3f" % (float(t.scrambles_won) / float(t.scrambles))).trim_prefix("0") if t.scrambles > 0 else "-"
-		rows.append(PackedStringArray([
-			"%s MASCOT" % season.team_data(team).team_name.to_upper(),
-			str(t.scrambles_won), str(t.scrambles - t.scrambles_won), pct, str(t.scramble_yds), str(t.scramble_td)]))
 	return rows
 
 

@@ -96,13 +96,16 @@ func _process(_delta: float) -> bool:
 			Input.action_release(&"confirm")
 			if state == &"Intro":
 				_failures.append("(A) did not skip the intro")
-			if audio.booth_busy():
+			# The exchange is cut off; all that may be heard now is the booth's
+			# word on the kickoff the skip led to.
+			var kickoff_lines: int = audio.play_counts.get(AudioDirector.CALL_KICKOFF, 0) + audio.play_counts.get(AudioDirector.QUIP_KICKOFF, 0)
+			if not audio._exchange_parts.is_empty() or (audio.booth_busy() and kickoff_lines == 0):
 				_failures.append("the booth kept talking after the skip")
 			_check_handed_over()
 			_step = Step.PLAIN
 			_open(false)
 		Step.PLAIN:
-			if state != &"Scramble":
+			if state != &"Kickoff":
 				_failures.append("a match without the flag opened in '%s'" % state)
 			return _report()
 	return false

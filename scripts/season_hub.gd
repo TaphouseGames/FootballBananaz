@@ -22,9 +22,9 @@ signal picked
 signal remark(moment: StringName, sure: bool)
 
 enum Mode { PICK, PAGES }
-enum Page { WEEK, STANDINGS, TEAMS, PLAYERS, MASCOTS, SCHEDULE }
+enum Page { WEEK, STANDINGS, TEAMS, PLAYERS, SCHEDULE }
 
-const PAGE_NAMES: PackedStringArray = ["THIS WEEK", "STANDINGS", "TEAM STATS", "PLAYER STATS", "MASCOTS", "SCHEDULE"]
+const PAGE_NAMES: PackedStringArray = ["THIS WEEK", "STANDINGS", "TEAM STATS", "PLAYER STATS", "SCHEDULE"]
 const SCRIM_COLOR: Color = Color(0.02, 0.04, 0.1, 0.72)
 const PANEL_COLOR: Color = Color(0.04, 0.08, 0.2, 0.96)
 const SOFT: Color = Color(0.86, 0.9, 1.0)
@@ -169,7 +169,7 @@ func _turn(by: int) -> void:
 	match page:
 		Page.STANDINGS:
 			remark.emit(&"standings", false)
-		Page.TEAMS, Page.PLAYERS, Page.MASCOTS:
+		Page.TEAMS, Page.PLAYERS:
 			remark.emit(&"stats", false)
 
 
@@ -282,8 +282,6 @@ func refresh() -> void:
 		Page.PLAYERS:
 			_body.add_child(_players_view(season))
 			action = "(A)  LEADERS / NEXT TEAM          "
-		Page.MASCOTS:
-			_body.add_child(_mascots_view(season))
 		Page.SCHEDULE:
 			_body.add_child(_schedule_view(season))
 	_hint.text = "%s(LB) (RB)  PAGE          (Y)  NEW SEASON          (B)  BACK" % action
@@ -403,22 +401,6 @@ func _teams_view(season: Season) -> Control:
 		column.add_child(StatTable.row(rows[i], StatTable.ROW_COLOR if i % 2 == 1 else StatTable.CLEAR, color, 22, WIDE_STAT, WIDE_NAME))
 	column.add_child(StatTable.spacer(14.0))
 	column.add_child(_heading("A GAME: POINTS, YARDS, PASSING, RUSHING, POINTS ALLOWED.\nALL SEASON: GIVEAWAYS, THIRD DOWNS MADE, TIMES SACKED. PLAYOFF GAMES COUNT.", 18, SOFT))
-	return _centered(column)
-
-
-## The mascots: who comes up with the ball in the scrambles that open a half.
-func _mascots_view(season: Season) -> Control:
-	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override(&"separation", 0)
-	column.custom_minimum_size.x = 860.0
-	var rows: Array[PackedStringArray] = SeasonTables.mascot_rows(season)
-	var order: Array[int] = SeasonTables.mascot_order(season)
-	column.add_child(StatTable.row(SeasonTables.MASCOTS_HEAD, StatTable.HEAD_COLOR, StatTable.DIM_TEXT, 16, WIDE_STAT, WIDE_NAME + 80.0))
-	for i: int in rows.size():
-		var color: Color = MainMenu.GOLD if order[i] == season.user_team else Color.WHITE
-		column.add_child(StatTable.row(rows[i], StatTable.ROW_COLOR if i % 2 == 1 else StatTable.CLEAR, color, 24, WIDE_STAT, WIDE_NAME + 80.0))
-	column.add_child(StatTable.spacer(14.0))
-	column.add_child(_heading("THE SCRAMBLES THAT OPEN A HALF: WON, LOST, THE SHARE WON,\nTHE YARDS THE MASCOT RAN THEM BACK AND ITS TOUCHDOWNS.", 18, SOFT))
 	return _centered(column)
 
 

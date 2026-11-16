@@ -6,7 +6,8 @@ extends Control
 ## above it. Left and right are as the person sees them on the field when they
 ## play that side: from behind the offense, or from behind the defense.
 
-const LATERAL: float = 21.0
+## Yards shown either side of the ball: half the field's width and a little.
+const LATERAL: float = 27.5
 ## Yards shown past the line of scrimmage and behind it, for an offensive play.
 const OFFENSE_AHEAD: float = 21.0
 const OFFENSE_BEHIND: float = 9.0

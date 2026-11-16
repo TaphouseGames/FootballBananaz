@@ -7,9 +7,9 @@
 script = ExtResource("2_assign")
 label = "S"
 job = 2
-start = Vector2(18, -5)
-zone_center = Vector2(22, -5)
-zone_radius = 9
+start = Vector2(18, -5.4)
+zone_center = Vector2(22, -5.4)
+zone_radius = 12
 deep = true
 
 [sub_resource type="Resource" id="d1"]
@@ -24,7 +24,7 @@ label = "DL"
 job = 2
 start = Vector2(3, 0)
 zone_center = Vector2(7, 0)
-zone_radius = 9
+zone_radius = 12
 
 [sub_resource type="Resource" id="d3"]
 script = ExtResource("2_assign")
@@ -36,27 +36,27 @@ start = Vector2(1, 1.9)
 script = ExtResource("2_assign")
 label = "CB"
 job = 2
-start = Vector2(14, -14)
-zone_center = Vector2(20, -15)
-zone_radius = 8
+start = Vector2(14, -18.4)
+zone_center = Vector2(20, -19.9)
+zone_radius = 10.5
 deep = true
 
 [sub_resource type="Resource" id="d5"]
 script = ExtResource("2_assign")
 label = "CB"
 job = 2
-start = Vector2(14, 14)
-zone_center = Vector2(20, 15)
-zone_radius = 8
+start = Vector2(14, 18.4)
+zone_center = Vector2(20, 19.9)
+zone_radius = 10.5
 deep = true
 
 [sub_resource type="Resource" id="d6"]
 script = ExtResource("2_assign")
 label = "S"
 job = 2
-start = Vector2(18, 5)
-zone_center = Vector2(22, 5)
-zone_radius = 9
+start = Vector2(18, 5.4)
+zone_center = Vector2(22, 5.4)
+zone_radius = 12
 deep = true
 
 [resource]

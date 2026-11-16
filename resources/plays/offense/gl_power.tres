@@ -44,7 +44,7 @@ script = ExtResource("2_assign")
 label = "RB"
 job = 3
 start = Vector2(-6.5, 0.4)
-route = PackedVector2Array(2.8, 0.5, 5.5, 2.8, 10, 3.8)
+route = PackedVector2Array(2.8, 0.5, 5.5, 2.8, 10, 3.9)
 
 [resource]
 script = ExtResource("1_play")

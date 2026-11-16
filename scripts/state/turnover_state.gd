@@ -4,8 +4,7 @@ extends GameState
 
 
 func enter() -> void:
-	# A scramble nobody won goes up again: it is nobody's ball yet.
-	game.hud.show_banner(game.banner_text, "" if game.scramble_due else "%s ball" % game.offense.team_name)
+	game.hud.show_banner(game.banner_text, "%s ball" % game.offense.team_name)
 	game.hud.set_hint("")
 
 

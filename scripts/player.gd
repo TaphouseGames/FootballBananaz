@@ -299,6 +299,7 @@ func _setup_look_model() -> void:
 	body.add_child(model)
 	model.show_look(ratings.look_or_default(), team.team_color, ratings.number, ratings.display_name, team.white_kit)
 	_meshes.append(model.body_mesh)
+	_meshes.append(model.head)
 	animator = PlayerAnimator.new(self, model.skeleton)
 
 
