@@ -13,8 +13,15 @@ extends RefCounted
 ## width it was modelled with.
 const NECK_FILL: float = 0.8
 const NECK_FLARE: float = 0.12
+## How much of the collar's opening a neck may fill below the collar's rim.
+const NECK_HOLD: float = 0.9
+## How far above the rim (as a share of the head model's height) that hold ends.
+const NECK_HOLD_FADE: float = 0.06
 ## How deep the band at the top of the body is that counts as the collar's rim.
 const COLLAR_RIM: float = 0.035
+## How tall, to the top of its collar, the body is that the heads' fit
+## (PlayerParts.HEADS) is given for.
+const HEAD_UNIT: float = 0.8
 
 static var _cache: Dictionary[String, KitBase] = {}
 
@@ -40,6 +47,10 @@ var back_name: Vector3
 ## Per head id: [its mesh fitted to this body, in the body's space; the
 ## height of the top of it; the height of the middle of the head].
 var _heads: Dictionary[String, Array] = {}
+## How much bigger than usual heads are on this body (PlayerParts.BODIES).
+var _head_scale: float = 1.0
+## How much bigger than his height says a player with this body is.
+var body_scale: float = 1.0
 
 
 ## The body with this id in PlayerParts.BODIES.
@@ -52,6 +63,8 @@ static func of(body: String) -> KitBase:
 func _init(body: String) -> void:
 	id = body
 	var entry: Dictionary = PlayerParts.BODIES[body]
+	_head_scale = entry.get("head_scale", 1.0)
+	body_scale = entry.get("scale", 1.0)
 	scene = load(entry["path"])
 	_bake(entry)
 
@@ -82,10 +95,15 @@ func _head(head: String) -> Array:
 ## over the collar's middle, and the neck below its flare narrowed to go into
 ## the collar, whatever width it was modelled with.
 func _fit_head(head: String) -> Array:
-	var size: float = PlayerParts.head_fit(head, "size")
-	var sink: float = PlayerParts.head_fit(head, "sink")
-	var forward: float = PlayerParts.head_fit(head, "forward")
+	# A head's fit is in the units of a body HEAD_UNIT tall to its collar; the
+	# models come in at whatever size their longest side makes them.
+	var unit: float = collar_top / HEAD_UNIT
+	var size: float = PlayerParts.head_fit(head, "size") * unit * _head_scale
+	var sink: float = PlayerParts.head_fit(head, "sink") * unit
+	var forward: float = PlayerParts.head_fit(head, "forward") * unit
 	var neck_share: float = PlayerParts.head_fit(head, "neck")
+	var flare_share: float = PlayerParts.head_fit(head, "flare")
+	var tilt: float = deg_to_rad(PlayerParts.head_fit(head, "tilt"))
 	var path: String = PlayerParts.HEADS[head]["path"]
 	var root: Node = (load(path) as PackedScene).instantiate()
 	var source: ArrayMesh = (root.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D).mesh as ArrayMesh
@@ -122,13 +140,27 @@ func _fit_head(head: String) -> Array:
 	var narrow: Vector2 = Vector2(
 		clampf(NECK_FILL * collar_half.x / maxf(neck_half.x * grow, 0.0001), 0.3, 1.0),
 		clampf(NECK_FILL * collar_half.y / maxf(neck_half.y * grow, 0.0001), 0.3, 1.0))
+	# Where the rim of the collar is on the model.
+	var rim: float = line + sink / grow
 	var at: Vector3 = Vector3(collar_middle.x, collar_middle.y - forward, collar_top - sink)
 	for i: int in points.size():
 		var point: Vector3 = points[i]
-		var flare: float = smoothstep(line, line + tall * NECK_FLARE, point.z)
+		var flare: float = smoothstep(line, line + tall * flare_share, point.z)
 		var upright: Vector2 = lean * clampf((line - point.z) / maxf(line - low, 0.0001), 0.0, 1.0)
 		var across: Vector2 = (Vector2(point.x, point.y) + upright - neck_middle) * narrow.lerp(Vector2.ONE, flare)
-		points[i] = at + Vector3(across.x, across.y, point.z - line) * grow
+		# The head nods about its neck line as one piece, so the face keeps
+		# its shape; the neck below the line follows less the deeper it is.
+		var nod: Vector2 = Vector2(across.y, point.z - line).rotated(tilt * clampf((point.z - low) / maxf(line - low, 0.0001), 0.0, 1.0))
+		var fitted_point: Vector3 = at + Vector3(across.x, nod.x, nod.y) * grow
+		# Below the rim nothing may be behind the collar's opening, however
+		# the neck was modelled: the back of a thick neck is pulled in, less
+		# and less just above the rim. (In front the chin and what hangs
+		# from it lie over the collar, so the front is left alone.)
+		var off: Vector2 = Vector2(fitted_point.x, fitted_point.y) - collar_middle
+		var out: float = (off / (collar_half * NECK_HOLD)).length()
+		if out > 1.0 and off.y > 0.0:
+			off /= lerpf(out, 1.0, smoothstep(rim, rim + tall * NECK_HOLD_FADE, point.z))
+		points[i] = Vector3(collar_middle.x + off.x, collar_middle.y + off.y, fitted_point.z)
 	arrays[Mesh.ARRAY_VERTEX] = points
 	var fitted: ArrayMesh = ArrayMesh.new()
 	fitted.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
@@ -178,8 +210,13 @@ func _bake(entry: Dictionary) -> void:
 		var share: Color = Color(0.0, 0.0, 0.0, 0.0)
 		for k: int in per:
 			share += worth[bones[i * per + k]] * weights[i * per + k]
-		colors[i] = share
 		var point: Vector3 = points[i]
+		# A body whose neck bones do not reach all round its collar says how
+		# deep the collar is instead.
+		if entry.has("collar_depth"):
+			var depth: float = entry["collar_depth"]
+			share.r = maxf(share.r, smoothstep(depth + 0.008, depth - 0.008, collar_top - point.z))
+		colors[i] = share
 		custom[i * 4] = point.x
 		custom[i * 4 + 1] = point.y
 		custom[i * 4 + 2] = point.z

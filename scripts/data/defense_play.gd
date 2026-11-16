@@ -1,6 +1,6 @@
 class_name DefensePlay
 extends Resource
-## A defensive play: one assignment per player (7).
+## A defensive play: one assignment per player (8).
 
 ## The tab of the play-select screen the play is on.
 enum Group { MAN, ZONE, BLITZ, GOAL_LINE }

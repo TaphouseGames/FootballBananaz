@@ -3,9 +3,9 @@ extends Node
 ## Turns Input Map actions into inputs for the one player the person controls.
 ## `team` is null in autoplay, which disables everything here.
 
-const PASS_ACTIONS: Array[StringName] = [&"pass_1", &"pass_2", &"pass_3"]
-const PAD_LABELS: Array[String] = ["A", "X", "B"]
-const PAD_COLORS: Array[Color] = [Color(0.3, 0.85, 0.35), Color(0.25, 0.55, 1.0), Color(1.0, 0.3, 0.25)]
+const PASS_ACTIONS: Array[StringName] = [&"pass_1", &"pass_2", &"pass_3", &"pass_4"]
+const PAD_LABELS: Array[String] = ["A", "X", "B", "Y"]
+const PAD_COLORS: Array[Color] = [Color(0.3, 0.85, 0.35), Color(0.25, 0.55, 1.0), Color(1.0, 0.3, 0.25), Color(1.0, 0.82, 0.2)]
 
 var game: Game
 var pc: PlayController
@@ -144,7 +144,8 @@ func update_live() -> void:
 	var carrier: Player = pc.ball.carrier
 	var is_passer: bool = pc.can_pass() and player == pc.qb
 
-	# In the pocket the pass buttons win: they share A, X and B with other actions.
+	# In the pocket the pass buttons win: they share A, X, B and (with four men
+	# out) Y with other actions.
 	# The pass leaves on release: the longer the hold, the harder and flatter the
 	# throw. A tap is a lob; a full charge fires a bullet by itself.
 	if is_passer:
@@ -185,7 +186,10 @@ func update_live() -> void:
 		return
 	if not player.can_act():
 		return
-	if Input.is_action_just_pressed(&"jump"):
+	# With four men out the jump button is the fourth pass button for as long
+	# as the quarterback can throw.
+	var jump_is_pass: bool = is_passer and pc.eligible.size() >= PASS_ACTIONS.size()
+	if Input.is_action_just_pressed(&"jump") and not jump_is_pass:
 		pc.do_jump(player)
 		return
 	if is_passer:

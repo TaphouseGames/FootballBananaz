@@ -49,9 +49,15 @@ job = 1
 start = Vector2(-1.5, -8.3)
 route = PackedVector2Array(2, 0, 9, 9.3)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 2
+start = Vector2(-0.6, 3.4)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Empty Slants"
 description = "Shotgun, nobody in the backfield. Back in the left slot: three quick slants."
 group = 3
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

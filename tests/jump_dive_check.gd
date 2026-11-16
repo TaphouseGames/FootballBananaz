@@ -117,7 +117,7 @@ func _tick_distance() -> void:
 	if _case == Case.TOP:
 		_expect(_distances[Case.LOW] > _distances[Case.GROUND] + 0.5, "a low jump dive went no further than a ground dive")
 		_expect(_distances[Case.TOP] > _distances[Case.LOW] + 0.5, "a jump dive from the top went no further than a low one")
-		_expect(_dive_height > _tuning.jump_height * 0.8, "let go only %.2f up" % _dive_height)
+		_expect(_dive_height > _man.jump_height() * 0.8, "let go only %.2f up" % _dive_height)
 	_next()
 
 

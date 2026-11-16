@@ -94,6 +94,21 @@ get_open = 75
 catching = 80
 security = 40
 
+[sub_resource type="Resource" id="player_7"]
+script = ExtResource("1_ratings")
+display_name = "Bram Russet"
+position = "TE"
+number = 44
+speed = 55
+endurance = 55
+strength = 62
+blocking = 62
+tackling = 58
+get_open = 58
+catching = 68
+juke = 40
+security = 60
+
 [resource]
 script = ExtResource("2_roster")
-players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6"), SubResource("player_7")])

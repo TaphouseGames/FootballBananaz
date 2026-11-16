@@ -97,6 +97,22 @@ catching = 58
 juke = 68
 security = 66
 
+[sub_resource type="Resource" id="player_7"]
+script = ExtResource("1_ratings")
+display_name = "Dixie Crumble"
+position = "TE"
+number = 48
+speed = 56
+endurance = 56
+strength = 60
+blocking = 64
+tackling = 60
+coverage = 54
+get_open = 55
+catching = 60
+juke = 45
+security = 62
+
 [resource]
 script = ExtResource("2_roster")
-players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6"), SubResource("player_7")])

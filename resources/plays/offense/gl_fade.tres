@@ -49,10 +49,19 @@ job = 1
 start = Vector2(-6.5, 0.6)
 route = PackedVector2Array(2, 5.7, 6.5, 12.9)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 1
+start = Vector2(-0.6, -3.4)
+route = PackedVector2Array(4, 2)
+settle = true
+block_time = 0.5
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Fade"
-description = "Both wideouts fade to the back corners. Back slips out to the right flat."
+description = "Both wideouts fade to the back corners. Back slips out to the right flat. Tight end blocks, then sits down in the middle."
 goal_line = true
 group = 4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

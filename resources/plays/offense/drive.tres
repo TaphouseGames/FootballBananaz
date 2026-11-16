@@ -50,9 +50,15 @@ start = Vector2(-1.5, -7.6)
 route = PackedVector2Array(5.5, 0, 5, -2.2)
 settle = true
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 2
+start = Vector2(-0.6, 3.4)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Drive"
 description = "Left wideout drags shallow across the field, right wideout breaks in behind him ten yards deep. Back sits down from the left slot."
 group = 1
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

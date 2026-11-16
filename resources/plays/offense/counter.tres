@@ -46,11 +46,17 @@ job = 3
 start = Vector2(-6, 2)
 route = PackedVector2Array(0.3, 2.3, 2.5, -5, 7, -11.8)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 2
+start = Vector2(-0.6, -3.4)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Counter"
-description = "Back steps right, then cuts back to the left side."
+description = "Back steps right, then cuts back to the left side behind the tight end."
 category = 0
 is_run = true
 handoff_delay = 0.6
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

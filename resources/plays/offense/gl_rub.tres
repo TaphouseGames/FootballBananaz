@@ -30,10 +30,10 @@ start = Vector2(-0.9, 1.7)
 
 [sub_resource type="Resource" id="wr_l"]
 script = ExtResource("2_assign")
-label = "TE"
+label = "WR"
 job = 1
-start = Vector2(-0.6, -3.4)
-route = PackedVector2Array(3, 0, 4, 14)
+start = Vector2(-0.6, -15.6)
+route = PackedVector2Array(3, 0, 8, -5.8)
 
 [sub_resource type="Resource" id="wr_r"]
 script = ExtResource("2_assign")
@@ -49,10 +49,17 @@ job = 1
 start = Vector2(-1.5, 7.6)
 route = PackedVector2Array(2, 1.4, 4.5, 11.6)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 1
+start = Vector2(-0.6, -3.4)
+route = PackedVector2Array(3, 0, 4, 14)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Rub"
-description = "Two stacked on the right: the outside man slants in, the inside man breaks to the flat under him. Tight end drags across."
+description = "Two stacked on the right: the outside man slants in, the inside man breaks to the flat under him. Tight end drags across, left wideout fades to the corner."
 goal_line = true
 group = 4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

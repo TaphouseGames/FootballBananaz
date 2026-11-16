@@ -9,12 +9,12 @@ extends SceneTree
 ##   describe       only prints what the models are made of (works headless)
 ##   head=<n>       which of HEADS goes on the body
 
-const BODY: String = "res://TripoModels/human_figure_3d_model/human_figure_3d_model.fbx"
+const BODY: String = "res://TripoModels/player_body_male_athletic/player_body_male_athletic.fbx"
 const HEADS: PackedStringArray = [
-	"res://TripoModels/bearded_man_head_3d_model/bearded_man_head_3d_model.fbx",
-	"res://TripoModels/stylized_head_3d_model/stylized_head_3d_model.fbx",
-	"res://TripoModels/stylized_head_3d_model_1/stylized_head_3d_model_1.fbx",
-	"res://TripoModels/stylized_male_head_3d_model/stylized_male_head_3d_model.fbx",
+	"res://TripoModels/crowd_head_m5_brown_beard/crowd_head_m5_brown_beard.fbx",
+	"res://TripoModels/crowd_head_m8_grey_beard/crowd_head_m8_grey_beard.fbx",
+	"res://TripoModels/crowd_head_m11_blond_grin/crowd_head_m11_blond_grin.fbx",
+	"res://TripoModels/player_head_dash_plantain/player_head_dash_plantain.fbx",
 ]
 ## Per head: how far forward it is moved and how many degrees it is tipped back
 ## round its neck. The crowd's heads are modelled with the chin pushed forward.

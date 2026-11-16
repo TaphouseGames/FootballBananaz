@@ -49,10 +49,18 @@ job = 1
 start = Vector2(-0.6, -19.9)
 route = PackedVector2Array(40, 0)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 1
+start = Vector2(-0.6, 3.4)
+route = PackedVector2Array(2, 1.5, 3, 9)
+block_time = 1
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Mismatch Go"
-description = "Back splits out wide left and runs straight up the field on a linebacker. Slot breaks in under him, right wideout runs the post."
+description = "Back splits out wide left and runs straight up the field on a linebacker. Slot breaks in under him, right wideout runs the post. Tight end blocks, then leaks to the right flat."
 category = 2
 group = 2
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

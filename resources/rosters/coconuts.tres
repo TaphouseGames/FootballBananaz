@@ -96,6 +96,22 @@ get_open = 45
 catching = 35
 security = 80
 
+[sub_resource type="Resource" id="player_7"]
+script = ExtResource("1_ratings")
+display_name = "Moose Macaroon"
+position = "TE"
+number = 43
+speed = 45
+endurance = 55
+strength = 78
+blocking = 76
+tackling = 68
+coverage = 40
+get_open = 40
+catching = 48
+juke = 30
+security = 68
+
 [resource]
 script = ExtResource("2_roster")
-players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6"), SubResource("player_7")])

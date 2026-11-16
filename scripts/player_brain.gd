@@ -197,7 +197,7 @@ func think(pc: PlayController, delta: float) -> void:
 			if carrier == player:
 				_carry(pc)
 			elif carrier.team == player.team:
-				_block(pc, carrier.position)
+				_lead_block(pc, carrier.position)
 			elif _reading_run(pc, carrier):
 				_defense_pocket(pc)
 			else:
@@ -523,9 +523,12 @@ func _offense_pocket(pc: PlayController) -> void:
 				# Flea flicker: he drops while the back has it.
 				_seek(route[route.size() - 1] if route.size() > 0 else start_point)
 		OffenseAssignment.Job.BLOCK:
-			_block(pc, pc.qb.position)
+			_lead_block(pc, pc.qb.position)
 		_:
-			_run_route(pc)
+			if chipping(pc):
+				_block(pc, pc.qb.position)
+			else:
+				_run_route(pc)
 
 
 func _quarterback(pc: PlayController) -> void:
@@ -709,7 +712,7 @@ func _heave(pc: PlayController) -> void:
 	var target: Player = null
 	var best_score: float = -INF
 	for receiver: Player in pc.eligible:
-		if receiver.is_down():
+		if receiver.is_down() or receiver.brain.chipping(pc):
 			continue
 		# Depth first; how open he is only settles it between men at about the
 		# same depth.
@@ -739,7 +742,8 @@ func _best_receiver(pc: PlayController, checkdowns: bool) -> Player:
 	# A team that throws short takes the man underneath unless time is short.
 	var depth_bonus: float = lerpf(tuning.ai_qb_depth_bonus * player.team.call_bias[OffensePlay.Category.DEEP], tuning.ai_qb_urgent_depth_bonus, pc.qb_urgency)
 	for receiver: Player in pc.eligible:
-		if receiver.is_down():
+		# A man still in his block is not looking for the ball.
+		if receiver.is_down() or receiver.brain.chipping(pc):
 			continue
 		var downfield: float = (receiver.position.x - pc.los_x) * pc.off_dir
 		if not checkdowns and downfield < tuning.ai_qb_min_depth:
@@ -947,7 +951,15 @@ func _run_route(pc: PlayController) -> void:
 func on_route(pc: PlayController) -> bool:
 	return is_offense and off_assign != null and pc.phase == PlayController.Phase.POCKET \
 			and _is_receiver(pc) and route_index < route.size() \
-			and player != pc.human.controlled
+			and player != pc.human.controlled and not chipping(pc)
+
+
+## A chip and release: he is still in his block and has not gone out on his
+## route yet (see OffenseAssignment.block_time).
+func chipping(pc: PlayController) -> bool:
+	return is_offense and off_assign != null and off_assign.job == OffenseAssignment.Job.ROUTE \
+			and off_assign.block_time > 0.0 and pc.phase == PlayController.Phase.POCKET \
+			and pc.live_time < off_assign.block_time
 
 
 ## Where his route has him `seconds` from now: along the waypoints still to
@@ -1136,7 +1148,9 @@ func _carry(pc: PlayController) -> void:
 
 
 ## The sharper carrier goes over a tackler who dives at him. Only a dive: a
-## man on his feet wraps up a carrier in the air like any other.
+## man on his feet wraps up a carrier in the air like any other. And only a
+## dive he would be high enough over when it gets to him: one that is too
+## close for his jump he leaves to a spin or a stiff arm.
 func _hurdles(pc: PlayController) -> bool:
 	var edge: float = pc.cpu_edge(player)
 	if edge <= 0.0 or _hurdle_timer > 0.0:
@@ -1149,6 +1163,8 @@ func _hurdles(pc: PlayController) -> bool:
 		var dist: float = to.length()
 		if dist > tuning.ai_edge_hurdle_range or dist < 0.01 or opponent.velocity.dot(to / dist) <= 0.0:
 			continue
+		if not _would_clear(opponent, to / dist, dist):
+			continue
 		_hurdle_timer = 0.5
 		if randf() < tuning.ai_edge_hurdle_chance * edge:
 			pc.game.add_stat(&"hurdle_jumps")
@@ -1156,6 +1172,19 @@ func _hurdles(pc: PlayController) -> bool:
 			return true
 		return false
 	return false
+
+
+## Whether a jump started now would have his feet over the diving `opponent`
+## when the dive gets to him. `toward` points from the diver to him.
+func _would_clear(opponent: Player, toward: Vector3, dist: float) -> bool:
+	var closing: float = (opponent.velocity - player.velocity).dot(toward)
+	if closing <= 0.0:
+		return false
+	var contact: float = maxf(dist - tuning.dive_tackle_radius, 0.0) / closing
+	var t: float = contact / maxf(tuning.jump_time, 0.01)
+	if t >= 1.0:
+		return false
+	return 4.0 * player.jump_height() * t * (1.0 - t) >= tuning.hurdle_clear_height
 
 
 ## True on the tick this carrier means to start his spin or stiff arm against
@@ -1206,7 +1235,10 @@ func _dive_for_the_line(pc: PlayController, nearest: float) -> bool:
 
 
 ## Picks the move that fits where the tackler is coming from: a stiff arm for one
-## closing from the side, a spin for one straight ahead.
+## closing from the side, a spin for one straight ahead. A carrier who is much
+## better at the other move uses that one where it can work: the strong one
+## puts his arm out at a tackler in front of him, the elusive one spins off a
+## tackler at his side.
 func _carrier_move(pc: PlayController, opponent: Player) -> void:
 	var to: Vector3 = opponent.position - player.position
 	to.y = 0.0
@@ -1216,7 +1248,16 @@ func _carrier_move(pc: PlayController, opponent: Player) -> void:
 	var ahead: float = to.dot(player.facing)
 	var left: float = to.dot(Vector3.UP.cross(player.facing))
 
-	if absf(left) > tuning.ai_stiff_arm_side_dot and ahead > -0.5:
+	var stiff_arm: bool = absf(left) > tuning.ai_stiff_arm_side_dot and ahead > -0.5
+	var stronger: float = float(player.ratings.strength - player.ratings.juke)
+	if stiff_arm and -stronger >= tuning.ai_move_rating_margin:
+		stiff_arm = false
+		pc.game.add_stat(&"spins_by_rating")
+	elif not stiff_arm and ahead > 0.0 and left != 0.0 and stronger >= tuning.ai_move_rating_margin:
+		stiff_arm = true
+		pc.game.add_stat(&"stiff_arms_by_rating")
+
+	if stiff_arm:
 		# Strong carriers use the stiff arm more.
 		if randf() < _sharp(tuning.ai_stiff_arm_chance, tuning.ai_edge_move_chance) * float(player.ratings.strength) / 50.0:
 			var side: float = signf(left)
@@ -1232,13 +1273,46 @@ func _carrier_move(pc: PlayController, opponent: Player) -> void:
 		pc.do_spin(player, -signf(left) if left != 0.0 else 1.0, true)
 
 
+## A blocker with a path drawn for him on a run play (the fullback through the
+## hole, a tight end round the edge) runs it in front of the carrier until a
+## defender nobody is blocking yet is near enough to take on: the linebacker
+## in the hole, not the lineman his own line already has. Everybody else
+## blocks from the start, and so does he once his path is run or the carrier
+## has gone past him.
+func _lead_block(pc: PlayController, protect: Vector3) -> void:
+	var leading: bool = is_offense and off_assign != null and off_assign.job == OffenseAssignment.Job.BLOCK \
+			and pc.off_play.is_run and route_index < route.size()
+	if leading:
+		var carrier: Player = pc.ball.carrier
+		if carrier != null and carrier != pc.qb and (carrier.position.x - player.position.x) * pc.off_dir > 1.0:
+			leading = false
+	if not leading:
+		_block(pc, protect)
+		return
+	for opponent: Player in player.team.opponent.players:
+		if opponent.is_down() or opponent.block_slow_timer > 0.0:
+			continue
+		if _flat_distance(opponent.position, player.position) <= tuning.ai_lead_block_range:
+			_block(pc, protect, true)
+			return
+	var target: Vector3 = route[route_index]
+	if _flat_distance(player.position, target) < 0.9:
+		route_index += 1
+	player.move_input = _direction_to(target)
+	# He has to get there before the man with the ball does.
+	player.wants_turbo = true
+
+
 ## Get between the most dangerous nearby opponent and the thing being protected.
-func _block(pc: PlayController, protect: Vector3) -> void:
+## `free_only` leaves the ones a teammate is already blocking to him.
+func _block(pc: PlayController, protect: Vector3, free_only: bool = false) -> void:
 	player.is_blocking = true
 	var best: Player = null
 	var best_score: float = INF
 	for opponent: Player in player.team.opponent.players:
 		if opponent.is_down():
+			continue
+		if free_only and opponent.block_slow_timer > 0.0 and opponent.block_partner != player:
 			continue
 		var score: float = _flat_distance(opponent.position, player.position) + 0.35 * _flat_distance(opponent.position, protect)
 		if score < best_score:
@@ -1275,6 +1349,8 @@ func _defense_pocket(pc: PlayController) -> void:
 		DefenseAssignment.Job.MAN:
 			if man_target == null:
 				_cover_zone(pc)
+			elif _green_dogs(pc):
+				_pursue(pc, pc.qb)
 			else:
 				_cover_man(pc)
 		DefenseAssignment.Job.ZONE:
@@ -1286,6 +1362,15 @@ func _defense_pocket(pc: PlayController) -> void:
 		# Blown coverage: caught flat-footed, looking into the backfield.
 		player.move_input = Vector3.ZERO
 		player.wants_turbo = false
+
+
+## His man is staying in to block, so he comes for the quarterback: the extra
+## blocker gets an extra rusher, as he would from a linebacker who sees it.
+func _green_dogs(pc: PlayController) -> bool:
+	if not def_assign.green_dog or pc.live_time < tuning.ai_green_dog_delay:
+		return false
+	var job: OffenseAssignment = man_target.brain.off_assign
+	return job != null and job.job == OffenseAssignment.Job.BLOCK
 
 
 ## The defender picked to take a receiver or the back out goes for him once the

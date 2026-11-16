@@ -1,14 +1,15 @@
 class_name OffensePlay
 extends Resource
-## An offensive play: one assignment per player (7). Exactly one should be the QB.
+## An offensive play: one assignment per player (8). Exactly one should be the QB.
 
 ## What the play attacks. The CPU play caller uses it to pick and to counter.
 enum Category { RUN, SHORT, DEEP }
-## The tab of the play-select screen the play is on.
-enum Group { RUN, SHORT_PASS, DEEP_PASS, SHOTGUN, GOAL_LINE }
+## The tab of the play-select screen the play is on. HEAVY: the plays built
+## around the tight end / fullback.
+enum Group { RUN, SHORT_PASS, DEEP_PASS, SHOTGUN, GOAL_LINE, HEAVY }
 
 ## The tabs' titles, in Group order.
-const GROUP_NAMES: PackedStringArray = ["RUN", "SHORT PASS", "DEEP PASS", "SHOTGUN", "GOAL LINE"]
+const GROUP_NAMES: PackedStringArray = ["RUN", "SHORT PASS", "DEEP PASS", "SHOTGUN", "GOAL LINE", "HEAVY"]
 
 @export var play_name: String = "Play"
 @export var description: String = ""

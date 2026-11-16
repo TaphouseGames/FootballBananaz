@@ -49,6 +49,13 @@ job = 1
 start = Vector2(-0.6, 8.3)
 route = PackedVector2Array(12, 0, 44, -8.3)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 1
+start = Vector2(-0.6, -8.3)
+route = PackedVector2Array(12, 0, 44, 8.3)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Hail Mary"
@@ -56,4 +63,4 @@ description = "Everyone goes deep. Throw it up and pray."
 category = 2
 group = 2
 heave_only = true
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

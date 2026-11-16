@@ -49,6 +49,12 @@ job = 3
 start = Vector2(-6.5, 0.6)
 route = PackedVector2Array(3.5, -0.6, 6, -6.6)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "FB"
+job = 2
+start = Vector2(-4.5, -2)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Boot"
@@ -57,4 +63,4 @@ group = 4
 handoff_delay = 0.35
 play_action = true
 goal_line = true
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

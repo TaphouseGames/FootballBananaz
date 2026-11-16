@@ -19,27 +19,50 @@ const BUILD_NAMES: PackedStringArray = ["Lean", "Athletic", "Big"]
 ##   belt_z, hem_z, boot_z                    the waistband, the hem of the
 ##                                            pants and the top of the boots
 ##   front_number, back_number, back_name     [centre z, half width, half height]
+##   collar_depth                             how far down from its top the collar
+##                                            goes, where the neck bones do not
+##                                            cover all of it
+##   scale                                    how much bigger than his height says
+##                                            a player with this body is, head and
+##                                            all (1 if not given)
+##   head_scale                               how much bigger than usual heads
+##                                            are on this body (1 if not given)
 const BODIES: Dictionary[String, Dictionary] = {
 	"male_athletic": {
-		"path": "res://TripoModels/human_figure_3d_model/human_figure_3d_model.fbx",
+		"path": "res://TripoModels/player_body_male_athletic/player_body_male_athletic.fbx",
+	},
+	"male_big": {
+		"path": "res://TripoModels/player_body_male_big/player_body_male_big.fbx",
+		"collar_depth": 0.075, "scale": 1.1, "head_scale": 0.98,
 	},
 }
 
 ## The heads, by id. `name` is what the team editor calls it, `gender` whose
 ## bodies it goes on, `path` the model. How it is put on a body:
-##   size      how tall the model is, neck and all, in the body's units
+##   size      how tall the model is, neck and all, on a body 0.8 tall to the
+##             top of its collar (it grows with the body)
 ##   neck      how far up the model the line is that goes into the collar
 ##             (0 its bottom, 1 its top): higher shows less neck
 ##   sink      how far below the top of the collar that line sits
 ##   forward   moves the head toward the face
+##   tilt      degrees the head nods forward (chin down) about that line
+##   flare     how far above that line (as a share of the model's height) the
+##             neck is back to the width it was modelled with; the neck is
+##             narrowed to go into the collar, so raise it for a thick neck
+##             that comes out of the collar wider than the collar
 const HEADS: Dictionary[String, Dictionary] = {
 	"dash_plantain": {
 		"name": "Dash Plantain", "gender": "male",
-		"path": "res://TripoModels/stylized_male_head_3d_model/stylized_male_head_3d_model.fbx",
+		"path": "res://TripoModels/player_head_dash_plantain/player_head_dash_plantain.fbx",
 		"size": 0.272, "neck": 0.205, "sink": 0.035, "forward": 0.027,
 	},
+	"moe_peel": {
+		"name": "Moe Peel", "gender": "male",
+		"path": "res://TripoModels/player_head_moe_peel/player_head_moe_peel.fbx",
+		"size": 0.24, "neck": 0.235, "sink": 0.035, "forward": 0.008, "tilt": 8.0,
+	},
 }
-const HEAD_FIT: Dictionary = {"size": 0.3, "neck": 0.15, "sink": 0.035, "forward": 0.0}
+const HEAD_FIT: Dictionary = {"size": 0.3, "neck": 0.15, "sink": 0.035, "forward": 0.0, "flare": 0.12, "tilt": 0.0}
 
 
 static func body_id(gender: int, build: int) -> String:

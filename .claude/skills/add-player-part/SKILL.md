@@ -109,6 +109,14 @@ Without a path, take the newest folder in `TripoModels/` whose `.fbx` no entry o
 `player_parts.gd` (and no fan in `tools/crowd_parts.json`) uses, and say which one you took. If
 the path is already in `player_parts.gd`, say so and stop.
 
+Tripo's names say nothing (`man_head_3d_model`), so rename the folder and the `.fbx` in it
+(with its `.fbx.import`) before adding the part: `player_body_<gender>_<build>` or
+`player_head_<id>`, e.g. `TripoModels/player_head_moe_peel/player_head_moe_peel.fbx`. Leave
+the `.fbm` folder and the textures in it as they are (the FBX names them), and do not edit the
+`.import` files: Godot imports the model again under its new path. The Tripo bridge also puts
+a new model into whichever scene is open in the editor; if that scene names the old path, fix
+it there too.
+
 Godot is not on PATH; its location is in the `godot-executable-location` memory
 (`Godot_v4.7.2-stable_win64_console.exe`). With `G` set to it, from the project root:
 
@@ -144,7 +152,7 @@ loads them at 1024; the 2048 sources stay as they are.
    "$G" --path . --script res://tests/model_gallery.gd -- out=<scratchpad>/gallery only=body_<gender>_<build>
    ```
 
-   The sheet shows the body in away and home kits at several heights from four sides. Check:
+   The sheet shows the body in away and home kits at several heights from five sides. Check:
    - **Jersey / pants** meet at the waistband, not above or below it.
    - **Pants / socks** meet at the hem of the pants: no sock colour on the pants' cuff.
    - **Socks / boots** meet at the top of the boots.
@@ -164,7 +172,18 @@ loads them at 1024; the 2048 sources stay as they are.
    ```
 
    Those numbers are what the male athletic body comes to, as a starting point.
-4. Look at the heads on it too (`only=heads_<gender>`, which uses the athletic body, or pick
+
+   If part of the collar stays white in the away kit (look at the back view), the neck bones
+   do not reach all round it: add `"collar_depth": 0.075`, how far down from its top the
+   collar goes. The male big body needed it.
+
+   Heads grow with the body (their fit is measured against the height of the collar, whatever
+   size the model came in at). To make them bigger or smaller on one body only, add
+   `"head_scale"` (1 is usual). `"scale"` makes players with this body bigger than their height
+   says, head and all; to make only the body bigger, give `scale` and divide `head_scale` by
+   it (the male big body has `scale` 1.1 and `head_scale` 0.98: a wider collar round heads
+   of the size they were).
+4. Look at the heads on it too (`only=heads_<gender>`, which uses the athletic body unless `build=<build>` names another, or pick
    the body in the team editor): a head that sat well on another body can sit differently on
    a wider or narrower collar.
 5. Run the [checks](#checks).
@@ -185,7 +204,7 @@ loads them at 1024; the 2048 sources stay as they are.
    ```
 
 3. Import, render and look (`only=heads_<gender>` shows every head of the gender close up from
-   four sides; `only=body_` shows whole players):
+   five sides; `only=body_` shows whole players):
 
    ```bash
    "$G" --path . --script res://tests/model_gallery.gd -- out=<scratchpad>/gallery only=heads_<gender>
@@ -201,12 +220,21 @@ loads them at 1024; the 2048 sources stay as they are.
    | Chin or beard sinks into the collar | lower `neck`, or lower `sink` |
    | Neck or its cut bottom shows behind the collar (side view) | raise `forward` by 0.01-0.03 |
    | Neck shows in front of the collar | lower `forward` (it may be negative) |
+   | The head looks up, or should look down at the field | `"tilt"`: degrees it nods forward about the neck line (0 if not given; Moe Peel has 8) |
+   | A thick neck is back to its full width too soon above the collar | `"flare"` (0.12 if not given): how far above the collar's rim the neck stays narrowed |
    | The model faces backwards or sideways | it has to be regenerated or turned in Blender: there is no yaw setting |
 
    Dash Plantain needed `size` 0.272 (his neck was too wide for the collar at 0.3), `neck`
-   0.205 and `forward` 0.027. The side view is the one that shows a bad fit. Body and head
-   are sized against each other only (a player's height comes from his look), so "a bigger
-   body" and "a smaller head" are the same change: `size`.
+   0.205 and `forward` 0.027. The side view is the one that shows a bad fit.
+
+   **Always check that the neck does not poke out of the uniform.** Look at the side view,
+   the view from behind at an angle and the back view of every new head: no skin may show
+   outside the collar, behind it or through its front. The fit holds the back of the neck
+   inside the collar by itself (`NECK_HOLD` in `kit_base.gd`), so what is left is the front:
+   a spot of skin on the front of the collar means `forward` is too high. For a heavy head
+   whose chin is pushed forward (Moe Peel), nod it with `tilt` rather than moving it
+   forward. Moe Peel: `size` 0.24, `neck` 0.235, `forward` 0.008, `tilt` 8. Look at a head on the body its
+   player has (`build=big` for a lineman), not only on the athletic one.
 4. If the head was made for a player, offer to give it to that player: in the team editor
    (Player models > Head), or by setting `head` on his look in `resources/rosters/<team>.tres`.
    A player without a saved look gets a head picked from his name among those of his gender.

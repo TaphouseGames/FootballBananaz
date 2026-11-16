@@ -405,7 +405,7 @@ func record_match(game: Game) -> bool:
 		line.add(game.stat_book.team_line(team))
 		lines.append(line)
 		var roster: Array[PlayerLine] = []
-		# The seven, whoever is on the field at the whistle (see Team.players).
+		# The eight, whoever is on the field at the whistle (see Team.players).
 		for player: Player in team.squad:
 			roster.append(game.stat_book.player_line(player))
 		players.append(roster)

@@ -58,12 +58,20 @@ zone_center = Vector2(18, 12.7)
 zone_radius = 14.5
 deep = true
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 2
+start = Vector2(4.5, -3)
+zone_center = Vector2(6, -1.5)
+zone_radius = 7.5
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Tampa 2"
-description = "Two rush, corners in the flats, two deep halves, and the middle linebacker runs back to take the deep seam."
+description = "Two rush, corners in the flats, two deep halves, and the middle linebacker runs back to take the deep seam. The other one stays underneath."
 run_fit = 0.5
 short_fit = 0.45
 deep_fit = 0.4
 group = 1
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

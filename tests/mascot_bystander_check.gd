@@ -97,8 +97,8 @@ func _line_up(yard: float, home_ball: bool) -> void:
 
 func _check_line_up() -> void:
 	var tuning: Tuning = _game.tuning
-	if _pc.players.size() != 16:
-		_fail("%d on the field, not the two sevens and the two mascots" % _pc.players.size())
+	if _pc.players.size() != 18:
+		_fail("%d on the field, not the two eights and the two mascots" % _pc.players.size())
 	var lane: float = tuning.half_width() - tuning.mascot_sideline_inset
 	for team: Team in [_game.home, _game.away]:
 		var mascot: Mascot = team.mascot
@@ -106,7 +106,7 @@ func _check_line_up() -> void:
 		if not _pc.players.has(mascot) or not mascot.visible:
 			_fail("%s is not on the field" % who)
 			continue
-		if team.players.has(mascot) or team.players.size() != 7:
+		if team.players.has(mascot) or team.players.size() != 8:
 			_fail("%s is one of its team's %d players" % [who, team.players.size()])
 		if not mascot.bystander:
 			_fail("%s is not standing by" % who)
@@ -115,7 +115,7 @@ func _check_line_up() -> void:
 			_fail("%s is at z %.1f, not by its own sideline (%.1f)" % [who, mascot.position.z, side * lane])
 		if mascot.position.x < -tuning.end_zone_depth or mascot.position.x > tuning.field_length + tuning.end_zone_depth:
 			_fail("%s is off the end of the field at x %.1f" % [who, mascot.position.x])
-		# Behind its own team: nobody of its seven is further back than it is,
+		# Behind its own team: nobody of its eight is further back than it is,
 		# unless the end line is in the way.
 		var dir: float = float(team.attack_dir)
 		var back_x: float = -(tuning.end_zone_depth - 1.5) if dir > 0.0 else tuning.field_length + tuning.end_zone_depth - 1.5

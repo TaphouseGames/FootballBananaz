@@ -1,6 +1,6 @@
 class_name Team
 extends Node3D
-## A side: its identity, direction of attack, score, and seven Player children.
+## A side: its identity, direction of attack, score, and eight Player children.
 
 const MASCOT_SCENE: PackedScene = preload("res://scenes/mascot.tscn")
 
@@ -22,8 +22,8 @@ const MASCOT_SCENE: PackedScene = preload("res://scenes/mascot.tscn")
 var white_kit: bool = false
 var score: int = 0
 var opponent: Team
-## Who plays for this team: its seven, and its mascot while it is a guest at
-## a touchdown party (PlayController._invite_mascot). The seven are always in
+## Who plays for this team: its eight, and its mascot while it is a guest at
+## a touchdown party (PlayController._invite_mascot). The eight are always in
 ## `squad`. The mascot is on the field with them, but only stands by (see
 ## Player.bystander), so otherwise it is not one of these.
 var players: Array[Player] = []

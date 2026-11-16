@@ -5,7 +5,9 @@ extends Resource
 ## A position simply ignores the ratings it has no use for.
 
 @export var display_name: String = ""
-@export_enum("QB", "LINE", "WR", "RB") var position: String = "LINE"
+## "TE" is the tight end who is also the fullback: he lines up wherever the
+## play puts him, to block, to catch or to carry.
+@export_enum("QB", "LINE", "WR", "RB", "TE") var position: String = "LINE"
 ## Jersey number. 0 = none.
 @export_range(0, 99) var number: int = 0
 ## What his model looks like. Nobody has to have one: see look_or_default().
@@ -35,7 +37,8 @@ extends Resource
 @export_group("Ball Skills")
 ## Chance to hold on to a pass (and to pick one off on defense).
 @export_range(0, 100) var catching: int = 50
-## How well a spin or a jump beats a tackle (the stiff arm goes by strength).
+## How well a spin beats a tackle and how high he jumps, which is what gets him
+## over a diving tackler (the stiff arm goes by strength).
 @export_range(0, 100) var juke: int = 50
 ## How well he holds on to the ball when he is tackled.
 @export_range(0, 100) var security: int = 50
@@ -55,6 +58,7 @@ const KEY_RATINGS: Dictionary[String, Array] = {
 	"WR": [&"get_open", &"catching", &"speed", &"juke"],
 	"RB": [&"speed", &"juke", &"strength", &"security"],
 	"LINE": [&"blocking", &"tackling", &"strength"],
+	"TE": [&"blocking", &"catching", &"strength", &"get_open"],
 }
 ## Every rating a player card shows, in order, with the name it goes by there.
 ## The last three only mean something for a quarterback.

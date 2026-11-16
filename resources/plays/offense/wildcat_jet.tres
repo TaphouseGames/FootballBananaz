@@ -46,6 +46,12 @@ label = "RB"
 job = 0
 start = Vector2(-5, 0)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 2
+start = Vector2(-0.6, 3.4)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Wildcat Jet"
@@ -54,4 +60,4 @@ category = 0
 is_run = true
 handoff_delay = 0.7
 cpu_weight = 0.4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

@@ -1145,7 +1145,7 @@ func _stance() -> void:
 	var quarterback: bool = false
 	var defender: bool = false
 	if brain != null and brain.off_assign != null:
-		lineman = brain.off_assign.job == OffenseAssignment.Job.BLOCK
+		lineman = brain.off_assign.job == OffenseAssignment.Job.BLOCK or brain.off_assign.block_time > 0.0
 		quarterback = brain.off_assign.job == OffenseAssignment.Job.QB
 	elif brain != null and brain.def_assign != null:
 		lineman = brain.def_assign.job == DefenseAssignment.Job.RUSH

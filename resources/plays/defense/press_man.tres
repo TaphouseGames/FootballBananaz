@@ -51,11 +51,19 @@ job = 1
 start = Vector2(3, 3)
 man_target = 2
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 1
+start = Vector2(3, -3)
+man_target = 3
+green_dog = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Press Man"
-description = "Three rush, corners up in the receivers' faces, linebacker on the back. The safety sits only ten yards deep."
+description = "Three rush, corners up in the receivers' faces, linebackers on the back and the tight end. The safety sits only ten yards deep."
 run_fit = 0.65
 short_fit = 0.6
 deep_fit = 0.5
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

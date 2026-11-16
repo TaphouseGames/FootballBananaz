@@ -51,13 +51,21 @@ start = Vector2(2, 12.7)
 man_target = 1
 underneath = true
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 2
+start = Vector2(2.5, 0)
+zone_center = Vector2(3, 0)
+zone_radius = 8
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Double"
-description = "Three rush, two men on each wideout: one in front, one behind. Nobody on the back."
+description = "Three rush, two men on each wideout: one in front, one behind. One man in the short middle, nobody on the back."
 run_fit = 0.4
 short_fit = 0.6
 deep_fit = 0.3
 group = 3
 goal_line = true
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

@@ -108,7 +108,7 @@ func _snap() -> void:
 	_game.start_drive(team, _game.tuning.yard_to_x(team.attack_dir, 92.0))
 	_pc.line_up(_game.offense_playbook.plays[0], _game.defense_playbook.plays[0])
 	# The mascot that joined the last party is standing by again.
-	if _pc.players.size() != 16 or team.players.size() != 7 or not team.mascot.bystander:
+	if _pc.players.size() != 18 or team.players.size() != 8 or not team.mascot.bystander:
 		_failures.append("score %d: %d players lined up, %d of them the home team's" % [_scores + 1, _pc.players.size(), team.players.size()])
 	_pc.snap()
 	_pc.state_machine.transition(&"Live")

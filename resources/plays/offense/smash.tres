@@ -50,10 +50,18 @@ job = 1
 start = Vector2(-5, -3)
 route = PackedVector2Array(1, -8.2, 4, -15.4, 9, -18.3)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 1
+start = Vector2(-0.6, 3.4)
+route = PackedVector2Array(7, 0, 6.5, -1)
+settle = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Smash"
-description = "Hitch outside with a corner route over the top of it. Back in the far flat."
+description = "Hitch outside with a corner route over the top of it. Tight end hooks up in the middle, back in the far flat."
 category = 1
 group = 1
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

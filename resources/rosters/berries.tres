@@ -98,6 +98,21 @@ catching = 85
 juke = 45
 security = 32
 
+[sub_resource type="Resource" id="player_7"]
+script = ExtResource("1_ratings")
+display_name = "Boyd Mulberry"
+position = "TE"
+number = 46
+speed = 66
+endurance = 62
+strength = 52
+blocking = 52
+coverage = 58
+get_open = 66
+catching = 64
+juke = 55
+security = 52
+
 [resource]
 script = ExtResource("2_roster")
-players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6"), SubResource("player_7")])

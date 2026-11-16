@@ -51,12 +51,20 @@ label = "LB"
 job = 0
 start = Vector2(2, 4)
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 1
+start = Vector2(4, -3)
+man_target = 3
+green_dog = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Fire Zone"
-description = "Five rush with two deep halves behind it. Everything short is open if the ball gets out."
+description = "Five rush with two deep halves behind it and a man on the tight end. Everything else short is open if the ball gets out."
 run_fit = 0.6
 short_fit = 0.3
 deep_fit = 0.35
 group = 2
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

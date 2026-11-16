@@ -97,6 +97,22 @@ catching = 40
 juke = 88
 security = 42
 
+[sub_resource type="Resource" id="player_7"]
+script = ExtResource("1_ratings")
+display_name = "Bo Split"
+position = "TE"
+number = 40
+speed = 58
+endurance = 58
+strength = 58
+blocking = 60
+tackling = 55
+coverage = 52
+get_open = 62
+catching = 62
+juke = 55
+security = 55
+
 [resource]
 script = ExtResource("2_roster")
-players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6"), SubResource("player_7")])

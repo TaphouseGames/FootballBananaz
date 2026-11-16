@@ -46,13 +46,20 @@ job = 3
 start = Vector2(-6, 1.5)
 route = PackedVector2Array(0.5, 6.8, 4, 14.1, 9, 16.9)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "FB"
+job = 2
+start = Vector2(-4.5, 2)
+route = PackedVector2Array(3.5, 3, 8.5, 4)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Toss"
-description = "Two tight ends block down. Quick pitch to the back running for the right corner."
+description = "Two tight ends block down. Quick pitch to the back running for the right corner behind the fullback."
 category = 0
 group = 4
 is_run = true
 handoff_delay = 0.25
 goal_line = true
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

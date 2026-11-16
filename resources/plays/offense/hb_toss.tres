@@ -46,11 +46,18 @@ job = 3
 start = Vector2(-6, -2.5)
 route = PackedVector2Array(0.5, -8, 5, -16.7, 12, -19.6)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "FB"
+job = 2
+start = Vector2(-4.5, -2)
+route = PackedVector2Array(3.5, -4, 8.5, -5)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "HB Toss"
-description = "Quick pitch to the back, already running wide to the left."
+description = "Quick pitch to the back, already running wide to the left. Fullback leads him round the end."
 category = 0
 is_run = true
 handoff_delay = 0.25
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

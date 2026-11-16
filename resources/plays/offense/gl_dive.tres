@@ -46,13 +46,20 @@ job = 3
 start = Vector2(-6.5, 0.6)
 route = PackedVector2Array(3.5, -0.2, 9, -0.2)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "FB"
+job = 2
+start = Vector2(-4.5, 1.8)
+route = PackedVector2Array(3.5, -0.9, 8, -0.9)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Dive"
-description = "Two tight ends, everyone blocks down. Quick handoff straight ahead."
+description = "Two tight ends, everyone blocks down. Quick handoff straight ahead behind the fullback."
 category = 0
 is_run = true
 handoff_delay = 0.3
 goal_line = true
 group = 4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

@@ -1,11 +1,14 @@
 extends SceneTree
 ## Headless check of the play-select tabs: every tab of both playbooks is full
-## (as many plays as fit on the grid), the Hail Mary is an ordinary play on the
-## deep pass tab, and the CPU never calls it on an ordinary down.
+## (as many plays as fit on the grid), every play has a job for each of the
+## eight on a side and no more targets than there are pass buttons, the Hail
+## Mary is an ordinary play on the deep pass tab, and the CPU never calls it on
+## an ordinary down.
 ##
 ## Run:  godot --headless --path . --script res://tests/play_groups_check.gd
 
 const CALLS: int = 3000
+const TEAM_SIZE: int = 8
 
 var _game: Game
 var _failures: PackedStringArray = PackedStringArray()
@@ -32,6 +35,7 @@ func _process(_delta: float) -> bool:
 			heaves.append(play)
 		if play.goal_line != (play.group == OffensePlay.Group.GOAL_LINE):
 			_failures.append("%s: goal line flag and tab disagree" % play.play_name)
+		_check_offense(play)
 	_check_counts("offense", OffensePlay.GROUP_NAMES, counts)
 	_expect(OffensePlay.GROUP_NAMES.size() == OffensePlay.Group.size(), "offense: tab names and groups differ in number")
 
@@ -41,6 +45,7 @@ func _process(_delta: float) -> bool:
 		counts[play.group] += 1
 		if play.goal_line != (play.group == DefensePlay.Group.GOAL_LINE):
 			_failures.append("%s: goal line flag and tab disagree" % play.play_name)
+		_expect(play.assignments.size() == TEAM_SIZE, "%s: %d assignments, wanted %d" % [play.play_name, play.assignments.size(), TEAM_SIZE])
 	_check_counts("defense", DefensePlay.GROUP_NAMES, counts)
 	_expect(DefensePlay.GROUP_NAMES.size() == DefensePlay.Group.size(), "defense: tab names and groups differ in number")
 
@@ -72,6 +77,29 @@ func _process(_delta: float) -> bool:
 		print("play_groups_check FAILED")
 	quit(0 if _failures.is_empty() else 1)
 	return true
+
+
+## One job each, one quarterback, a runner on a run play and only there (or
+## for a fake), and a pass button for everyone who can be thrown to.
+func _check_offense(play: OffensePlay) -> void:
+	_expect(play.assignments.size() == TEAM_SIZE, "%s: %d assignments, wanted %d" % [play.play_name, play.assignments.size(), TEAM_SIZE])
+	var quarterbacks: int = 0
+	var runners: int = 0
+	var targets: int = 0
+	for assignment: OffenseAssignment in play.assignments:
+		match assignment.job:
+			OffenseAssignment.Job.QB:
+				quarterbacks += 1
+			OffenseAssignment.Job.RUNNER:
+				runners += 1
+				targets += 1
+			OffenseAssignment.Job.ROUTE:
+				targets += 1
+		_expect(assignment.block_time <= 0.0 or assignment.job == OffenseAssignment.Job.ROUTE, "%s: %s blocks first but has no route to go out on" % [play.play_name, assignment.label])
+	_expect(quarterbacks == 1, "%s: %d quarterbacks" % [play.play_name, quarterbacks])
+	_expect(runners <= 1, "%s: %d runners" % [play.play_name, runners])
+	_expect(runners == 1 or not (play.is_run or play.play_action or play.flea_flicker), "%s: nobody to hand the ball to" % play.play_name)
+	_expect(play.is_run or targets <= HumanController.PASS_ACTIONS.size(), "%s: %d targets, more than there are pass buttons" % [play.play_name, targets])
 
 
 func _check_counts(side: String, names: PackedStringArray, counts: PackedInt32Array) -> void:

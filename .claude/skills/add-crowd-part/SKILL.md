@@ -25,6 +25,10 @@ The user gives a folder such as `res://TripoModels/<name>/`. The source is the `
   pasted an already-used path before. If it is already there, look for the newest folder in
   `TripoModels/` that no fan uses, and use that one, and say so in the report.
 - Two folders whose `tripo_convert_<id>.fbm` subfolder has the same id are the same model.
+- Tripo's names say nothing (`torso_3d_model_1`), so rename the folder and the `.fbx` in it
+  (with its `.fbx.import`) to `crowd_<head|torso|legs>_<fan id>_<what it looks like>`, e.g.
+  `TripoModels/crowd_head_m11_blond_grin/crowd_head_m11_blond_grin.fbx`. Leave the `.fbm`
+  folder and its textures as they are, and do not edit the `.import` files.
 
 ### 2. Add the entry
 

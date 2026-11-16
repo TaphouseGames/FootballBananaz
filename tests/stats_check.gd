@@ -112,7 +112,7 @@ func _check_book() -> void:
 
 		var sum: PlayerLine = PlayerLine.new()
 		var defense: PlayerLine = PlayerLine.new()
-		# The seven and the mascot, which can make a tackle where it stands.
+		# The eight and the mascot, which can make a tackle where it stands.
 		var everyone: Array[Player] = team.squad.duplicate()
 		everyone.append(team.mascot)
 		for player: Player in everyone:
@@ -190,7 +190,7 @@ func _check_menu() -> void:
 	for side: int in 2:
 		menu.show_screen(PauseMenu.Screen.ROSTER, side)
 		var team: Team = _game.home if side == 0 else _game.away
-		# The seven: a game that ends on a touchdown has the mascot out there too.
+		# The eight: a game that ends on a touchdown has the mascot out there too.
 		for i: int in team.squad.size():
 			menu._roster_cursor = i
 			menu._refresh()

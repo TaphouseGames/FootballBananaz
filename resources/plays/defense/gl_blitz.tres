@@ -47,13 +47,21 @@ label = "LB"
 job = 0
 start = Vector2(2.5, 0)
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 1
+start = Vector2(2.5, 3)
+man_target = 3
+green_dog = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Blitz"
-description = "Four down linemen in the gaps and a linebacker behind them: five rush. Press man outside, nobody on the back."
+description = "Four down linemen in the gaps and a linebacker behind them: five rush. Press man outside and on the tight end, nobody on the back."
 run_fit = 0.55
 short_fit = 0.55
 deep_fit = 0.15
 group = 3
 goal_line = true
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

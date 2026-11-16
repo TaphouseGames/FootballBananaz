@@ -106,6 +106,21 @@ catching = 40
 juke = 60
 security = 85
 
+[sub_resource type="Resource" id="player_7"]
+script = ExtResource("1_ratings")
+display_name = "Bull Malbec"
+position = "TE"
+number = 40
+endurance = 60
+strength = 74
+blocking = 72
+tackling = 62
+coverage = 42
+get_open = 45
+catching = 52
+juke = 38
+security = 70
+
 [resource]
 script = ExtResource("2_roster")
-players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6")])
+players = Array[ExtResource("1_ratings")]([SubResource("player_0"), SubResource("player_1"), SubResource("player_2"), SubResource("player_3"), SubResource("player_4"), SubResource("player_5"), SubResource("player_6"), SubResource("player_7")])

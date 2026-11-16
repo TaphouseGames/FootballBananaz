@@ -116,7 +116,12 @@ extends Resource
 
 @export_group("Jump")
 @export var jump_time: float = 0.45
+## Yards his feet leave the turf at the top, before his juke rating
+## (jump_height_scale_low and _high).
 @export var jump_height: float = 1.3
+## A carrier in the air whose feet are at least this high when a diving tackler
+## gets to him goes over the dive. Lower than that he is tackled like any other.
+@export var hurdle_clear_height: float = 0.55
 ## Seconds after landing before the next jump.
 @export var jump_cooldown: float = 0.35
 ## Catch and interception radius multiplier for a player in the air.
@@ -304,9 +309,10 @@ extends Resource
 ## Tackle chance multiplier for a tackler who runs into a stiff arm (strength rating).
 @export var stiff_arm_tackle_scale_low: float = 0.6
 @export var stiff_arm_tackle_scale_high: float = 0.1
-## Chance that a carrier in the air clears a diving tackler.
-@export var hurdle_chance_low: float = 0.6
-@export var hurdle_chance_high: float = 1.0
+## Multiplies jump_height (juke rating). With hurdle_clear_height this is what
+## decides how much of his jump a carrier spends above a diving tackler.
+@export var jump_height_scale_low: float = 0.5
+@export var jump_height_scale_high: float = 1.15
 ## Longest throw in yards. A pass aimed further comes up short.
 @export var pass_range_low: float = 28.0
 @export var pass_range_high: float = 62.0
@@ -468,6 +474,10 @@ extends Resource
 @export var block_pancake_time_min: float = 0.2
 @export var block_pancake_time_max: float = 0.7
 @export var block_pancake_down_time: float = 2.5
+## A lead blocker (a blocker with a path drawn for him on a run play) leaves
+## his path for the first defender nobody is blocking who comes within this
+## many yards.
+@export var ai_lead_block_range: float = 3.5
 
 @export_group("Impact Feel")
 ## Real-time seconds of hit-stop on a tackle.
@@ -741,6 +751,9 @@ extends Resource
 @export var ai_qb_under_chance: float = 0.3
 ## Seconds after the snap before pass rushers start using turbo.
 @export var ai_rush_turbo_delay: float = 0.7
+## Seconds after the snap a green dog (DefenseAssignment.green_dog) needs to
+## see that his man is staying in to block, before he rushes.
+@export var ai_green_dog_delay: float = 0.5
 ## Seconds a coverage defender takes to read a change in his receiver's movement.
 @export var ai_cover_lag: float = 0.42
 ## Share of his speed a coverage defender loses for a moment when his receiver
@@ -891,6 +904,10 @@ extends Resource
 @export var ai_stiff_arm_chance: float = 0.45
 ## How far to the side the tackler must be (0 = straight ahead, 1 = level with him).
 @export var ai_stiff_arm_side_dot: float = 0.6
+## A carrier whose strength is this many points above his juke rating stiff-arms
+## a tackler in front of him too, where he would otherwise spin; one whose juke
+## is that far above his strength spins off a tackler at his side.
+@export var ai_move_rating_margin: float = 15.0
 ## A CPU carrier starts a well-timed move this many seconds before the tackler
 ## gets to him, and never looks at a tackler further away than `range`.
 @export var ai_move_lead: float = 0.2
@@ -984,7 +1001,8 @@ extends Resource
 ## At full edge this takes the place of ai_jump_dive_chance.
 @export var ai_edge_jump_dive_chance: float = 0.25
 ## A carrier jumps over a tackler who dives at him from within this range,
-## with this chance (at full edge).
+## with this chance (at full edge), if his jump would have him high enough
+## (hurdle_clear_height) when the dive gets there.
 @export var ai_edge_hurdle_range: float = 3.5
 @export var ai_edge_hurdle_chance: float = 0.37
 ## At full edge these multiply ai_cover_bust_chance and ai_blown_coverage_chance.

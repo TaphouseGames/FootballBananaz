@@ -56,7 +56,7 @@ static func random(seed_value: int, position: String = "") -> PlayerLook:
 	if female and not PlayerParts.heads_of(Gender.FEMALE).is_empty():
 		look.gender = Gender.FEMALE
 	look.build = Build.ATHLETIC
-	if position == "LINE":
+	if position == "LINE" or position == "TE":
 		look.build = Build.BIG
 	elif position == "WR":
 		look.build = Build.LEAN

@@ -49,12 +49,20 @@ label = "CB"
 job = 0
 start = Vector2(2, 9.1)
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 2
+start = Vector2(5, -3)
+zone_center = Vector2(7, -3)
+zone_radius = 7
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Overload"
-description = "Five rush, two extra off the right edge. Two zones behind them, nobody deep."
+description = "Five rush, two extra off the right edge. Three zones behind them, nobody deep."
 run_fit = 0.61
 short_fit = 0.37
 deep_fit = 0.26
 group = 2
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

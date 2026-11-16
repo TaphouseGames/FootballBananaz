@@ -57,12 +57,20 @@ zone_center = Vector2(17, 5.4)
 zone_radius = 10.5
 deep = true
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 2
+start = Vector2(5, 0)
+zone_center = Vector2(6, 0)
+zone_radius = 8
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Cover 4"
-description = "Three rush, four deep quarters across the field. Nothing underneath."
+description = "Three rush, four deep quarters across the field. Only one linebacker underneath."
 run_fit = 0.45
 short_fit = 0.15
 deep_fit = 0.6
 group = 1
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

@@ -73,13 +73,21 @@ func _draw_offense() -> void:
 				_draw_path(assignment, QB_COLOR, 1.5, false)
 				draw_circle(start, 4.0, QB_COLOR, true, -1.0, true)
 			OffenseAssignment.Job.BLOCK:
+				# A lead blocker's path is only there on a run play.
+				if _offense.is_run:
+					_draw_path(assignment, BLOCK_COLOR, 1.5, true)
 				draw_circle(start, 3.5, BLOCK_COLOR, false, 1.5, true)
 			OffenseAssignment.Job.RUNNER:
 				_draw_path(assignment, RUN_COLOR, 2.5, true)
 				draw_circle(start, 4.0, RUN_COLOR, true, -1.0, true)
 			_:
 				_draw_path(assignment, ROUTE_COLOR, 2.0, not assignment.settle)
-				draw_circle(start, 4.0, ROUTE_COLOR, true, -1.0, true)
+				if assignment.block_time > 0.0:
+					# Blocks first, then goes out: a blocker's ring in the
+					# colour of a route.
+					draw_circle(start, 3.5, ROUTE_COLOR, false, 2.0, true)
+				else:
+					draw_circle(start, 4.0, ROUTE_COLOR, true, -1.0, true)
 
 
 func _draw_path(assignment: OffenseAssignment, color: Color, width: float, arrow: bool) -> void:

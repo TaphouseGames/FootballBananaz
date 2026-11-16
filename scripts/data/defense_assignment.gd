@@ -18,6 +18,9 @@ enum Job { RUSH, MAN, ZONE, SPY }
 ## MAN: play in front of the receiver, between him and the quarterback, instead
 ## of on his deep side. For a second defender on a man who is already covered.
 @export var underneath: bool = false
+## MAN: a green dog. When the man he covers stays in to block, he rushes the
+## quarterback instead of standing over a blocker.
+@export var green_dog: bool = false
 ## ZONE: centre and radius of the area to guard.
 @export var zone_center: Vector2 = Vector2(10.0, 0.0)
 @export var zone_radius: float = 9.0

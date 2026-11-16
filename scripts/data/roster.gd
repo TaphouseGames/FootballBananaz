@@ -2,7 +2,7 @@ class_name Roster
 extends Resource
 ## A team's players, in the order of the Player nodes under the Team. Every play
 ## lists its assignments in the same order: QB, three linemen, two receivers,
-## then the back.
+## the back, then the tight end / fullback.
 
 ## How strongly the CPU's play calling follows what the roster is good at: the
 ## power each strength's share of the average is raised to, and the least and
@@ -30,18 +30,18 @@ func call_bias() -> PackedFloat32Array:
 
 ## What the team select shows of this roster: [label, 0..100] for its passing
 ## and its running game and for how it defends each. Everyone plays both ways:
-## the quarterback is the safety, the receivers the corners, the back the
-## linebacker and the linemen the rush.
+## the quarterback is the safety, the receivers the corners, the back and the
+## tight end the linebackers and the linemen the rush.
 func team_ratings() -> Array[Array]:
 	var strengths: PackedFloat32Array = _strengths()
 	var qb: PlayerRatings = _first("QB")
 	var pass_offense: float = (strengths[1] + strengths[2]) / 2.0
 	# The back and his blockers, and a quarterback who can run it himself.
-	var blocking: float = _mean(["LINE", "WR"], &"blocking")
+	var blocking: float = _mean(["LINE", "TE", "WR"], &"blocking")
 	var run_offense: float = (float(_first("RB").overall()) * 2.0 + blocking * 2.0 + float(qb.speed + qb.juke) / 2.0) / 5.0
 	var rush: float = _mean(["LINE"], &"strength")
-	var pass_defense: float = (_mean(["QB", "WR", "RB"], &"coverage") * 2.0 + rush) / 3.0
-	var run_defense: float = (_mean(["QB", "LINE", "WR", "RB"], &"tackling") * 2.0 + rush) / 3.0
+	var pass_defense: float = (_mean(["QB", "WR", "RB", "TE"], &"coverage") * 2.0 + rush) / 3.0
+	var run_defense: float = (_mean(["QB", "LINE", "WR", "RB", "TE"], &"tackling") * 2.0 + rush) / 3.0
 	return [
 		["PASS OFF", roundi(pass_offense)],
 		["RUN OFF", roundi(run_offense)],
@@ -54,8 +54,8 @@ func team_ratings() -> Array[Array]:
 func _strengths() -> PackedFloat32Array:
 	var qb: PlayerRatings = _first("QB")
 	var back: PlayerRatings = _first("RB")
-	var run: float = (float(back.overall()) + _mean(["LINE", "WR"], &"blocking")) / 2.0
-	var short: float = (float(qb.accuracy) + _mean(["WR", "RB"], &"catching") + _mean(["WR", "RB"], &"get_open")) / 3.0
+	var run: float = (float(back.overall()) + _mean(["LINE", "TE", "WR"], &"blocking")) / 2.0
+	var short: float = (float(qb.accuracy) + _mean(["WR", "RB", "TE"], &"catching") + _mean(["WR", "RB", "TE"], &"get_open")) / 3.0
 	# The arm counts double: nobody runs under a ball that does not get there.
 	var deep: float = (float(qb.power) * 2.0 + (_mean(["WR"], &"speed") + _mean(["WR"], &"get_open")) / 2.0) / 3.0
 	return PackedFloat32Array([run, short, deep])

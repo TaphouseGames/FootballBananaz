@@ -49,9 +49,15 @@ job = 1
 start = Vector2(-1.5, 8.3)
 route = PackedVector2Array(4, 0, 4.5, 11.6)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "FB"
+job = 2
+start = Vector2(-5.5, 2.5)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "HB Slot Out"
 description = "Back lines up in the right slot and breaks to the sideline four yards deep. Both wideouts slant inside."
 group = 1
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

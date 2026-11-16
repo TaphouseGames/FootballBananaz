@@ -48,6 +48,14 @@ job = 1
 start = Vector2(5, 3)
 man_target = 2
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 1
+start = Vector2(5, -3)
+man_target = 3
+green_dog = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Corner Blitz"
@@ -56,4 +64,4 @@ run_fit = 0.41
 short_fit = 0.84
 deep_fit = 0.42
 group = 2
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

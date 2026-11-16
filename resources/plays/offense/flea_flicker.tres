@@ -49,6 +49,12 @@ job = 3
 start = Vector2(-6.5, 0.6)
 route = PackedVector2Array(3.3, 0, 5, -5.2, 8.5, -11)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "TE"
+job = 2
+start = Vector2(-0.6, 3.4)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Flea Flicker"
@@ -59,4 +65,4 @@ handoff_delay = 0.42
 flea_flicker = true
 flick_delay = 0.5
 cpu_weight = 0.4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

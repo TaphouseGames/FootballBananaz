@@ -1008,7 +1008,7 @@ func _live_excitement() -> float:
 				_breakaway_called = true
 				remark(&"announcer_room", REMARK_ROOM)
 				# A handed-off back breaking loose gets his own line.
-				if not pc.kickoff and pc.handoff_done and not pc.pass_completed() and carrier.ratings.position == "RB":
+				if not pc.kickoff and pc.handoff_done and not pc.pass_completed() and (carrier.ratings.position == "RB" or carrier.ratings.position == "TE"):
 					quip(&"color_juice", QUIP_JUICE)
 				else:
 					quip(&"color_breakaway", QUIP_BREAKAWAY)

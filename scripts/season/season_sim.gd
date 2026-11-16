@@ -157,18 +157,18 @@ func _play() -> void:
 			line.sacked_yds += -gain
 			_line(off, qb).sacked += 1
 			_line(off, qb).sacked_yds += -gain
-			_line(def, _pick(def, ["LINE", "LINE", "RB", "QB"], &"tackling")).sacks += 1
+			_line(def, _pick(def, ["LINE", "LINE", "RB", "TE", "QB"], &"tackling")).sacks += 1
 			down_by_contact = false
 		else:
 			var deep: bool = roll >= run_weight + short_weight
-			var target: int = _pick(off, ["WR", "WR", "RB"] if not deep else ["WR"], &"get_open")
+			var target: int = _pick(off, ["WR", "WR", "RB", "TE"] if not deep else ["WR", "WR", "WR", "TE"], &"get_open")
 			line.pass_att += 1
 			_line(off, qb).pass_att += 1
 			_line(off, target).targets += 1
 			if randf() < clampf(INTERCEPTION_CHANCE - edge * EDGE_CHANCE * 0.3, 0.005, 0.2):
 				line.pass_int += 1
 				_line(off, qb).pass_int += 1
-				_line(def, _pick(def, ["QB", "WR", "RB"], &"coverage")).interceptions += 1
+				_line(def, _pick(def, ["QB", "WR", "RB", "TE"], &"coverage")).interceptions += 1
 				_change_hands(def, _spot + randi_range(3, 25), -1)
 				return
 			if randf() >= clampf((COMPLETION_DEEP if deep else COMPLETION_SHORT) + edge * EDGE_CHANCE, 0.2, 0.97):
@@ -187,9 +187,10 @@ func _play() -> void:
 				_line(off, target).rec_td += 1
 	else:
 		var edge: float = float(_rating(off, 1) - _rating(def, 3))
-		# The back, now and then the quarterback keeping it or a receiver coming round.
+		# The back, now and then the quarterback keeping it, the fullback up the
+		# middle or a receiver coming round.
 		var who: float = randf()
-		carrier = _pick(off, ["RB"] if who < 0.62 else (["QB"] if who < 0.94 else ["WR"]), &"speed")
+		carrier = _pick(off, ["RB"] if who < 0.56 else (["QB"] if who < 0.86 else (["TE"] if who < 0.95 else ["WR"])), &"speed")
 		var yards: float = randf_range(-2.0, RUN_SHORT_MAX)
 		if randf() < clampf(RUN_BREAK_CHANCE + edge * EDGE_CHANCE, 0.05, 0.6):
 			yards = RUN_SHORT_MAX + _spread(RUN_BREAK_YARDS)
@@ -208,7 +209,7 @@ func _play() -> void:
 		return
 	# Somebody brought him down, and perhaps knocked the ball out.
 	if carrier >= 0 and down_by_contact:
-		var tackler: int = _pick(def, ["QB", "LINE", "WR", "RB"], &"tackling")
+		var tackler: int = _pick(def, ["QB", "LINE", "WR", "RB", "TE"], &"tackling")
 		if randf() < FUMBLE_CHANCE:
 			line.fumbles += 1
 			if randf() < FORCED_FUMBLE_CHANCE:
@@ -217,7 +218,7 @@ func _play() -> void:
 				turnover = true
 				line.fumbles_lost += 1
 				_line(off, carrier).fumbles_lost += 1
-				_change_hands(def, _spot + gain, _pick(def, ["QB", "LINE", "WR", "RB"], &"speed"))
+				_change_hands(def, _spot + gain, _pick(def, ["QB", "LINE", "WR", "RB", "TE"], &"speed"))
 				return
 		elif randf() < TACKLE_CHANCE:
 			_line(def, tackler).tackles += 1
@@ -259,7 +260,7 @@ func _change_hands(side: int, spot: int, recoverer: int) -> void:
 	if recoverer >= 0:
 		_line(side, recoverer).fumble_recoveries += 1
 	if randf() < RETURN_TD_CHANCE:
-		var scorer: int = recoverer if recoverer >= 0 else _pick(side, ["QB", "WR", "RB"], &"speed")
+		var scorer: int = recoverer if recoverer >= 0 else _pick(side, ["QB", "WR", "RB", "TE"], &"speed")
 		_lines[side].return_td += 1
 		_line(side, scorer).return_td += 1
 		_touchdown(side, false)

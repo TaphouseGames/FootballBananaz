@@ -69,7 +69,10 @@ func _tick() -> void:
 		return
 	if not _thrown:
 		if _pc.ball_dead or _pc.live_time > 6.0:
-			_report(false, "never thrown")
+			_report(false, "never thrown (%.1f s in, %s, receiver %.1f yd downfield, %s)" % [
+					_pc.live_time, "ball dead" if _pc.ball_dead else "ball live",
+					(_receiver.position.x - _pc.los_x) * _pc.off_dir,
+					"quarterback can pass" if _pc.can_pass() else "quarterback cannot pass"])
 			return
 		var downfield: float = (_receiver.position.x - _pc.los_x) * _pc.off_dir
 		if downfield >= _throw_at and _pc.can_pass():

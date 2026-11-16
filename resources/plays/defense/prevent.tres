@@ -59,12 +59,20 @@ zone_center = Vector2(22, 5.4)
 zone_radius = 12
 deep = true
 
+[sub_resource type="Resource" id="d7"]
+script = ExtResource("2_assign")
+label = "LB"
+job = 2
+start = Vector2(6, -8)
+zone_center = Vector2(8, -8)
+zone_radius = 8
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Prevent"
-description = "Two rush, four deep. Gives up everything underneath."
+description = "Two rush, four deep, two underneath. Gives up the short stuff."
 run_fit = 0.61
 short_fit = 0.39
 deep_fit = 0.42
 group = 1
-assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6")])
+assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

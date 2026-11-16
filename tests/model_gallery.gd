@@ -10,6 +10,7 @@ extends SceneTree
 ## Run:  godot --path . --script res://tests/model_gallery.gd -- out=<folder>
 ## Optional user args after "--":
 ##   only=<text>      only the sheets whose name contains the text
+##   build=<build>    the body the heads sheet puts the heads on (athletic)
 ##   describe=<path>  no pictures: prints what the model at a res:// path is
 ##                    made of (triangles, size, bones). Works headless.
 
@@ -22,6 +23,7 @@ const BODY_BONES: PackedStringArray = [
 
 var _out_dir: String = "user://model_gallery"
 var _only: String = ""
+var _heads_build: int = PlayerLook.Build.ATHLETIC
 var _cam: Camera3D
 var _view: SubViewport
 var _models: Array[PlayerModel] = []
@@ -33,6 +35,8 @@ func _initialize() -> void:
 			_out_dir = arg.trim_prefix("out=")
 		elif arg.begins_with("only="):
 			_only = arg.trim_prefix("only=")
+		elif arg.begins_with("build="):
+			_heads_build = maxi(PlayerParts.BUILDS.find(arg.trim_prefix("build=")), 0)
 		elif arg.begins_with("describe="):
 			_describe(arg.trim_prefix("describe="))
 			quit()
@@ -76,7 +80,7 @@ func _run() -> void:
 			continue
 		var faces: Array[PlayerLook] = []
 		for head: String in heads:
-			faces.append(_look(gender, PlayerLook.Build.ATHLETIC, head, 72))
+			faces.append(_look(gender, _heads_build, head, 72))
 		await _sheet("heads_%s" % PlayerParts.GENDERS[gender], faces, true)
 	print("model gallery saved to ", ProjectSettings.globalize_path(_out_dir))
 	quit()
@@ -92,7 +96,7 @@ func _look(gender: int, build: int, head: String, height: int) -> PlayerLook:
 
 
 ## One picture of `looks` side by side, a row for each side they are seen
-## from: in front, a quarter turned, the side and behind. Of the head
+## from: in front, a quarter turned, the side, from behind at an angle and behind. Of the head
 ## (`close`) or of the whole body.
 func _sheet(sheet: String, looks: Array[PlayerLook], close: bool) -> void:
 	if _only != "" and not sheet.contains(_only):
@@ -100,7 +104,7 @@ func _sheet(sheet: String, looks: Array[PlayerLook], close: bool) -> void:
 	for model: PlayerModel in _models:
 		model.queue_free()
 	_models.clear()
-	const TURNS: PackedFloat32Array = [0.0, 0.7, 1.5708, 3.14159]
+	const TURNS: PackedFloat32Array = [0.0, 0.7, 1.5708, 2.4, 3.14159]
 	const TEAM_COLORS: Array[Color] = [Color(0.1, 0.3, 0.8), Color(0.98, 0.8, 0.1), Color(0.6, 0.1, 0.5), Color(0.1, 0.5, 0.25)]
 	const NAMES: PackedStringArray = ["Gee", "Longerman", "Ox", "Kay", "Banana", "Fly", "Wu"]
 	# Metres from one model to the next and from the bottom of a row to its top.

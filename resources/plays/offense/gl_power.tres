@@ -29,9 +29,9 @@ start = Vector2(-0.9, 1.7)
 
 [sub_resource type="Resource" id="wr_l"]
 script = ExtResource("2_assign")
-label = "FB"
+label = "TE"
 job = 2
-start = Vector2(-4.5, 2)
+start = Vector2(-0.6, -3.4)
 
 [sub_resource type="Resource" id="wr_r"]
 script = ExtResource("2_assign")
@@ -46,13 +46,20 @@ job = 3
 start = Vector2(-6.5, 0.4)
 route = PackedVector2Array(2.8, 0.5, 5.5, 2.8, 10, 3.9)
 
+[sub_resource type="Resource" id="te"]
+script = ExtResource("2_assign")
+label = "FB"
+job = 2
+start = Vector2(-4.5, 2)
+route = PackedVector2Array(3.5, -1.1, 8, -1.1)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Power"
-description = "Fullback and tight end lead off the right guard, back follows them in."
+description = "Two tight ends. Fullback leads off the right guard, back follows him in."
 category = 0
 is_run = true
 handoff_delay = 0.4
 goal_line = true
 group = 4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])

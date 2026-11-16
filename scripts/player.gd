@@ -477,7 +477,14 @@ func air_height() -> float:
 	if state != State.JUMPING:
 		return 0.0
 	var t: float = clampf(1.0 - state_timer / tuning.jump_time, 0.0, 1.0)
-	return 4.0 * tuning.jump_height * t * (1.0 - t)
+	return 4.0 * jump_height() * t * (1.0 - t)
+
+
+## How high his feet get at the top of a jump: higher with a better juke rating.
+func jump_height() -> float:
+	if ratings == null:
+		return tuning.jump_height
+	return tuning.jump_height * PlayerRatings.blend(ratings.juke, tuning.jump_height_scale_low, tuning.jump_height_scale_high)
 
 
 func max_speed() -> float:
@@ -505,9 +512,9 @@ func start_dive(dir: Vector3, speed: float = -1.0) -> void:
 
 
 ## How long a jump dive started right now would stay in the air: longer from
-## higher up.
+## higher up in his own jump, however high that goes.
 func jump_dive_time() -> float:
-	var share: float = clampf(air_height() / maxf(tuning.jump_height, 0.01), 0.0, 1.0)
+	var share: float = clampf(air_height() / maxf(jump_height(), 0.01), 0.0, 1.0)
 	return tuning.dive_time + tuning.jump_dive_extra_time * share
 
 

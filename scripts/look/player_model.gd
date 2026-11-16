@@ -88,7 +88,7 @@ func refresh() -> void:
 		return
 	if rig == null or look.body_id() != _body_id or look.head_id() != _head_id:
 		_build_rig()
-	rig.scale = Vector3.ONE * look.height_m() / RIG_HEIGHT
+	rig.scale = Vector3.ONE * look.height_m() * _info.body_scale / RIG_HEIGHT
 
 	_material.set_shader_parameter(&"team_color", team_color)
 	_material.set_shader_parameter(&"white_kit", white_kit)
@@ -113,7 +113,7 @@ func refresh() -> void:
 func head_height() -> float:
 	if _info == null or look == null:
 		return 1.6
-	return _info.head_middle_z(_head_id) / _info.top_z(_head_id) * look.height_m()
+	return _info.head_middle_z(_head_id) / _info.top_z(_head_id) * look.height_m() * _info.body_scale
 
 
 ## Puts the body in: its scene with the baked mesh and the kit material, and

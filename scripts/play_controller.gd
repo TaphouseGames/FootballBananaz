@@ -17,6 +17,9 @@ enum Result { NONE, TACKLED, OUT_OF_PLAY, INCOMPLETE, TOUCHDOWN }
 ## him to come back for.
 enum Placement { NORMAL, LEAD, UNDER }
 
+## How far apart two man-coverage defenders line up at the least, in yards.
+const MAN_LINEUP_GAP: float = 1.5
+
 var game: Game
 var tuning: Tuning
 var ball: Ball
@@ -103,7 +106,7 @@ var was_touchback: bool = false
 
 var qb: Player
 var runner: Player
-## Receivers in play order: the person throws to them with pass_1, pass_2, pass_3.
+## Receivers in play order: the person throws to them with pass_1 to pass_4.
 var eligible: Array[Player] = []
 var players: Array[Player] = []
 
@@ -209,7 +212,10 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 				if qb == null:
 					qb = player
 			OffenseAssignment.Job.BLOCK:
-				player.speed_scale = tuning.line_speed_scale
+				# Not the man who leads the carrier through the hole: he has to
+				# stay in front of him.
+				if assignment.route.is_empty():
+					player.speed_scale = tuning.line_speed_scale
 			OffenseAssignment.Job.RUNNER:
 				if runner == null:
 					runner = player
@@ -248,6 +254,16 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 		if assignment.job == DefenseAssignment.Job.MAN and not cover_order.is_empty():
 			target = cover_order[mini(assignment.man_target, cover_order.size() - 1)]
 			start.z = target.position.z
+			# Two men lined up close together (the back and the tight end): the
+			# second defender stands behind the first, not inside him.
+			for _step: int in defense.players.size():
+				var taken: bool = false
+				for j: int in i:
+					if _flat_distance(defense.players[j].position, start) < MAN_LINEUP_GAP:
+						taken = true
+				if not taken:
+					break
+				start.x += off_dir * MAN_LINEUP_GAP
 		player.reset_for_play(start, -face_off)
 		# Rushers with a hand in the dirt are linemen; a blitzer from further back
 		# comes at full speed.
@@ -450,7 +466,7 @@ func kick_off() -> void:
 
 # --- Mascots ---------------------------------------------------------------------
 
-## Everybody on the field: each team's seven and its mascot standing by.
+## Everybody on the field: each team's eight and its mascot standing by.
 func _gather_players() -> void:
 	players.clear()
 	for team: Team in [game.home, game.away]:
@@ -2001,10 +2017,10 @@ func _check_hit(attacker: Player, victim: Player, offset: Vector3, dist: float) 
 		if dist > tuning.dive_tackle_radius:
 			return
 		if is_carrier:
-			# A carrier in the air hurdles the dive, if he times it well enough.
+			# A carrier in the air hurdles the dive if he is high enough when it
+			# gets to him: a matter of timing, and of how high he jumps (juke rating).
 			if victim.is_airborne() and attacker.tackle_cooldown <= 0.0:
-				var clear: float = PlayerRatings.blend(victim.ratings.juke, tuning.hurdle_chance_low, tuning.hurdle_chance_high)
-				if randf() < clear:
+				if victim.air_height() >= tuning.hurdle_clear_height:
 					attacker.tackle_cooldown = tuning.tackle_retry_time
 					game.add_stat(&"hurdles")
 					game.audio.remark(&"announcer_hurdle", AudioDirector.REMARK_HURDLE)
