@@ -1114,8 +1114,9 @@ extends Resource
 ## lying with his head to it) holds him further off: see Player._wall_room().
 @export var wall_standoff: float = 0.4
 ## Thrown, knocked or diving into the wall at this speed (yd/s, straight at
-## it) or more, a player is flattened against it; he stays stuck to it for
-## `wall_splat_stick_time` before he peels off and falls on the turf.
+## it) or more, a player is flattened against it, if he is near enough (see
+## wall_splat_range); he stays stuck to it for `wall_splat_stick_time` before
+## he peels off and falls on the turf.
 @export var wall_splat_speed: float = 4.0
 @export var wall_splat_stick_time: float = 0.8
 ## Once he has come off the wall he lies dazed for this long, and gets up
@@ -1184,3 +1185,7 @@ func own_goal_x(dir: int) -> float:
 ## World X for "own N yard line" of a team attacking in `dir`.
 func yard_to_x(dir: int, yard: float) -> float:
 	return yard if dir > 0 else field_length - yard
+## His middle has to be within this many yards of the face of the wall as he
+## meets it to be flattened. Further off, touching it with an outstretched
+## hand or his head, he only comes back off it (wall_bounce).
+@export var wall_splat_range: float = 1.2

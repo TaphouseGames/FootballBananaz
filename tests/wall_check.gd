@@ -1,8 +1,9 @@
 extends SceneTree
 ## Headless check of the wall round the field as a solid thing. A player who
-## runs into it stays on his feet and slides along it; one knocked or diving
-## into it fast is flattened against it, sticks, and gets up again; a carrier's
-## dive into it is down there; the ball comes back off it, a pass included,
+## runs into it stays on his feet and slides along it; one knocked into it fast
+## from close by is flattened against it, sticks, and gets up again; a carrier's
+## dive into it is down there, and not flattened when only his hands reach it;
+## the ball comes back off it, a pass included,
 ## which stays live; and nothing is out of bounds any more, except a ball that
 ## goes over the wall into the stands.
 ##
@@ -108,9 +109,12 @@ func _check_knocked() -> void:
 	var nearest: float = 100.0
 	player.heal()
 	for i: int in 300:
+		var before: float = -Stadium.wall_distance(_tuning, player.position.x, player.position.z)
 		player.integrate(DT)
 		deepest = maxf(deepest, _depth(player))
 		if player.wall_hit > 0.0:
+			# Only from close by: a tick's travel and wall_splat_range at most.
+			_expect(before <= _tuning.wall_splat_range + player.wall_hit * DT + 0.01, "he was flattened from %.2f yd off the wall" % before)
 			_expect(hit_at < 0, "he was flattened twice by one shove")
 			hit_at = i
 			hit_speed = player.wall_hit
@@ -159,9 +163,21 @@ func _check_knocked() -> void:
 
 
 ## A carrier who dives into the wall is down where he hits it.
+## Stretched out he meets it with his hands, his middle about a yard off: he is
+## flattened only if that is within wall_splat_range.
 func _check_dive() -> void:
+	var range_set: float = _tuning.wall_splat_range
+	_tuning.wall_splat_range = 2.0
+	_dive_at_wall(true)
+	_tuning.wall_splat_range = 0.5
+	_dive_at_wall(false)
+	_tuning.wall_splat_range = range_set
+
+
+func _dive_at_wall(near_enough: bool) -> void:
 	var player: Player = _stage()
 	var side: float = _tuning.half_width() + _tuning.wall_gap
+	player.heal()
 	_put(player, Vector3(45.0, 0.0, side - 2.0))
 	_pc.ball.give_to(player)
 	_pc.phase = PlayController.Phase.RUN
@@ -177,7 +193,11 @@ func _check_dive() -> void:
 		_pc.ball.integrate(DT)
 		_pc._check_carrier()
 	print("dive at it:   %s after %.2f s, %s" % [_pc.result_text(), float(ticks) * DT, "flattened" if hit else "not flattened"])
-	_expect(hit, "a dive into the wall did not flatten him")
+	if near_enough:
+		_expect(hit, "a dive into the wall did not flatten him")
+	else:
+		_expect(not hit, "a diver who only reached the wall with his hands was flattened")
+		_expect(player.fall.kind != PlayerFall.Kind.SPLAT and not player.is_dazed(), "a dive that only touched the wall left him dazed")
 	_expect(deepest <= 0.0, "diving at the wall he got %.2f yd into it" % deepest)
 	_expect(_pc.ball_dead and _pc.result == PlayController.Result.TACKLED and _pc.was_dive, "a carrier's dive into the wall is ruled %s" % _pc.result_text())
 	_expect(_pc.ball.carrier == player, "he lost the ball on the wall")

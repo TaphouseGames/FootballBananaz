@@ -885,9 +885,12 @@ func _measure_reach() -> float:
 
 ## After his own move this tick: the wall stops him. Going into it on his feet
 ## he slides along it; thrown, knocked or diving into it he is flattened
-## against it if he is fast enough, and comes back off it a little if not.
+## against it if he is fast enough and his body is up against it (his middle
+## within tuning.wall_splat_range of it), and comes back off it a little if
+## not: one who only touches it with a hand or his head is not flattened.
 func _meet_wall() -> void:
-	if Stadium.wall_distance(tuning, position.x, position.z) + _wall_room() <= 0.0:
+	var gap: float = -Stadium.wall_distance(tuning, position.x, position.z)
+	if gap >= _wall_room():
 		position.y = 0.0
 		return
 	var normal: Vector3 = Stadium.wall_normal(tuning, position.x, position.z)
@@ -896,7 +899,7 @@ func _meet_wall() -> void:
 	if into <= 0.0:
 		return
 	var thrown: bool = state == State.DIVING or state == State.DOWN
-	if thrown and into >= tuning.wall_splat_speed and fall.stick <= 0.0:
+	if thrown and into >= tuning.wall_splat_speed and gap <= tuning.wall_splat_range and fall.stick <= 0.0:
 		splat(normal, into)
 	elif state == State.DOWN:
 		velocity += normal * into * (1.0 + tuning.wall_bounce)
