@@ -73,10 +73,6 @@ var _bail_rolled: bool = false
 ## Seconds until he looks at the empty side again, and until a carrier next
 ## thinks about jumping a dive.
 var _lane_timer: float = 0.0
-## Run at a hole: the lane the carrier has picked and when he looks again.
-var _hole_z: float = 0.0
-var _hole_picked: bool = false
-var _hole_timer: float = 0.0
 var _hurdle_timer: float = 0.0
 ## What he went up meaning to jump dive at: a man (`_leap_target`), the pass
 ## coming down, or straight ahead for the line.
@@ -1150,6 +1146,9 @@ func _carry(pc: PlayController) -> void:
 		if dist < nearest:
 			nearest = dist
 			nearest_opponent = opponent
+		if at_hole and opponent.hole_block and opponent.block_slow_timer > 0.0:
+			# His blockers have this one: he runs past him, not away from him.
+			continue
 		if dist < tuning.ai_carrier_avoid_radius and to.dot(forward) > -1.0:
 			var side: float = signf(to.z)
 			if side == 0.0:
@@ -1160,8 +1159,13 @@ func _carry(pc: PlayController) -> void:
 		steer.z -= signf(player.position.z) * 2.0
 	if at_hole:
 		# Behind the line on a run at a hole: when his blockers have opened a
-		# lane he cuts to it. With none open he runs as he always does.
-		steer.z += _hole_pull(pc, forward)
+		# lane he runs at the middle of it. With none open he runs as he
+		# always does.
+		# A hole still far off to one side (a counter) is run to as the play
+		# draws it, not straight across the field.
+		var lane: Vector2 = pc.hole_lane()
+		if lane.y >= tuning.ai_hole_min_room and absf(lane.x - player.position.z) <= tuning.hole_pull_range:
+			steer.z += clampf(lane.x - player.position.z, -1.0, 1.0) * tuning.ai_hole_pull
 	player.move_input = steer.normalized()
 	player.wants_turbo = nearest < tuning.ai_turbo_range
 
@@ -1180,54 +1184,6 @@ func _carry(pc: PlayController) -> void:
 		_decision_timer = 0.5
 		_move_lead = -1.0
 		_carrier_move(pc, nearest_opponent)
-
-
-## How hard a carrier behind the line on a run at a hole is pulled sideways,
-## toward the lane his blockers have opened. The lanes are the hole and a few
-## either side of it; the one with the most room between the men at the line
-## (defenders, and his own blockers) wins, with the hole itself and the lane he
-## is already headed for preferred. Looked at again every little while, so he
-## commits to a cut. No lane with `ai_hole_min_room`: no pull.
-func _hole_pull(pc: PlayController, forward: Vector3) -> float:
-	_hole_timer -= _delta
-	if _hole_timer <= 0.0:
-		_hole_timer = tuning.ai_hole_rethink
-		var best: float = -INF
-		var from_z: float = _hole_z if _hole_picked else player.position.z
-		var picked: float = pc.run_hole.z
-		var picked_room: float = 0.0
-		for step: int in range(-tuning.ai_hole_lanes, tuning.ai_hole_lanes + 1):
-			var z: float = pc.run_hole.z + float(step) * tuning.ai_hole_lane_step
-			var room: float = 6.0
-			for opponent: Player in player.team.opponent.players:
-				if opponent.is_down():
-					continue
-				var depth: float = (opponent.position.x - pc.los_x) * forward.x
-				if depth < -2.0 or depth > 5.0:
-					continue
-				# A free man closes the lane; one who is tied up only fills it.
-				var reach: float = 0.0 if opponent.block_slow_timer > 0.0 else 1.0 + maxf(depth, 0.0) * 0.3
-				room = minf(room, absf(opponent.position.z - z) - reach)
-			# His own blockers are in the way just the same.
-			for mate: Player in player.team.players:
-				if mate == player or mate.is_down():
-					continue
-				var depth: float = (mate.position.x - pc.los_x) * forward.x
-				if depth < -2.0 or depth > 3.0 or (mate.position.x - player.position.x) * forward.x < 0.0:
-					continue
-				room = minf(room, absf(mate.position.z - z))
-			var score: float = room - absf(z - pc.run_hole.z) * tuning.ai_hole_stray_cost - absf(z - from_z) * tuning.ai_hole_cut_cost
-			if score > best:
-				best = score
-				picked = z
-				picked_room = room
-		_hole_z = picked
-		_hole_picked = picked_room >= tuning.ai_hole_min_room
-		if _hole_picked:
-			pc.game.add_stat(&"hole_reads")
-	if not _hole_picked:
-		return 0.0
-	return clampf((_hole_z - player.position.z) / 2.0, -1.0, 1.0) * tuning.ai_hole_pull
 
 
 ## Sets wants_secure for this tick, and returns true when the carrier means to
@@ -1445,6 +1401,9 @@ func _lead_block(pc: PlayController, protect: Vector3) -> void:
 ## `free_only` leaves the ones a teammate is already blocking to him.
 func _block(pc: PlayController, protect: Vector3, free_only: bool = false) -> void:
 	player.is_blocking = true
+	if is_offense and (player.hole_side != 0.0 or free_only) and pc.run_hole_live():
+		_block_hole(pc, free_only)
+		return
 	var best: Player = null
 	var best_score: float = INF
 	for opponent: Player in player.team.opponent.players:
@@ -1466,6 +1425,49 @@ func _block(pc: PlayController, protect: Vector3, free_only: bool = false) -> vo
 	_seek(spot)
 	if pc.phase == PlayController.Phase.RUN:
 		player.wants_turbo = _flat_distance(player.position, spot) > 4.0
+
+
+## Blocking for the hole on a run aimed inside, until the ball is through it.
+## A lineman takes the man he was given at the line-up for as long as that man
+## is on his feet and near, and after that whoever is nearest on his own side
+## of the hole; a lead blocker takes the first free man he meets. He sets up
+## inside and behind his man, never with his own body in the lane, so the man
+## is walked out of the hole (PlayController._drive_block) and the blocker ends
+## up as the edge of it.
+func _block_hole(pc: PlayController, free_only: bool) -> void:
+	var hole_z: float = pc.run_hole.z
+	var target: Player = player.block_target
+	if target != null and (target.is_down() or _flat_distance(target.position, player.position) > 8.0):
+		target = null
+	if target == null:
+		var best_score: float = INF
+		for opponent: Player in player.team.opponent.players:
+			if opponent.is_down():
+				continue
+			if opponent.block_slow_timer > 0.0 and opponent.block_partner != player and (free_only or player.hole_side != 0.0):
+				continue
+			if player.hole_side != 0.0 and (opponent.position.z - hole_z) * player.hole_side < -0.3:
+				continue
+			var score: float = _flat_distance(opponent.position, player.position) + 0.35 * _flat_distance(opponent.position, pc.run_hole)
+			if score < best_score:
+				best_score = score
+				target = opponent
+	if target == null:
+		return
+	var side: float = player.hole_side
+	if side == 0.0:
+		side = target.block_drive_side if target.block_drive_by == player else target.position.z - hole_z
+		if absf(side) < 0.3:
+			side = target.position.z - player.position.z
+		side = 1.0 if side >= 0.0 else -1.0
+	var out: float = (target.position.z - hole_z) * side
+	# Inside his man, but no nearer the middle of the lane than its edge; and
+	# while the man is still nearer than that, straight behind him.
+	var edge: float = tuning.hole_lane_half + tuning.player_radius
+	var wide: float = maxf(out - 0.6, minf(edge, out))
+	var spot: Vector3 = Vector3(target.position.x - pc.off_dir * 0.6, 0.0, hole_z + side * wide)
+	_seek(spot)
+	player.wants_turbo = _flat_distance(player.position, spot) > 4.0
 
 
 # --- Defense -----------------------------------------------------------------
@@ -2034,8 +2036,6 @@ func _reset() -> void:
 	_escape_rolled = false
 	_bail_rolled = false
 	_lane_timer = 0.0
-	_hole_picked = false
-	_hole_timer = 0.0
 	_hurdle_timer = 0.0
 	_escaping = false
 	run_kind = &""

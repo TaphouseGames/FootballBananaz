@@ -104,6 +104,9 @@ func _ready() -> void:
 	play_controller.setup(self)
 	hud.setup(self)
 	audio.setup(self)
+	var hole_debug: HoleDebug = HoleDebug.new()
+	hole_debug.setup(self)
+	add_child(hole_debug)
 
 	clock = tuning.game_length * 0.5
 	opening_receiver = home if randf() < 0.5 else away

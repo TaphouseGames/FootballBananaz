@@ -39,6 +39,8 @@ var los_x: float = 0.0
 ## CPU back runs at it. See _find_run_hole and _drive_block.
 var has_run_hole: bool = false
 var run_hole: Vector3 = Vector3.ZERO
+## The back has crossed the line on this play (see _check_hole_burst).
+var _hole_crossed: bool = false
 
 var phase: Phase = Phase.POCKET
 var ball_dead: bool = true
@@ -272,6 +274,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 		if assignment.job == DefenseAssignment.Job.RUSH and assignment.start.x <= tuning.line_depth:
 			player.speed_scale = tuning.line_speed_scale
 		player.brain.assign_defense(assignment, start, target, to_world(_def_point(assignment.zone_center, deepest, room), def_flip))
+	_assign_run_blocks()
 	_scout_defense()
 	_roll_blown_coverage()
 	_roll_technique(p_def)
@@ -293,6 +296,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 ## a hole; a toss or a sweep goes round the end.
 func _find_run_hole() -> void:
 	has_run_hole = false
+	_hole_crossed = false
 	if not off_play.is_run or runner == null or runner == qb:
 		return
 	var from: Vector3 = runner.position
@@ -315,6 +319,165 @@ func run_hole_live() -> bool:
 	if ball.carrier != runner and ball.carrier != qb:
 		return false
 	return (runner.position.x - los_x) * off_dir < 1.0
+
+
+## A run at a hole is blocked for it. With both teams on their spots:
+## - the hole moves to the nearest gap between two linemen (or just outside the
+##   last one), since a path drawn straight at a lineman has no way through,
+##   and the back's path and his lead blocker's move with it;
+## - every lineman belongs to one side of the hole, and so does every defender
+##   on the line; a defender standing right in the gap goes to the side that
+##   has a lineman free for him;
+## - each defender on the line, nearest the hole first, is given the nearest
+##   lineman of his side who has nobody yet. A defender too many is nobody's;
+## - a lineman too many (a tight end with nobody over him) is given the
+##   nearest man behind the line on his side.
+## See PlayerBrain._block_hole and _drive_block.
+func _assign_run_blocks() -> void:
+	if not has_run_hole:
+		return
+	var line: Array[Player] = []
+	for player: Player in offense.players:
+		var job: OffenseAssignment = player.brain.off_assign
+		if job.job != OffenseAssignment.Job.BLOCK or not job.route.is_empty():
+			continue
+		var depth: float = (player.position.x - los_x) * off_dir
+		if depth >= -(tuning.line_depth + 0.5) and absf(player.position.z) <= tuning.hole_max_width:
+			line.append(player)
+	if line.is_empty():
+		return
+	line.sort_custom(func(a: Player, b: Player) -> bool: return a.position.z < b.position.z)
+	var front: Array[Player] = []
+	for player: Player in defense.players:
+		var depth: float = (player.position.x - los_x) * off_dir
+		if depth >= 0.0 and depth <= tuning.line_depth + 1.0 and absf(player.position.z - run_hole.z) <= tuning.hole_range + 2.0:
+			front.append(player)
+
+	var body: float = tuning.player_radius * 2.0
+	var gaps: PackedFloat32Array = PackedFloat32Array([line[0].position.z - body - 0.2])
+	for i: int in range(1, line.size()):
+		gaps.append((line[i - 1].position.z + line[i].position.z) * 0.5)
+	gaps.append(line[line.size() - 1].position.z + body + 0.2)
+	var drawn: float = run_hole.z
+	var best: float = INF
+	for gap: float in gaps:
+		# A path drawn well outside the line (a counter, off tackle) stays where
+		# it is: the whole line blocks away from it.
+		if absf(gap - drawn) > tuning.hole_snap_range:
+			continue
+		# A defender lined up in the gap itself makes it the worse choice of two.
+		var cost: float = absf(gap - drawn)
+		for defender: Player in front:
+			if absf(defender.position.z - gap) < 0.6:
+				cost += 0.4
+		if cost < best:
+			best = cost
+			run_hole.z = gap
+	var shift: float = run_hole.z - drawn
+	for player: Player in offense.players:
+		var job: OffenseAssignment = player.brain.off_assign
+		if player != runner and (job.job != OffenseAssignment.Job.BLOCK or job.route.is_empty()):
+			continue
+		for i: int in player.brain.route.size():
+			var point: Vector3 = player.brain.route[i]
+			if (point.x - los_x) * off_dir >= -3.5:
+				point.z += shift
+				player.brain.route[i] = point
+
+	for player: Player in line:
+		player.hole_side = 1.0 if player.position.z > run_hole.z else -1.0
+	front.sort_custom(func(a: Player, b: Player) -> bool: return absf(a.position.z - run_hole.z) < absf(b.position.z - run_hole.z))
+	var taken: PackedInt32Array = PackedInt32Array([0, 0])
+	for defender: Player in front:
+		var across: float = defender.position.z - run_hole.z
+		var side: float = 0.0 if absf(across) < 0.3 else signf(across)
+		var taker: Player = null
+		var nearest: float = INF
+		for player: Player in line:
+			if player.block_target != null or (side != 0.0 and player.hole_side != side):
+				continue
+			var dist: float = absf(player.position.z - defender.position.z)
+			if dist < nearest:
+				nearest = dist
+				taker = player
+		if taker != null:
+			taker.block_target = defender
+			defender.hole_side = taker.hole_side
+		else:
+			defender.hole_side = side if side != 0.0 else 1.0
+		# Each man further out on a side is taken a body further, to make room
+		# for the one inside him.
+		var slot: int = 0 if defender.hole_side < 0.0 else 1
+		defender.hole_clear = tuning.hole_clear_width + float(taken[slot]) * (body + 0.1)
+		taken[slot] += 1
+	# A lineman with nobody over him goes up to the nearest man behind the
+	# line on his side of the hole: the linebacker who would fill it.
+	for player: Player in line:
+		if player.block_target != null:
+			continue
+		var pick: Player = null
+		var nearest: float = INF
+		for defender: Player in defense.players:
+			if front.has(defender) or defender.hole_side != 0.0:
+				continue
+			var depth: float = (defender.position.x - los_x) * off_dir
+			var across: float = defender.position.z - run_hole.z
+			if depth > tuning.hole_climb_depth or across * player.hole_side < -0.5 or absf(across) > tuning.hole_range:
+				continue
+			var dist: float = absf(across) + depth * 0.3
+			if dist < nearest:
+				nearest = dist
+				pick = defender
+		if pick != null:
+			player.block_target = pick
+			pick.hole_side = player.hole_side
+
+
+## The lane at the hole as it is right now: x is the z of its middle and y its
+## width clear of bodies, in yards. It is the room between the nearest man of
+## either team on his feet at the line on one side of the hole and the nearest
+## on the other (the back himself and a blocker running a path in front of him
+## do not count), looked for no further than a little past where the blockers
+## take their men. A linebacker waiting two yards past the line is not in it:
+## he is the next thing the back has to beat.
+func hole_lane() -> Vector2:
+	var reach: float = tuning.hole_clear_width + 0.5
+	var left: float = reach
+	var right: float = reach
+	for player: Player in players:
+		if player == runner or player.bystander or player.is_down():
+			continue
+		if player.team == offense and (player == qb or not player.brain.route.is_empty()):
+			continue
+		var depth: float = (player.position.x - los_x) * off_dir
+		if depth < -1.5 or depth > 1.2:
+			continue
+		var across: float = player.position.z - run_hole.z
+		if across < 0.0:
+			left = minf(left, -across)
+		else:
+			right = minf(right, across)
+	return Vector2(run_hole.z + (right - left) * 0.5, maxf(left + right - tuning.player_radius * 2.0, 0.0))
+
+
+## The back goes through the line: inside an open lane and in time, he gets his
+## burst. Looked at once, on the tick he crosses.
+func _check_hole_burst() -> void:
+	if _hole_crossed or not has_run_hole or runner == null or ball.carrier != runner:
+		return
+	if (runner.position.x - los_x) * off_dir < 0.0:
+		return
+	_hole_crossed = true
+	if live_time > tuning.hole_close_time:
+		return
+	var lane: Vector2 = hole_lane()
+	if lane.y < tuning.hole_burst_min_width or absf(runner.position.z - lane.x) > lane.y * 0.5 + 0.2:
+		return
+	runner.burst_timer = tuning.hole_burst_time
+	game.add_stat(&"hole_bursts")
+	if runner == human.controlled:
+		game.audio.play(&"spin", 0.5, 1.4)
+		game.impact(tuning.shove_shake * 0.5, 0.0)
 
 
 ## A defensive play-frame point with its depth squeezed so that a play whose
@@ -786,6 +949,7 @@ func simulate(delta: float) -> void:
 	_try_flea_flicker()
 	human.update_live()
 	_think_and_move(delta)
+	_check_hole_burst()
 	if phase == Phase.POCKET and ball.carrier == qb and qb.is_tucked():
 		qb_tuck_time += delta
 	else:
@@ -2211,7 +2375,7 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 	chance *= PlayerRatings.blend(skills.strength, tuning.strength_tackle_scale_low, tuning.strength_tackle_scale_high)
 	chance *= PlayerRatings.blend(tackler.ratings.tackling, tuning.tackling_scale_low, tuning.tackling_scale_high)
 	if tackler.block_slow_timer > 0.0:
-		chance *= tuning.blocked_tackle_scale
+		chance *= tuning.hole_blocked_tackle_scale if tackler.hole_block else tuning.blocked_tackle_scale
 	var spinning: bool = carrier.spin_evade_timer > 0.0
 	if spinning:
 		chance *= PlayerRatings.blend(skills.juke, tuning.spin_tackle_scale_low, tuning.spin_tackle_scale_high)
@@ -2524,8 +2688,10 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 		# On a run play the blocker sometimes wins outright and opens a hole.
 		rusher.block_pancake_time = -1.0
 		game.audio.play(&"pads_clash", 0.4)
-		rusher.block_drive = _roll_drive(blocker, rusher)
-		rusher.block_drive_side = 0.0
+		_roll_drive(blocker, rusher)
+		if rusher.hole_block and rusher.block_drive >= tuning.hole_drive_min:
+			# A block won at the hole holds until the back has had his chance.
+			rusher.block_shed_time = maxf(rusher.block_shed_time, tuning.hole_hold_time - live_time)
 		if off_play.is_run:
 			var pancake: float = tuning.block_pancake_chance
 			pancake *= PlayerRatings.blend(blocker.ratings.blocking, tuning.pancake_blocking_scale_low, tuning.pancake_blocking_scale_high)
@@ -2543,7 +2709,9 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 		blocker.block_partner = rusher
 		blocker.block_partner_timer = 0.2
 	if rusher.block_pancake_time >= 0.0 and rusher.block_engaged_time >= rusher.block_pancake_time:
-		rusher.knock_down(push_dir * 4.0, tuning.block_pancake_down_time, PlayerFall.Kind.PANCAKE)
+		# At the hole he is thrown out of it, not back into the lane.
+		var fall: Vector3 = Vector3(0.0, 0.0, rusher.block_drive_side) if rusher.hole_block else push_dir
+		rusher.knock_down(fall * 4.0, tuning.block_pancake_down_time, PlayerFall.Kind.PANCAKE)
 		rusher.block_slow_timer = 0.0
 		rusher.block_engaged_time = 0.0
 		rusher.block_pancake_time = -1.0
@@ -2560,46 +2728,63 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 		rusher.block_engaged_time = 0.0
 
 
-## Run blocking at the hole: whether this blocker gets movement on this
-## defender, and how much (yards a second). His blocking against the
-## defender's strength decides most of it and luck the rest, so a good line
-## opens holes against a weak one most of the time and the other way round
-## hardly ever.
-func _roll_drive(blocker: Player, rusher: Player) -> float:
-	if not run_hole_live() or blocker.team != offense:
-		return 0.0
-	if _flat_distance(rusher.position, run_hole) > tuning.hole_range:
-		return 0.0
+## Run blocking at the hole, rolled when a block is made: how fast (yards a
+## second) this blocker moves this defender out of it, and to which side. His
+## blocking against the defender's strength decides most of it and luck the
+## rest, so a good line opens the hole against a weak one nearly every time
+## and a weak one only half opens it. The same two locking up again keep the
+## roll they had.
+func _roll_drive(blocker: Player, rusher: Player) -> void:
+	if not run_hole_live() or blocker.team != offense or _flat_distance(rusher.position, run_hole) > tuning.hole_range:
+		rusher.hole_block = false
+		rusher.block_drive = 0.0
+		rusher.block_drive_by = null
+		return
+	rusher.hole_block = true
+	if rusher.block_drive_by == blocker:
+		return
+	rusher.block_drive_by = blocker
+	# The side he was given at the line-up; a man who was not on the line goes
+	# to the side of the hole he is on, or away from his blocker.
+	var side: float = rusher.hole_side
+	if side == 0.0:
+		side = rusher.position.z - run_hole.z
+		if absf(side) < 0.3:
+			side = rusher.position.z - blocker.position.z
+	rusher.block_drive_side = 1.0 if side >= 0.0 else -1.0
 	var edge: float = float(blocker.ratings.blocking - rusher.ratings.strength) / 100.0 + tuning.hole_drive_base
 	edge += randf_range(-tuning.hole_drive_luck, tuning.hole_drive_luck)
+	if not blocker.brain.route.is_empty():
+		edge += tuning.hole_lead_bonus
 	var won: float = clampf(edge / maxf(tuning.hole_drive_full, 0.01), 0.0, 1.0)
 	game.add_stat(&"hole_blocks")
 	if won > 0.0:
 		game.add_stat(&"hole_blocks_won")
-	return won * tuning.hole_drive_speed
+		rusher.block_drive = lerpf(tuning.hole_drive_min, tuning.hole_drive_speed, won)
+	else:
+		rusher.block_drive = tuning.hole_drive_lost
+	if rusher == human.controlled:
+		rusher.block_drive *= tuning.hole_drive_human_scale
 
 
-## The defender is walked sideways out of the back's way while the block holds
-## and the ball has not gone through: away from the hole, and once the back has
-## the ball away from the line he is actually running (most of the way from
-## the hole to where he is), so a back who cuts gets his blocks too. The
+## The defender is taken out of the hole while the block holds, the ball has
+## not gone through and the hole has not closed: sideways to his side until he
+## is `hole_clear_width` from the middle of it, and a little downfield. The
 ## blocker stays on his man by himself: the man he is blocking is slowed, he
 ## is not.
-func _drive_block(blocker: Player, rusher: Player, delta: float) -> void:
-	if rusher.block_drive <= 0.0 or rusher.block_engaged_time > tuning.hole_drive_time or not run_hole_live():
+func _drive_block(_blocker: Player, rusher: Player, delta: float) -> void:
+	if not rusher.hole_block or rusher.block_drive <= 0.0 or live_time > tuning.hole_close_time or not run_hole_live():
 		return
-	if absf(rusher.position.x - los_x) > tuning.hole_drive_depth:
+	var depth: float = (rusher.position.x - los_x) * off_dir
+	if absf(depth) > tuning.hole_drive_depth:
 		return
-	var lane: float = run_hole.z
-	if ball.carrier == runner:
-		lane = lerpf(run_hole.z, runner.position.z, tuning.hole_follow_back)
-	# A man standing right in the lane keeps going the way he was going, or
-	# at first away from his blocker.
-	var side: float = rusher.position.z - lane
-	if absf(side) < 0.5:
-		side = rusher.block_drive_side if rusher.block_drive_side != 0.0 else rusher.position.z - blocker.position.z
-	rusher.block_drive_side = 1.0 if side >= 0.0 else -1.0
-	rusher.drive_push += Vector3(0.0, 0.0, rusher.block_drive_side) * rusher.block_drive * delta
+	var push: Vector3 = Vector3.ZERO
+	var clear: float = rusher.hole_clear if rusher.hole_clear > 0.0 else tuning.hole_clear_width
+	if (rusher.position.z - run_hole.z) * rusher.block_drive_side < clear:
+		push.z = rusher.block_drive_side * rusher.block_drive
+	if depth < tuning.hole_drive_depth - 1.0:
+		push.x = off_dir * tuning.hole_drive_forward * rusher.block_drive / maxf(tuning.hole_drive_speed, 0.01)
+	rusher.drive_push += push * delta
 
 
 # --- Queries ---------------------------------------------------------------------

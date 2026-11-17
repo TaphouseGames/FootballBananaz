@@ -509,41 +509,75 @@ extends Resource
 ## of scrimmage, if that is within this many yards of the ball. A play that
 ## goes wider (a toss, a sweep) has no hole and is blocked as before.
 @export var hole_max_width: float = 7.0
-## A blocker who gets the better of a defender within `hole_range` yards of the
-## hole moves him sideways away from it. How fast is
-## rolled once for each block: his blocking rating minus the defender's
-## strength (as a share of 100) plus `hole_drive_base`, plus or minus
-## `hole_drive_luck`. At `hole_drive_full` or more the defender goes at
-## `hole_drive_speed` yards a second; at zero or less he holds his ground.
+## Such a play is blocked for its hole (PlayController._assign_run_blocks): the
+## hole is moved to the nearest gap between two linemen, every lineman is one
+## side of it or the other and has a man on his side, and he stands inside and
+## behind that man, never nearer the middle of the lane than `hole_lane_half`
+## yards (to the edge of his body).
+@export var hole_lane_half: float = 1.0
+## The hole moves to a gap only if one is within this many yards of where the
+## path is drawn, and a lineman with nobody over him goes up to a defender no
+## deeper than `hole_climb_depth` yards.
+@export var hole_snap_range: float = 1.5
+@export var hole_climb_depth: float = 7.0
+## A block within `hole_range` yards of the hole is rolled once: the blocker's
+## blocking rating minus the defender's strength (as a share of 100) plus
+## `hole_drive_base`, plus or minus `hole_drive_luck`. At zero or less the block
+## is lost and the defender is moved away from the hole at `hole_drive_lost`
+## yards a second, which he mostly walks back; just above zero at
+## `hole_drive_min`, and at `hole_drive_full` or more at `hole_drive_speed`.
+## A lead blocker (the fullback through the hole) comes with a run at his man:
+## `hole_lead_bonus` is added to his roll.
 @export var hole_range: float = 6.0
-@export var hole_drive_speed: float = 4.0
-@export var hole_drive_base: float = 0.08
-@export var hole_drive_luck: float = 0.3
+@export var hole_lead_bonus: float = 0.25
+@export var hole_drive_lost: float = 0.8
+@export var hole_drive_min: float = 3.0
+@export var hole_drive_speed: float = 5.0
+@export var hole_drive_base: float = 0.25
+@export var hole_drive_luck: float = 0.15
 @export var hole_drive_full: float = 0.45
-## He is moved for this long at the most, and only this close to the line.
-@export var hole_drive_time: float = 1.8
+## He is taken sideways until he is this far from the middle of the lane (the
+## next man out on the same side a body further), and downfield at
+## `hole_drive_forward` yards a second, no further from the line than
+## `hole_drive_depth`. The person's own defender goes at
+## `hole_drive_human_scale` of the speed.
+@export var hole_clear_width: float = 2.4
+@export var hole_drive_forward: float = 1.0
 @export var hole_drive_depth: float = 4.5
-## Once the back has the ball the defenders are moved away from the line he
-## is running: this share of the way from the hole to where he is.
-@export var hole_follow_back: float = 0.6
-## CPU back behind the line on such a play: he looks at lanes this far apart
-## either side of the hole and takes the one with the most room, every
-## `ai_hole_rethink` seconds. A lane away from the hole costs
-## `ai_hole_stray_cost` yards of room for every yard, and one away from the
-## lane he is already headed for `ai_hole_cut_cost`. A lane with at least
-## `ai_hole_min_room` yards either side pulls him toward it this hard (next to
-## the 1 that takes him straight upfield); with no such lane he runs as usual.
-## Off: in tests/run_hole_check.gd the back gained no more with it than by
-## running away from the nearest defender as he always has, and the blockers
-## move their men away from the line he runs anyway (hole_follow_back).
-@export var ai_hole_read: bool = false
+@export var hole_drive_human_scale: float = 0.5
+## Seconds after the snap: no block won at the hole is shed before
+## `hole_hold_time`, and at `hole_close_time` the blockers stop moving their
+## men, so the hole closes on a back who is late.
+@export var hole_hold_time: float = 1.6
+@export var hole_close_time: float = 2.1
+## Tackle chance multiplier for a defender tied up in a block at the hole (in
+## place of blocked_tackle_scale).
+@export var hole_blocked_tackle_scale: float = 0.15
+## The person's back behind the line with the stick pushed upfield is pulled
+## sideways toward the middle of the open lane this hard (next to the 1 of the
+## stick). Leaning the stick sideways by `hole_magnet_release` or more switches
+## it off.
+@export var hole_magnet: float = 0.35
+@export var hole_magnet_release: float = 0.6
+## Neither the person's back nor a CPU back is pulled toward a lane whose
+## middle is further than this to one side of him.
+@export var hole_pull_range: float = 2.5
+## A back who crosses the line inside a lane at least `hole_burst_min_width`
+## yards wide (clear of bodies) before `hole_close_time` runs this much faster
+## for `hole_burst_time` seconds.
+@export var hole_burst_speed: float = 1.25
+@export var hole_burst_time: float = 0.6
+@export var hole_burst_min_width: float = 1.6
+## Draws the lane, who blocks whom and which way each man is being moved
+## (scripts/hole_debug.gd).
+@export var hole_debug: bool = false
+## CPU back behind the line on such a play: a lane at least `ai_hole_min_room`
+## yards wide pulls him toward its middle this hard (next to the 1 that takes
+## him straight upfield), and he does not steer away from the men his blockers
+## have at the hole. With no such lane he runs as usual.
+@export var ai_hole_read: bool = true
 @export var ai_hole_min_room: float = 1.1
 @export var ai_hole_pull: float = 1.6
-@export var ai_hole_lane_step: float = 1.5
-@export var ai_hole_lanes: int = 2
-@export var ai_hole_rethink: float = 0.15
-@export var ai_hole_stray_cost: float = 0.35
-@export var ai_hole_cut_cost: float = 0.25
 
 @export_group("Impact Feel")
 ## Real-time seconds of hit-stop on a tackle.

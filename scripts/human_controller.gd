@@ -151,6 +151,17 @@ func update_live() -> void:
 	if pc.phase == PlayController.Phase.AIR and pc.ball.intended == player and not moving:
 		assist = true
 
+	# A back behind the line on a run at a hole, stick pushed upfield: he is
+	# eased toward the middle of the lane his blockers have opened. Leaning the
+	# stick to a side is the person's own cut, and wins.
+	if player == pc.runner and player.has_ball and pc.run_hole_live():
+		var ahead: float = move.x * pc.off_dir
+		if ahead > 0.5 and absf(move.z) < tuning.hole_magnet_release:
+			var lane: Vector2 = pc.hole_lane()
+			if lane.y >= tuning.hole_burst_min_width and absf(lane.x - player.position.z) <= tuning.hole_pull_range:
+				var pulled: Vector3 = move + Vector3(0.0, 0.0, clampf(lane.x - player.position.z, -1.0, 1.0) * tuning.hole_magnet * ahead)
+				player.move_input = pulled.normalized() * move.length()
+
 	var carrier: Player = pc.ball.carrier
 	var is_passer: bool = pc.can_pass() and player == pc.qb
 	# Held with the ball in his hands: he secures it. While the quarterback can

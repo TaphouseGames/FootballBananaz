@@ -115,6 +115,20 @@ var block_partner_timer: float = 0.0
 var block_drive: float = 0.0
 var block_drive_side: float = 0.0
 var drive_push: Vector3 = Vector3.ZERO
+## The blocker that roll was made against: the same two locking up again keep it.
+var block_drive_by: Player = null
+## The block he is in was rolled at the hole.
+var hole_block: bool = false
+## A run at a hole (PlayController._assign_run_blocks): which side of it he
+## belongs to (+1 / -1 along z, 0 = neither), and for a lineman the defender
+## he has.
+var hole_side: float = 0.0
+var block_target: Player = null
+## A defender on the line: how far from the middle of the lane he is taken (the
+## second man out on a side further than the first, so they do not jam).
+var hole_clear: float = 0.0
+## Above 0 while a back who hit the hole on time runs faster.
+var burst_timer: float = 0.0
 
 var spin_evade_timer: float = 0.0
 ## Shared by spin and stiff arm.
@@ -219,6 +233,12 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	block_drive = 0.0
 	block_drive_side = 0.0
 	drive_push = Vector3.ZERO
+	block_drive_by = null
+	hole_block = false
+	hole_side = 0.0
+	block_target = null
+	hole_clear = 0.0
+	burst_timer = 0.0
 	spin_evade_timer = 0.0
 	move_cooldown = 0.0
 	move_side = 1.0
@@ -518,6 +538,8 @@ func max_speed() -> float:
 		speed *= tuning.stiff_arm_speed_scale
 	if is_securing():
 		speed *= tuning.secure_speed_scale
+	if burst_timer > 0.0 and has_ball:
+		speed *= tuning.hole_burst_speed
 	return speed
 
 
@@ -840,6 +862,7 @@ func _tick_timers(delta: float) -> void:
 	catch_timer = maxf(catch_timer - delta, 0.0)
 	ball_grab_cooldown = maxf(ball_grab_cooldown - delta, 0.0)
 	block_immune_timer = maxf(block_immune_timer - delta, 0.0)
+	burst_timer = maxf(burst_timer - delta, 0.0)
 	block_partner_timer = maxf(block_partner_timer - delta, 0.0)
 	if block_partner != null and (block_partner_timer <= 0.0 or block_partner.state != State.NORMAL or state != State.NORMAL):
 		block_partner = null
