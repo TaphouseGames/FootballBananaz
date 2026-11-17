@@ -1,0 +1,10 @@
+task created 212fef1d-0b86-41fe-b6ec-b0cb323adc44 (@jumbotron-v2-concept)
+generate_image · queued
+generate_image · running · 212fef1d
+generate_image · running · 212fef1d
+generate_image · running · 212fef1d
+generate_image · success 100% · 212fef1d
+[32m✓[39m generate_image · 212fef1d-0b86-41fe-b6ec-b0cb323adc44 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to v2_concept\tripo-out\jumbotron-v2-concept-212fef1d
+{"task_id":"212fef1d-0b86-41fe-b6ec-b0cb323adc44","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"v2_concept\\tripo-out\\jumbotron-v2-concept-212fef1d","files":["generated_image.png","preview.png"],"preview":"v2_concept\\tripo-out\\jumbotron-v2-concept-212fef1d\\preview.png"}

@@ -1,0 +1,19 @@
+{
+  "task_id": "5b33f2a5-9e8c-4820-b45b-66a4ecbcf3ba",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "A new object from the same stadium as the floodlight tower in image[1]: a stadium jumbotron scoreboard. One huge blank flat black rectangular screen in a thick dark grey riveted steel housing with a flat steel roof plate and corner brackets like the lamp box of image[1], a small row of round floodlights along the top, standing on two steel lattice truss towers with cross bracing like the tower of image[1], on one wide weathered concrete base. Perfectly left-right symmetrical. Straight-on front view, whole object in frame, single isolated object on a plain grey background, in exactly the stylized hand-painted game prop style, grey steel colours and lighting of image[1]. No blue, no yellow, no text.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-17T21:41:35.439938Z",
+  "completed_at": "2026-11-17T21:42:11.793681Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

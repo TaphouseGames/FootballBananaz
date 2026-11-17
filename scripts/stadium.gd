@@ -150,8 +150,14 @@ const FONT_NAMES: PackedStringArray = ["Impact", "Haettenschweiler", "Arial Blac
 const SCREEN_COLOR: Color = Color(0.03, 0.04, 0.07)
 const SCREEN_TEXT_COLOR: Color = Color(1.0, 0.86, 0.3)
 ## The screen of jumbotron.glb, as shares of the model's width and height: its
-## middle (x is unused) and its size.
-const SCREEN_RECT: Rect2 = Rect2(0.5, 0.658, 0.72, 0.44)
+## middle and its size. SCREEN_DEPTH is how far in front of the model's middle
+## it is, as a share of the model's depth (the housing's rim, the lamps and the
+## base stand further forward than the screen). All four are the SCREEN line
+## tools/prep_prop.py prints for the model.
+const SCREEN_RECT: Rect2 = Rect2(0.4989, 0.7138, 0.9289, 0.4774)
+const SCREEN_DEPTH: float = 0.2046
+## How far in front of the model's screen the picture is, in yards.
+const SCREEN_LIFT: float = 0.06
 ## The screen with the main menu's title on it (show_title): lit, and the
 ## words outlined so the darker of them stands off it.
 const TITLE_SCREEN_COLOR: Color = Color(0.04, 0.07, 0.17)
@@ -1551,8 +1557,9 @@ func _add_screen(board: Node3D) -> void:
 	var size: Vector3 = board.get_meta(&"size")
 	var width: float = size.x * SCREEN_RECT.size.x
 	var height: float = size.y * SCREEN_RECT.size.y
-	var front: float = size.z * 0.5 + 0.1
+	var front: float = size.z * SCREEN_DEPTH + SCREEN_LIFT
 	var middle: float = size.y * SCREEN_RECT.position.y
+	var across: float = size.x * (SCREEN_RECT.position.x - 0.5)
 	var quad: QuadMesh = QuadMesh.new()
 	quad.size = Vector2(width, height)
 	var material: StandardMaterial3D = StandardMaterial3D.new()
@@ -1563,19 +1570,19 @@ func _add_screen(board: Node3D) -> void:
 	screen.mesh = quad
 	screen.material_override = material
 	screen.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	screen.position = Vector3(0.0, middle, front)
+	screen.position = Vector3(across, middle, front)
 	board.add_child(screen)
 
 	var score: Label3D = _label("GAME DAY", 160, SCREEN_TEXT_COLOR)
 	score.name = "Score"
 	score.pixel_size = height * 0.42 / 160.0
-	score.position = Vector3(0.0, middle, front + 0.05)
+	score.position = Vector3(across, middle, front + 0.05)
 	board.add_child(score)
 	_score_labels.append(score)
 	var flash: Label3D = _label("TOUCHDOWN!", 160, Color.WHITE)
 	flash.name = "Flash"
 	flash.pixel_size = width * 0.9 / maxf(_font.get_string_size("TOUCHDOWN!", HORIZONTAL_ALIGNMENT_CENTER, -1.0, 160).x, 1.0)
-	flash.position = Vector3(0.0, middle, front + 0.05)
+	flash.position = Vector3(across, middle, front + 0.05)
 	flash.visible = false
 	board.add_child(flash)
 	_flash_labels.append(flash)

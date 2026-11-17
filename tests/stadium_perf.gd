@@ -4,13 +4,16 @@ extends SceneTree
 ## the stadium on and off. Needs a window (no --headless), since headless does
 ## not render. V-sync is switched off for the run.
 ##
-## Run:  godot --path . --resolution 1280x720 --script res://tests/stadium_perf.gd -- [stadium=on|off|both] [seconds=3]
+## Run:  godot --path . --resolution 1280x720 --script res://tests/stadium_perf.gd -- [stadium=on|off|both] [seconds=3] [stop=jumbotron]
 
 ## Seconds at each stop before measuring starts (shaders, streaming).
 const SETTLE: float = 0.7
 
 var _modes: Array[bool] = [false, true]
 var _seconds: float = 3.0
+## Measure one stop only, looking straight at a jumbotron (stop=jumbotron).
+var _only_jumbotron: bool = false
+var _settle: float = SETTLE
 var _game: Game
 var _stops: Array = []
 var _stop: int = -1
@@ -30,6 +33,11 @@ func _initialize() -> void:
 			_modes = [true]
 		elif arg == "stadium=off":
 			_modes = [false]
+		elif arg == "stop=jumbotron":
+			# With one stop there is nothing before it to take the stalls of
+			# the first seconds of a match (shaders, the signs' bake).
+			_only_jumbotron = true
+			_settle = 6.0
 		elif arg.begins_with("seconds="):
 			_seconds = float(arg.trim_prefix("seconds="))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -58,6 +66,10 @@ func _open() -> void:
 		_stops.append([Vector3(x - dir * t.camera_distance, t.camera_height, 0.0), Vector3(x + dir * t.camera_look_ahead, 0.0, 0.0)])
 	_stops.append([Vector3(length * 0.5, t.camera_height, t.camera_distance), Vector3(length * 0.5, 0.0, -t.camera_look_ahead)])
 	_stops.append([Vector3(length * 0.5, t.camera_height, -t.camera_distance), Vector3(length * 0.5, 0.0, t.camera_look_ahead)])
+	if _only_jumbotron:
+		# The game camera never has a jumbotron in view: the stadium gallery's
+		# shot of the one over the far end, which fills the picture with it.
+		_stops = [[Vector3(70.0, 8.0, 0.0), Vector3(140.0, 24.0, 0.0)]]
 	_stop = -1
 	_all.clear()
 	_draws = 0
@@ -81,11 +93,11 @@ func _process(_delta: float) -> bool:
 	var stop: Array = _stops[_stop]
 	_game.camera_rig.shot(stop[0], stop[1], true)
 	var at: float = float(now - _stop_start) / 1000000.0
-	if at > SETTLE:
+	if at > _settle:
 		_times.append(frame)
 		_draws = maxi(_draws, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
 		_primitives = maxi(_primitives, int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)))
-	if at > SETTLE + _seconds:
+	if at > _settle + _seconds:
 		_all.append_array(_times)
 		_next_stop()
 	return false
@@ -103,8 +115,9 @@ func _finish_mode() -> bool:
 	var fans: int = 0
 	if _game.field.stadium != null:
 		fans = _game.field.stadium.fan_count
-	_results.append("stadium %s  %dx%d  mean %.2f ms (%.0f fps)  99th %.2f ms  most draw calls %d  most primitives %d  fans %d" % [
-		"on " if _modes[0] else "off", size.x, size.y, mean, 1000.0 / maxf(mean, 0.001), worst,
+	var median: float = sorted[sorted.size() / 2] if not sorted.is_empty() else 0.0
+	_results.append("stadium %s  %dx%d  mean %.2f ms (%.0f fps)  median %.2f ms  99th %.2f ms  most draw calls %d  most primitives %d  fans %d" % [
+		"on " if _modes[0] else "off", size.x, size.y, mean, 1000.0 / maxf(mean, 0.001), median, worst,
 		_draws, _primitives, fans])
 	_modes.remove_at(0)
 	if not _modes.is_empty():

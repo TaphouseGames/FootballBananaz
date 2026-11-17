@@ -1,0 +1,9 @@
+task created 18f60159-96ed-4dd4-9f45-de45db35b580 (@jumbotron-v3-uv)
+mesh_uv · queued
+mesh_uv · running 99% · 18f60159
+mesh_uv · running 99% · 18f60159
+mesh_uv · success 100% · 18f60159
+[32m✓[39m mesh_uv · 18f60159-96ed-4dd4-9f45-de45db35b580 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to v3_uv\tripo-out\jumbotron-v3-uv-18f60159
+{"task_id":"18f60159-96ed-4dd4-9f45-de45db35b580","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"v3_uv\\tripo-out\\jumbotron-v3-uv-18f60159","files":["model.glb","uv_render.webp"],"model_file":"v3_uv\\tripo-out\\jumbotron-v3-uv-18f60159\\model.glb"}

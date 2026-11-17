@@ -48,7 +48,7 @@ The wall is 2.3 yards high (`WALL_HEIGHT`), a little taller than a player (1.95)
 
 All under `Field/Stadium/Props` at run time (the nodes are made in `Stadium._build_props()`, which is where to move them):
 
-- `Jumbotrons/Jumbotron0` and `Jumbotron4`: behind the back wall at each end. The score is a `Label3D` on a quad in front of the model's screen (`SCREEN_RECT`). On the main menu `Stadium.show_title()` puts the game's title and subtitle on `Jumbotron0` in place of the score (`Title`, `Subtitle`), and stands it `MainMenu.JUMBOTRON_SCALE` times its size.
+- `Jumbotrons/Jumbotron0` and `Jumbotron4`: behind the back wall at each end. The score is a `Label3D` on a quad just in front of the model's screen (`SCREEN_RECT` and `SCREEN_DEPTH`, which are the SCREEN line `tools/prep_prop.py` prints for the model). On the main menu `Stadium.show_title()` puts the game's title and subtitle on `Jumbotron0` in place of the score (`Title`, `Subtitle`), and stands it `MainMenu.JUMBOTRON_SCALE` times its size.
 - `LightTowers/LightTower1, 3, 5, 7`: outside the four corners.
 - `HotDogStand`: on the walkway at the top of the home stand (-Z), about 30 % of the way along.
 - `BoothAnchor`: an empty marker at the top of the home stand at midfield. There is no booth model yet; this is where one would go.
@@ -64,9 +64,31 @@ blender -b --factory-startup --python tools/prep_prop.py -- assets/stadium/sourc
 
 - `crowd_kit.glb`, `crowd_atlas.png` and `crowd_mask.png` are the crowd's parts; see "The crowd's parts" below. The kit's import has `generate_lods` off, since the levels are made by the script. (`fan.glb` and `tools/prep_fan.py` are the old single-model crowd and are no longer used.)
 - The signs are not files. `Stadium._bake_signs()` writes the 16 texts into one picture at the start of a match (a viewport that is thrown away afterwards) and the crowd shader shows one cell on the front of each board. The picture is ready by the second frame of a match. Headless runs skip the bake.
-- `jumbotron.glb` and `hot_dog_stand.glb` are Tripo models (prompts in each `task.json`), and `light_tower.glb` is made from `TripoModels/industrial_floodlight_3d_model/industrial_floodlight_3d_model.fbx` (`tris=9000`, down from 27,000, and no `yaw`; the script reads FBX too). The others are cut to 5,000 triangles or fewer and 1024 px textures. `yaw=-90` because Tripo's models came out facing +X. `Stadium._prop()` scales each to the height it wants, and shows a plain box if a file is missing.
+- `hot_dog_stand.glb` is a Tripo model (prompt in its `task.json`), `jumbotron.glb` is one too (see The jumbotron below), and `light_tower.glb` is made from `TripoModels/industrial_floodlight_3d_model/industrial_floodlight_3d_model.fbx` (`tris=9000`, down from 27,000, and no `yaw`; the script reads FBX too). The hot dog stand is cut to 5,000 triangles and a 1024 px texture. `yaw=-90` because Tripo's models came out facing +X. `Stadium._prop()` scales each to the height it wants, and shows a plain box if a file is missing.
 - The sky of a match is `assets/stadium/cartoon_sky.gdshader`, set on the environment in `scenes/main.tscn` and `scenes/main_menu.tscn`: its colours, how many clouds (`cloud_cover`), their size (`cloud_columns`) and drift (`cloud_speed`) are the shader's parameters. The clouds sit low, just over the stands, since that is all of the sky the intro's camera sees.
 - `assets/stadium/source/` has a `.gdignore`, so Godot does not import the raw models.
+
+## The jumbotron
+
+A steel housing with a row of lamps on two lattice towers, in the style of the light towers: 17,862 triangles, the model's own normals, and 2048 px colour, normal and roughness/metal maps. It is seen close on the main menu and in the intro, so it is not thinned. From `assets/stadium/source/tripo/jumbotron` (145 credits in all: 5, 120 and 20):
+
+```
+tripo generate image-to-image ./light_tower_ref.png --prompt "<in v3_concept's task.json>" -o v3_concept
+tripo make ./v3_concept/tripo-out/<task>/generated_image.png --model tripo-p2 -p face_limit=20000 -p pbr=true -p texture_quality=detailed -o v3
+tripo mesh uv <the model's task id> -o v3_uv
+```
+
+`light_tower_ref.png` is a render of `light_tower.glb`, so the concept picture takes its style from the towers. P2 is Tripo's Smart Mesh, `mesh uv` its Smart UV. Then, from the project root:
+
+```
+blender -b --factory-startup --python tools/prep_prop.py -- assets/stadium/source/tripo/jumbotron/v3_uv/tripo-out/<task>/model.glb assets/stadium/jumbotron.glb tris=20000 yaw=-90 texture=2048 clean=1 level=1 screen=1 preview=<dir>
+```
+
+- `clean=1` drops faces without area, loose points and specks, and keeps the model's own normals (its hard edges) when it is not thinned. Tripo builds such a model from over a hundred separate pieces (every bolt and lamp is one), so small pieces are kept.
+- `level=1` turns the model so its front faces exactly forward, stands it upright and makes its underside flat.
+- `screen=1` finds the screen (the largest flat dark area facing forward), makes it one plane and prints `SCREEN middle <x> <y> size <w> <h> depth <d>`. Those five numbers go into `SCREEN_RECT` and `SCREEN_DEPTH` in `scripts/stadium.gd`: the housing's rim, the lamps and the base stand further forward than the screen, so the picture is put on the screen's own plane.
+
+`v2` and `v2_concept` there are an earlier blue and yellow design that is not used.
 
 ## The crowd's parts
 
@@ -153,7 +175,7 @@ To add a mascot for a new team:
 - `godot --headless --fixed-fps 60 --path . --script res://tests/wall_check.gd` (a few seconds): the wall as a solid thing. A player run at it stays up and slides along it, one shoved at it from close by is flattened, sticks and gets up, a carrier's dive into it is down (and not flattened when only his hands reach it), a loose ball and a pass come back off it (the pass still live), a carrier or a ball past the sideline is in play, and a ball in the stands is dead. The gallery's `only=wall` shots show the wall's height against a player and the squish from hit to getting up.
 - `tests/celebration_check.gd` checks that the mascot of the scorer's team reaches the huddle and is standing by again at the next line-up.
 - `godot --path . --resolution 1400x1000 --script res://tests/crowd_gallery.gd -- out=<dir>` (window): every head on every outfit with the crowd's shader, from the front, behind, the side and in a cheer, each row close up, a fan with a sign and the plainest level.
-- `godot --path . --resolution 1280x720 --script res://tests/stadium_perf.gd` (window): frame times with the stadium off and on.
+- `godot --path . --resolution 1280x720 --script res://tests/stadium_perf.gd -- [stop=jumbotron]` (window): frame times with the stadium off and on; with `stop=jumbotron`, from one stop that looks straight at a jumbotron.
 
 ## Cost
 
@@ -167,6 +189,17 @@ Measured 2026-11-14 on an RTX 4070 Ti / i7-9700K, v-sync off, eight camera stops
 | Kit of parts (men), 1920x1080 | 1.80 to 1.88 ms (532 to 557) | 1.4 to 1.6 million | 2,468 |
 
 So the kit is a little faster than the one man it replaced: about a third fewer triangles for 48 more draw calls. Runs differ by up to 0.4 ms on the same build, so read the frame times as "no slower, probably 10 % faster". The women's parts will add draw calls (more meshes per piece of the stands) and no triangles. The game runs at about 500 fps on this machine and is not limited by the graphics card, so this says little about a weak GPU; there, lower `crowd_lod_near` and `crowd_lod_far` first, then `crowd_density`, then `anti_aliasing/quality/msaa_3d` in the project settings.
+
+The jumbotron went from 5,000 to 17,862 triangles on 2026-11-17 (two of them, so about 26,000 more). Measured the same day, same machine, 1280x720, three runs each, old model and new:
+
+| | old | new |
+| --- | --- | --- |
+| The eight game-camera stops, mean frame time | 4.31 to 4.53 ms | 4.13 to 4.37 ms |
+| Looking straight at a jumbotron (`stop=jumbotron seconds=5`), mean | 3.34 to 3.39 ms | 3.34 to 3.65 ms |
+| The same, median | 2.96 to 3.00 ms | 2.94 to 3.20 ms |
+| The same, most triangles in a frame | 222,000 to 265,000 | 234,000 to 239,000 |
+
+No difference outside the spread between runs. The game camera never has a jumbotron in view; the second stop is the worst case.
 
 ## Open issues
 

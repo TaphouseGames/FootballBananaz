@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://q4egl55hgth7"
-path="res://.godot/imported/jumbotron_Color_cfc4f4b4-bf71-42f6-a585-113ceda69d65.jpg-09915f2d9849bdc1bd48b826f51056d7.ctex"
+uid="uid://dwwdxo4wcpf2i"
+path="res://.godot/imported/jumbotron_tripo_image_tripo_node_41cbcab3-ab21-415f-b134-59d27e991f25_base_color.jpg-3f294d746588b22f3bacc2a96b55f97d.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "7d224133c449ae0d5e4deb3d0c01f992"
+"md5": "1b2d1afab9bbe66a7dd236e2ac40a64a"
 }
 
 [deps]
 
-source_file="res://assets/stadium/jumbotron_Color_cfc4f4b4-bf71-42f6-a585-113ceda69d65.jpg"
-dest_files=["res://.godot/imported/jumbotron_Color_cfc4f4b4-bf71-42f6-a585-113ceda69d65.jpg-09915f2d9849bdc1bd48b826f51056d7.ctex"]
+source_file="res://assets/stadium/jumbotron_tripo_image_tripo_node_41cbcab3-ab21-415f-b134-59d27e991f25_base_color.jpg"
+dest_files=["res://.godot/imported/jumbotron_tripo_image_tripo_node_41cbcab3-ab21-415f-b134-59d27e991f25_base_color.jpg-3f294d746588b22f3bacc2a96b55f97d.ctex"]
 
 [params]
 

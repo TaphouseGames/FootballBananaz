@@ -1,0 +1,24 @@
+[1m── Plan ──────────────────────────[22m
+input: ./v3_concept/tripo-out/jumbotron-v3-concept-5b33f2a5/generated_image.png
+model: P2-20260801[2m — explicit --model[22m
+steps:
+  1. image-to-model  [2mPOST /v3/generation/image-to-model[22m — generate a 3D model from one image
+[2m     face_limit=20000 pbr=true texture_quality="detailed" model="P2-20260801"[22m
+deliverables: GLB
+cost impact:
+  · estimated generation cost: 120 credits (official list price)
+  · texture_quality detailed: higher price tier
+[1m──────────────────────────────────[22m
+model: P2-20260801 (explicit --model)
+task created 41cbcab3-ab21-415f-b134-59d27e991f25 (@jumbotron-v3)
+image_to_model · queued
+image_to_model · running 5% · 41cbcab3
+image_to_model · running 16% · 41cbcab3
+image_to_model · running 27% · 41cbcab3
+image_to_model · running 41% · 41cbcab3
+image_to_model · running 62% · 41cbcab3
+image_to_model · success 100% · 41cbcab3
+[32m✓[39m image_to_model · 41cbcab3-ab21-415f-b134-59d27e991f25 · 120 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to v3\tripo-out\jumbotron-v3-41cbcab3
+{"task_id":"41cbcab3-ab21-415f-b134-59d27e991f25","type":"image_to_model","status":"success","credits_consumed":120,"output_dir":"v3\\tripo-out\\jumbotron-v3-41cbcab3","files":["model.glb","rendered_image.webp","preview.png"],"model_file":"v3\\tripo-out\\jumbotron-v3-41cbcab3\\model.glb","preview":"v3\\tripo-out\\jumbotron-v3-41cbcab3\\preview.png"}

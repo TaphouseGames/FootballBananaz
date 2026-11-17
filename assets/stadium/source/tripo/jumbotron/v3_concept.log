@@ -1,0 +1,10 @@
+task created 5b33f2a5-9e8c-4820-b45b-66a4ecbcf3ba (@jumbotron-v3-concept)
+generate_image · queued
+generate_image · running · 5b33f2a5
+generate_image · running · 5b33f2a5
+generate_image · running · 5b33f2a5
+generate_image · success 100% · 5b33f2a5
+[32m✓[39m generate_image · 5b33f2a5-9e8c-4820-b45b-66a4ecbcf3ba · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to v3_concept\tripo-out\jumbotron-v3-concept-5b33f2a5
+{"task_id":"5b33f2a5-9e8c-4820-b45b-66a4ecbcf3ba","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"v3_concept\\tripo-out\\jumbotron-v3-concept-5b33f2a5","files":["generated_image.png","preview.png"],"preview":"v3_concept\\tripo-out\\jumbotron-v3-concept-5b33f2a5\\preview.png"}
