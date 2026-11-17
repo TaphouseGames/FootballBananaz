@@ -28,39 +28,33 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
-script = ExtResource("2_assign")
-label = "WR"
-job = 1
-start = Vector2(-0.6, -18.4)
-route = PackedVector2Array(5, 0, 6, 18.4)
-
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "SL"
-job = 1
-start = Vector2(-0.6, -8.3)
-route = PackedVector2Array(12, 0, 13, 16.7)
+start = Vector2(-0.6, 11.2)
+route = PackedVector2Array(12, 0, 13, -18)
+
+[sub_resource type="Resource" id="z"]
+script = ExtResource("2_assign")
+label = "WR"
+start = Vector2(-0.6, 19.9)
+route = PackedVector2Array(5, 0, 6, -22)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
-job = 1
-start = Vector2(-7, 2.5)
-route = PackedVector2Array(1, 6.6, 4, 15.2)
+start = Vector2(-7, -2.5)
+route = PackedVector2Array(1, -6.6, 4, -15.2)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
-label = "TE"
-job = 1
-start = Vector2(-0.6, 3.4)
-route = PackedVector2Array(6, 0, 5.5, -1)
-settle = true
-block_time = 0.8
+label = "HB"
+start = Vector2(-1.5, 5.4)
+route = PackedVector2Array(2, 3, 3, 13)
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Levels"
-description = "Shotgun. Two men break in from the left, at five yards and at twelve. Back swings to the right flat. Tight end blocks, then sits down in the middle."
-group = 3
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+description = "Shotgun, three on the right. Wideout breaks in at five yards, slot at twelve. Inside man in the right flat, back swings left."
+group = 4
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

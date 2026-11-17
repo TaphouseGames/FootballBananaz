@@ -27,26 +27,26 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, -17)
+start = Vector2(-0.6, -18.4)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, 5.4)
+start = Vector2(-1.2, 18.4)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
 job = 3
 start = Vector2(-6.5, 0.4)
-route = PackedVector2Array(2.8, 0.5, 5.5, 2.8, 10, 3.9)
+route = PackedVector2Array(2.8, 1.5, 5.5, 4.6, 10, 6.5)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
 label = "TE"
 job = 2
@@ -55,8 +55,9 @@ start = Vector2(-0.6, 3.4)
 [resource]
 script = ExtResource("1_play")
 play_name = "Off Tackle"
-description = "Handoff through the gap outside the right guard. The tight end and the tight wideout seal the edge."
+description = "Handoff round the outside of the tight end on the right. Everyone blocks."
 category = 0
+group = 1
 is_run = true
 handoff_delay = 0.4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

@@ -6,8 +6,9 @@
 [sub_resource type="Resource" id="qb"]
 script = ExtResource("2_assign")
 label = "QB"
-job = 2
-start = Vector2(-0.6, 18.4)
+job = 0
+start = Vector2(-4, 0)
+route = PackedVector2Array(-1, 0)
 
 [sub_resource type="Resource" id="c"]
 script = ExtResource("2_assign")
@@ -27,37 +28,37 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
-label = "WR"
-job = 3
-start = Vector2(-3, -5.4)
-route = PackedVector2Array(-1.2, 5.4, -1, 12.3, 3, 21, 10, 25.3)
+label = "TE"
+start = Vector2(-0.6, -3.4)
+route = PackedVector2Array(3, 0, 6, -8)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
-label = "WR"
-job = 2
-start = Vector2(-0.6, 9.8)
+label = "TE"
+start = Vector2(-0.6, 3.4)
+route = PackedVector2Array(5, 0, 9, -1.5)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
-job = 0
-start = Vector2(-5, 0)
+job = 3
+start = Vector2(-6.5, 0.4)
+route = PackedVector2Array(3.5, 0, 6, -5)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
-label = "TE"
+label = "FB"
 job = 2
-start = Vector2(-0.6, 3.4)
+start = Vector2(-4.5, 1.8)
 
 [resource]
 script = ExtResource("1_play")
-play_name = "Wildcat Jet"
-description = "Direct snap to the back. Left wideout comes across in front of him, takes the ball and runs around the right end. Quarterback is split wide to block."
-category = 0
-is_run = true
-handoff_delay = 0.7
-cpu_weight = 0.4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+play_name = "Goal Line Pop"
+description = "Fake the dive. Right tight end runs straight up the middle behind the linebackers who come up, left tight end fades to the corner."
+group = 5
+handoff_delay = 0.3
+play_action = true
+goal_line = true
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

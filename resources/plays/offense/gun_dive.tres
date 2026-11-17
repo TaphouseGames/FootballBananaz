@@ -7,7 +7,7 @@
 script = ExtResource("2_assign")
 label = "QB"
 job = 0
-start = Vector2(-4, 0)
+start = Vector2(-7, 0)
 
 [sub_resource type="Resource" id="c"]
 script = ExtResource("2_assign")
@@ -27,38 +27,37 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
-label = "WR"
+label = "SL"
 job = 2
-start = Vector2(-0.6, -5.4)
+start = Vector2(-0.6, 11.2)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, 17)
+start = Vector2(-0.6, 19.9)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
-job = 1
-start = Vector2(-6.5, 0.6)
-route = PackedVector2Array(0.5, 6, 3, 13)
-
-[sub_resource type="Resource" id="te"]
-script = ExtResource("2_assign")
-label = "FB"
 job = 3
-start = Vector2(-4.5, -1.8)
-route = PackedVector2Array(2.5, -0.8, 5, -2.2, 10, -3)
+start = Vector2(-7, -2.5)
+route = PackedVector2Array(1.5, 1.2, 8, 1.6, 16, 1.6)
+
+[sub_resource type="Resource" id="y"]
+script = ExtResource("2_assign")
+label = "HB"
+job = 2
+start = Vector2(-1.5, 5.4)
 
 [resource]
 script = ExtResource("1_play")
-play_name = "FB Belly"
-description = "Fullback takes it off the left guard, the tight wideout seals the edge. Back fakes the sweep to the right."
+play_name = "Gun Dive"
+description = "Shotgun, three on the right. Quick handoff to the back straight ahead, left of the center."
 category = 0
-group = 5
+group = 4
 is_run = true
 handoff_delay = 0.35
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

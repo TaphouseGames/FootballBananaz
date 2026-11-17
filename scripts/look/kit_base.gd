@@ -19,6 +19,9 @@ const NECK_HOLD: float = 0.9
 const NECK_HOLD_FADE: float = 0.06
 ## How deep the band at the top of the body is that counts as the collar's rim.
 const COLLAR_RIM: float = 0.035
+## How far above the top of the waistband the jersey is back to its own bones
+## (see _tuck()), on a body HEAD_UNIT tall.
+const TUCK_FADE: float = 0.05
 ## How tall, to the top of its collar, the body is that the heads' fit
 ## (PlayerParts.HEADS) is given for.
 const HEAD_UNIT: float = 0.8
@@ -198,6 +201,9 @@ func _bake(entry: Dictionary) -> void:
 	var count: int = points.size()
 	@warning_ignore("integer_division")
 	var per: int = bones.size() / count
+	_tuck(points, arrays[Mesh.ARRAY_INDEX], bones, weights, per, worth)
+	arrays[Mesh.ARRAY_BONES] = bones
+	arrays[Mesh.ARRAY_WEIGHTS] = weights
 	for point: Vector3 in points:
 		collar_top = maxf(collar_top, point.z)
 	var rim_low: Vector2 = Vector2.INF
@@ -232,6 +238,99 @@ func _bake(entry: Dictionary) -> void:
 	var format: int = Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT
 	format |= source.surface_get_format(0) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, format)
+
+
+## Keeps the jersey in the pants. The two are separate shells, the bottom of
+## the jersey inside the waistband, and as modelled the one goes with the
+## waist and the other with the pelvis: a player who bends forward pulls his
+## jersey out at the back and can be looked into. Here the jersey takes the
+## bones of the waistband next to it up to the waistband's top, and goes back
+## to its own over TUCK_FADE above that. `worth` is what each bone is (see
+## _bone_worth()).
+func _tuck(points: PackedVector3Array, index: PackedInt32Array, bones: PackedInt32Array, weights: PackedFloat32Array, per: int, worth: Array[Color]) -> void:
+	var count: int = points.size()
+	# The shells: vertices in the same place are one, joined by triangles.
+	var welded: Dictionary[Vector3i, int] = {}
+	var piece: PackedInt32Array = PackedInt32Array()
+	piece.resize(count)
+	for i: int in count:
+		var key: Vector3i = Vector3i((points[i] * 100000.0).round())
+		if not welded.has(key):
+			welded[key] = i
+		piece[i] = welded[key]
+	for t: int in range(0, index.size(), 3):
+		var a: int = _piece_of(piece, index[t])
+		for k: int in [1, 2]:
+			var b: int = _piece_of(piece, index[t + k])
+			if a != b:
+				piece[b] = a
+	var size: Dictionary[int, int] = {}
+	var low: Dictionary[int, float] = {}
+	var high: Dictionary[int, float] = {}
+	var top: float = 0.0
+	for i: int in count:
+		var of: int = _piece_of(piece, i)
+		size[of] = size.get(of, 0) + 1
+		low[of] = minf(low.get(of, INF), points[i].z)
+		high[of] = maxf(high.get(of, -INF), points[i].z)
+		top = maxf(top, points[i].z)
+	# The pants are the biggest shell round the thighs, the jersey the biggest
+	# round the chest.
+	var pants: int = _biggest(size, low, high, (hem_z + belt_z) / 2.0)
+	var jersey: int = _biggest(size, low, high, (belt_z + top) / 2.0)
+	if pants < 0 or jersey < 0 or pants == jersey:
+		return
+	var band_top: float = high[pants]
+	var fade: float = TUCK_FADE * top / HEAD_UNIT
+	var band: PackedInt32Array = PackedInt32Array()
+	for i: int in count:
+		if _piece_of(piece, i) == pants and points[i].z > band_top - fade * 2.0:
+			band.append(i)
+	for i: int in count:
+		if _piece_of(piece, i) != jersey or points[i].z > band_top + fade:
+			continue
+		var share: float = 1.0 - smoothstep(band_top, band_top + fade, points[i].z)
+		var near: int = band[0]
+		for other: int in band:
+			if points[other].distance_squared_to(points[i]) < points[near].distance_squared_to(points[i]):
+				near = other
+		# A sleeve that hangs down beside the waistband is not tucked into it.
+		var arm: float = 0.0
+		for k: int in per:
+			arm += (worth[bones[i * per + k]].b + worth[bones[i * per + k]].g) * weights[i * per + k]
+		share *= 1.0 - smoothstep(0.0, 0.3, arm)
+		share *= 1.0 - smoothstep(fade * 1.5, fade * 2.5, points[near].distance_to(points[i]))
+		if share <= 0.0:
+			continue
+		var mixed: Dictionary[int, float] = {}
+		for k: int in per:
+			mixed[bones[i * per + k]] = mixed.get(bones[i * per + k], 0.0) + weights[i * per + k] * (1.0 - share)
+			mixed[bones[near * per + k]] = mixed.get(bones[near * per + k], 0.0) + weights[near * per + k] * share
+		var order: Array[int] = mixed.keys()
+		order.sort_custom(func(a: int, b: int) -> bool: return mixed[a] > mixed[b])
+		var sum: float = 0.0
+		for k: int in mini(per, order.size()):
+			sum += mixed[order[k]]
+		for k: int in per:
+			var kept: bool = k < order.size() and sum > 0.0
+			bones[i * per + k] = order[k] if kept else 0
+			weights[i * per + k] = mixed[order[k]] / sum if kept else 0.0
+
+
+func _piece_of(piece: PackedInt32Array, i: int) -> int:
+	while piece[i] != i:
+		piece[i] = piece[piece[i]]
+		i = piece[i]
+	return i
+
+
+## The shell with the most vertices that reaches from below `z` to above it.
+func _biggest(size: Dictionary[int, int], low: Dictionary[int, float], high: Dictionary[int, float], z: float) -> int:
+	var best: int = -1
+	for of: int in size:
+		if low[of] < z and high[of] > z and (best < 0 or size[of] > size[best]):
+			best = of
+	return best
 
 
 ## Where the parts of the kit and its print go, from where the body's joints

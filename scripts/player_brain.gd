@@ -48,6 +48,22 @@ var bite_time: float = 0.0
 ## not). `takeout_target` is the man he has gone for, until the dive lands.
 var takeout_time: float = -1.0
 var takeout_target: Player
+## How a man defender plays his man this play. Set by PlayController at the
+## line-up (see _roll_technique): tight on his deep side, off him with a
+## cushion that closes as he comes, or trailing on the quarterback's side.
+enum Technique { TIGHT, OFF, TRAIL }
+var technique: Technique = Technique.TIGHT
+## Yards he shades to one side of his man (along z), rolled with it.
+var leverage: float = 0.0
+## Playing off: the cushion he is holding right now.
+var _cushion: float = 0.0
+## Decided once per pass: whether this defender tries to get in front of the
+## receiver, and whether he has thought about diving at him instead.
+var _undercut_decided: bool = false
+var _undercut: bool = false
+var _air_hit_decided: bool = false
+## He dived at the receiver and not at the ball: that dive catches nothing.
+var hit_man: bool = false
 
 var _decision_timer: float = 0.0
 ## The sharper quarterback rolls once per play for getting away from a rusher,
@@ -57,6 +73,10 @@ var _bail_rolled: bool = false
 ## Seconds until he looks at the empty side again, and until a carrier next
 ## thinks about jumping a dive.
 var _lane_timer: float = 0.0
+## Run at a hole: the lane the carrier has picked and when he looks again.
+var _hole_z: float = 0.0
+var _hole_picked: bool = false
+var _hole_timer: float = 0.0
 var _hurdle_timer: float = 0.0
 ## What he went up meaning to jump dive at: a man (`_leap_target`), the pass
 ## coming down, or straight ahead for the line.
@@ -76,6 +96,11 @@ var run_kind: StringName = &""
 ## it (negative = not rolled yet) and how long he then still hesitates.
 var _move_lead: float = -1.0
 var _move_late: float = 0.0
+## Securing the ball is decided once per tackler: who it was decided for,
+## whether he does, and whether it is to run that tackler over.
+var _secure_target: Player
+var _secure_on: bool = false
+var _secure_power: bool = false
 ## The CPU quarterback rolls once per play for keeping the ball by design:
 ## the time he goes (negative = he does not).
 var _keeper_rolled: bool = false
@@ -159,6 +184,9 @@ func assign_defense(assignment: DefenseAssignment, start: Vector3, target: Playe
 func think(pc: PlayController, delta: float) -> void:
 	player.move_input = Vector3.ZERO
 	player.wants_turbo = false
+	# With a tackler on his back a carrier always has both arms round the ball.
+	# (He does no other thinking then: see can_act below.)
+	player.wants_secure = player.state == Player.State.DRAGGING
 	player.is_blocking = false
 	player.calling_for_ball = false
 	player.ai_speed_scale = 1.0
@@ -1111,6 +1139,7 @@ func _find_open_spot(pc: PlayController) -> Vector3:
 func _carry(pc: PlayController) -> void:
 	var forward: Vector3 = Vector3(float(player.team.attack_dir), 0.0, 0.0)
 	var steer: Vector3 = forward
+	var at_hole: bool = tuning.ai_hole_read and player == pc.runner and pc.run_hole_live()
 	var nearest: float = INF
 	var nearest_opponent: Player = null
 	for opponent: Player in player.team.opponent.players:
@@ -1129,6 +1158,10 @@ func _carry(pc: PlayController) -> void:
 	var edge: float = tuning.half_width() - 3.0
 	if absf(player.position.z) > edge:
 		steer.z -= signf(player.position.z) * 2.0
+	if at_hole:
+		# Behind the line on a run at a hole: when his blockers have opened a
+		# lane he cuts to it. With none open he runs as he always does.
+		steer.z += _hole_pull(pc, forward)
 	player.move_input = steer.normalized()
 	player.wants_turbo = nearest < tuning.ai_turbo_range
 
@@ -1141,10 +1174,115 @@ func _carry(pc: PlayController) -> void:
 		return
 	if _hurdles(pc):
 		return
+	if _secures(pc, nearest_opponent, nearest):
+		return
 	if _decision_timer <= 0.0 and _move_due(pc, nearest_opponent, nearest):
 		_decision_timer = 0.5
 		_move_lead = -1.0
 		_carrier_move(pc, nearest_opponent)
+
+
+## How hard a carrier behind the line on a run at a hole is pulled sideways,
+## toward the lane his blockers have opened. The lanes are the hole and a few
+## either side of it; the one with the most room between the men at the line
+## (defenders, and his own blockers) wins, with the hole itself and the lane he
+## is already headed for preferred. Looked at again every little while, so he
+## commits to a cut. No lane with `ai_hole_min_room`: no pull.
+func _hole_pull(pc: PlayController, forward: Vector3) -> float:
+	_hole_timer -= _delta
+	if _hole_timer <= 0.0:
+		_hole_timer = tuning.ai_hole_rethink
+		var best: float = -INF
+		var from_z: float = _hole_z if _hole_picked else player.position.z
+		var picked: float = pc.run_hole.z
+		var picked_room: float = 0.0
+		for step: int in range(-tuning.ai_hole_lanes, tuning.ai_hole_lanes + 1):
+			var z: float = pc.run_hole.z + float(step) * tuning.ai_hole_lane_step
+			var room: float = 6.0
+			for opponent: Player in player.team.opponent.players:
+				if opponent.is_down():
+					continue
+				var depth: float = (opponent.position.x - pc.los_x) * forward.x
+				if depth < -2.0 or depth > 5.0:
+					continue
+				# A free man closes the lane; one who is tied up only fills it.
+				var reach: float = 0.0 if opponent.block_slow_timer > 0.0 else 1.0 + maxf(depth, 0.0) * 0.3
+				room = minf(room, absf(opponent.position.z - z) - reach)
+			# His own blockers are in the way just the same.
+			for mate: Player in player.team.players:
+				if mate == player or mate.is_down():
+					continue
+				var depth: float = (mate.position.x - pc.los_x) * forward.x
+				if depth < -2.0 or depth > 3.0 or (mate.position.x - player.position.x) * forward.x < 0.0:
+					continue
+				room = minf(room, absf(mate.position.z - z))
+			var score: float = room - absf(z - pc.run_hole.z) * tuning.ai_hole_stray_cost - absf(z - from_z) * tuning.ai_hole_cut_cost
+			if score > best:
+				best = score
+				picked = z
+				picked_room = room
+		_hole_z = picked
+		_hole_picked = picked_room >= tuning.ai_hole_min_room
+		if _hole_picked:
+			pc.game.add_stat(&"hole_reads")
+	if not _hole_picked:
+		return 0.0
+	return clampf((_hole_z - player.position.z) / 2.0, -1.0, 1.0) * tuning.ai_hole_pull
+
+
+## Sets wants_secure for this tick, and returns true when the carrier means to
+## run `opponent` over, so that no spin or stiff arm gets in the way.
+## - Short yardage: a back strong enough to drag a tackler holds it all the way
+##   through the line.
+## - A tackler about to arrive, decided once for each: the carrier a good deal
+##   stronger than a tackler on his feet in front of him lowers his shoulder.
+##   Anyone else covers the ball only if no spin or stiff arm came of it, so
+##   the small quick carrier mostly just looks after the ball.
+func _secures(pc: PlayController, opponent: Player, dist: float) -> bool:
+	if dist > tuning.ai_move_range:
+		return false
+	if _short_yardage(pc):
+		var drag_time: float = PlayerRatings.blend(player.ratings.strength, tuning.drag_time_low, tuning.drag_time_high)
+		if drag_time * tuning.secure_drag_time_scale >= tuning.drag_min_time:
+			player.wants_secure = true
+	var to: Vector3 = opponent.position - player.position
+	to.y = 0.0
+	to /= maxf(dist, 0.01)
+	var closing: float = (player.velocity - opponent.velocity).dot(to)
+	# Seconds until the tackler is within reach.
+	var contact: float = (dist - tuning.tackle_radius) / maxf(closing, 0.5)
+	if contact > tuning.ai_secure_lead:
+		return false
+	if _secure_target != opponent:
+		_secure_target = opponent
+		var stronger: float = float(player.ratings.strength - opponent.ratings.strength)
+		var elusive: float = float(player.ratings.juke - player.ratings.strength)
+		_secure_power = stronger >= tuning.ai_secure_strength_margin and elusive < tuning.ai_move_rating_margin \
+				and to.dot(player.facing) >= tuning.secure_truck_front_dot
+		_secure_on = randf() < _sharp(tuning.ai_secure_chance, tuning.ai_edge_secure_chance)
+		if _secure_on:
+			pc.game.add_stat(&"secures_power" if _secure_power else &"secures_cover")
+	if not _secure_on:
+		return false
+	if _secure_power:
+		player.wants_secure = true
+		return true
+	# His move has been and gone, or he chose to make none.
+	if _decision_timer > 0.0 or player.move_cooldown > 0.0:
+		player.wants_secure = true
+	return false
+
+
+## The runner with a yard or two to go for the first down or the goal line.
+func _short_yardage(pc: PlayController) -> bool:
+	if player != pc.runner or player.team != pc.offense:
+		return false
+	var dir: float = float(player.team.attack_dir)
+	var goal_x: float = tuning.field_length if dir > 0.0 else 0.0
+	var to_go: float = (goal_x - player.position.x) * dir
+	if not pc.game.goal_to_go:
+		to_go = minf(to_go, (pc.game.first_down_x - player.position.x) * dir)
+	return to_go > 0.0 and to_go <= tuning.ai_secure_short_yards
 
 
 ## The sharper carrier goes over a tackler who dives at him. Only a dive: a
@@ -1433,13 +1571,36 @@ func _cover_man(pc: PlayController) -> void:
 	var aim: Vector3 = _cover_spot(pc, man_target)
 	# Stay on his deep side: a catch in front of the defender is a tackle, one
 	# behind him is a touchdown.
-	aim.x += pc.off_dir * tuning.ai_cover_cushion * (-1.0 if def_assign.underneath else 1.0)
+	aim.x += pc.off_dir * _man_cushion(pc)
+	aim.z += leverage
 	player.ai_speed_scale = tuning.ai_cover_speed_scale * _cut_scale(man_target)
 	_seek(aim)
 	# Beaten: he is past the defender or has pulled away. Burn turbo to recover.
 	var behind: float = (man_target.position.x - player.position.x) * pc.off_dir
 	var gap: float = _flat_distance(player.position, man_target.position)
 	player.wants_turbo = _bust_timer <= 0.0 and (behind > tuning.ai_cover_beaten_depth or gap > tuning.ai_cover_beaten_gap)
+
+
+## Yards downfield of his man a man defender aims to be (negative = on the
+## quarterback's side of him).
+func _man_cushion(pc: PlayController) -> float:
+	var tight: float = tuning.ai_cover_cushion
+	if def_assign.underneath:
+		return -tight
+	match technique:
+		Technique.TRAIL:
+			return -tuning.ai_cover_trail_cushion
+		Technique.OFF:
+			# He gives ground as his man comes at him, and less of it the further
+			# downfield they get. A man who pulls up short gets closed on.
+			var depth: float = (man_target.position.x - pc.los_x) * pc.off_dir
+			var want: float = tight
+			var early: bool = pc.live_time < 0.3
+			if early or man_target.velocity.x * pc.off_dir > tuning.run_speed * 0.5:
+				want = lerpf(tuning.ai_cover_off_cushion, tight, clampf(depth / maxf(tuning.ai_cover_off_depth, 0.01), 0.0, 1.0))
+			_cushion = want if early else move_toward(_cushion, want, tuning.ai_cover_off_close * _delta)
+			return maxf(_cushion, tight)
+	return tight
 
 
 func _cover_zone(pc: PlayController) -> void:
@@ -1594,7 +1755,12 @@ func _pursue(pc: PlayController, target: Player, allow_turbo: bool = true) -> vo
 		_decision_timer = 0.4
 		# The sharper defender nearly always leaves his feet: a dive is a big hit,
 		# and big hits are what knock the ball loose.
-		if randf() < _sharp(tuning.ai_dive_chance, tuning.ai_edge_dive_chance):
+		var dive_chance: float = _sharp(tuning.ai_dive_chance, tuning.ai_edge_dive_chance)
+		# A stronger carrier with both arms round the ball runs over a man on his
+		# feet: this one goes for his legs, which is harder to run through.
+		if target.is_securing() and float(target.ratings.strength - player.ratings.strength) >= tuning.ai_secure_strength_margin:
+			dive_chance = maxf(dive_chance, tuning.ai_secure_dive_chance)
+		if randf() < dive_chance:
 			pc.do_dive(player, _direction_to(target.position + target.velocity * 0.12))
 	elif target.has_ball:
 		_leap_at_carrier(pc, target, dist)
@@ -1628,6 +1794,8 @@ func _think_air(pc: PlayController) -> void:
 		return
 	var time_left: float = maxf(pc.ball.flight_time - pc.ball.flight_elapsed, 0.0)
 	var dist: float = _flat_distance(player.position, landing)
+	if _hits_receiver(pc, landing, time_left):
+		return
 	if not pc.ball_breakers.has(player):
 		# Too far to make a play on the ball: get in front of the catch instead.
 		var depth: float = tuning.ai_ball_cut_off
@@ -1639,7 +1807,7 @@ func _think_air(pc: PlayController) -> void:
 		player.move_input = _direction_to(cut_off)
 		player.wants_turbo = dist < tuning.ai_ball_react_radius
 		return
-	_seek(landing)
+	_seek(_undercut_spot(pc, landing, time_left))
 	player.wants_turbo = dist > 1.0
 	# Close enough as the ball comes down: go up for it.
 	if not _contest_decided and time_left <= tuning.ai_contest_time and dist <= tuning.ai_contest_range:
@@ -1647,6 +1815,69 @@ func _think_air(pc: PlayController) -> void:
 		if randf() < _sharp(tuning.ai_contest_chance, tuning.ai_edge_contest_chance):
 			pc.do_jump(player)
 	_go_for_ball(pc)
+
+
+## Where a defender going for the ball runs to. Mostly where it comes down. But
+## a receiver who waits for the ball or comes back to it has his body between
+## it and a man behind him, so a defender with the time for it goes round to the
+## quarterback's side of him. Decided once per pass; with the receiver running
+## away from the throw the two spots are the same.
+func _undercut_spot(pc: PlayController, landing: Vector3, time_left: float) -> Vector3:
+	var target: Player = pc.ball.intended
+	if target == null or target.is_down() or pc.ball.thrower == null:
+		return landing
+	var incoming: Vector3 = landing - pc.ball.thrower.position
+	incoming.y = 0.0
+	if incoming.length_squared() < 0.01:
+		return landing
+	incoming = incoming.normalized()
+	var facing_ball: float = clampf(1.0 - target.velocity.dot(incoming) / tuning.run_speed, 0.0, 1.0)
+	var spot: Vector3 = landing - incoming * tuning.ai_undercut_depth * facing_ball
+	if not _undercut_decided:
+		_undercut_decided = true
+		var chance: float = _sharp(tuning.ai_undercut_chance, tuning.ai_edge_undercut_chance) \
+			* PlayerRatings.blend(player.ratings.coverage, tuning.undercut_coverage_scale_low, tuning.undercut_coverage_scale_high)
+		# A man who goes underneath and does not get there has let the catch go:
+		# with nobody behind him he wants to be surer of it.
+		var margin: float = tuning.ai_undercut_margin
+		if def_assign.deep or not _has_help_behind(pc, landing):
+			margin += tuning.ai_undercut_safe_margin
+		var top: float = player.max_speed() * tuning.turbo_speed_multiplier
+		_undercut = _flat_distance(player.position, spot) / maxf(top, 0.01) + margin <= time_left and randf() < chance
+		if _undercut:
+			pc.game.add_stat(&"undercut_tries")
+	return spot if _undercut else landing
+
+
+## A teammate on his feet deeper than where the pass comes down.
+func _has_help_behind(pc: PlayController, landing: Vector3) -> bool:
+	for mate: Player in player.team.players:
+		if mate != player and not mate.is_down() and (mate.position.x - landing.x) * pc.off_dir > 1.0:
+			return true
+	return false
+
+
+## No pass interference: a defender who will not get to the ball can put the
+## receiver on the ground before it gets there. He dives at him from close in,
+## late in the flight. If he misses he is on the turf and the catch is free.
+func _hits_receiver(pc: PlayController, landing: Vector3, time_left: float) -> bool:
+	var target: Player = pc.ball.intended
+	if _air_hit_decided or target == null or target.is_down() or time_left > tuning.ai_air_hit_time:
+		return false
+	if _flat_distance(player.position, target.position) > tuning.ai_air_hit_range:
+		return false
+	# With a play on the ball he makes that instead.
+	if _flat_distance(player.position + player.velocity * time_left, landing) <= pc.catch_reach(player, landing):
+		return false
+	_air_hit_decided = true
+	if randf() >= _sharp(tuning.ai_air_hit_chance, tuning.ai_edge_air_hit_chance):
+		return false
+	takeout_target = target
+	hit_man = true
+	_contest_decided = true
+	pc.game.add_stat(&"air_hit_tries")
+	pc.do_dive(player, _direction_to(target.position + target.velocity * 0.12))
+	return true
 
 
 ## The ball is coming down out of his reach: sometimes he leaves his feet for
@@ -1793,15 +2024,27 @@ func _reset() -> void:
 	bite_time = 0.0
 	takeout_time = -1.0
 	takeout_target = null
+	technique = Technique.TIGHT
+	leverage = 0.0
+	_cushion = 0.0
+	_undercut_decided = false
+	_undercut = false
+	_air_hit_decided = false
+	hit_man = false
 	_escape_rolled = false
 	_bail_rolled = false
 	_lane_timer = 0.0
+	_hole_picked = false
+	_hole_timer = 0.0
 	_hurdle_timer = 0.0
 	_escaping = false
 	run_kind = &""
 	_decision_timer = 0.0
 	_move_lead = -1.0
 	_move_late = 0.0
+	_secure_target = null
+	_secure_on = false
+	_secure_power = false
 	_keeper_rolled = false
 	_keeper_time = -1.0
 	_late_hit_used = false

@@ -2,8 +2,8 @@ extends SceneTree
 ## Headless check of the play-select tabs: every tab of both playbooks is full
 ## (as many plays as fit on the grid), every play has a job for each of the
 ## eight on a side and no more targets than there are pass buttons, the Hail
-## Mary is an ordinary play on the deep pass tab, and the CPU never calls it on
-## an ordinary down.
+## Mary is an ordinary play on the gun spread tab, the CPU never calls it on
+## an ordinary down, and it keeps Da Bomb for when it needs a lot at once.
 ##
 ## Run:  godot --headless --path . --script res://tests/play_groups_check.gd
 
@@ -51,7 +51,7 @@ func _process(_delta: float) -> bool:
 
 	_expect(heaves.size() == 1, "%d heave-only plays in the offense playbook, wanted 1" % heaves.size())
 	for play: OffensePlay in heaves:
-		_expect(play.group == OffensePlay.Group.DEEP_PASS, "%s is not on the deep pass tab" % play.play_name)
+		_expect(play.group == OffensePlay.Group.GUN_SPREAD, "%s is not on the gun spread tab" % play.play_name)
 		_expect(play.category == OffensePlay.Category.DEEP, "%s is not a deep play" % play.play_name)
 
 	# An ordinary down at midfield early in the game, and one at the goal line.
@@ -69,6 +69,8 @@ func _process(_delta: float) -> bool:
 				called += 1
 		_expect(called == 0, "%d yards out: the CPU called a heave-only play %d times in %d" % [int(to_goal), called, CALLS])
 
+	_check_shot(offense)
+
 	if _failures.is_empty():
 		print("play_groups_check PASSED")
 	else:
@@ -77,6 +79,55 @@ func _process(_delta: float) -> bool:
 		print("play_groups_check FAILED")
 	quit(0 if _failures.is_empty() else 1)
 	return true
+
+
+## Da Bomb is in the book as a shot play, and the CPU calls it far more often
+## in long yardage, with the half running out and when well behind than on an
+## ordinary first down.
+func _check_shot(offense: Array[OffensePlay]) -> void:
+	var shot: OffensePlay = null
+	for play: OffensePlay in offense:
+		if play.play_name == "Da Bomb":
+			shot = play
+	_expect(shot != null, "no play named Da Bomb")
+	if shot == null:
+		return
+	_expect(shot.shot_play and shot.category == OffensePlay.Category.DEEP and not shot.is_run, "Da Bomb is not a deep shot play")
+	_expect(shot.group == OffensePlay.Group.GUN_TRIPS, "Da Bomb is not on the gun trips tab")
+	var tuning: Tuning = _game.tuning
+	var dir: int = _game.offense.attack_dir
+	var shares: Dictionary[String, float] = {}
+	for situation: String in ["first and normal", "third and long", "half running out", "two scores behind"]:
+		_game.half = 1
+		_game.clock = tuning.game_length * 0.4
+		_game.conversion = false
+		_game.down = 1
+		_game.offense.score = 0
+		_game.defense.score = 0
+		_game.los_x = tuning.goal_x(dir) - float(dir) * 60.0
+		_game.first_down_x = _game.los_x + float(dir) * tuning.yards_to_gain
+		match situation:
+			"third and long":
+				_game.down = 3
+			"half running out":
+				_game.clock = _game.play_caller.play_time(_game) * 3.5
+			"two scores behind":
+				_game.half = 2
+				_game.clock = tuning.game_length * 0.45
+				_game.defense.score = 14
+		var called: int = 0
+		for i: int in CALLS:
+			if _game.play_caller.pick_offense(offense, _game) == shot:
+				called += 1
+		shares[situation] = float(called) / float(CALLS)
+		print("Da Bomb, %s: %.1f%% of calls" % [situation, 100.0 * shares[situation]])
+	_game.offense.score = 0
+	_game.defense.score = 0
+	var ordinary: float = shares["first and normal"]
+	_expect(ordinary < 0.02, "Da Bomb is called on %.1f%% of ordinary first downs" % (100.0 * ordinary))
+	for situation: String in shares:
+		if situation != "first and normal":
+			_expect(shares[situation] >= maxf(ordinary * 3.0, 0.02), "Da Bomb, %s: only %.1f%% of calls" % [situation, 100.0 * shares[situation]])
 
 
 ## One job each, one quarterback, a runner on a run play and only there (or

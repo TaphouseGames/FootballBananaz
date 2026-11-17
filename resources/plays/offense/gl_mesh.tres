@@ -7,8 +7,8 @@
 script = ExtResource("2_assign")
 label = "QB"
 job = 0
-start = Vector2(-5, 0)
-route = PackedVector2Array(-2, 0)
+start = Vector2(-4, 0)
+route = PackedVector2Array(-3, 0)
 
 [sub_resource type="Resource" id="c"]
 script = ExtResource("2_assign")
@@ -28,36 +28,36 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
-label = "WR"
-job = 1
-start = Vector2(-0.6, -17)
-route = PackedVector2Array(3, 0, 10, 10.1)
+label = "TE"
+start = Vector2(-0.6, -3.4)
+route = PackedVector2Array(2, 0, 3, 12)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
-label = "WR"
-job = 1
-start = Vector2(-0.6, 18.4)
-route = PackedVector2Array(3, 0, 10, -10.1)
+label = "TE"
+start = Vector2(-0.6, 3.4)
+route = PackedVector2Array(3.5, 0, 4.5, -12)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
-job = 1
-start = Vector2(-1.5, 8.3)
-route = PackedVector2Array(4, 0, 4.5, 11.6)
+start = Vector2(-6.5, 0.4)
+route = PackedVector2Array(2, -6, 5, -13)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
 label = "FB"
-job = 2
-start = Vector2(-5.5, 2.5)
+start = Vector2(-4.5, 1.8)
+route = PackedVector2Array(9, -1.8)
+settle = true
+block_time = 0.5
 
 [resource]
 script = ExtResource("1_play")
-play_name = "HB Slot Out"
-description = "Back lines up in the right slot and breaks to the sideline four yards deep. Both wideouts slant inside."
-group = 1
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+play_name = "Goal Line Mesh"
+description = "The tight ends cross right behind the line. Back to the left flat. Fullback blocks, then sits down in the middle."
+group = 5
+goal_line = true
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

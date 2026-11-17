@@ -47,6 +47,7 @@ label = "LB"
 job = 1
 start = Vector2(3, 2)
 man_target = 2
+green_dog = true
 
 [sub_resource type="Resource" id="d7"]
 script = ExtResource("2_assign")
@@ -60,8 +61,8 @@ green_dog = true
 script = ExtResource("1_play")
 play_name = "Safety Blitz"
 description = "Three rush and the safety comes from deep up the middle. Man on every receiver, nobody behind them."
-run_fit = 0.43
-short_fit = 0.57
-deep_fit = 0.6
+run_fit = 0.41
+short_fit = 0.71
+deep_fit = 0.64
 group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

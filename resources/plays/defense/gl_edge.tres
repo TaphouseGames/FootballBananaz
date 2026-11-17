@@ -8,6 +8,7 @@ script = ExtResource("2_assign")
 label = "LB"
 job = 2
 start = Vector2(2.5, -9.8)
+align = 2
 zone_center = Vector2(2.5, -9.8)
 zone_radius = 8
 
@@ -48,6 +49,7 @@ script = ExtResource("2_assign")
 label = "LB"
 job = 2
 start = Vector2(2.5, 9.8)
+align = 2
 zone_center = Vector2(2.5, 9.8)
 zone_radius = 8
 
@@ -56,6 +58,7 @@ script = ExtResource("2_assign")
 label = "LB"
 job = 2
 start = Vector2(2.5, 0)
+align = 2
 zone_center = Vector2(3, 0)
 zone_radius = 7
 
@@ -63,8 +66,8 @@ zone_radius = 7
 script = ExtResource("1_play")
 play_name = "Goal Line Edge"
 description = "Three rush, a linebacker set wide on each side for the toss and one in the middle. Man on the wideouts."
-run_fit = 0.55
-short_fit = 0.5
+run_fit = 0.56
+short_fit = 0.49
 deep_fit = 0.15
 group = 3
 goal_line = true

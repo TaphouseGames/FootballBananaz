@@ -22,6 +22,7 @@ label = "LB"
 job = 1
 start = Vector2(4, 0)
 man_target = 2
+green_dog = true
 
 [sub_resource type="Resource" id="d3"]
 script = ExtResource("2_assign")
@@ -64,7 +65,7 @@ green_dog = true
 script = ExtResource("1_play")
 play_name = "Double Wide"
 description = "Two rush. Both wideouts get a man underneath and a man over the top. One linebacker has the back, the other the tight end."
-run_fit = 0.35
-short_fit = 0.55
-deep_fit = 0.7
+run_fit = 0.36
+short_fit = 0.46
+deep_fit = 0.56
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

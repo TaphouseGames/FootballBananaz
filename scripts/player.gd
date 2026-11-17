@@ -65,6 +65,8 @@ var velocity: Vector3 = Vector3.ZERO
 ## Desired direction, length 0..1, on the XZ plane.
 var move_input: Vector3 = Vector3.ZERO
 var wants_turbo: bool = false
+## Held by a ball carrier to secure the ball (see is_securing).
+var wants_secure: bool = false
 var facing: Vector3 = Vector3.RIGHT
 ## When set, the player faces this way instead of the way he is moving
 ## (a quarterback dropping back keeps his eyes downfield).
@@ -107,6 +109,12 @@ var block_immune_timer: float = 0.0
 ## the timer runs. Only the animation reads it.
 var block_partner: Player = null
 var block_partner_timer: float = 0.0
+## Run blocking: how fast (yards a second) the blocker on him is moving him out
+## of the hole, rolled when the block is made, and the push that comes to this
+## tick. See PlayController._drive_block.
+var block_drive: float = 0.0
+var block_drive_side: float = 0.0
+var drive_push: Vector3 = Vector3.ZERO
 
 var spin_evade_timer: float = 0.0
 ## Shared by spin and stiff arm.
@@ -187,6 +195,7 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	velocity = Vector3.ZERO
 	move_input = Vector3.ZERO
 	wants_turbo = false
+	wants_secure = false
 	facing = face_dir
 	look_dir = Vector3.ZERO
 	state = State.NORMAL
@@ -207,6 +216,9 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	block_immune_timer = 0.0
 	block_partner = null
 	block_partner_timer = 0.0
+	block_drive = 0.0
+	block_drive_side = 0.0
+	drive_push = Vector3.ZERO
 	spin_evade_timer = 0.0
 	move_cooldown = 0.0
 	move_side = 1.0
@@ -422,6 +434,14 @@ func is_tucked() -> bool:
 	return has_ball and wants_turbo
 
 
+## The carrier has the ball in both arms against his chest and leans into the
+## run: slower, but he fumbles less, runs over a weaker tackler in front of him
+## and shakes off a tackler on his back more often. Not during a spin, a stiff
+## arm, a jump or a dive.
+func is_securing() -> bool:
+	return has_ball and wants_secure and (state == State.NORMAL or state == State.DRAGGING)
+
+
 ## Lying dazed after a jump dive, or after being flattened against the wall.
 func is_dazed() -> bool:
 	return state == State.DOWN and dazed_timer > 0.0
@@ -496,6 +516,8 @@ func max_speed() -> float:
 			speed *= tuning.qb_run_speed_scale
 	if state == State.STIFF_ARM:
 		speed *= tuning.stiff_arm_speed_scale
+	if is_securing():
+		speed *= tuning.secure_speed_scale
 	return speed
 
 

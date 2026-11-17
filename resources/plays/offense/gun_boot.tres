@@ -8,7 +8,7 @@ script = ExtResource("2_assign")
 label = "QB"
 job = 0
 start = Vector2(-7, 0)
-route = PackedVector2Array(-0.5, 0)
+route = PackedVector2Array(-1, -6)
 
 [sub_resource type="Resource" id="c"]
 script = ExtResource("2_assign")
@@ -28,36 +28,36 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
-label = "WR"
-job = 1
-start = Vector2(-0.6, -18.4)
-route = PackedVector2Array(4, 0, 11, 10.1)
+label = "SL"
+start = Vector2(-0.6, 11.2)
+route = PackedVector2Array(10, 0, 14, -24)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "WR"
-job = 1
-start = Vector2(-0.6, 18.4)
-route = PackedVector2Array(3, 0, 10, -10.1)
+start = Vector2(-0.6, 19.9)
+route = PackedVector2Array(40, 0)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
-job = 1
-start = Vector2(-1.5, -8.3)
-route = PackedVector2Array(2, 0, 9, 9.3)
+job = 3
+start = Vector2(-7, -2.5)
+route = PackedVector2Array(0.8, 2.5, 3, 8.7, 6, 12)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
-label = "TE"
-job = 2
-start = Vector2(-0.6, 3.4)
+label = "HB"
+start = Vector2(-1.5, 5.4)
+route = PackedVector2Array(2.5, 0, 4, -18)
 
 [resource]
 script = ExtResource("1_play")
-play_name = "Gun Empty Slants"
-description = "Shotgun, nobody in the backfield. Back in the left slot: three quick slants."
-group = 3
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+play_name = "Gun Boot"
+description = "Shotgun, three on the right. Fake the stretch right and roll out left. Inside man drags across with the quarterback, slot crosses deeper behind him, wideout goes deep."
+group = 4
+handoff_delay = 0.4
+play_action = true
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

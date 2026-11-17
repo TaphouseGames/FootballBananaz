@@ -28,38 +28,34 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
-script = ExtResource("2_assign")
-label = "SL"
-job = 1
-start = Vector2(-0.6, 8.3)
-route = PackedVector2Array(6, 0, 5.5, 2.2)
-settle = true
-
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "WR"
-job = 1
+start = Vector2(-0.6, -18.4)
+route = PackedVector2Array(10, 0, 24, -2.5)
+
+[sub_resource type="Resource" id="z"]
+script = ExtResource("2_assign")
+label = "WR"
 start = Vector2(-0.6, 18.4)
-route = PackedVector2Array(10, 0, 24, 2.9)
+route = PackedVector2Array(3, 0, 10, -10.1)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
-job = 1
 start = Vector2(-7, 2.5)
 route = PackedVector2Array(1, 6.6, 4, 15.2)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
-label = "TE"
-job = 1
-start = Vector2(-0.6, -3.4)
-route = PackedVector2Array(5, 0, 5.5, -7)
+label = "SL"
+start = Vector2(-1.2, -8.3)
+route = PackedVector2Array(6.6, 0, 6.1, 1.5)
+settle = true
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Stick"
-description = "Shotgun. Slot sits down six yards deep, wideout fades behind him, back swings to the flat. Tight end breaks out on the other side."
+description = "Shotgun. Slot sits down six yards deep, left wideout fades behind him. Right wideout slants, back swings to the right flat."
 group = 3
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

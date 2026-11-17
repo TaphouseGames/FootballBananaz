@@ -7,8 +7,8 @@
 script = ExtResource("2_assign")
 label = "QB"
 job = 0
-start = Vector2(-5, 0)
-route = PackedVector2Array(-2, 0)
+start = Vector2(-4, 0)
+route = PackedVector2Array(-3, 0)
 
 [sub_resource type="Resource" id="c"]
 script = ExtResource("2_assign")
@@ -28,38 +28,35 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "TE"
-job = 1
 start = Vector2(-0.6, -3.4)
 route = PackedVector2Array(4, 1)
 settle = true
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "TE"
-job = 1
 start = Vector2(-0.6, 3.4)
 route = PackedVector2Array(4, 0, 9, 8.4)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
-job = 1
-start = Vector2(-6.5, 0.6)
-route = PackedVector2Array(2, 5.7, 5, 14.4)
+start = Vector2(-6.5, 0.4)
+route = PackedVector2Array(2, 5.9, 5, 14.6)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
 label = "FB"
 job = 2
-start = Vector2(-5.5, -2.5)
+start = Vector2(-4.5, 1.8)
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Corner"
-description = "Right tight end breaks to the back corner, left tight end sits down in the middle, back in the flat."
+description = "Right tight end breaks to the back corner, left tight end sits down in the middle, back in the right flat."
+group = 5
 goal_line = true
-group = 4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

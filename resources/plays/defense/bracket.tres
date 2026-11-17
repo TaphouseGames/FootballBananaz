@@ -49,6 +49,7 @@ label = "LB"
 job = 1
 start = Vector2(4, 2)
 man_target = 2
+green_dog = true
 
 [sub_resource type="Resource" id="d7"]
 script = ExtResource("2_assign")
@@ -62,7 +63,7 @@ green_dog = true
 script = ExtResource("1_play")
 play_name = "Bracket"
 description = "Three rush, man on every receiver, a second man underneath the left wideout. Nobody deep."
-run_fit = 0.25
-short_fit = 0.44
-deep_fit = 0.38
+run_fit = 0.24
+short_fit = 0.5
+deep_fit = 0.52
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

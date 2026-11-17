@@ -8,12 +8,26 @@ extends Resource
 ## moment he runs.
 enum Job { RUSH, MAN, ZONE, SPY }
 
+## How the drawn lineup spot is fitted to the offense's formation before the
+## snap (see DefenseAligner). A MAN defender always lines up across from his
+## man, whatever this says.
+## SPOT: where the play draws him: the line, a blitzer in the box.
+## OUTSIDE: a corner. Out with the widest receiver of his side at his drawn
+##   depth; in to the edge of the formation when nobody is split out there.
+## SLOT: walks out over a slot or wing nobody else has on his side, and slides
+##   toward the strong side otherwise.
+## STRENGTH: slides toward the side with more receivers: safeties, the men in
+##   the middle.
+enum Align { SPOT, OUTSIDE, SLOT, STRENGTH }
+
 @export var label: String = "DB"
 @export var job: Job = Job.MAN
-## Lineup spot. MAN defenders slide laterally to line up across from their man.
+## Lineup spot as drawn: `x` is his depth, `y` puts him on a side.
 @export var start: Vector2 = Vector2(5.0, 0.0)
-## MAN: which offensive player to cover. 0 = first eligible receiver in the
-## offensive play, 1 = second, and so on (blockers split wide come last).
+@export var align: Align = Align.SPOT
+## MAN: which offensive player to cover, by where he lines up: 0 = the widest
+## receiver on the left, 1 = the widest on the right, 2 = the back, 3 = whoever
+## is left (tight end, fullback, a slot). See DefenseAligner.man_order.
 @export var man_target: int = 0
 ## MAN: play in front of the receiver, between him and the quarterback, instead
 ## of on his deep side. For a second defender on a man who is already covered.

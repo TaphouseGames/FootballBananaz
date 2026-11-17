@@ -47,6 +47,7 @@ label = "LB"
 job = 1
 start = Vector2(2.5, 2)
 man_target = 2
+green_dog = true
 
 [sub_resource type="Resource" id="d7"]
 script = ExtResource("2_assign")
@@ -60,8 +61,8 @@ green_dog = true
 script = ExtResource("1_play")
 play_name = "Goal Line Spy"
 description = "Three rush, man on every receiver, and a spy for the quarterback who rolls out or keeps it."
-run_fit = 0.5
-short_fit = 0.7
+run_fit = 0.82
+short_fit = 0.48
 deep_fit = 0.2
 group = 3
 goal_line = true

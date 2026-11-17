@@ -1,0 +1,63 @@
+[gd_resource type="Resource" script_class="OffensePlay" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/offense_play.gd" id="1_play"]
+[ext_resource type="Script" path="res://scripts/data/offense_assignment.gd" id="2_assign"]
+
+[sub_resource type="Resource" id="qb"]
+script = ExtResource("2_assign")
+label = "QB"
+job = 0
+start = Vector2(-7, 0)
+
+[sub_resource type="Resource" id="c"]
+script = ExtResource("2_assign")
+label = "C"
+job = 2
+start = Vector2(-0.6, 0)
+
+[sub_resource type="Resource" id="lg"]
+script = ExtResource("2_assign")
+label = "G"
+job = 2
+start = Vector2(-0.9, -1.7)
+
+[sub_resource type="Resource" id="rg"]
+script = ExtResource("2_assign")
+label = "G"
+job = 2
+start = Vector2(-0.9, 1.7)
+
+[sub_resource type="Resource" id="x"]
+script = ExtResource("2_assign")
+label = "WR"
+job = 2
+start = Vector2(-0.6, -18.4)
+
+[sub_resource type="Resource" id="z"]
+script = ExtResource("2_assign")
+label = "WR"
+job = 2
+start = Vector2(-0.6, 18.4)
+
+[sub_resource type="Resource" id="back"]
+script = ExtResource("2_assign")
+label = "RB"
+job = 3
+start = Vector2(-7, 2.5)
+route = PackedVector2Array(0.3, 1.8, 1.5, -4, 7, -8.5, 14, -10.5)
+
+[sub_resource type="Resource" id="y"]
+script = ExtResource("2_assign")
+label = "SL"
+job = 2
+start = Vector2(-1.2, -8.3)
+
+[resource]
+script = ExtResource("1_play")
+play_name = "Gun Counter"
+description = "Shotgun. Back steps right, then crosses in front of the quarterback, takes the ball and cuts up the left side."
+category = 0
+group = 3
+is_run = true
+handoff_delay = 0.6
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

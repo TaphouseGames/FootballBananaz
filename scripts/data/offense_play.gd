@@ -4,20 +4,25 @@ extends Resource
 
 ## What the play attacks. The CPU play caller uses it to pick and to counter.
 enum Category { RUN, SHORT, DEEP }
-## The tab of the play-select screen the play is on. HEAVY: the plays built
-## around the tight end / fullback.
-enum Group { RUN, SHORT_PASS, DEEP_PASS, SHOTGUN, GOAL_LINE, HEAVY }
+## The formation the play lines up in, which is also its tab on the play-select
+## screen. Every play of a formation has all eight players on the same spots
+## before the snap, so the line-up does not give the play away
+## (tests/playbook_rules_check.gd fails if one does not).
+enum Group { I_FORM, SINGLEBACK, HEAVY, GUN_SPREAD, GUN_TRIPS, GOAL_LINE }
 
 ## The tabs' titles, in Group order.
-const GROUP_NAMES: PackedStringArray = ["RUN", "SHORT PASS", "DEEP PASS", "SHOTGUN", "GOAL LINE", "HEAVY"]
+const GROUP_NAMES: PackedStringArray = ["I-FORM", "SINGLEBACK", "HEAVY", "GUN SPREAD", "GUN TRIPS", "GOAL LINE"]
 
 @export var play_name: String = "Play"
 @export var description: String = ""
 @export var category: Category = Category.SHORT
-@export var group: Group = Group.RUN
+@export var group: Group = Group.I_FORM
 ## The CPU play caller only calls it as a last-play heave. The person can pick
 ## it at any time.
 @export var heave_only: bool = false
+## A home-run shot. The CPU play caller saves it for when it needs a lot at
+## once: long yardage, a half running out, a game to catch up in.
+@export var shot_play: bool = false
 ## Run play: the ball is handed to the RUNNER after `handoff_delay` seconds.
 @export var is_run: bool = false
 @export var handoff_delay: float = 0.5

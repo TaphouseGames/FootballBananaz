@@ -19,6 +19,10 @@ const GROUP_NAMES: PackedStringArray = ["MAN", "ZONE", "BLITZ", "GOAL LINE"]
 ## Drawn for a stand at the goal line. The CPU play caller calls it there
 ## (Tuning.ai_goal_line_distance) and hardly ever anywhere else.
 @export var goal_line: bool = false
+## For a play drawn with one side different from the other: where the CPU puts
+## the side drawn on the right. +1 toward the offense's strong side, -1 away
+## from it, 0 either side. See DefenseAligner.cpu_flip.
+@export_range(-1, 1) var strength_side: int = 0
 
 
 func fit(category: OffensePlay.Category) -> float:

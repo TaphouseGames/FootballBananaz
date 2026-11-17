@@ -32,7 +32,8 @@ const CONTROLS: Array[Array] = [
 		["(B)", "Spin. With the stick across: juke"],
 		["(LB) (RB)", "Stiff arm to the left, to the right"],
 		["(X)", "Dive, down where you land. On a kick return in your own end zone: touchback"],
-		["(Y) (A)", "Jump"],
+		["Hold (A)", "Secure the ball: slower, but fewer fumbles, and the strong run over weaker tacklers and shake them off"],
+		["(Y)", "Jump"],
 		["(X) in the air", "Jump dive: faster and further, but you get up injured"],
 	]],
 	["DEFENSE", [

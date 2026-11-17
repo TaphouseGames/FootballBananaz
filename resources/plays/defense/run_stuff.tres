@@ -8,6 +8,7 @@ script = ExtResource("2_assign")
 label = "S"
 job = 2
 start = Vector2(5, 0)
+align = 2
 zone_center = Vector2(5, 0)
 zone_radius = 13.5
 
@@ -49,6 +50,7 @@ label = "LB"
 job = 1
 start = Vector2(3, 2)
 man_target = 2
+green_dog = true
 
 [sub_resource type="Resource" id="d7"]
 script = ExtResource("2_assign")
@@ -62,7 +64,7 @@ green_dog = true
 script = ExtResource("1_play")
 play_name = "Run Stuff"
 description = "Three rush, press man, linebackers tight on the back and the tight end, safety walked up. Nobody deep."
-run_fit = 0.71
-short_fit = 0.33
+run_fit = 0.3
+short_fit = 0.45
 deep_fit = 0.39
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

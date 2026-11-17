@@ -109,13 +109,41 @@ Without a path, take the newest folder in `TripoModels/` whose `.fbx` no entry o
 `player_parts.gd` (and no fan in `tools/crowd_parts.json`) uses, and say which one you took. If
 the path is already in `player_parts.gd`, say so and stop.
 
-Tripo's names say nothing (`man_head_3d_model`), so rename the folder and the `.fbx` in it
-(with its `.fbx.import`) before adding the part: `player_body_<gender>_<build>` or
-`player_head_<id>`, e.g. `TripoModels/player_head_moe_peel/player_head_moe_peel.fbx`. Leave
-the `.fbm` folder and the textures in it as they are (the FBX names them), and do not edit the
-`.import` files: Godot imports the model again under its new path. The Tripo bridge also puts
-a new model into whichever scene is open in the editor; if that scene names the old path, fix
-it there too.
+### Renaming the model
+
+Tripo's names say nothing (`man_head_3d_model`). Whenever a new part is added from a path (given
+by the user or found as above), rename it first, without asking, before `describe` and before
+anything is written to `player_parts.gd`. This is always the first step of adding a part.
+
+1. Work out the new name from the arguments:
+   - body: `player_body_<gender>_<build>`, e.g. `player_body_male_big`
+   - head: `player_head_<id>`, with the id from step 2 of [Adding a head](#adding-a-head)
+     (the player's name in lower case with underscores, e.g. `player_head_moe_peel`). If the
+     user named no player, look at the colour texture in the `.fbm` folder and name the head
+     after what it looks like (`player_head_red_beard`); do not stop to ask.
+2. If the folder and the `.fbx` already have that name, there is nothing to do. If another
+   folder already has it (a body being replaced), add `_2`, `_3`, ... and leave the old folder
+   alone.
+3. Rename the folder, then the `.fbx` and its `.fbx.import` inside it, so that all three carry
+   the new name (`git mv` if `git ls-files` shows the folder is tracked, plain `mv` otherwise):
+
+   ```bash
+   mv TripoModels/<old folder> TripoModels/<new>
+   mv TripoModels/<new>/<old file>.fbx TripoModels/<new>/<new>.fbx
+   mv TripoModels/<new>/<old file>.fbx.import TripoModels/<new>/<new>.fbx.import
+   ```
+
+   The path may point at the folder or straight at the `.fbx`; either way rename both. Leave
+   the `.fbm` folder and the textures in it as they are (the FBX names them), and do not edit
+   the `.import` files: Godot imports the model again under its new path.
+4. Grep the project (`*.tscn`, `*.tres`, `*.gd`, `*.json`) for the old path and fix what names
+   it: the Tripo bridge puts a new model into whichever scene is open in the editor.
+5. Run `--import` (below) and use the new path everywhere from here on. Name both the old and
+   the new path in the report.
+
+Do not rename a model whose path is already in `player_parts.gd` or `tools/crowd_parts.json`.
+
+### Looking at it
 
 Godot is not on PATH; its location is in the `godot-executable-location` memory
 (`Godot_v4.7.2-stable_win64_console.exe`). With `G` set to it, from the project root:
@@ -134,7 +162,8 @@ loads them at 1024; the 2048 sources stay as they are.
 
 ## Adding a body
 
-1. `describe` it. It must say "all the bones a body needs". If bones are missing it was not
+1. [Rename the model](#renaming-the-model), then `describe` it under its new path. It must say
+   "all the bones a body needs". If bones are missing it was not
    rigged by Tripo's auto-rig: stop and tell the user. About 12-16 thousand triangles is
    expected; say so if it is far off, but go on.
 2. Add it to `BODIES` under `"<gender>_<build>"` with only its `path`:
@@ -190,7 +219,8 @@ loads them at 1024; the 2048 sources stay as they are.
 
 ## Adding a head
 
-1. `describe` it: no rig, about 2-3 thousand triangles (more is fine).
+1. [Rename the model](#renaming-the-model), then `describe` it under its new path: no rig,
+   about 2-3 thousand triangles (more is fine).
 2. Add it to `HEADS`. The id is the player's name in lower case with underscores (or what the
    head looks like, if it is not made for one player); ids are what rosters store, so never
    rename one that is in use.
@@ -254,6 +284,6 @@ says nothing about the part.
 
 ## Report
 
-Say what was added (id, kind, triangles), which values had to be set by hand and why, what
+Say what was added (id, kind, triangles), what the model was renamed from and to, which values had to be set by hand and why, what
 the checks said, and give the full path of the gallery pictures. If bodies are still missing,
 name them in one line.

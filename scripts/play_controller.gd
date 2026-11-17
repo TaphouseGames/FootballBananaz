@@ -17,9 +17,6 @@ enum Result { NONE, TACKLED, OUT_OF_PLAY, INCOMPLETE, TOUCHDOWN }
 ## him to come back for.
 enum Placement { NORMAL, LEAD, UNDER }
 
-## How far apart two man-coverage defenders line up at the least, in yards.
-const MAN_LINEUP_GAP: float = 1.5
-
 var game: Game
 var tuning: Tuning
 var ball: Ball
@@ -37,6 +34,11 @@ var def_flipped: bool = false
 ## +1 or -1: the offense's direction along X.
 var off_dir: float = 1.0
 var los_x: float = 0.0
+## A run play aimed inside has a hole: the spot on the line of scrimmage the
+## back's path goes through. The blockers move their men away from it and a
+## CPU back runs at it. See _find_run_hole and _drive_block.
+var has_run_hole: bool = false
+var run_hole: Vector3 = Vector3.ZERO
 
 var phase: Phase = Phase.POCKET
 var ball_dead: bool = true
@@ -222,20 +224,26 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 	if qb == null:
 		qb = offense.players[0]
 
-	# Receivers first (in play order), then blockers from widest to tightest:
-	# this is the order man-coverage indices refer to.
-	var blockers: Array[Player] = []
+	_find_run_hole()
+
+	# The men who can be thrown to, in play order: the order of the pass buttons.
+	for player: Player in offense.players:
+		if player != qb and player.brain.off_assign.job != OffenseAssignment.Job.BLOCK:
+			eligible.append(player)
+
+	# The defense lines up on what it sees: where the offense stands, not what
+	# its play is going to be. See DefenseAligner.
+	var seen: Array[Vector2] = []
+	var seen_players: Array[Player] = []
 	for player: Player in offense.players:
 		if player == qb:
 			continue
-		if player.brain.off_assign.job == OffenseAssignment.Job.BLOCK:
-			blockers.append(player)
-		else:
-			eligible.append(player)
-	blockers.sort_custom(func(a: Player, b: Player) -> bool: return absf(a.position.z) > absf(b.position.z))
-	var cover_order: Array[Player] = []
-	cover_order.append_array(eligible)
-	cover_order.append_array(blockers)
+		var spot: Vector2 = Vector2((player.position.x - los_x) * off_dir, player.position.z * off_dir)
+		seen.append(spot)
+		if absf(spot.y) >= DefenseAligner.LINE_WIDTH or spot.x <= DefenseAligner.LINE_DEPTH:
+			seen_players.append(player)
+	var formation: DefenseAligner = DefenseAligner.read(seen)
+	var cover_order: PackedInt32Array = formation.man_order()
 
 	# Close to the goal line the play as drawn would put its deep men and zones
 	# past the back of the end zone: squeeze it up to fit.
@@ -245,25 +253,19 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 		deepest = maxf(deepest, assignment.start.x)
 		if assignment.job == DefenseAssignment.Job.ZONE:
 			deepest = maxf(deepest, assignment.zone_center.x)
+	var depths: PackedFloat32Array = PackedFloat32Array()
+	for assignment: DefenseAssignment in p_def.assignments:
+		depths.append(_def_point(assignment.start, deepest, room).x)
+	var spots: PackedVector2Array = formation.starts(p_def, def_flip, depths)
 
 	for i: int in defense.players.size():
 		var player: Player = defense.players[i]
-		var assignment: DefenseAssignment = p_def.assignments[mini(i, p_def.assignments.size() - 1)]
-		var start: Vector3 = to_world(_def_point(assignment.start, deepest, room), def_flip)
+		var slot: int = mini(i, p_def.assignments.size() - 1)
+		var assignment: DefenseAssignment = p_def.assignments[slot]
+		var start: Vector3 = to_world(spots[slot])
 		var target: Player = null
 		if assignment.job == DefenseAssignment.Job.MAN and not cover_order.is_empty():
-			target = cover_order[mini(assignment.man_target, cover_order.size() - 1)]
-			start.z = target.position.z
-			# Two men lined up close together (the back and the tight end): the
-			# second defender stands behind the first, not inside him.
-			for _step: int in defense.players.size():
-				var taken: bool = false
-				for j: int in i:
-					if _flat_distance(defense.players[j].position, start) < MAN_LINEUP_GAP:
-						taken = true
-				if not taken:
-					break
-				start.x += off_dir * MAN_LINEUP_GAP
+			target = seen_players[cover_order[mini(DefenseAligner.man_index(assignment, def_flip), cover_order.size() - 1)]]
 		player.reset_for_play(start, -face_off)
 		# Rushers with a hand in the dirt are linemen; a blitzer from further back
 		# comes at full speed.
@@ -272,6 +274,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 		player.brain.assign_defense(assignment, start, target, to_world(_def_point(assignment.zone_center, deepest, room), def_flip))
 	_scout_defense()
 	_roll_blown_coverage()
+	_roll_technique(p_def)
 	_roll_takeout()
 	_roll_play_action()
 	_place_mascots()
@@ -283,6 +286,35 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 	game.field.set_markers(los_x, game.first_down_x, not game.goal_to_go)
 	human.on_line_up()
 	_update_markers()
+
+
+## Where a run play is aimed: the point at which the back's path as drawn
+## crosses the line of scrimmage. Only a path that crosses near the ball makes
+## a hole; a toss or a sweep goes round the end.
+func _find_run_hole() -> void:
+	has_run_hole = false
+	if not off_play.is_run or runner == null or runner == qb:
+		return
+	var from: Vector3 = runner.position
+	for point: Vector3 in runner.brain.route:
+		var before: float = (from.x - los_x) * off_dir
+		var after: float = (point.x - los_x) * off_dir
+		if before < 0.0 and after >= 0.0:
+			var z: float = lerpf(from.z, point.z, -before / (after - before))
+			if absf(z) <= tuning.hole_max_width:
+				has_run_hole = true
+				run_hole = Vector3(los_x, 0.0, z)
+			return
+		from = point
+
+
+## The hole still matters: the ball has not gone through the line yet.
+func run_hole_live() -> bool:
+	if not has_run_hole or ball_dead or runner == null:
+		return false
+	if ball.carrier != runner and ball.carrier != qb:
+		return false
+	return (runner.position.x - los_x) * off_dir < 1.0
 
 
 ## A defensive play-frame point with its depth squeezed so that a play whose
@@ -593,6 +625,33 @@ func team_edge(team: Team) -> float:
 
 func cpu_edge(player: Player) -> float:
 	return team_edge(player.team)
+
+
+## Man defenders do not all play their man the same way. Most stay tight on his
+## deep side. Some play off him and give up what is short, and with a deep
+## defender behind them some trail him on the quarterback's side and give up
+## what is lofted over them. Each also shades him to one side or the other. A
+## man the play draws up at the line is pressing and stays tight.
+func _roll_technique(play: DefensePlay) -> void:
+	var deep_help: bool = false
+	for assignment: DefenseAssignment in play.assignments:
+		if assignment.job == DefenseAssignment.Job.ZONE and assignment.deep:
+			deep_help = true
+	for defender: Player in defense.players:
+		var brain: PlayerBrain = defender.brain
+		var assignment: DefenseAssignment = brain.def_assign
+		if assignment.job != DefenseAssignment.Job.MAN or brain.man_target == null or assignment.underneath:
+			continue
+		brain.leverage = randf_range(-tuning.ai_cover_leverage, tuning.ai_cover_leverage)
+		if assignment.start.x <= tuning.ai_cover_press_depth:
+			continue
+		var roll: float = randf()
+		if roll < tuning.ai_cover_off_chance:
+			brain.technique = PlayerBrain.Technique.OFF
+			game.add_stat(&"technique_off")
+		elif deep_help and roll < tuning.ai_cover_off_chance + tuning.ai_cover_trail_chance:
+			brain.technique = PlayerBrain.Technique.TRAIL
+			game.add_stat(&"technique_trail")
 
 
 ## Now and then a coverage defender (sometimes two) means to take his man out
@@ -1455,10 +1514,20 @@ func _resolve_pass_arrival() -> void:
 		# For the tests: how close the man covering a short ball's receiver ends up.
 		game.add_stat(&"short_passes")
 		game.add_stat(&"short_pass_cover_feet", roundi(_flat_distance(ball_coverer.position, ball.intended.position) * 3.0))
+	_count_arrival(point)
 	var receiver: Player = _best_catcher(offense.players, point, ball.thrower)
 	var defender: Player = _best_catcher(defense.players, point, null)
 
 	if receiver != null:
+		if defender != null:
+			# A defender who has got between the receiver and the ball has first go.
+			var front: float = in_front(receiver, defender)
+			if front > 0.0:
+				game.add_stat(&"undercuts")
+			if randf() < tuning.interception_chance_front * front * _catch_scale(defender) * RubberBand.bad(offense, game):
+				game.add_stat(&"undercut_interceptions")
+				_intercept(defender)
+				return
 		if randf() < catch_chance(receiver, point):
 			if receiver.is_airborne():
 				game.add_stat(&"jump_catches")
@@ -1528,6 +1597,8 @@ func catch_chance(receiver: Player, point: Vector3) -> float:
 			# A defender on the far side of the receiver has to play through him.
 			var behind: float = maxf(offset.normalized().dot(incoming), 0.0) if dist > 0.01 else 0.0
 			penalty *= 1.0 - tuning.cover_shield * behind * facing_ball
+			# One who has got round in front of him is in the way of it.
+			penalty *= 1.0 + tuning.cover_front * in_front(receiver, opponent)
 			chance -= penalty
 	chance -= maxi(crowd - 1, 0) * tuning.dive_crowd_penalty
 	# So does one who went up for the ball.
@@ -1659,6 +1730,66 @@ func _check_tipped_ball() -> void:
 	_tip_pass(player, knock)
 
 
+## How squarely `defender` stands between `receiver` and the pass (0..1): 1 on
+## the line back to the thrower from a receiver who waits for the ball or comes
+## back to it, 0 beside him or behind him. A receiver running away from the
+## throw has nobody in front of him in this sense: a man on that side of him is
+## trailing.
+func in_front(receiver: Player, defender: Player) -> float:
+	if ball.thrower == null:
+		return 0.0
+	var incoming: Vector3 = receiver.position - ball.thrower.position
+	incoming.y = 0.0
+	var offset: Vector3 = defender.position - receiver.position
+	offset.y = 0.0
+	if incoming.length_squared() < 0.01 or offset.length_squared() < 0.0001:
+		return 0.0
+	incoming = incoming.normalized()
+	var facing_ball: float = clampf(1.0 - receiver.velocity.dot(incoming) / tuning.run_speed, 0.0, 1.0)
+	return maxf(-offset.normalized().dot(incoming), 0.0) * facing_ball
+
+
+## For the tests: how near the nearest defender is to the man the pass is meant
+## for as it arrives, what kind of coverage that defender is in, and whether a
+## defender has got in front of him. `point` is where it comes down.
+func _count_arrival(point: Vector3) -> void:
+	var target: Player = ball.intended
+	if target == null or target.is_down():
+		return
+	var near: Player = null
+	var gap: float = INF
+	for defender: Player in defense.players:
+		if defender.is_down():
+			continue
+		var dist: float = _flat_distance(defender.position, target.position)
+		if dist < gap:
+			gap = dist
+			near = defender
+	if near == null:
+		return
+	var feet: int = roundi(minf(gap, 15.0) * 3.0)
+	game.add_stat(&"arrivals")
+	game.add_stat(&"arrival_feet", feet)
+	game.add_stat(&"arrival_tight" if gap < 1.0 else (&"arrival_step" if gap <= 3.0 else &"arrival_open"))
+	if gap <= tuning.cover_radius:
+		# Covered: whether any of the men on him has got round in front.
+		game.add_stat(&"arrival_covered")
+		for defender: Player in defense.players:
+			if not defender.is_down() and _flat_distance(defender.position, target.position) <= tuning.cover_radius and in_front(target, defender) >= 0.6:
+				game.add_stat(&"arrival_front")
+				break
+	var deep_ball: bool = (point.x - los_x) * off_dir >= 15.0
+	var assign: DefenseAssignment = near.brain.def_assign
+	var kind: String = "other"
+	if assign != null and assign.job == DefenseAssignment.Job.MAN:
+		kind = "man"
+	elif assign != null and assign.job == DefenseAssignment.Job.ZONE:
+		kind = "deep_zone" if assign.deep else "zone"
+	var key: String = "arrival_%s_%s" % ["long" if deep_ball else "short", kind]
+	game.add_stat(StringName(key))
+	game.add_stat(StringName(key + "_feet"), feet)
+
+
 func _catch_scale(player: Player) -> float:
 	return PlayerRatings.blend(player.ratings.catching, tuning.catch_scale_low, tuning.catch_scale_high)
 
@@ -1693,6 +1824,9 @@ func _best_catcher(candidates: Array[Player], point: Vector3, exclude: Player, l
 	var best_share: float = 1.0
 	for candidate: Player in candidates:
 		if candidate == exclude or (candidate.is_down() and candidate.dive_reach_timer <= 0.0):
+			continue
+		if candidate.brain.hit_man:
+			# He dived at the receiver, not at the ball.
 			continue
 		var spot: Vector3 = candidate.position_in(lookahead) if lookahead > 0.0 else candidate.position
 		var share: float = _flat_distance(spot, point) / catch_reach(candidate, point)
@@ -1906,6 +2040,11 @@ func _resolve_contacts(delta: float) -> void:
 	# them pair by pair measurably favoured whichever team came first.)
 	_pushes.resize(players.size())
 	_pushes.fill(Vector3.ZERO)
+	# Defenders being driven off the hole (see _drive_block) are moved first, so
+	# that whoever they are walked into is pushed clear of them below.
+	for player: Player in players:
+		player.position += player.drive_push
+		player.drive_push = Vector3.ZERO
 	for i: int in players.size():
 		var a: Player = players[i]
 		for j: int in range(i + 1, players.size()):
@@ -2036,7 +2175,7 @@ func _check_hit(attacker: Player, victim: Player, offset: Vector3, dist: float) 
 			# dives during the play go for the ball carrier alone.
 			if attacker.brain.takeout_target == victim:
 				attacker.brain.takeout_target = null
-				game.add_stat(&"takeouts")
+				game.add_stat(&"air_hits" if attacker.brain.hit_man else &"takeouts")
 			_knock_over(attacker, victim, offset.normalized() if dist > 0.01 else attacker.facing)
 	elif is_carrier and attacker.state == Player.State.NORMAL and dist <= tuning.tackle_radius:
 		_attempt_tackle(attacker, victim, false)
@@ -2058,6 +2197,9 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 	# Already dragging one tackler: a second one finishes it.
 	if carrier.state == Player.State.DRAGGING:
 		_finish_tackle(carrier, dir, kind, tackler, big_hit)
+		return
+
+	if _try_truck(tackler, carrier, dir):
 		return
 
 	var skills: PlayerRatings = carrier.ratings
@@ -2094,6 +2236,8 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 	var drag_time: float = PlayerRatings.blend(skills.strength, tuning.drag_time_low, tuning.drag_time_high)
 	if big_hit:
 		drag_time *= tuning.drag_big_hit_scale
+	if carrier.is_securing():
+		drag_time *= tuning.secure_drag_time_scale
 	var can_drag: bool = carrier.state == Player.State.NORMAL and tackler.state == Player.State.NORMAL
 	if can_drag and drag_time >= tuning.drag_min_time:
 		carrier.start_drag(tackler, drag_time)
@@ -2105,9 +2249,36 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 		_finish_tackle(carrier, dir, kind, tackler, big_hit)
 
 
+## A carrier securing the ball runs over a weaker tackler who is on his feet in
+## front of him: the bigger the gap in strength, the likelier. A dive at his
+## legs is harder to run through, and a tackler at his side or his back cannot
+## be run over at all. `dir` points from the tackler to him.
+func _try_truck(tackler: Player, carrier: Player, dir: Vector3) -> bool:
+	if not carrier.is_securing() or carrier.state != Player.State.NORMAL:
+		return false
+	var gap: float = float(carrier.ratings.strength - tackler.ratings.strength)
+	if gap <= 0.0 or (-dir).dot(carrier.facing) < tuning.secure_truck_front_dot:
+		return false
+	var flat_speed: float = Vector2(carrier.velocity.x, carrier.velocity.z).length()
+	if flat_speed < tuning.secure_truck_min_speed:
+		return false
+	var chance: float = minf(gap * tuning.secure_truck_chance_per_point, tuning.secure_truck_chance_max)
+	if tackler.state == Player.State.DIVING:
+		chance *= tuning.secure_truck_dive_scale
+	chance *= RubberBand.good(carrier.team, game)
+	if randf() >= chance:
+		return false
+	game.add_stat(&"trucks")
+	_break_tackle(tackler, carrier, dir, &"truck")
+	carrier.velocity *= tuning.secure_truck_speed_keep
+	return true
+
+
 ## The carrier goes down and the play is over.
 func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackler: Player = null, big: bool = false) -> void:
 	var carried: Vector3 = carrier.velocity
+	# Asked before he goes down: on the turf he is securing nothing.
+	var secured: bool = carrier.is_securing()
 	# A drag that ends with him going down is the tackle of the man hanging on.
 	tackled_by = tackler if tackler != null else carrier.drag_partner
 	carrier.knock_down(dir * tuning.tackle_knockdown_impulse, tuning.knockdown_time, kind)
@@ -2122,7 +2293,7 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 		game.audio.quip(&"color_tackle", AudioDirector.QUIP_TACKLE)
 	game.impact(tuning.tackle_shake, 1.0)
 	game.field.fx.blood_burst(carrier.position, dir, tuning.blood_drops_tackle, true)
-	if _try_fumble(carrier, dir, kind, carried):
+	if _try_fumble(carrier, dir, kind, carried, secured):
 		return
 	was_sack = phase == Phase.POCKET and carrier == qb
 	if was_sack:
@@ -2136,11 +2307,15 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 
 ## The hit may knock the ball out. It leaves the way he was hit (`dir`), more or
 ## less, and the play goes on with the ball on the turf until somebody has it.
-## `carried` is how fast the carrier was moving when he was hit.
-func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: Vector3) -> bool:
+## `carried` is how fast the carrier was moving when he was hit, `secured`
+## whether he had the ball in both arms.
+func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: Vector3, secured: bool = false) -> bool:
 	var chance: float = PlayerRatings.blend(carrier.ratings.security, tuning.fumble_chance_low, tuning.fumble_chance_high)
 	if kind != PlayerFall.Kind.WRAP:
 		chance *= tuning.fumble_big_hit_scale
+	if secured:
+		chance *= tuning.secure_fumble_scale
+		game.add_stat(&"secured_tackles")
 	chance *= RubberBand.bad(carrier.team, game)
 	if randf() >= chance:
 		return false
@@ -2300,6 +2475,9 @@ func _update_drag() -> void:
 	var tackler: Player = carrier.drag_partner
 	var dir: Vector3 = carrier.facing
 	var escape: float = PlayerRatings.blend(carrier.ratings.strength, tuning.shake_off_chance_low, tuning.shake_off_chance_high)
+	if carrier.is_securing():
+		escape += tuning.secure_shake_off_bonus
+		game.add_stat(&"secured_drags")
 	if tackler != null and randf() < escape:
 		game.add_stat(&"shake_offs")
 		_break_tackle(tackler, carrier, dir)
@@ -2346,6 +2524,8 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 		# On a run play the blocker sometimes wins outright and opens a hole.
 		rusher.block_pancake_time = -1.0
 		game.audio.play(&"pads_clash", 0.4)
+		rusher.block_drive = _roll_drive(blocker, rusher)
+		rusher.block_drive_side = 0.0
 		if off_play.is_run:
 			var pancake: float = tuning.block_pancake_chance
 			pancake *= PlayerRatings.blend(blocker.ratings.blocking, tuning.pancake_blocking_scale_low, tuning.pancake_blocking_scale_high)
@@ -2354,6 +2534,7 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 				rusher.block_pancake_time = randf_range(tuning.block_pancake_time_min, tuning.block_pancake_time_max)
 	rusher.block_engaged_time += delta
 	rusher.block_slow_timer = 0.12
+	_drive_block(blocker, rusher, delta)
 	# A man with two on him stays with the first until that one lets go.
 	if rusher.block_partner == null or rusher.block_partner == blocker:
 		rusher.block_partner = blocker
@@ -2377,6 +2558,48 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 		rusher.block_immune_timer = tuning.block_immune_time
 		rusher.block_slow_timer = 0.0
 		rusher.block_engaged_time = 0.0
+
+
+## Run blocking at the hole: whether this blocker gets movement on this
+## defender, and how much (yards a second). His blocking against the
+## defender's strength decides most of it and luck the rest, so a good line
+## opens holes against a weak one most of the time and the other way round
+## hardly ever.
+func _roll_drive(blocker: Player, rusher: Player) -> float:
+	if not run_hole_live() or blocker.team != offense:
+		return 0.0
+	if _flat_distance(rusher.position, run_hole) > tuning.hole_range:
+		return 0.0
+	var edge: float = float(blocker.ratings.blocking - rusher.ratings.strength) / 100.0 + tuning.hole_drive_base
+	edge += randf_range(-tuning.hole_drive_luck, tuning.hole_drive_luck)
+	var won: float = clampf(edge / maxf(tuning.hole_drive_full, 0.01), 0.0, 1.0)
+	game.add_stat(&"hole_blocks")
+	if won > 0.0:
+		game.add_stat(&"hole_blocks_won")
+	return won * tuning.hole_drive_speed
+
+
+## The defender is walked sideways out of the back's way while the block holds
+## and the ball has not gone through: away from the hole, and once the back has
+## the ball away from the line he is actually running (most of the way from
+## the hole to where he is), so a back who cuts gets his blocks too. The
+## blocker stays on his man by himself: the man he is blocking is slowed, he
+## is not.
+func _drive_block(blocker: Player, rusher: Player, delta: float) -> void:
+	if rusher.block_drive <= 0.0 or rusher.block_engaged_time > tuning.hole_drive_time or not run_hole_live():
+		return
+	if absf(rusher.position.x - los_x) > tuning.hole_drive_depth:
+		return
+	var lane: float = run_hole.z
+	if ball.carrier == runner:
+		lane = lerpf(run_hole.z, runner.position.z, tuning.hole_follow_back)
+	# A man standing right in the lane keeps going the way he was going, or
+	# at first away from his blocker.
+	var side: float = rusher.position.z - lane
+	if absf(side) < 0.5:
+		side = rusher.block_drive_side if rusher.block_drive_side != 0.0 else rusher.position.z - blocker.position.z
+	rusher.block_drive_side = 1.0 if side >= 0.0 else -1.0
+	rusher.drive_push += Vector3(0.0, 0.0, rusher.block_drive_side) * rusher.block_drive * delta
 
 
 # --- Queries ---------------------------------------------------------------------

@@ -27,17 +27,15 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "WR"
-job = 1
 start = Vector2(-0.6, -18.4)
 route = PackedVector2Array(40, 0)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "WR"
-job = 1
 start = Vector2(-0.6, 18.4)
 route = PackedVector2Array(40, 0)
 
@@ -48,19 +46,18 @@ job = 3
 start = Vector2(-7, 2.5)
 route = PackedVector2Array(0.8, -2.2, 9, -3, 16, -3)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
-label = "FB"
-job = 2
-start = Vector2(-7, -2.5)
-route = PackedVector2Array(5.5, 1.7, 11, 1.7)
+label = "SL"
+start = Vector2(-1.2, -8.3)
+route = PackedVector2Array(40, 1.4)
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Draw"
-description = "Shotgun. Wideouts run deep, the quarterback waits, then hands it to the back up the middle behind the fullback."
+description = "Shotgun. Everyone runs deep, the quarterback waits, then hands it to the back up the middle."
 category = 0
 group = 3
 is_run = true
 handoff_delay = 0.55
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

@@ -22,6 +22,12 @@ const TIME_PRIOR: float = 4.0
 ## line and away from it. See _goal_line_scale().
 const GOAL_LINE_NEAR: float = 6.0
 const GOAL_LINE_FAR: float = 0.02
+## What a shot play's chance of being called is multiplied by on an ordinary
+## down, and when the offense needs a lot at once. See _shot_scale().
+const SHOT_ORDINARY: float = 0.2
+const SHOT_NEEDED: float = 3.0
+## Points behind in the second half that make every down a down for a shot.
+const SHOT_DEFICIT: float = 12.0
 
 ## Per offensive team: how often it has called each category lately, and the
 ## yards it made with it. Both decay by MEMORY every play.
@@ -142,6 +148,8 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 			continue
 		var weight: float = (want[play.category] + 0.05) / maxf(per_category[play.category], 1.0)
 		weight *= _goal_line_scale(play.goal_line, game) * play.cpu_weight
+		if play.shot_play:
+			weight *= _shot_scale(game, now)
 		# Do not call the same play three times in a row.
 		var repeats: int = 0
 		for i: int in range(history.size() - 1, -1, -1):
@@ -160,10 +168,7 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 ## first, then moved by what the score and the clock ask for.
 func _situation(game: Game) -> PackedFloat32Array:
 	var tuning: Tuning = game.tuning
-	var to_go: float = absf(game.first_down_x - game.los_x)
-	var downs_left: int = maxi(tuning.downs_per_series - game.down + 1, 1)
-	# Yards needed per remaining down, against what a series needs on average.
-	var need: float = (to_go / float(downs_left)) / (tuning.yards_to_gain / float(tuning.downs_per_series))
+	var need: float = _need(game)
 	var result: PackedFloat32Array = PackedFloat32Array([0.3, 0.4, 0.3])
 	if need > 1.0:
 		# Behind schedule: fewer runs, more shots downfield.
@@ -191,6 +196,26 @@ func _situation(game: Game) -> PackedFloat32Array:
 		for i: int in CATEGORIES:
 			result[i] = lerpf(result[i], mix[i], lean)
 	return result
+
+
+## Yards needed per remaining down, against what a series needs on average:
+## 1 is on schedule, 2 is second and twice as long.
+func _need(game: Game) -> float:
+	var tuning: Tuning = game.tuning
+	var to_go: float = absf(game.first_down_x - game.los_x)
+	var downs_left: int = maxi(tuning.downs_per_series - game.down + 1, 1)
+	return (to_go / float(downs_left)) / (tuning.yards_to_gain / float(tuning.downs_per_series))
+
+
+## How much more or less often a shot play (OffensePlay.shot_play) is called:
+## seldom on an ordinary down, often in long yardage, with the half running
+## out, or well behind in the second half.
+func _shot_scale(game: Game, now: GameSituation) -> float:
+	var long_yardage: float = clampf(_need(game) - 1.0, 0.0, 1.0)
+	var behind: float = 0.0
+	if game.half >= 2 and now.margin < 0:
+		behind = clampf(float(-now.margin) / SHOT_DEFICIT, 0.0, 1.0)
+	return lerpf(SHOT_ORDINARY, SHOT_NEEDED, maxf(long_yardage, maxf(now.urgency, behind)))
 
 
 ## How much more or less often a play is called for where the ball is: a goal

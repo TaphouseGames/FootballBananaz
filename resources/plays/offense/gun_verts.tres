@@ -28,37 +28,34 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "WR"
-job = 1
-start = Vector2(-0.6, -19.9)
+start = Vector2(-0.6, -18.4)
 route = PackedVector2Array(40, 0)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "WR"
-job = 1
-start = Vector2(-0.6, 19.9)
+start = Vector2(-0.6, 18.4)
 route = PackedVector2Array(40, 0)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
-label = "SL"
-job = 1
-start = Vector2(-0.6, 6.9)
-route = PackedVector2Array(12, 0, 40, -5.9)
+label = "RB"
+start = Vector2(-7, 2.5)
+route = PackedVector2Array(1, 6.6, 4, 15.2)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
-label = "FB"
-job = 2
-start = Vector2(-7, -2.5)
+label = "SL"
+start = Vector2(-1.2, -8.3)
+route = PackedVector2Array(12, 0, 40, 5.5)
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Verts"
-description = "Shotgun. Both wideouts straight up the field, slot up the seam between the safeties."
+description = "Shotgun. Both wideouts straight up the field, slot up the seam between the safeties. Back in the right flat."
 category = 2
 group = 3
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

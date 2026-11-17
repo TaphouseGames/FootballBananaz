@@ -972,6 +972,8 @@ func _build_pose(delta: float) -> void:
 			_tuck_ball()
 			_pose[B.SPINE].x += 20.0
 			_pose[B.HEAD].x -= 10.0
+			if player.is_securing():
+				_cover_ball()
 			return
 		Player.State.HOLDING:
 			_mode = 17
@@ -1003,6 +1005,9 @@ func _build_pose(delta: float) -> void:
 		elif player == pc.qb and pc.phase == PlayController.Phase.POCKET and not pc.ball_dead and not pc.flick_returning() and player.feet_set >= 1.0 and not player.is_tucked():
 			_mode = 2
 			_qb_cocked()
+		elif player.is_securing() and not pc.ball_dead:
+			_mode = 21
+			_secure_ball()
 		else:
 			_mode = 1
 			_tuck_ball()
@@ -1500,6 +1505,24 @@ func _spin() -> void:
 	_pose[B.HEAD].x -= 8.0
 	_pose[B.ARM_R] = Vector3(-20.0, 30.0, -70.0)
 	_pose[B.FORE_R] = Vector3(0.0, -105.0, 0.0)
+
+
+## Securing the ball: shoulders down and forward into the run, head up enough
+## to see, both arms round the ball.
+func _secure_ball() -> void:
+	_rate = 22.0
+	_tuck_ball()
+	_pose[B.SPINE].x += 22.0
+	_pose[B.CHEST].x += 10.0
+	_pose[B.HEAD].x -= 14.0
+	_cover_ball()
+
+
+## The free arm (the right: the ball is tucked in the left) comes across the
+## chest, forearm over the ball.
+func _cover_ball() -> void:
+	_pose[B.ARM_R] = Vector3(-30.0, -45.0, -72.0)
+	_pose[B.FORE_R] = Vector3(0.0, -118.0, 0.0)
 
 
 ## Free arm straight out to the side, ball tucked in the other. Built for the

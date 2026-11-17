@@ -16,6 +16,8 @@ extends SceneTree
 ##                 so every snap is defended as if seen for the first time)
 ##   snaps=<n>     snaps per cell (default 120 for matrix, 40 for spam)
 ##   off=<text>    only offensive plays whose name contains the text
+##   tab=<text>    only offensive plays on the tab (formation) whose name contains the text
+##   def=<text>    only defensive plays whose name contains the text
 ##   detail        also print yards, completion, turnover and sack rates per cell
 ##   place=normal|lead|under|cpu   spam probe: how the throw is placed (cpu lets
 ##                 the CPU quarterback choose; default normal)
@@ -42,6 +44,8 @@ var _pc: PlayController
 var _mode: String = "matrix"
 var _snaps: int = 0
 var _off_filter: String = ""
+var _tab_filter: String = ""
+var _def_filter: String = ""
 var _detail: bool = false
 var _spam_times: PackedFloat64Array = PackedFloat64Array([0.8, 1.4, 2.0, 2.6])
 var _overrides: Dictionary[String, float] = {}
@@ -82,6 +86,10 @@ func _initialize() -> void:
 			_snaps = maxi(int(arg.trim_prefix("snaps=")), 1)
 		elif arg.begins_with("off="):
 			_off_filter = arg.trim_prefix("off=").to_lower()
+		elif arg.begins_with("def="):
+			_def_filter = arg.trim_prefix("def=").to_lower()
+		elif arg.begins_with("tab="):
+			_tab_filter = arg.trim_prefix("tab=").to_lower()
 		elif arg.begins_with("place="):
 			_place = arg.trim_prefix("place=")
 		elif arg.begins_with("yard="):
@@ -141,9 +149,12 @@ func _build_jobs() -> void:
 	for o: int in offs.size():
 		if _off_filter != "" and not offs[o].play_name.to_lower().contains(_off_filter):
 			continue
+		if _tab_filter != "" and not OffensePlay.GROUP_NAMES[offs[o].group].to_lower().contains(_tab_filter):
+			continue
 		if _mode == "matrix" or _mode == "all":
 			for d: int in defs.size():
-				_jobs.append(_new_job(o, d, -1, 0.0))
+				if _def_filter == "" or defs[d].play_name.to_lower().contains(_def_filter):
+					_jobs.append(_new_job(o, d, -1, 0.0))
 		if _mode == "scramble" and not offs[o].is_run:
 			for time: float in _spam_times:
 				for d: int in defs.size():
@@ -274,6 +285,14 @@ func _mean(job: Dictionary, key: String) -> float:
 
 func _report() -> void:
 	physics_frame.disconnect(_tick)
+	# What the coverage did over the whole run: see PlayController._count_arrival.
+	var coverage: PackedStringArray = PackedStringArray()
+	for key: StringName in _game.stats:
+		var text: String = String(key)
+		if text.begins_with("arrival") or text.begins_with("undercut") or text.begins_with("air_hit") or text.begins_with("technique") or text == "interceptions" or text == "passes":
+			coverage.append("%s=%d" % [text, _game.stats[key]])
+	coverage.sort()
+	print("COVERAGE " + " ".join(coverage))
 	var offs: Array[OffensePlay] = _game.offense_playbook.plays
 	var defs: Array[DefensePlay] = _game.defense_playbook.plays
 
@@ -282,7 +301,8 @@ func _report() -> void:
 		print("\nVALUE per snap (yards capped at %d, turnover = -%d). Rows: offense. Columns: defense." % [int(CAP), int(TURNOVER_COST)])
 		var header: String = "%-14s" % ""
 		for def_play: DefensePlay in defs:
-			header += "%8s" % def_play.play_name.substr(0, 7)
+			if _def_filter == "" or def_play.play_name.to_lower().contains(_def_filter):
+				header += "%8s" % def_play.play_name.substr(0, 7)
 		print(header + "     mean   min   max  comp%  to%  sack%  big%  open  wide%")
 		var column_sum: PackedFloat32Array = PackedFloat32Array()
 		column_sum.resize(defs.size())
@@ -328,7 +348,8 @@ func _report() -> void:
 					print(detail)
 		var footer: String = "%-14s" % "mean allowed"
 		for d: int in defs.size():
-			footer += "%8.1f" % (column_sum[d] / float(maxi(rows, 1)))
+			if _def_filter == "" or defs[d].play_name.to_lower().contains(_def_filter):
+				footer += "%8.1f" % (column_sum[d] / float(maxi(rows, 1)))
 		print(footer)
 
 	var spam: Array[Dictionary] = _jobs.filter(func(job: Dictionary) -> bool: return int(job["slot"]) != -1)

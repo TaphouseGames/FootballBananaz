@@ -28,17 +28,15 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "WR"
-job = 1
 start = Vector2(-0.6, -18.4)
 route = PackedVector2Array(40, 0)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "WR"
-job = 1
 start = Vector2(-0.6, 18.4)
 route = PackedVector2Array(16, 0, 40, -18.4)
 
@@ -46,14 +44,14 @@ route = PackedVector2Array(16, 0, 40, -18.4)
 script = ExtResource("2_assign")
 label = "RB"
 job = 3
-start = Vector2(-6.5, 0.6)
-route = PackedVector2Array(3.5, 0.6, 14, 0.6)
+start = Vector2(-6.5, 0.4)
+route = PackedVector2Array(3.5, 0.2, 14, 0.2)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
 label = "FB"
 job = 2
-start = Vector2(-4.5, 2)
+start = Vector2(-4.5, 1.8)
 
 [resource]
 script = ExtResource("1_play")
@@ -62,5 +60,4 @@ description = "Fake the dive up the middle, then a deep post and a go route behi
 category = 2
 handoff_delay = 0.42
 play_action = true
-group = 2
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

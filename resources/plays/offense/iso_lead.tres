@@ -27,38 +27,37 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, -17)
+start = Vector2(-0.6, -18.4)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, 17)
+start = Vector2(-0.6, 18.4)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
 job = 3
-start = Vector2(-6.5, -0.4)
-route = PackedVector2Array(3.5, -0.5, 9, -0.5)
+start = Vector2(-6.5, 0.4)
+route = PackedVector2Array(3.5, -1.3, 9, -1.5, 16, -1.5)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
 label = "FB"
 job = 2
-start = Vector2(-4.5, -1.8)
-route = PackedVector2Array(3.5, 0.9, 8, 0.9)
+start = Vector2(-4.5, 1.8)
+route = PackedVector2Array(3.5, -2.9, 8, -2.9)
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Iso Lead"
 description = "Fullback hits the gap left of the center and takes on the first man there. Back follows him through."
 category = 0
-group = 5
 is_run = true
 handoff_delay = 0.4
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

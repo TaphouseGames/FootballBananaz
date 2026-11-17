@@ -131,11 +131,21 @@ func update_live() -> void:
 	player.ai_speed_scale = 1.0
 	player.move_input = move
 	player.wants_turbo = Input.is_action_pressed(&"turbo")
+	player.wants_secure = false
 
 	# Play action: he stays with the back until the fake is over.
 	if player == pc.qb and player.has_ball and pc.faking():
 		player.move_input = Vector3.ZERO
 		player.wants_turbo = false
+		return
+	# A run play until the ball is handed over, and a flea flicker while the
+	# back has it: the quarterback does what the play draws for him (stays put,
+	# or drops on a draw), so the exchange happens where it is meant to. Walked
+	# away from the back, the handoff would turn into a slower toss.
+	if player == pc.qb and pc.phase == PlayController.Phase.POCKET and _in_exchange():
+		player.move_input = Vector3.ZERO
+		player.wants_turbo = false
+		assist = true
 		return
 
 	if pc.phase == PlayController.Phase.AIR and pc.ball.intended == player and not moving:
@@ -143,6 +153,9 @@ func update_live() -> void:
 
 	var carrier: Player = pc.ball.carrier
 	var is_passer: bool = pc.can_pass() and player == pc.qb
+	# Held with the ball in his hands: he secures it. While the quarterback can
+	# throw the same button is a pass button.
+	player.wants_secure = player.has_ball and not is_passer and Input.is_action_pressed(&"secure_ball")
 
 	# In the pocket the pass buttons win: they share A, X, B and (with four men
 	# out) Y with other actions.
@@ -194,8 +207,9 @@ func update_live() -> void:
 		return
 	if is_passer:
 		return
-	# The second jump button is a pass button while the quarterback can throw.
-	if Input.is_action_just_pressed(&"jump_alt"):
+	# The second jump button is a pass button while the quarterback can throw,
+	# and secures the ball for anyone carrying it.
+	if not player.has_ball and Input.is_action_just_pressed(&"jump_alt"):
 		pc.do_jump(player)
 		return
 	if player.has_ball:
@@ -233,8 +247,19 @@ func update_live() -> void:
 		pc.do_shove(player, move.normalized() if moving else player.facing)
 
 
+## The quarterback still has the ball to hand over on a run play, or is waiting
+## for the pitch back on a flea flicker.
+func _in_exchange() -> bool:
+	if pc.off_play == null or pc.runner == null or pc.runner == pc.qb:
+		return false
+	if pc.off_play.is_run:
+		return not pc.handoff_done and pc.ball.carrier == pc.qb
+	return pc.flicking()
+
+
 ## Running with the ball: spin, a stiff arm to either side, or a dive that
-## gives himself up for the last few yards.
+## gives himself up for the last few yards. (Securing the ball is a held
+## button, read in update_live.)
 func _carrier_moves(player: Player, move: Vector3, moving: bool) -> void:
 	if Input.is_action_just_pressed(&"stiff_arm_left"):
 		pc.do_stiff_arm(player, 1.0)
@@ -285,6 +310,7 @@ func update_dead() -> void:
 	player.ai_speed_scale = 1.0
 	player.move_input = move
 	player.wants_turbo = Input.is_action_pressed(&"turbo")
+	player.wants_secure = false
 	if not Input.is_action_just_pressed(&"action") or not player.can_act():
 		return
 	var on_defense: bool = is_defending()

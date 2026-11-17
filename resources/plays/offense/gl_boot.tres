@@ -28,17 +28,15 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
 label = "TE"
-job = 1
 start = Vector2(-0.6, -3.4)
 route = PackedVector2Array(4, 0, 8, 14)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "TE"
-job = 1
 start = Vector2(-0.6, 3.4)
 route = PackedVector2Array(2, 0, 3, 12.7)
 
@@ -46,21 +44,21 @@ route = PackedVector2Array(2, 0, 3, 12.7)
 script = ExtResource("2_assign")
 label = "RB"
 job = 3
-start = Vector2(-6.5, 0.6)
-route = PackedVector2Array(3.5, -0.6, 6, -6.6)
+start = Vector2(-6.5, 0.4)
+route = PackedVector2Array(3.5, -0.4, 6, -6.4)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
 label = "FB"
 job = 2
-start = Vector2(-4.5, -2)
+start = Vector2(-4.5, 1.8)
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Goal Line Boot"
 description = "Fake the dive and roll out right. Tight end in the flat in front of the quarterback, the other one crossing to the back corner."
-group = 4
+group = 5
 handoff_delay = 0.35
 play_action = true
 goal_line = true
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

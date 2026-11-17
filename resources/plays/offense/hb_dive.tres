@@ -27,26 +27,26 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
-label = "WR"
+label = "TE"
 job = 2
-start = Vector2(-0.6, -17)
+start = Vector2(-0.6, -3.4)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
 label = "WR"
 job = 2
-start = Vector2(-0.6, 17)
+start = Vector2(-1.2, 18.4)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
 job = 3
-start = Vector2(-6.5, 0.6)
-route = PackedVector2Array(3.5, 0.6, 9, 0.6)
+start = Vector2(-6.5, 0.4)
+route = PackedVector2Array(3.5, -0.2, 9, -0.2)
 
-[sub_resource type="Resource" id="te"]
+[sub_resource type="Resource" id="y"]
 script = ExtResource("2_assign")
 label = "TE"
 job = 2
@@ -55,8 +55,9 @@ start = Vector2(-0.6, 3.4)
 [resource]
 script = ExtResource("1_play")
 play_name = "HB Dive"
-description = "Quick handoff straight up the middle. Tight end on the right."
+description = "Quick handoff straight up the middle behind two tight ends."
 category = 0
+group = 2
 is_run = true
 handoff_delay = 0.35
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

@@ -6,10 +6,9 @@
 [sub_resource type="Resource" id="d0"]
 script = ExtResource("2_assign")
 label = "S"
-job = 2
-start = Vector2(3, 0)
-zone_center = Vector2(3.5, 0)
-zone_radius = 8
+start = Vector2(2.5, 0)
+man_target = 3
+underneath = true
 
 [sub_resource type="Resource" id="d1"]
 script = ExtResource("2_assign")
@@ -49,6 +48,7 @@ label = "LB"
 job = 1
 start = Vector2(2.5, 2)
 man_target = 2
+green_dog = true
 
 [sub_resource type="Resource" id="d7"]
 script = ExtResource("2_assign")
@@ -60,10 +60,10 @@ green_dog = true
 
 [resource]
 script = ExtResource("1_play")
-play_name = "Goal Line Press"
-description = "Three rush, corners in the receivers' faces, linebackers on the back and the tight end and a man waiting in the short middle."
-run_fit = 0.5
-short_fit = 0.7
+play_name = "Goal Line TE Double"
+description = "Three rush, corners in the receivers' faces, a linebacker on the back, and two men on the tight end: one behind him, one in front."
+run_fit = 0.56
+short_fit = 0.43
 deep_fit = 0.2
 group = 3
 goal_line = true

@@ -8,6 +8,7 @@ script = ExtResource("2_assign")
 label = "QB"
 job = 0
 start = Vector2(-4, 0)
+route = PackedVector2Array(-2, 0)
 
 [sub_resource type="Resource" id="c"]
 script = ExtResource("2_assign")
@@ -27,36 +28,34 @@ label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
 
-[sub_resource type="Resource" id="wr_l"]
+[sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
-label = "WR"
-job = 2
-start = Vector2(-0.6, -17)
+label = "TE"
+start = Vector2(-0.6, -3.4)
+route = PackedVector2Array(4, 0, 8, -7)
 
-[sub_resource type="Resource" id="wr_r"]
+[sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
-label = "WR"
-job = 2
-start = Vector2(-0.6, 8.3)
+label = "TE"
+start = Vector2(-0.6, 3.4)
+route = PackedVector2Array(3, 0, 7, -4)
 
 [sub_resource type="Resource" id="back"]
 script = ExtResource("2_assign")
 label = "RB"
-job = 3
-start = Vector2(-6, 2.5)
-route = PackedVector2Array(0.5, 8, 5, 15.9, 12, 18.8)
-
-[sub_resource type="Resource" id="te"]
-script = ExtResource("2_assign")
-label = "TE"
 job = 2
-start = Vector2(-0.6, 3.4)
+start = Vector2(-6.5, 0.4)
+
+[sub_resource type="Resource" id="y"]
+script = ExtResource("2_assign")
+label = "FB"
+start = Vector2(-4.5, 1.8)
+route = PackedVector2Array(2.5, 5, 5.5, 10)
 
 [resource]
 script = ExtResource("1_play")
-play_name = "Crack Toss"
-description = "Quick pitch to the back running wide to the right. Right wideout lines up tight and blocks down inside."
-category = 0
-is_run = true
-handoff_delay = 0.25
-assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("wr_l"), SubResource("wr_r"), SubResource("back"), SubResource("te")])
+play_name = "Goal Line Flat"
+description = "Fullback slips straight out to the right flat. Right tight end slants inside to clear it, left tight end fades to the corner. Back stays in to block."
+group = 5
+goal_line = true
+assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])

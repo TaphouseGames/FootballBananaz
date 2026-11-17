@@ -136,6 +136,7 @@ func _confirm(choice: Resource) -> void:
 		off_flipped = randf() < 0.5
 	if def_play == null:
 		def_play = game.play_caller.pick_defense(def_plays, game)
-		def_flipped = randf() < 0.5
+		# A one-sided play goes to the side of the formation it is meant for.
+		def_flipped = DefenseAligner.cpu_flip(def_play, off_play, off_flipped)
 	pc.line_up(off_play, def_play, off_flipped, def_flipped)
 	machine.transition(&"PreSnap")

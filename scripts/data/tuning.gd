@@ -111,6 +111,26 @@ extends Resource
 ## How long the arm stays out. The carrier can still steer.
 @export var stiff_arm_time: float = 0.5
 @export var stiff_arm_speed_scale: float = 0.9
+## Securing the ball (held): both arms round it, leaning forward. He is this
+## much slower for it.
+@export var secure_speed_scale: float = 0.9
+## Multiplies his chance of fumbling when he is tackled.
+@export var secure_fumble_scale: float = 0.8
+## He runs over a tackler on his feet in front of him with this chance per
+## point his strength is above the tackler's, up to the most. "In front" is the
+## least dot of his facing with the way to the tackler, and he has to be moving
+## at this speed or more. He keeps this share of his speed through it.
+@export var secure_truck_chance_per_point: float = 0.015
+@export var secure_truck_chance_max: float = 0.7
+@export var secure_truck_front_dot: float = 0.5
+@export var secure_truck_min_speed: float = 3.0
+@export var secure_truck_speed_keep: float = 0.6
+## Multiplies the chance against a tackler who dives at his legs.
+@export var secure_truck_dive_scale: float = 0.5
+## Wrapped up while securing he drags the tackler this much longer, and is this
+## much likelier (added to the chance) to shake him off at the end of it.
+@export var secure_drag_time_scale: float = 1.25
+@export var secure_shake_off_bonus: float = 0.15
 @export var knockdown_time: float = 1.1
 @export var knockdown_friction: float = 16.0
 
@@ -241,12 +261,19 @@ extends Resource
 ## Share of that penalty a receiver takes off by shielding the ball: he is
 ## standing still or coming back to it, and the defender is behind him.
 @export var cover_shield: float = 0.4
+## Share added to that penalty for a defender who has got in front of such a
+## receiver, between him and the ball.
+@export var cover_front: float = 0.25
 @export var catch_min_chance: float = 0.12
 @export var defender_catch_radius: float = 1.7
 ## Interception chance when the receiver fails the catch and a defender is at the ball.
 @export var interception_chance: float = 0.18
 ## Interception chance when no receiver is near the ball at all.
 @export var interception_chance_open: float = 0.5
+## Interception chance for a defender within reach of the ball and squarely in
+## front of a receiver who waits for it or comes back to it. Rolled before the
+## receiver's catch; less the further round to the side the defender is.
+@export var interception_chance_front: float = 0.12
 ## Chance removed by each defender in the air within reach of the ball.
 @export var contest_penalty: float = 0.15
 ## A pass nobody held on to stays in the air, and live, until it lands. Dropped
@@ -478,6 +505,45 @@ extends Resource
 ## his path for the first defender nobody is blocking who comes within this
 ## many yards.
 @export var ai_lead_block_range: float = 3.5
+## Run plays aimed inside: the hole is where the back's path crosses the line
+## of scrimmage, if that is within this many yards of the ball. A play that
+## goes wider (a toss, a sweep) has no hole and is blocked as before.
+@export var hole_max_width: float = 7.0
+## A blocker who gets the better of a defender within `hole_range` yards of the
+## hole moves him sideways away from it. How fast is
+## rolled once for each block: his blocking rating minus the defender's
+## strength (as a share of 100) plus `hole_drive_base`, plus or minus
+## `hole_drive_luck`. At `hole_drive_full` or more the defender goes at
+## `hole_drive_speed` yards a second; at zero or less he holds his ground.
+@export var hole_range: float = 6.0
+@export var hole_drive_speed: float = 4.0
+@export var hole_drive_base: float = 0.08
+@export var hole_drive_luck: float = 0.3
+@export var hole_drive_full: float = 0.45
+## He is moved for this long at the most, and only this close to the line.
+@export var hole_drive_time: float = 1.8
+@export var hole_drive_depth: float = 4.5
+## Once the back has the ball the defenders are moved away from the line he
+## is running: this share of the way from the hole to where he is.
+@export var hole_follow_back: float = 0.6
+## CPU back behind the line on such a play: he looks at lanes this far apart
+## either side of the hole and takes the one with the most room, every
+## `ai_hole_rethink` seconds. A lane away from the hole costs
+## `ai_hole_stray_cost` yards of room for every yard, and one away from the
+## lane he is already headed for `ai_hole_cut_cost`. A lane with at least
+## `ai_hole_min_room` yards either side pulls him toward it this hard (next to
+## the 1 that takes him straight upfield); with no such lane he runs as usual.
+## Off: in tests/run_hole_check.gd the back gained no more with it than by
+## running away from the nearest defender as he always has, and the blockers
+## move their men away from the line he runs anyway (hole_follow_back).
+@export var ai_hole_read: bool = false
+@export var ai_hole_min_room: float = 1.1
+@export var ai_hole_pull: float = 1.6
+@export var ai_hole_lane_step: float = 1.5
+@export var ai_hole_lanes: int = 2
+@export var ai_hole_rethink: float = 0.15
+@export var ai_hole_stray_cost: float = 0.35
+@export var ai_hole_cut_cost: float = 0.25
 
 @export_group("Impact Feel")
 ## Real-time seconds of hit-stop on a tackle.
@@ -763,6 +829,24 @@ extends Resource
 @export var ai_cover_lead: float = 0.15
 ## Yards a coverage defender stays on the deep side of his receiver.
 @export var ai_cover_cushion: float = 1.2
+## Technique, rolled per man defender per play (see PlayController._roll_technique).
+## Chance that he plays off: `off_cushion` yards deep of his man at the line,
+## down to ai_cover_cushion once the man is `off_depth` yards downfield. When
+## the man pulls up short the cushion closes at `off_close` yards a second.
+@export var ai_cover_off_chance: float = 0.3
+@export var ai_cover_off_cushion: float = 4.5
+@export var ai_cover_off_depth: float = 10.0
+@export var ai_cover_off_close: float = 3.0
+## Chance that he trails instead: `trail_cushion` yards on the quarterback's
+## side of his man. Only in a play with a deep defender behind him.
+@export var ai_cover_trail_chance: float = 0.15
+@export var ai_cover_trail_cushion: float = 1.0
+## A man defender drawn within this many yards of the line is pressing: he
+## plays tight whatever the roll.
+@export var ai_cover_press_depth: float = 2.5
+## Leverage: he shades up to this many yards to one side of his man (rolled per
+## play), so a route breaking the other way gains a step.
+@export var ai_cover_leverage: float = 1.0
 @export var ai_cover_speed_scale: float = 1.0
 ## A defender uses turbo to recover once his receiver is this far past him,
 ## or this far away in any direction.
@@ -885,6 +969,24 @@ extends Resource
 @export var ai_contest_range: float = 2.6
 @export var ai_contest_time: float = 0.3
 @export var ai_contest_chance: float = 0.6
+## Chance (before his coverage rating) that a defender going for the ball tries
+## to get in front of a receiver who waits for it or comes back to it:
+## `undercut_depth` yards toward the quarterback from where it comes down. He
+## has to be able to get there `undercut_margin` seconds before the ball, and
+## `undercut_safe_margin` more if he is a deep zone or nobody is behind him.
+@export var ai_undercut_chance: float = 0.5
+@export var ai_undercut_depth: float = 0.9
+@export var ai_undercut_margin: float = 0.1
+@export var ai_undercut_safe_margin: float = 0.25
+@export var undercut_coverage_scale_low: float = 0.6
+@export var undercut_coverage_scale_high: float = 1.3
+## Chance that a defender who will not get to the ball dives at the receiver
+## it is meant for instead, to put him on the ground before it arrives. There
+## is no pass interference. He has to be within `range` yards of him with no
+## more than `time` seconds of flight left; a miss leaves him on the turf.
+@export var ai_air_hit_chance: float = 0.15
+@export var ai_air_hit_range: float = 2.5
+@export var ai_air_hit_time: float = 0.3
 ## Chance that a CPU player who cannot reach the ball on his feet jumps or dives
 ## for it. Decided once per pass, this long before the ball arrives.
 @export var ai_catch_effort_chance: float = 0.4
@@ -922,6 +1024,20 @@ extends Resource
 @export var ai_move_late_max: float = 0.4
 ## Chance (before his juke rating) that a stiff arm goes out on the wrong side.
 @export var ai_move_wrong_side_chance: float = 0.12
+## Chance that a CPU carrier secures the ball for a tackler about to get to him
+## (rolled once per tackler), starting this many seconds before contact.
+@export var ai_secure_chance: float = 0.5
+@export var ai_secure_lead: float = 0.35
+## A carrier this many points stronger than the tackler in front of him lowers
+## his shoulder to run him over instead of trying a spin or a stiff arm. A
+## defender that much weaker than a carrier who is securing the ball goes for
+## his legs with a dive, which is harder to run over.
+@export var ai_secure_strength_margin: float = 10.0
+## The least chance of that dive (ai_dive_chance or its edge value if higher).
+@export var ai_secure_dive_chance: float = 0.85
+## The runner secures the ball through the line with this many yards or fewer
+## to go for the first down or the goal line.
+@export var ai_secure_short_yards: float = 2.0
 ## A CPU carrier dives when the goal line or the first-down marker is this close
 ## and a defender is nearer than the matching pressure distance.
 @export var ai_dive_reach: float = 3.0
@@ -954,6 +1070,9 @@ extends Resource
 ## ai_ball_react_time.
 @export var ai_edge_catch_effort_chance: float = 0.9
 @export var ai_edge_contest_chance: float = 0.9
+## In place of ai_undercut_chance and ai_air_hit_chance.
+@export var ai_edge_undercut_chance: float = 0.8
+@export var ai_edge_air_hit_chance: float = 0.25
 @export var ai_edge_keeper_chance: float = 0.28
 @export var ai_edge_rush_turbo_delay: float = 0.35
 @export var ai_edge_ball_react_time: float = 0.15
@@ -998,6 +1117,8 @@ extends Resource
 @export var ai_edge_move_wrong_side_chance: float = 0.02
 @export var ai_edge_move_chance: float = 0.85
 @export var ai_edge_dive_chance: float = 0.95
+## At full edge this takes the place of ai_secure_chance.
+@export var ai_edge_secure_chance: float = 0.9
 ## At full edge this takes the place of ai_jump_dive_chance.
 @export var ai_edge_jump_dive_chance: float = 0.25
 ## A carrier jumps over a tackler who dives at him from within this range,
@@ -1118,6 +1239,10 @@ extends Resource
 ## wall_splat_range); he stays stuck to it for `wall_splat_stick_time` before
 ## he peels off and falls on the turf.
 @export var wall_splat_speed: float = 4.0
+## His middle has to be within this many yards of the face of the wall as he
+## meets it to be flattened. Further off, touching it with an outstretched
+## hand or his head, he only comes back off it (wall_bounce).
+@export var wall_splat_range: float = 1.2
 @export var wall_splat_stick_time: float = 0.8
 ## Once he has come off the wall he lies dazed for this long, and gets up
 ## injured, as after a jump dive (see injury_rating_scale, injury_plays).
@@ -1185,7 +1310,3 @@ func own_goal_x(dir: int) -> float:
 ## World X for "own N yard line" of a team attacking in `dir`.
 func yard_to_x(dir: int, yard: float) -> float:
 	return yard if dir > 0 else field_length - yard
-## His middle has to be within this many yards of the face of the wall as he
-## meets it to be flattened. Further off, touching it with an outstretched
-## hand or his head, he only comes back off it (wall_bounce).
-@export var wall_splat_range: float = 1.2
