@@ -61,3 +61,5 @@ group = 1
 is_run = true
 handoff_delay = 0.6
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 5
+motion_to = Vector2(-1.2, 13.5)

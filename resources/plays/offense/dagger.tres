@@ -60,3 +60,5 @@ description = "Shotgun. Slot runs the seam to pull the safety away, left wideout
 category = 2
 group = 3
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 5
+motion_to = Vector2(-1.2, -4.5)

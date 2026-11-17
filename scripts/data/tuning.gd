@@ -767,6 +767,24 @@ extends Resource
 @export_range(0.0, 1.0) var qb_silly_open_chance: float = 0.15
 ## Longest a CPU quarterback holds the snap to finish a silly line.
 @export var cpu_silly_hold_max: float = 4.0
+## Motion before the snap (Y). A short motion, a return and one into the
+## backfield are jogged at this share of his speed; across is run, a jet sprinted.
+@export_range(0.3, 1.0) var motion_jog_scale: float = 0.8
+## Seconds before the man covering him sets off after him.
+@export var motion_follow_delay: float = 0.25
+## Seconds before a zone defense starts to shift, the most yards any of them
+## moves, and the share of his speed he walks it at.
+@export var motion_zone_delay: float = 0.4
+@export var motion_zone_shift_max: float = 3.0
+@export_range(0.2, 1.0) var motion_zone_walk_scale: float = 0.5
+## How often a CPU offense sends its man when the play has a motion, how long
+## after lining up, and how long it waits once he is set before it snaps.
+@export_range(0.0, 1.0) var ai_motion_chance: float = 0.35
+@export var ai_motion_time: float = 0.4
+@export var ai_motion_set_time: float = 0.25
+## A jet sweep: the man takes the ball at a sprint and runs `hole_burst_speed`
+## times as fast for this long, which is what gets him to the edge.
+@export var jet_sweep_burst_time: float = 1.5
 ## Seconds after the whistle during which late hits are allowed.
 @export var late_hit_window: float = 1.6
 @export var scored_banner_time: float = 5.0

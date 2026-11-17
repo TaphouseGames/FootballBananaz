@@ -54,9 +54,18 @@ label = "TE"
 job = 2
 start = Vector2(-0.6, 3.4)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "WR"
+start = Vector2(-2.4, -9)
+route = PackedVector2Array(41, 0)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "TE Delay"
 description = "Wideout runs the coverage off deep, back to the right flat. Left tight end blocks, then slips out over the middle."
 group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 2
+motion_to = Vector2(-2.4, -9)
+motion_assignment = SubResource("motion")

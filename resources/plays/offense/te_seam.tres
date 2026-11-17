@@ -53,6 +53,13 @@ label = "TE"
 start = Vector2(-0.6, 3.4)
 route = PackedVector2Array(12, 0, 40, -2)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "WR"
+start = Vector2(-2.4, -9)
+route = PackedVector2Array(13, 0, 11.5, 1.5)
+settle = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "TE Seam"
@@ -60,3 +67,6 @@ description = "All four out. Right tight end straight up the seam, left tight en
 category = 2
 group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 2
+motion_to = Vector2(-2.4, -9)
+motion_assignment = SubResource("motion")

@@ -52,6 +52,12 @@ label = "TE"
 start = Vector2(-0.6, 3.4)
 route = PackedVector2Array(8, 0, 14, 10)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "WR"
+start = Vector2(-2.4, -9)
+route = PackedVector2Array(13, 0, 41, 9)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Flood"
@@ -59,3 +65,6 @@ description = "Three levels on the right side: wideout deep, tight end to the si
 category = 2
 group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 2
+motion_to = Vector2(-2.4, -9)
+motion_assignment = SubResource("motion")

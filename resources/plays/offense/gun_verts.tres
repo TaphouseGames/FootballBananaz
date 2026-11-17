@@ -59,3 +59,5 @@ description = "Shotgun. Both wideouts straight up the field, slot up the seam be
 category = 2
 group = 3
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 5
+motion_to = Vector2(-1.2, -4.5)

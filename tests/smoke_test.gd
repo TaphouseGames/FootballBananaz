@@ -17,7 +17,7 @@ const MONKEY_ACTIONS: Array[StringName] = [
 	&"move_left", &"move_right", &"move_up", &"move_down",
 	&"turbo", &"jump", &"confirm", &"action", &"switch_player", &"pass_1", &"pass_2", &"pass_3", &"pass_4",
 	&"jump_alt", &"spin", &"stiff_arm_left", &"stiff_arm_right",
-	&"pass_lead", &"pass_under", &"flip_play", &"qb_call", &"throw_away",
+	&"pass_lead", &"pass_under", &"flip_play", &"qb_call", &"throw_away", &"motion",
 ]
 
 var _game: Game

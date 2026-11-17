@@ -54,9 +54,19 @@ label = "TE"
 job = 2
 start = Vector2(-0.6, 3.4)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "WR"
+start = Vector2(-1.5, 8.5)
+route = PackedVector2Array(12, 0, 10.5, -2)
+settle = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Curl Flat"
 description = "Wideouts stop and turn back at twelve yards. Back swings out to the right and turns upfield."
 group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 1
+motion_to = Vector2(-1.5, 8.5)
+motion_assignment = SubResource("motion")

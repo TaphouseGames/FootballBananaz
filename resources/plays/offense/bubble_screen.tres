@@ -59,3 +59,5 @@ play_name = "Bubble Screen"
 description = "Shotgun, three on the right. Slot steps back and out for a quick throw behind the line, the two men beside him block. Back swings left."
 group = 4
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 5
+motion_to = Vector2(-1.5, 9)

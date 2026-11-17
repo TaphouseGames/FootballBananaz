@@ -419,6 +419,10 @@ prompt `[shouting] ...`, one take, levelled to the `qb_cadence` files (RMS
   then (`Tuning.qb_silly_chance`, `qb_silly_open_chance`). A CPU quarterback
   holds the snap for one, up to `cpu_silly_hold_max` seconds, so keep them
   under four seconds.
+- `qb_motion_<n>`: said as the quarterback sends a receiver in motion ((Y)
+  before the snap, `AudioDirector.qb_motion`), with his leg kick. Half of them
+  serious, half silly, one picked at random. Short: the man is already on his
+  way, and a jet motion is snapped within a second or two.
 
 `qb_call` (2026-11-13): Blue forty-two! · Ohio! Ohio! · Hut! Hut! · Set! Set! ·
 Omaha! Omaha! · Red nineteen! Red nineteen! · Green eighty! Green eighty! ·
@@ -433,6 +437,11 @@ Spaghetti twenty-two! · Nobody tackle me, okay?! · Is it Tuesday? TUESDAY! ·
 Wi-fi password! Wi-fi password! · My hands are cold! Hurry up! · Purple!
 Seven... teen... ish! · Who ordered the nachos?! Who ordered the nachos?! ·
 Ohio! No, the OTHER Ohio! · I forgot the snap count!
+
+`qb_motion` (2026-11-17): Motion! Motion! · Shift! Shift! · Move! Move! · Slide
+over! · Jet! Jet! · Check, check, go! · Reset! Other side! · Walkies! · Scoot
+your boot! · You! Yes, you! Over there! · Shoo! Shoo! · Musical chairs! Go! ·
+Go stand somewhere else! · New spot, who dis?
 
 ## Script
 

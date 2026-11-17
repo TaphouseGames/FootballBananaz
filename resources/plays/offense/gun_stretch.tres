@@ -52,6 +52,13 @@ label = "HB"
 job = 2
 start = Vector2(-1.5, 5.4)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "HB"
+job = 2
+start = Vector2(-7, 2.5)
+route = PackedVector2Array(3.5, 5.5, 8, 9.5)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Stretch"
@@ -61,3 +68,6 @@ group = 4
 is_run = true
 handoff_delay = 0.4
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 4
+motion_to = Vector2(-7, 2.5)
+motion_assignment = SubResource("motion")

@@ -53,9 +53,18 @@ label = "TE"
 start = Vector2(-0.6, 3.4)
 route = PackedVector2Array(6, 0, 13, -20)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "WR"
+start = Vector2(-1.5, 8.5)
+route = PackedVector2Array(12, 0, 40, -8)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "TE Cross"
 description = "Right tight end crosses the field twelve yards deep, wideout runs the post over him. Left tight end in the left flat, back sits down on the right."
 group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 1
+motion_to = Vector2(-1.5, 8.5)
+motion_assignment = SubResource("motion")

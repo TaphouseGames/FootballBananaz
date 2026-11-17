@@ -44,6 +44,29 @@ const GROUP_NAMES: PackedStringArray = ["I-FORM", "SINGLEBACK", "HEAVY", "GUN SP
 @export var goal_line: bool = false
 @export var assignments: Array[OffenseAssignment] = []
 
+## Motion before the snap: one receiver (MotionRules.pick says which) may be
+## sent on his way with (Y). See PreSnapMotion.
+## ZIP: a short way in toward the formation, on his own side.
+## ACROSS: behind the line to the other side of the formation.
+## JET: across at full speed in front of a shotgun quarterback, to be snapped
+##   while he runs. Left unsnapped he sets on the other side.
+## ORBIT: into the backfield, beside the quarterback.
+## RETURN: a few yards in and back to where he was. The line-up stays as it is;
+##   what the defense does about it is the point.
+enum Motion { NONE, ZIP, ACROSS, JET, ORBIT, RETURN }
+
+@export var motion: Motion = Motion.NONE
+## Where he ends up, as drawn (x downfield, y lateral). RETURN: where he turns
+## round.
+@export var motion_to: Vector2 = Vector2.ZERO
+## His job after the motion, with `start` his new spot. JET: his job when the
+## ball is snapped while he runs, with `start` the point in front of the
+## quarterback his path goes through. Null (RETURN): the job the play draws.
+@export var motion_assignment: OffenseAssignment
+## Run play: snapped while he runs, the ball goes to the motion man (a jet
+## sweep) and the drawn runner leads the way for him.
+@export var motion_handoff: bool = false
+
 
 ## How many yards past the line the deepest route of the play is drawn.
 func deepest_route() -> float:

@@ -14,6 +14,8 @@ extends SceneTree
 ##                 upfield for every yard across (default 9/0.35)
 ##   scout         leave the defense's memory of earlier plays on (off by default,
 ##                 so every snap is defended as if seen for the first time)
+##   motion        send the motion man (Y) on every play that has one, and snap
+##                 once he has set (a jet: as he gets to the quarterback)
 ##   snaps=<n>     snaps per cell (default 120 for matrix, 40 for spam)
 ##   off=<text>    only offensive plays whose name contains the text
 ##   tab=<text>    only offensive plays on the tab (formation) whose name contains the text
@@ -50,6 +52,8 @@ var _detail: bool = false
 var _spam_times: PackedFloat64Array = PackedFloat64Array([0.8, 1.4, 2.0, 2.6])
 var _overrides: Dictionary[String, float] = {}
 var _scout: bool = false
+## Every play that has a motion (Y) is run with its man sent.
+var _motion: bool = false
 ## Spam probe: how the fixed throw is placed (normal, lead, under, or cpu to let
 ## the CPU quarterback choose).
 var _place: String = "normal"
@@ -105,6 +109,8 @@ func _initialize() -> void:
 			_rollout_forward = shape[1] if shape.size() > 1 else _rollout_forward
 		elif arg == "scout":
 			_scout = true
+		elif arg == "motion":
+			_motion = true
 		elif arg.begins_with("home=") or arg.begins_with("away="):
 			_teams[0 if arg.begins_with("home=") else 1] = arg.get_slice("=", 1)
 		elif arg.begins_with("times="):
@@ -239,6 +245,17 @@ func _start_play() -> void:
 	var off_index: int = job["off"]
 	var def_index: int = job["def"]
 	_pc.line_up(_game.offense_playbook.plays[off_index], _game.defense_playbook.plays[def_index])
+	if _motion and _pc.motion.call_motion():
+		# The man is sent and the ball snapped once he has set, or with a jet
+		# as he gets to the quarterback.
+		for _i: int in 720:
+			_pc.motion.tick(1.0 / 60.0)
+			if _pc.motion.state == PreSnapMotion.State.SET or _pc.motion.jet_in_window():
+				break
+		if _pc.motion.state == PreSnapMotion.State.SET:
+			# The defense gets the moment it takes to settle, too.
+			for _i: int in 90:
+				_pc.motion.tick(1.0 / 60.0)
 	_pc.snap()
 	_pc.state_machine.transition(&"Live")
 	_completions_before = _game.get_stat(&"completions")

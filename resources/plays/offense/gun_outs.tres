@@ -52,9 +52,18 @@ label = "SL"
 start = Vector2(-1.2, -8.3)
 route = PackedVector2Array(12, 0, 40, 3)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "SL"
+start = Vector2(-2.2, 8.3)
+route = PackedVector2Array(13, 0, 41, -3)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Outs"
 description = "Shotgun. Both wideouts break to the sideline six yards deep, slot up the seam to hold the safety. Back stays in to block."
 group = 3
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 2
+motion_to = Vector2(-2.2, 8.3)
+motion_assignment = SubResource("motion")

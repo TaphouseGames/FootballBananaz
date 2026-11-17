@@ -102,6 +102,7 @@ const QUIP_RESUME: StringName = &"color_resume"
 ## The quarterback's extra shouts before the snap (B), and his silly ones.
 const QB_CALL: StringName = &"qb_call"
 const QB_SILLY: StringName = &"qb_silly"
+const QB_MOTION: StringName = &"qb_motion"
 ## Fourth and twenty: the booth cannot let 4:20 go by.
 const QUIP_BLAZE: StringName = &"color_blaze"
 const BLAZE_DOWN: int = 4
@@ -876,6 +877,15 @@ func qb_call() -> void:
 	elif not has_sound(QB_CALL):
 		sound = &"qb_cadence"
 	say(sound, true)
+
+
+## The quarterback sends a receiver in motion (Y): a line of its own, serious
+## or silly, and a plain shout while there are none.
+func qb_motion() -> void:
+	if has_sound(QB_MOTION):
+		say(QB_MOTION, true)
+	else:
+		qb_call()
 
 
 ## Stirs the crowd without a cheer or a groan.

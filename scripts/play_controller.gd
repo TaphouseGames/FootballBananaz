@@ -162,6 +162,8 @@ var _pushes: PackedVector3Array = PackedVector3Array()
 ## (Running them immediately gave the team that thinks second an edge.)
 var _thinking: bool = false
 var _queued_actions: Array[Callable] = []
+## Motion before the snap: who may be sent, and what the defense does about it.
+var motion: PreSnapMotion
 
 @onready var state_machine: StateMachine = $StateMachine
 
@@ -171,6 +173,7 @@ func setup(p_game: Game) -> void:
 	tuning = game.tuning
 	ball = game.ball
 	human = game.human
+	motion = PreSnapMotion.new(self)
 	_gather_players()
 	state_machine.setup(self)
 
@@ -228,10 +231,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 
 	_find_run_hole()
 
-	# The men who can be thrown to, in play order: the order of the pass buttons.
-	for player: Player in offense.players:
-		if player != qb and player.brain.off_assign.job != OffenseAssignment.Job.BLOCK:
-			eligible.append(player)
+	_list_eligible()
 
 	# The defense lines up on what it sees: where the offense stands, not what
 	# its play is going to be. See DefenseAligner.
@@ -244,21 +244,10 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 		seen.append(spot)
 		if absf(spot.y) >= DefenseAligner.LINE_WIDTH or spot.x <= DefenseAligner.LINE_DEPTH:
 			seen_players.append(player)
-	var formation: DefenseAligner = DefenseAligner.read(seen)
-	var cover_order: PackedInt32Array = formation.man_order()
-
-	# Close to the goal line the play as drawn would put its deep men and zones
-	# past the back of the end zone: squeeze it up to fit.
-	var room: float = (tuning.goal_x(offense.attack_dir) - los_x) * off_dir + tuning.end_zone_depth - tuning.def_back_margin
-	var deepest: float = 0.0
-	for assignment: DefenseAssignment in p_def.assignments:
-		deepest = maxf(deepest, assignment.start.x)
-		if assignment.job == DefenseAssignment.Job.ZONE:
-			deepest = maxf(deepest, assignment.zone_center.x)
-	var depths: PackedFloat32Array = PackedFloat32Array()
-	for assignment: DefenseAssignment in p_def.assignments:
-		depths.append(_def_point(assignment.start, deepest, room).x)
-	var spots: PackedVector2Array = formation.starts(p_def, def_flip, depths)
+	var cover_order: PackedInt32Array = DefenseAligner.read(seen).man_order()
+	var spots: PackedVector2Array = defense_spots(seen)
+	var room: float = _def_room()
+	var deepest: float = _def_deepest()
 
 	for i: int in defense.players.size():
 		var player: Player = defense.players[i]
@@ -274,7 +263,6 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 		if assignment.job == DefenseAssignment.Job.RUSH and assignment.start.x <= tuning.line_depth:
 			player.speed_scale = tuning.line_speed_scale
 		player.brain.assign_defense(assignment, start, target, to_world(_def_point(assignment.zone_center, deepest, room), def_flip))
-	_assign_run_blocks()
 	_scout_defense()
 	_roll_blown_coverage()
 	_roll_technique(p_def)
@@ -287,8 +275,45 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 
 	ball.place_on_ground(Vector3(los_x, 0.0, 0.0))
 	game.field.set_markers(los_x, game.first_down_x, not game.goal_to_go)
+	motion.prepare()
 	human.on_line_up()
 	_update_markers()
+
+
+## The men who can be thrown to, in play order: the order of the pass buttons.
+func _list_eligible() -> void:
+	eligible.clear()
+	for player: Player in offense.players:
+		if player != qb and player.brain.off_assign.job != OffenseAssignment.Job.BLOCK:
+			eligible.append(player)
+
+
+## Where the defensive play lines up against an offense standing on `seen`
+## (every offensive player but the quarterback, in the offense's frame as it
+## is on the field): one point per assignment. See DefenseAligner.
+func defense_spots(seen: Array[Vector2]) -> PackedVector2Array:
+	var room: float = _def_room()
+	var deepest: float = _def_deepest()
+	var depths: PackedFloat32Array = PackedFloat32Array()
+	for assignment: DefenseAssignment in def_play.assignments:
+		depths.append(_def_point(assignment.start, deepest, room).x)
+	return DefenseAligner.read(seen).starts(def_play, -1.0 if def_flipped else 1.0, depths)
+
+
+## Close to the goal line the play as drawn would put its deep men and zones
+## past the back of the end zone, and is squeezed up to fit (_def_point): the
+## yards there are for it, and how deep it is drawn.
+func _def_room() -> float:
+	return (tuning.goal_x(offense.attack_dir) - los_x) * off_dir + tuning.end_zone_depth - tuning.def_back_margin
+
+
+func _def_deepest() -> float:
+	var deepest: float = 0.0
+	for assignment: DefenseAssignment in def_play.assignments:
+		deepest = maxf(deepest, assignment.start.x)
+		if assignment.job == DefenseAssignment.Job.ZONE:
+			deepest = maxf(deepest, assignment.zone_center.x)
+	return deepest
 
 
 ## Where a run play is aimed: the point at which the back's path as drawn
@@ -549,6 +574,8 @@ func _reset_play() -> void:
 	heave = false
 	qb = null
 	runner = null
+	if motion != null:
+		motion.reset()
 	eligible.clear()
 	ball_breakers.clear()
 	ball_coverer = null
@@ -913,6 +940,13 @@ func _roll_play_action() -> void:
 
 
 func snap() -> void:
+	if not kickoff:
+		# A man sent in motion gets the job that goes with where he is by now.
+		if motion.settle():
+			_list_eligible()
+			_find_run_hole()
+		# The run is blocked for where everybody stands at the snap.
+		_assign_run_blocks()
 	ball_dead = false
 	live_time = 0.0
 	phase = Phase.POCKET
@@ -1205,12 +1239,18 @@ func _aim_quarterback() -> void:
 
 
 func _try_handoff() -> void:
-	if not off_play.is_run or handoff_done or runner == null or live_time < off_play.handoff_delay:
+	if not off_play.is_run or handoff_done or runner == null:
+		return
+	# A jet sweep is handed over as the man goes by, not on the play's count.
+	var passing: bool = motion.jet_sweep and live_time >= 0.1 and _flat_distance(qb.position, runner.position) <= tuning.handoff_reach
+	if live_time < off_play.handoff_delay and not passing:
 		return
 	handoff_done = true
 	if ball.carrier != qb or qb.is_down() or runner.is_down() or qb.state == Player.State.DRAGGING:
 		return
 	_hand_over(qb, runner)
+	if motion.jet_sweep:
+		runner.burst_timer = tuning.jet_sweep_burst_time
 	phase = Phase.RUN
 	handoff_time = live_time
 	game.add_stat(&"handoffs")

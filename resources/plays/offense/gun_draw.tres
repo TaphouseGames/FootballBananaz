@@ -52,6 +52,12 @@ label = "SL"
 start = Vector2(-1.2, -8.3)
 route = PackedVector2Array(40, 1.4)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "SL"
+start = Vector2(-5.5, 0)
+route = PackedVector2Array(0, 8, 3, 15, 12, 19)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Draw"
@@ -61,3 +67,6 @@ group = 3
 is_run = true
 handoff_delay = 0.55
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 3
+motion_to = Vector2(-5.5, 8.3)
+motion_assignment = SubResource("motion")

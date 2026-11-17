@@ -219,7 +219,8 @@ func think(pc: PlayController, delta: float) -> void:
 			if carrier == null:
 				return
 			if carrier == player:
-				_carry(pc)
+				if not _sweep(pc):
+					_carry(pc)
 			elif carrier.team == player.team:
 				_lead_block(pc, carrier.position)
 			elif _reading_run(pc, carrier):
@@ -942,8 +943,28 @@ func _open_at_spot(target: Player, spot: Vector3, flight: float) -> float:
 	return best
 
 
+## A jet sweep (PreSnapMotion.jet_sweep): the man who took the ball on the run
+## keeps to the path the play draws for him, flat out, until he is round the
+## end and at the line. Left to _carry he would turn upfield where he got the
+## ball, straight into his own linemen.
+func _sweep(pc: PlayController) -> bool:
+	if not pc.motion.jet_sweep or player != pc.runner or route_index >= route.size():
+		return false
+	if (player.position.x - pc.los_x) * pc.off_dir >= 0.0:
+		return false
+	var target: Vector3 = route[route_index]
+	if _flat_distance(player.position, target) < 0.9:
+		route_index += 1
+	player.move_input = _direction_to(target)
+	player.wants_turbo = true
+	return true
+
+
 func _run_route(pc: PlayController) -> void:
 	_call_for_ball(pc)
+	if player == pc.runner and pc.motion.jet_sweep:
+		# A jet sweep: he comes past the quarterback at full speed.
+		player.wants_turbo = true
 	if player == pc.runner and pc.selling_run():
 		# Play action: he hits the hole like a man with the ball.
 		player.wants_turbo = true

@@ -24,6 +24,7 @@ const MAN_COLOR: Color = Color(0.45, 0.9, 0.45)
 const ZONE_COLOR: Color = Color(0.4, 0.7, 1.0)
 const DEEP_COLOR: Color = Color(0.75, 0.6, 1.0)
 const SPY_COLOR: Color = Color(1.0, 0.7, 0.25)
+const MOTION_COLOR: Color = Color(0.45, 0.95, 1.0)
 
 var _offense: OffensePlay
 var _defense: DefensePlay
@@ -88,6 +89,28 @@ func _draw_offense() -> void:
 					draw_circle(start, 3.5, ROUTE_COLOR, false, 2.0, true)
 				else:
 					draw_circle(start, 4.0, ROUTE_COLOR, true, -1.0, true)
+	_draw_motion()
+
+
+## The motion (Y) sends a receiver on: a dashed line from his spot along the
+## way he goes, with a ring where he ends up. A return motion ends where it
+## began, so it is only the line out to where he turns, with a bar across.
+func _draw_motion() -> void:
+	var path: PackedVector2Array = MotionRules.path(_offense)
+	if path.is_empty():
+		return
+	var from: Vector2 = _off_point(_offense.assignments[MotionRules.pick(_offense)].start)
+	if _offense.motion == OffensePlay.Motion.RETURN:
+		var turn: Vector2 = _off_point(path[0])
+		draw_dashed_line(from, turn, MOTION_COLOR, 1.5, 4.0, true, true)
+		var across: Vector2 = (turn - from).normalized().orthogonal() * 4.0
+		draw_line(turn - across, turn + across, MOTION_COLOR, 1.5, true)
+		return
+	for point: Vector2 in path:
+		var to: Vector2 = _off_point(point)
+		draw_dashed_line(from, to, MOTION_COLOR, 1.5, 4.0, true, true)
+		from = to
+	draw_circle(from, 3.5, MOTION_COLOR, false, 1.5, true)
 
 
 func _draw_path(assignment: OffenseAssignment, color: Color, width: float, arrow: bool) -> void:

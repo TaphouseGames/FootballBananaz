@@ -59,3 +59,5 @@ play_name = "HB Screen"
 description = "Wideouts clear out deep. Dump it to the back behind the line on the left."
 group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 5
+motion_to = Vector2(-1.2, 13.5)

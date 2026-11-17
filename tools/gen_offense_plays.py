@@ -213,6 +213,101 @@ PLAYS = [
      [rt(2, 0, 3, 12), rt(3.5, 0, 4.5, -12), rt(2, -6, 5, -13), rt(9, -1.8, settle=True, bt=0.5)]),
 ]
 
+# ---- Motion before the snap ------------------------------------------------
+# The motion man is the receiver off the line (and not in the backfield) who
+# is nearest the ball: see scripts/motion_rules.gd, and pick() below, which
+# has to agree with it. I-Form and Goal Line have nobody like that.
+ZIP, ACROSS, JET, ORBIT, RETURN = 1, 2, 3, 4, 5
+# Where he ends up, per formation's motion man. He never moves toward the
+# line, so a spot is never further up than the path that leads to it.
+Z_ZIP, Z_RETURN = (-1.5, 8.5), (-1.2, 13.5)                                         # Singleback, Heavy: the flanker
+# All the way across to the left slot, between the line and the quarterback
+# under center: 27 yards, three and a half seconds of the play clock.
+Z_ACROSS = (-2.4, -9)
+SL_ACROSS, SL_ORBIT, SL_JET, SL_RETURN = (-2.2, 8.3), (-7, -2.5), (-5.5, 8.3), (-1.2, -4.5)   # Gun Spread: the slot
+W_ACROSS, W_ORBIT, W_JET, W_RETURN = (-2.2, -6), (-7, 2.5), (-5.5, -6), (-1.5, 9)   # Gun Trips: the wing
+# Where a jet motion passes in front of the shotgun quarterback.
+MESH = (-5.5, 0)
+
+
+def mo(kind, to, job=None, handoff=False):
+    return (kind, to, job, handoff)
+
+
+# file -> motion, target spot, his job from there (routes relative to the new
+# spot; JET: relative to MESH, for a snap while he runs). RETURN keeps the job
+# the play draws. A play that is not here has no motion.
+MOTIONS = {
+    # Singleback
+    # A flanker who comes in tight to block has a path to the point of the run
+    # and takes the first free man there (a crack block). Just standing in
+    # tight he brings his own man to the run and helps nobody.
+    "off_tackle": mo(ZIP, Z_ZIP, lead(3, -2, 5.5, -3)),
+    "counter": mo(RETURN, Z_RETURN),
+    # The draw wants the defense spread out: with him across the formation it
+    # lost three yards a carry, so he comes back to where he was.
+    "draw": mo(RETURN, Z_RETURN),
+    "curl_flat": mo(ZIP, Z_ZIP, rt(12, 0, 10.5, -2, settle=True)),
+    "mesh": mo(ZIP, Z_ZIP, rt(8, 0, 12.5, -26)),
+    "hb_screen": mo(RETURN, Z_RETURN),
+    "bootleg": mo(RETURN, Z_RETURN),
+    "crossfire": mo(ZIP, Z_ZIP, rt(3, 0, 6, -24)),
+    # The deep level of the flood comes from the far slot: a post to the middle.
+    "flood": mo(ACROSS, Z_ACROSS, rt(13, 0, 41, 9)),
+    # Heavy
+    "double_tight_power": mo(ZIP, Z_ZIP, lead(2.5, -4.5, 5, -5.5)),
+    "hb_dive": mo(RETURN, Z_RETURN),
+    "power_sweep": mo(ZIP, Z_ZIP, lead(2.5, -2.5, 5, -1.5)),
+    # Runs the coverage off on the left: the right is empty for the back's flat.
+    "te_delay": mo(ACROSS, Z_ACROSS, rt(41, 0)),
+    "te_flat": mo(RETURN, Z_RETURN),
+    "te_corner": mo(ZIP, Z_ZIP, rt(5, 0, 4.5, 1, settle=True)),
+    "te_cross": mo(ZIP, Z_ZIP, rt(12, 0, 40, -8)),
+    # Curls between the left tight end's corner route and the back's flat.
+    "te_seam": mo(ACROSS, Z_ACROSS, rt(13, 0, 11.5, 1.5, settle=True)),
+    "max_protect": mo(RETURN, Z_RETURN),
+    # Gun Spread
+    "gun_draw": mo(JET, SL_JET, rt(0, 8, 3, 15, 12, 19)),
+    # The jet sweep: it goes to the side with a wideout to block the corner,
+    # and the back, who steps that way anyway, leads it.
+    "gun_counter": mo(JET, SL_JET, run(0.5, 5, 5.5, 9, 13, 11), handoff=True),
+    "gun_stick": mo(ACROSS, SL_ACROSS, rt(7.6, 0, 7.1, -1.5, settle=True)),
+    # Into the backfield and out to the left flat the drag has just left.
+    "drive": mo(ORBIT, SL_ORBIT, rt(1, -6.6, 4, -15.2)),
+    "gun_outs": mo(ACROSS, SL_ACROSS, rt(13, 0, 41, -3)),
+    # Four verticals want two men on each side of the field.
+    "gun_verts": mo(RETURN, SL_RETURN),
+    "dagger": mo(RETURN, SL_RETURN),
+    "gun_flea_flicker": mo(RETURN, SL_RETURN),
+    # Gun Trips
+    "gun_stretch": mo(ORBIT, W_ORBIT, lead(3.5, 5.5, 8, 9.5)),
+    # Not a jet sweep away from the three receivers: nobody is out there to
+    # block for it. The wing comes into the backfield and leads the dive.
+    "gun_dive": mo(ORBIT, W_ORBIT, lead(6, -3, 11, -3.4)),
+    "bubble_screen": mo(RETURN, W_RETURN),
+    "smash": mo(ACROSS, W_ACROSS, rt(8.2, 0, 7.7, 2, settle=True)),
+    # A corner route on the left, over the back's swing: the two in-breakers
+    # come across underneath it.
+    "gun_levels": mo(ACROSS, W_ACROSS, rt(10, 0, 18, -9)),
+    "gun_boot": mo(ACROSS, W_ACROSS, rt(3.5, -2, 5, -10)),
+    # Still the flat level of the flood, swinging out of the backfield.
+    "gun_trips_flood": mo(ORBIT, W_ORBIT, rt(1, 6.6, 4, 15.2)),
+    "scissors": mo(ORBIT, W_ORBIT, rt(1, 6.6, 4, 15.2)),
+    "da_bomb": mo(RETURN, W_RETURN),
+}
+
+
+def pick(skill):
+    """The motion man's place among the four skill players, or -1."""
+    best = -1
+    for i, (_label, (x, y)) in enumerate(skill):
+        if x > -1.0 or x < -2.5:
+            continue
+        if best < 0 or abs(y) < abs(skill[best][1][1]):
+            best = i
+    return best
+
+
 REMOVED = ["deep_bomb", "end_around", "wildcat_jet", "wildcat_pass", "crack_toss", "fb_belly", "hb_slot_out",
            "mismatch_go", "gun_empty_slants", "gl_fade", "gl_empty", "gl_rub", "gl_pa",
            "hb_toss"]
@@ -255,6 +350,17 @@ def write_play(spec):
         settle = job[2] if len(job) > 2 else False
         bt = job[3] if len(job) > 3 else 0.0
         out.append(sub(ids[4 + i], label, kind, start, route, settle, bt))
+    motion = MOTIONS.get(file)
+    if motion:
+        kind, to, job, handoff = motion
+        man = pick(skill)
+        assert man >= 0, "%s: nobody may go in motion" % file
+        assert (job is None) == (kind == RETURN), file
+        if job:
+            start = MESH if kind == JET else to
+            settle = job[2] if len(job) > 2 else False
+            bt = job[3] if len(job) > 3 else 0.0
+            out.append(sub("motion", skill[man][0], job[0], start, job[1], settle, bt))
     res = ["[resource]", 'script = ExtResource("1_play")', 'play_name = "%s"' % name, 'description = "%s"' % desc]
     if category != SHORT:
         res.append("category = %d" % category)
@@ -268,6 +374,13 @@ def write_play(spec):
     if formation == GOAL_LINE:
         res.append("goal_line = true")
     res.append('assignments = Array[ExtResource("2_assign")]([%s])' % ", ".join('SubResource("%s")' % i for i in ids))
+    if motion:
+        res.append("motion = %d" % motion[0])
+        res.append("motion_to = %s" % vec(motion[1]))
+        if motion[2]:
+            res.append('motion_assignment = SubResource("motion")')
+        if motion[3]:
+            res.append("motion_handoff = true")
     out.append("\n".join(res) + "\n")
     with open("resources/plays/offense/%s.tres" % file, "w", newline="\n") as handle:
         handle.write("\n".join(out))
@@ -275,6 +388,7 @@ def write_play(spec):
 
 assert len(PLAYS) == 54, len(PLAYS)
 assert len({p[0] for p in PLAYS}) == 54
+assert set(MOTIONS) <= {p[0] for p in PLAYS}, set(MOTIONS) - {p[0] for p in PLAYS}
 for formation in range(6):
     assert sum(1 for p in PLAYS if p[3] == formation) == 9, formation
 for play in PLAYS:

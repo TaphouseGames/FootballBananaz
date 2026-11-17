@@ -53,9 +53,19 @@ start = Vector2(-1.2, -8.3)
 route = PackedVector2Array(6.6, 0, 6.1, 1.5)
 settle = true
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "SL"
+start = Vector2(-2.2, 8.3)
+route = PackedVector2Array(7.6, 0, 7.1, -1.5)
+settle = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Stick"
 description = "Shotgun. Slot sits down six yards deep, left wideout fades behind him. Right wideout slants, back swings to the right flat."
 group = 3
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 2
+motion_to = Vector2(-2.2, 8.3)
+motion_assignment = SubResource("motion")

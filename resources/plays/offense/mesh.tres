@@ -53,9 +53,18 @@ start = Vector2(-0.6, 3.4)
 route = PackedVector2Array(1.5, 2, 2.5, 10)
 block_time = 0.8
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "WR"
+start = Vector2(-1.5, 8.5)
+route = PackedVector2Array(8, 0, 12.5, -26)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Mesh"
 description = "Wideouts cross over the middle 8 yards deep. Back angles in underneath. Tight end blocks, then slips to the right flat."
 group = 1
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 1
+motion_to = Vector2(-1.5, 8.5)
+motion_assignment = SubResource("motion")

@@ -70,6 +70,8 @@ const CHEERS: int = 3
 const SULKS: int = 5
 const SULK_TRUDGE: int = 4
 const SPIKE_TIME: float = 0.4
+## How long the quarterback's leg kick lasts when he sends a man in motion.
+const MOTION_KICK_TIME: float = 0.7
 ## Hands on hips, elbows out. The pose gets the elbows about right and the palms
 ## are then put on the hips: this far out to the side, up and forward of the
 ## hips bone, in skeleton units.
@@ -139,6 +141,9 @@ var _phase: float = 0.0
 var _clock: float = 0.0
 var _throw_timer: float = 0.0
 var _spike_timer: float = 0.0
+## What is left of the leg kick, and the side it goes to (+1 his right).
+var _kick_timer: float = 0.0
+var _kick_side: float = 1.0
 var _was_thrower: bool = false
 var _ball_hand: int = B.HAND_L
 ## Above 0 while both hands follow the ball (a pass coming in, or one just
@@ -402,6 +407,7 @@ func update(delta: float, instant: bool) -> void:
 	_clock += delta
 	_throw_timer = maxf(_throw_timer - delta, 0.0)
 	_spike_timer = maxf(_spike_timer - delta, 0.0)
+	_kick_timer = maxf(_kick_timer - delta, 0.0)
 	_ground = 1.0
 	_rate = 14.0
 	_cycle_rate = 0.0
@@ -936,6 +942,8 @@ func _build_pose(delta: float) -> void:
 	if player.frozen:
 		_mode = 20
 		_stance()
+		if _kick_timer > 0.0:
+			_motion_kick()
 		return
 
 	match player.state:
@@ -1264,6 +1272,41 @@ func _qb_cocked() -> void:
 	_pose[B.HAND_R] = Vector3(0.0, 0.0, -20.0)
 	_pose[B.ARM_L] = Vector3(-55.0, 0.0, -62.0)
 	_pose[B.FORE_L] = Vector3(0.0, -70.0, 0.0)
+
+
+## The quarterback sends a receiver in motion: a leg kick toward `side` (+1 his
+## right, -1 his left), far bigger than the heel tap it is on a real field.
+func motion_kick(side: float) -> void:
+	_kick_timer = MOTION_KICK_TIME
+	_kick_side = 1.0 if side >= 0.0 else -1.0
+
+
+## Out of his stance: the leg goes back for the wind-up, then up past his
+## waist and stays there for a moment while he leans away from it, one arm
+## pointing where the man is to go and the other flailing over his head.
+func _motion_kick() -> void:
+	var t: float = 1.0 - _kick_timer / MOTION_KICK_TIME
+	var weight: float = smoothstep(0.0, 0.14, t) * (1.0 - smoothstep(0.78, 1.0, t))
+	var wind: float = sin(clampf(t / 0.22, 0.0, 1.0) * PI)
+	var swing: float = smoothstep(0.12, 0.42, t)
+	_rate = 30.0
+	_stash()
+	# Built for a kick to his right; mirrored for one to his left.
+	_pose[B.THIGH_L] = Vector3(lerpf(32.0 * wind, -118.0, swing), 0.0, 0.0)
+	_pose[B.SHIN_L] = Vector3(lerpf(80.0 * wind, 6.0, swing), 0.0, 0.0)
+	_pose[B.FOOT_L] = Vector3(-28.0 * swing, 0.0, 0.0)
+	_pose[B.THIGH_R] = Vector3(-6.0, 0.0, 0.0)
+	_pose[B.SHIN_R] = Vector3(12.0, 0.0, 0.0)
+	_pose[B.SPINE] = Vector3(12.0 * wind - 22.0 * swing, 0.0, 0.0)
+	_pose[B.CHEST] = Vector3(-8.0 * swing, -16.0 * swing, 0.0)
+	_pose[B.HEAD] = Vector3(8.0 * swing, -28.0 * swing, 0.0)
+	_pose[B.ARM_R] = Vector3(-12.0, 0.0, -6.0)
+	_pose[B.FORE_R] = Vector3.ZERO
+	_pose[B.ARM_L] = Vector3(-150.0 + 28.0 * sin(t * TAU * 3.0), 0.0, -32.0)
+	_pose[B.FORE_L] = Vector3(0.0, -30.0, 0.0)
+	if _kick_side < 0.0:
+		_mirror()
+	_blend_from_stash(weight)
 
 
 ## Plays the arm coming down as the scorer spikes the ball.

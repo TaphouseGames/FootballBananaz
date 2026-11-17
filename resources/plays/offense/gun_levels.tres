@@ -52,9 +52,18 @@ label = "HB"
 start = Vector2(-1.5, 5.4)
 route = PackedVector2Array(2, 3, 3, 13)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "HB"
+start = Vector2(-2.2, -6)
+route = PackedVector2Array(10, 0, 18, -9)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "Gun Levels"
 description = "Shotgun, three on the right. Wideout breaks in at five yards, slot at twelve. Inside man in the right flat, back swings left."
 group = 4
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 2
+motion_to = Vector2(-2.2, -6)
+motion_assignment = SubResource("motion")

@@ -38,6 +38,7 @@ func _process(_delta: float) -> bool:
 	var defense: Array[DefensePlay] = _game.defense_playbook.plays
 	_check_formations(offense)
 	_check_routes(offense)
+	_check_motion(offense)
 	_check_twins(offense, defense)
 	_check_alignment(offense, defense)
 	if _failures.is_empty():
@@ -90,6 +91,38 @@ func _check_routes(plays: Array[OffensePlay]) -> void:
 				_expect(assignment.start.distance_to(play.assignments[j].start) >= 1.0, "%s: %s and %s line up in each other" % [play.play_name, assignment.label, play.assignments[j].label])
 			if assignment.job == OffenseAssignment.Job.ROUTE or assignment.job == OffenseAssignment.Job.RUNNER:
 				_expect(not assignment.route.is_empty(), "%s: %s has nowhere to run" % [play.play_name, assignment.label])
+
+
+## A play's motion (Y) keeps to the rules of MotionRules: only a receiver off
+## the line moves, he never moves toward it and ends off it, and what he does
+## afterwards starts from where the motion puts him. Within a formation the
+## same man moves in every play, and no kind of motion is only ever a run or
+## only ever a pass, so the motion does not give the play away either.
+func _check_motion(plays: Array[OffensePlay]) -> void:
+	var half_width: float = _game.tuning.half_width()
+	var with_motion: int = 0
+	## Formation -> motion kind -> [runs, passes].
+	var kinds: Dictionary[String, Dictionary] = {}
+	for play: OffensePlay in plays:
+		for problem: String in MotionRules.problems(play, half_width):
+			_expect(false, "%s: %s" % [play.play_name, problem])
+		if not MotionRules.has_motion(play):
+			continue
+		with_motion += 1
+		var key: String = Probe.formation_key(play)
+		if not kinds.has(key):
+			kinds[key] = {}
+		var counts: Array = kinds[key].get(play.motion, [0, 0])
+		counts[0 if play.is_run else 1] += 1
+		kinds[key][play.motion] = counts
+	for key: String in kinds:
+		var runs: int = 0
+		var passes: int = 0
+		for kind: int in kinds[key]:
+			runs += kinds[key][kind][0]
+			passes += kinds[key][kind][1]
+		_expect(runs > 0 and passes > 0, "a formation whose motions are all %s" % ("runs" if passes == 0 else "passes"))
+	print("offense: %d plays with a motion" % with_motion)
 
 
 func _check_twins(offense: Array[OffensePlay], defense: Array[DefensePlay]) -> void:

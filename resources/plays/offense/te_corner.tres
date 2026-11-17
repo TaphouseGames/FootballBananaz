@@ -52,9 +52,19 @@ label = "TE"
 start = Vector2(-0.6, 3.4)
 route = PackedVector2Array(8, 0, 14, 9)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "WR"
+start = Vector2(-1.5, 8.5)
+route = PackedVector2Array(5, 0, 4.5, 1)
+settle = true
+
 [resource]
 script = ExtResource("1_play")
 play_name = "TE Corner"
 description = "Wideout slants inside, right tight end breaks to the corner behind him. Left tight end drags across, back in the right flat."
 group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
+motion = 1
+motion_to = Vector2(-1.5, 8.5)
+motion_assignment = SubResource("motion")
