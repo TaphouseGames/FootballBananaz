@@ -1,0 +1,7 @@
+task created d4e57ebe-8c4b-44d2-a7ae-4492e99c9c14 (@crowd-p14-uv)
+mesh_uv · queued
+mesh_uv · running 47% · d4e57ebe
+[32m✓[39m mesh_uv · d4e57ebe-8c4b-44d2-a7ae-4492e99c9c14 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p14_uv\tripo-out\crowd-p14-uv-d4e57ebe
+{"task_id":"d4e57ebe-8c4b-44d2-a7ae-4492e99c9c14","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"p14_uv\\tripo-out\\crowd-p14-uv-d4e57ebe","files":["model.glb","uv_render.webp"],"model_file":"p14_uv\\tripo-out\\crowd-p14-uv-d4e57ebe\\model.glb"}

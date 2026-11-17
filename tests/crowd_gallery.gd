@@ -6,7 +6,12 @@ extends SceneTree
 ## at the neck and the waist. Needs a window (no --headless), since headless
 ## does not render.
 ##
-## Run:  godot --path . --resolution 1400x1000 --script res://tests/crowd_gallery.gd -- out=<folder>
+## Where the crowd is made of whole people (assets/stadium/crowd_people.glb)
+## the sheets are of them instead: everybody side by side at each level of
+## detail (people_<level>_front, ...), and with person=<id>[,<id>] a sheet of
+## that person alone (<id>_front, <id>_near, ...).
+##
+## Run:  godot --path . --resolution 1400x1000 --script res://tests/crowd_gallery.gd -- out=<folder> [person=<id>,<id>]
 
 const COLUMN: float = 2.1
 const ROW: float = 2.9
@@ -15,6 +20,8 @@ const ROW: float = 2.9
 const STAGE: Vector3 = Vector3(0.0, 400.0, 0.0)
 
 var _out_dir: String = "user://crowd_gallery"
+## The people who get a sheet of their own (person=<id>,<id>).
+var _only_people: PackedStringArray = PackedStringArray()
 var _stage: Node3D
 var _camera: Camera3D
 var _stadium: Stadium
@@ -24,6 +31,8 @@ func _initialize() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("out="):
 			_out_dir = arg.trim_prefix("out=")
+		elif arg.begins_with("person="):
+			_only_people = arg.trim_prefix("person=").split(",")
 	DirAccess.make_dir_recursive_absolute(_out_dir)
 	_run()
 
@@ -62,6 +71,63 @@ func _run() -> void:
 	await _wait(0.5)
 
 	var shirts: Array[Color] = [home.team_color, away.team_color, Color(0.25, 0.45, 0.75), Color(0.9, 0.9, 0.88)]
+	# The whole people (assets/stadium/crowd_people.glb), one sheet each: the
+	# three levels of detail down, four shirts and then one with a sign across.
+	# Everybody side by side at full detail, in two rows of colours (and a
+	# third with signs), then at the two plainer levels.
+	if not _stadium._people.is_empty():
+		var count: int = _stadium._people.size()
+		var wide: float = float(count) * COLUMN * 1000.0 / 1400.0 + 0.6
+		for tier: int in 3:
+			var everybody: Dictionary = {}
+			for column: int in count:
+				var person: Stadium.Person = _stadium._people[column]
+				for row: int in 3:
+					var fan: Array = _fan(column, row, count, 3, shirts[(row * 2 + column) % shirts.size()] if row != 0 else away.team_color)
+					_stadium._enter(everybody, person.sign_meshes[tier] if row == 2 else person.meshes[tier], fan)
+			_show(everybody)
+			var level: String = Stadium.TIER_NAMES[tier].to_lower()
+			await _shoot("people_%s_front" % level, Vector3(1.5, 0.6, 10.0), wide)
+			if tier == 0:
+				await _shoot("people_%s_back" % level, Vector3(-1.5, 0.6, -10.0), wide)
+				# Two halves from closer by.
+				for half: int in 2:
+					var middle: Vector3 = Vector3((float(half) - 0.5) * float(count) * COLUMN * 0.5, 0.0, 0.0)
+					await _shoot("people_%s_front_%d" % [level, half + 1], Vector3(1.5, 0.6, 10.0), wide * 0.52, 0.2, middle)
+					await _shoot("people_%s_back_%d" % [level, half + 1], Vector3(-1.5, 0.6, -10.0), wide * 0.52, 0.2, middle)
+				_stadium.cheer[0] = 1.0
+				_stadium._push_uniforms()
+				await _wait(0.3)
+				_stadium.cheer[0] = 1.0
+				_stadium._push_uniforms()
+				await _shoot("people_%s_cheer" % level, Vector3(1.5, 0.6, 10.0), wide + 1.0, 0.0)
+				_stadium.cheer[0] = 0.0
+				_stadium._push_uniforms()
+	for person: Stadium.Person in _stadium._people:
+		# One sheet each, only for those asked for (person=<id>[,<id>...]).
+		if not _only_people.has(person.id):
+			continue
+		var sheet: Dictionary = {}
+		for tier: int in 3:
+			for column: int in shirts.size() + 1:
+				var holds_sign: bool = column == shirts.size()
+				var fan: Array = _fan(column, tier, shirts.size() + 1, 3, shirts[column % shirts.size()])
+				_stadium._enter(sheet, person.sign_meshes[tier] if holds_sign else person.meshes[tier], fan)
+		_show(sheet)
+		var tall: float = 3.0 * ROW + 0.6
+		await _shoot("%s_front" % person.id, Vector3(1.5, 0.6, 10.0), tall)
+		await _shoot("%s_back" % person.id, Vector3(-1.5, 0.6, -10.0), tall)
+		await _shoot("%s_side" % person.id, Vector3(10.0, 0.4, 2.0), tall)
+		await _shoot("%s_near" % person.id, Vector3(1.5, 0.6, 10.0), ROW * 1.05, 0.2, Vector3(0.0, ROW + 0.25, 0.0))
+		await _shoot("%s_near_side" % person.id, Vector3(10.0, 0.4, 0.0), ROW * 1.05, 0.2, Vector3(0.0, ROW + 0.25, 0.0))
+		_stadium.cheer[0] = 1.0
+		_stadium._push_uniforms()
+		await _wait(0.3)
+		_stadium.cheer[0] = 1.0
+		_stadium._push_uniforms()
+		await _shoot("%s_cheer" % person.id, Vector3(1.5, 0.6, 10.0), tall + 1.0, 0.0)
+		_stadium.cheer[0] = 0.0
+		_stadium._push_uniforms()
 	for kit: Stadium.Kit in _stadium._kits:
 		for tier: int in 3:
 			var level: String = Stadium.TIER_NAMES[tier].to_lower()

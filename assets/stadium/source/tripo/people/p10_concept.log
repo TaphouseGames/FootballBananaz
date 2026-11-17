@@ -1,0 +1,11 @@
+task created ece27828-df1b-4d89-818e-853c8042fe97 (@crowd-p10-concept)
+generate_image · queued
+generate_image · running · ece27828
+generate_image · running · ece27828
+generate_image · running · ece27828
+generate_image · running · ece27828
+generate_image · success 100% · ece27828
+[32m✓[39m generate_image · ece27828-df1b-4d89-818e-853c8042fe97 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p10_concept\tripo-out\crowd-p10-concept-ece27828
+{"task_id":"ece27828-df1b-4d89-818e-853c8042fe97","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p10_concept\\tripo-out\\crowd-p10-concept-ece27828","files":["generated_image.png","preview.png"],"preview":"p10_concept\\tripo-out\\crowd-p10-concept-ece27828\\preview.png"}

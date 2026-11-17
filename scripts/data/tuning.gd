@@ -1317,6 +1317,11 @@ extends Resource
 @export_range(0.0, 1.0) var crowd_female_share: float = 0.45
 ## Who sits where and what they look like: another number, another crowd.
 @export var crowd_seed: int = 4242
+## The one person every fan is: an id in tools/crowd_people.json. Empty:
+## everybody one of the people at random.
+@export var crowd_person: String = ""
+## The three below are for the older kit of parts, which the crowd is made of
+## only while assets/stadium/crowd_people.glb is not there.
 ## The one head every fan gets: the id of a fan in tools/crowd_parts.json.
 ## Empty: every fan a head at random, as with the outfits.
 @export var crowd_head: String = ""

@@ -63,6 +63,10 @@ enum Motion { NONE, ZIP, ACROSS, JET, ORBIT, RETURN }
 ## ball is snapped while he runs, with `start` the point in front of the
 ## quarterback his path goes through. Null (RETURN): the job the play draws.
 @export var motion_assignment: OffenseAssignment
+## JET: his job when the ball is snapped after he has gone past the
+## quarterback or has set, with `start` the spot he sets on. Null: he blocks
+## from there. A pass play needs one, so he stays a man who can be thrown to.
+@export var motion_set_assignment: OffenseAssignment
 ## Run play: snapped while he runs, the ball goes to the motion man (a jet
 ## sweep) and the drawn runner leads the way for him.
 @export var motion_handoff: bool = false

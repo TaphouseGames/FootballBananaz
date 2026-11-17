@@ -1,0 +1,10 @@
+task created 38116451-d99c-4c96-b568-8c2d5f6fbe08 (@crowd-p08-concept)
+generate_image · queued
+generate_image · running · 38116451
+generate_image · running · 38116451
+generate_image · running · 38116451
+generate_image · success 100% · 38116451
+[32m✓[39m generate_image · 38116451-d99c-4c96-b568-8c2d5f6fbe08 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p08_concept\tripo-out\crowd-p08-concept-38116451
+{"task_id":"38116451-d99c-4c96-b568-8c2d5f6fbe08","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p08_concept\\tripo-out\\crowd-p08-concept-38116451","files":["generated_image.png","preview.png"],"preview":"p08_concept\\tripo-out\\crowd-p08-concept-38116451\\preview.png"}

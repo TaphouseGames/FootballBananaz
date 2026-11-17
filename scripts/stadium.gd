@@ -20,6 +20,13 @@ const SIGN_SHADER: Shader = preload("res://assets/stadium/crowd_sign.gdshader")
 const KIT_SCENE: String = "res://assets/stadium/crowd_kit.glb"
 const KIT_ATLAS: String = "res://assets/stadium/crowd_atlas.png"
 const KIT_MASK: String = "res://assets/stadium/crowd_mask.png"
+## The whole people the crowd is made of instead, where this file is there,
+## with their picture, the mask of what is repainted in it (the top and the
+## trousers) and their normal map (all four made by tools/prep_people.py).
+const PEOPLE_SCENE: String = "res://assets/stadium/crowd_people.glb"
+const PEOPLE_ATLAS: String = "res://assets/stadium/crowd_people_atlas.png"
+const PEOPLE_MASK: String = "res://assets/stadium/crowd_people_mask.png"
+const PEOPLE_NORMAL: String = "res://assets/stadium/crowd_people_normal.png"
 ## Share of the fans who hold a sign over their heads.
 const SIGN_SHARE: float = 0.03
 ## The levels of detail. A fan is a head, an outfit and legs at each of them
@@ -145,6 +152,17 @@ const SCREEN_TEXT_COLOR: Color = Color(1.0, 0.86, 0.3)
 ## The screen of jumbotron.glb, as shares of the model's width and height: its
 ## middle (x is unused) and its size.
 const SCREEN_RECT: Rect2 = Rect2(0.5, 0.658, 0.72, 0.44)
+## The screen with the main menu's title on it (show_title): lit, and the
+## words outlined so the darker of them stands off it.
+const TITLE_SCREEN_COLOR: Color = Color(0.04, 0.07, 0.17)
+const TITLE_OUTLINE_COLOR: Color = Color(0.86, 0.93, 1.0)
+const TITLE_FONT_SIZE: int = 160
+## Shares of the screen's width and height the title's words may fill, and the
+## subtitle's lines; and how far above and below the screen's middle they sit.
+const TITLE_FIT: Vector2 = Vector2(0.84, 0.62)
+const SUBTITLE_FIT: Vector2 = Vector2(0.84, 0.26)
+const TITLE_RAISE: float = 0.13
+const SUBTITLE_DROP: float = 0.31
 ## Seconds "TOUCHDOWN!" flashes on the jumbotrons.
 const FLASH_TIME: float = 4.0
 ## A reaction smaller than this does not get anyone out of their seat.
@@ -214,6 +232,26 @@ class Kit:
 		return far != null and far_sign != null
 
 
+## One of the whole people of tools/crowd_people.json: a single mesh per level
+## of detail, with its own place in the people's picture.
+class Person:
+	var id: String = ""
+	var gender: String = ""
+	## Per level of detail (near, mid, far): sitting with the arms down, and
+	## with the arms up, for a fan with a sign.
+	var meshes: Array[Mesh] = [null, null, null]
+	var sign_meshes: Array[Mesh] = [null, null, null]
+	## Where the arms turn, and where the hands are when they are up.
+	var shoulder: Vector3 = DEFAULT_SHOULDER
+	var hand: Vector3 = DEFAULT_HAND
+	var material: ShaderMaterial
+	var sign_material: ShaderMaterial
+	var sign_mesh: Mesh
+
+	func complete() -> bool:
+		return not meshes.has(null) and not sign_meshes.has(null)
+
+
 var tuning: Tuning
 ## Fans in the stands, and how many of them are for the home team in the
 ## parts given to the home team and to the visitors (the tests read these).
@@ -233,6 +271,14 @@ var runs: Array[Run] = []
 var _game: Game
 ## One kit of parts per gender there are parts for.
 var _kits: Array[Kit] = []
+## The whole people, if PEOPLE_SCENE is there: then the crowd is made of them
+## and the kits are not loaded.
+var _people: Array[Person] = []
+## Every material that moves with the crowd (fans and signs), and the board
+## and the material of the sign of each kit, or of each person.
+var _materials: Array[ShaderMaterial] = []
+var _sign_meshes: Array[Mesh] = []
+var _sign_materials: Array[ShaderMaterial] = []
 ## The first kit's material (they are all told the same; the tests read it).
 var _material: ShaderMaterial
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -320,10 +366,61 @@ func start_wave() -> void:
 	_wave_from = _rng.randf()
 
 
-## The main menu's title stands where the far jumbotron is.
-func show_jumbotrons(shown: bool) -> void:
-	if props != null:
-		(props.get_node(^"Jumbotrons") as Node3D).visible = shown
+## The main menu's title, on the screen of the jumbotron at the +X end in
+## place of the score: `words` side by side in their `colors`, and `subtitle`
+## (which may run over several lines) under them. The board stands `scale_by`
+## times its size, so the title can be read from the field.
+func show_title(words: PackedStringArray, colors: PackedColorArray, subtitle: String, scale_by: float) -> void:
+	if props == null or words.is_empty():
+		return
+	var board: Node3D = props.get_node_or_null(^"Jumbotrons/Jumbotron0") as Node3D
+	if board == null or board.has_node(^"Title"):
+		return
+	var size: Vector3 = board.get_meta(&"size")
+	# Grown about the foot of its back, so its face stays where it was.
+	board.position -= board.basis.z.normalized() * size.z * 0.5 * (scale_by - 1.0)
+	board.scale = Vector3.ONE * scale_by
+	(board.get_node(^"Score") as Label3D).visible = false
+	(board.get_node(^"Flash") as Label3D).visible = false
+	var screen: MeshInstance3D = board.get_node(^"Screen") as MeshInstance3D
+	(screen.material_override as StandardMaterial3D).albedo_color = TITLE_SCREEN_COLOR
+	var room: Vector2 = (screen.mesh as QuadMesh).size
+	var front: float = screen.position.z + 0.05
+
+	# The words in a row, as wide as the screen lets them be.
+	var gap: float = float(TITLE_FONT_SIZE) * 0.22
+	var widths: PackedFloat32Array = PackedFloat32Array()
+	var total: float = gap * float(words.size() - 1)
+	var tall: float = 1.0
+	for word: String in words:
+		var word_size: Vector2 = _font.get_string_size(word, HORIZONTAL_ALIGNMENT_CENTER, -1.0, TITLE_FONT_SIZE)
+		widths.append(word_size.x)
+		total += word_size.x
+		tall = maxf(tall, word_size.y)
+	var pixel: float = minf(room.x * TITLE_FIT.x / maxf(total, 1.0), room.y * TITLE_FIT.y / tall)
+	var title: Node3D = Node3D.new()
+	title.name = "Title"
+	title.position = Vector3(0.0, screen.position.y + room.y * TITLE_RAISE, front)
+	board.add_child(title)
+	var at: float = -total * 0.5
+	for i: int in words.size():
+		var word: Label3D = _label(words[i], TITLE_FONT_SIZE, colors[i % colors.size()] if not colors.is_empty() else SCREEN_TEXT_COLOR)
+		word.name = "Word%d" % i
+		word.outline_size = TITLE_FONT_SIZE / 14
+		word.outline_modulate = TITLE_OUTLINE_COLOR
+		word.pixel_size = pixel
+		word.position.x = (at + widths[i] * 0.5) * pixel
+		title.add_child(word)
+		at += widths[i] + gap
+
+	if subtitle == "":
+		return
+	var line: Label3D = _label(subtitle, TITLE_FONT_SIZE, Color.WHITE)
+	line.name = "Subtitle"
+	var line_size: Vector2 = _font.get_multiline_string_size(subtitle, HORIZONTAL_ALIGNMENT_CENTER, -1.0, TITLE_FONT_SIZE)
+	line.pixel_size = minf(room.x * SUBTITLE_FIT.x / maxf(line_size.x, 1.0), room.y * SUBTITLE_FIT.y / maxf(line_size.y, 1.0))
+	line.position = Vector3(0.0, screen.position.y - room.y * SUBTITLE_DROP, front)
+	board.add_child(line)
 
 
 func rows() -> int:
@@ -436,11 +533,7 @@ func _push_uniforms() -> void:
 		on = smoothstep(0.0, 0.1, wave_progress) * (1.0 - smoothstep(0.9, 1.0, wave_progress))
 	var at: float = fposmod(_wave_from + maxf(wave_progress, 0.0), 1.0)
 	# The signs move with the fans who hold them.
-	var materials: Array[ShaderMaterial] = []
-	for kit: Kit in _kits:
-		materials.append(kit.material)
-		materials.append(kit.sign_material)
-	for material: ShaderMaterial in materials:
+	for material: ShaderMaterial in _materials:
 		material.set_shader_parameter(&"excitement", excitement)
 		material.set_shader_parameter(&"cheer_home", cheer[0])
 		material.set_shader_parameter(&"cheer_away", cheer[1])
@@ -769,16 +862,51 @@ func _build_crowd() -> void:
 	home_side_fans = Vector2i.ZERO
 	away_side_fans = Vector2i.ZERO
 	_material = null
-	_kits = _load_kits()
-	if _kits.is_empty():
-		push_warning("Stadium: %s is missing or out of date (run tools/prep_crowd.py), so the stands are empty." % KIT_SCENE)
-		return
-	var atlas: Texture2D = _kit_texture(KIT_ATLAS)
-	var mask: Texture2D = _kit_texture(KIT_MASK)
+	_materials.clear()
+	_sign_meshes.clear()
+	_sign_materials.clear()
+	_kits.clear()
+	_people = _load_people()
+	if _people.is_empty():
+		_kits = _load_kits()
+		if _kits.is_empty():
+			push_warning("Stadium: %s is missing or out of date (run tools/prep_people.py), so the stands are empty." % PEOPLE_SCENE)
+			return
 	var hair: PackedColorArray = PackedColorArray(HAIR_COLORS)
 	var pants: PackedColorArray = PackedColorArray(PANTS_COLORS)
 	pants.append(_home_color)
 	pants.append(_away_color)
+	if not _people.is_empty():
+		var picture: Texture2D = _kit_texture(PEOPLE_ATLAS)
+		var paint: Texture2D = _kit_texture(PEOPLE_MASK)
+		var bumps: Texture2D = _kit_texture(PEOPLE_NORMAL)
+		for person: Person in _people:
+			person.material = ShaderMaterial.new()
+			person.material.shader = CROWD_SHADER
+			person.material.set_shader_parameter(&"people", true)
+			person.material.set_shader_parameter(&"dim", tuning.crowd_dim)
+			person.material.set_shader_parameter(&"saturation", tuning.crowd_saturation)
+			person.material.set_shader_parameter(&"shoulder", person.shoulder)
+			person.material.set_shader_parameter(&"atlas_tex", picture)
+			person.material.set_shader_parameter(&"mask_tex", paint)
+			person.material.set_shader_parameter(&"normal_tex", bumps)
+			person.material.set_shader_parameter(&"pants_colors", pants)
+			person.sign_material = ShaderMaterial.new()
+			person.sign_material.shader = SIGN_SHADER
+			person.sign_material.set_shader_parameter(&"shoulder", person.shoulder)
+			person.sign_material.set_shader_parameter(&"sign_grid", Vector2(SIGN_GRID))
+			person.sign_mesh = _board_mesh(person.hand)
+			for mesh: Mesh in person.meshes + person.sign_meshes:
+				mesh.set_meta(&"material", person.material)
+			_materials.append(person.material)
+			_materials.append(person.sign_material)
+			_sign_meshes.append(person.sign_mesh)
+			_sign_materials.append(person.sign_material)
+		_material = _people[0].material
+		if tuning.crowd_person != "" and person_index(tuning.crowd_person) < 0:
+			push_warning("Stadium: nobody in %s is '%s' (crowd_person), so the fans are people at random." % [PEOPLE_SCENE, tuning.crowd_person])
+	var atlas: Texture2D = _kit_texture(KIT_ATLAS) if not _kits.is_empty() else null
+	var mask: Texture2D = _kit_texture(KIT_MASK) if not _kits.is_empty() else null
 	for kit: Kit in _kits:
 		kit.material = ShaderMaterial.new()
 		kit.material.shader = CROWD_SHADER
@@ -798,12 +926,17 @@ func _build_crowd() -> void:
 			for meshes: Array in parts:
 				for mesh: Mesh in meshes:
 					mesh.set_meta(&"material", kit.material)
-	_material = _kits[0].material
-	if tuning.crowd_head != "" and not _kits.any(func(kit: Kit) -> bool: return head_index(kit, tuning.crowd_head) >= 0):
+		_materials.append(kit.material)
+		_materials.append(kit.sign_material)
+		_sign_meshes.append(kit.sign_mesh)
+		_sign_materials.append(kit.sign_material)
+	if not _kits.is_empty():
+		_material = _kits[0].material
+	if _people.is_empty() and tuning.crowd_head != "" and not _kits.any(func(kit: Kit) -> bool: return head_index(kit, tuning.crowd_head) >= 0):
 		push_warning("Stadium: no head in %s is from the fan '%s' (crowd_head), so the fans get heads at random." % [KIT_SCENE, tuning.crowd_head])
-	if tuning.crowd_torso != "" and not _kits.any(func(kit: Kit) -> bool: return torso_index(kit, tuning.crowd_torso) >= 0):
+	if _people.is_empty() and tuning.crowd_torso != "" and not _kits.any(func(kit: Kit) -> bool: return torso_index(kit, tuning.crowd_torso) >= 0):
 		push_warning("Stadium: no outfit in %s is from the fan '%s' (crowd_torso), so the fans get outfits at random." % [KIT_SCENE, tuning.crowd_torso])
-	if tuning.crowd_legs != "" and not _kits.any(func(kit: Kit) -> bool: return legs_index(kit, tuning.crowd_legs) >= 0):
+	if _people.is_empty() and tuning.crowd_legs != "" and not _kits.any(func(kit: Kit) -> bool: return legs_index(kit, tuning.crowd_legs) >= 0):
 		push_warning("Stadium: no legs in %s are from the fan '%s' (crowd_legs), so the fans get legs at random." % [KIT_SCENE, tuning.crowd_legs])
 
 	var mid_x: float = tuning.field_length * 0.5
@@ -833,12 +966,45 @@ func _build_crowd() -> void:
 
 ## What is gathered for one piece of the stands before it is built: per level
 ## of detail the fans each mesh is drawn for (mesh -> list of fans), per kit
-## the fans with a sign, and all the fans. A fan is [transform, colour, custom].
+## (or per person) the fans with a sign, and all the fans. A fan is
+## [transform, colour, custom].
 func _new_chunk() -> Array:
 	var signs: Array = []
-	for kit: Kit in _kits:
+	for mesh: Mesh in _sign_meshes:
 		signs.append([])
 	return [[{}, {}, {}], signs, []]
+
+
+## Which of the people is `person_id` of tools/crowd_people.json, or -1.
+func person_index(person_id: String) -> int:
+	for index: int in _people.size():
+		if _people[index].id == person_id:
+			return index
+	return -1
+
+
+## Makes `fan` one of the people, a woman or a man by crowd_female_share, and
+## enters it in `chunk` under that person's mesh at each level of detail.
+func _seat_person(chunk: Array, fan: Array) -> void:
+	var wanted: String = "f" if _rng.randf() < tuning.crowd_female_share else "m"
+	var of_gender: Array[int] = []
+	for index: int in _people.size():
+		if _people[index].gender == wanted:
+			of_gender.append(index)
+	# Drawn even when it is not used, so that the rest of the crowd is the
+	# same whoever is in it.
+	var roll: int = _rng.randi()
+	var which: int = of_gender[roll % of_gender.size()] if not of_gender.is_empty() else roll % _people.size()
+	var same: int = person_index(tuning.crowd_person)
+	if same >= 0:
+		which = same
+	var person: Person = _people[which]
+	var holds_sign: bool = _rng.randf() < SIGN_SHARE
+	for tier: int in 3:
+		_enter(chunk[0][tier], person.sign_meshes[tier] if holds_sign else person.meshes[tier], fan)
+	if holds_sign:
+		(chunk[1][which] as Array).append(fan)
+	(chunk[2] as Array).append(fan)
 
 
 ## Gives `fan` a gender, a head, an outfit and legs, and enters it in `chunk`
@@ -846,6 +1012,9 @@ func _new_chunk() -> Array:
 ## transform, colour and custom data, so they move as one; the shader takes
 ## from them what each part needs.
 func _seat(chunk: Array, fan: Array) -> void:
+	if not _people.is_empty():
+		_seat_person(chunk, fan)
+		return
 	var which: int = 0
 	if _kits.size() > 1 and _rng.randf() < tuning.crowd_female_share:
 		which = 1
@@ -953,11 +1122,11 @@ func _add_chunk(crowd: Node3D, chunk_name: String, record: Array) -> void:
 				instance.visibility_range_end = (near if tier == 0 else far) + LOD_BLEND
 			chunk.add_child(instance)
 	# The signs are one flat board each: no levels of detail.
-	for which: int in _kits.size():
+	for which: int in _sign_meshes.size():
 		var holders: Array = record[1][which]
 		if holders.is_empty():
 			continue
-		var signs: MultiMeshInstance3D = _scatter(_kits[which].sign_mesh, holders, centre, _kits[which].sign_material)
+		var signs: MultiMeshInstance3D = _scatter(_sign_meshes[which], holders, centre, _sign_materials[which])
 		signs.name = "Signs%d" % which
 		chunk.add_child(signs)
 
@@ -1011,11 +1180,11 @@ func _board_mesh(hand: Vector3) -> Mesh:
 ## a grid of paper-coloured cells with the texts written on them, drawn by a
 ## viewport that is thrown away afterwards.
 func _bake_signs() -> void:
-	if _kits.is_empty() or DisplayServer.get_name() == "headless":
+	if _sign_materials.is_empty() or DisplayServer.get_name() == "headless":
 		return
-	var materials: Array[ShaderMaterial] = []
-	for kit: Kit in _kits:
-		materials.append(kit.sign_material)
+	# A copy: the picture is made over a few frames, and the list is emptied
+	# if the stadium is built again meanwhile.
+	var materials: Array[ShaderMaterial] = _sign_materials.duplicate()
 	var font: SystemFont = SystemFont.new()
 	font.font_names = SIGN_FONT_NAMES
 	font.font_weight = 700
@@ -1115,6 +1284,49 @@ func _fan(run: Run, s: float, at: Vector3, mid_x: float) -> Array:
 	# The skin tone stays under 1, so that the whole number is the hair's.
 	var look: float = minf(_rng.randf(), 0.98) + float(_rng.randi() % HAIR_COLORS.size())
 	return [Transform3D(basis, at), color, Color(_rng.randf(), look, around, _rng.randf())]
+
+
+## The people in PEOPLE_SCENE, in the order of tools/crowd_people.json; only
+## those with a mesh at every level of detail. tools/prep_people.py says what
+## each mesh is in its "extras".
+func _load_people() -> Array[Person]:
+	var people: Array[Person] = []
+	if not ResourceLoader.exists(PEOPLE_SCENE):
+		return people
+	var scene: Node = (load(PEOPLE_SCENE) as PackedScene).instantiate()
+	var by_index: Dictionary = {}
+	for node: Node in scene.find_children("*", "MeshInstance3D", true, false):
+		var extras: Dictionary = node.get_meta(&"extras", {})
+		if String(extras.get("kind", "")) != "person":
+			continue
+		var index: int = int(extras.get("index", 0))
+		if not by_index.has(index):
+			var made: Person = Person.new()
+			made.id = String(extras.get("fan", ""))
+			made.gender = String(extras.get("gender", "m"))
+			by_index[index] = made
+		var person: Person = by_index[index]
+		var mesh: Mesh = (node as MeshInstance3D).mesh
+		var tier: int = clampi(int(extras.get("tier", 0)), 0, 2)
+		mesh.set_meta(&"kind", "person")
+		mesh.set_meta(&"fan", person.id)
+		if int(extras.get("sign", 0)) == 1:
+			person.sign_meshes[tier] = mesh
+			if tier == 0:
+				person.hand = _kit_point(extras, "hand", person.hand)
+		else:
+			person.meshes[tier] = mesh
+			if tier == 0:
+				person.shoulder = _kit_point(extras, "shoulder", person.shoulder)
+	scene.free()
+	var keys: Array = by_index.keys()
+	keys.sort()
+	for key: int in keys:
+		if (by_index[key] as Person).complete():
+			people.append(by_index[key])
+		else:
+			push_warning("Stadium: '%s' in %s is not there at every level of detail; leaving it out." % [(by_index[key] as Person).id, PEOPLE_SCENE])
+	return people
 
 
 ## The kits in KIT_SCENE, the men's first; only those with every part at every

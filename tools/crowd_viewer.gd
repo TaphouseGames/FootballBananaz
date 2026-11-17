@@ -1,7 +1,15 @@
 extends Node3D
-## Developer tool, not part of the game: one fan out of the crowd's kit of
-## parts (assets/stadium/crowd_kit.glb), drawn with the crowd's own shader, to
-## turn round and take apart. Run tools/crowd_viewer.tscn by itself (F6).
+## Developer tool, not part of the game: one fan out of the crowd, drawn with
+## the crowd's own shader, to turn round. Run tools/crowd_viewer.tscn by
+## itself (F6).
+##
+## Where the crowd is made of whole people (assets/stadium/crowd_people.glb,
+## from tools/prep_people.py), it shows one of them: Left / Right picks who,
+## and the keys for the parts do nothing (KEYS_PEOPLE below). `look=<n>` on
+## the command line is then the person's number, from 0.
+##
+## Otherwise it shows a fan out of the older kit of parts
+## (assets/stadium/crowd_kit.glb), to take apart:
 ##
 ## Every part is picked on its own, so any head can be put on any outfit and
 ## looked at by itself, at each level of detail, in any of the colours the
@@ -33,6 +41,16 @@ R              a random fan
 W              wireframe      F  flat (no lighting tricks: the raw atlas)
 Space          turn by itself
 Drag / wheel   turn / zoom    Home  reset the view"""
+const KEYS_PEOPLE: String = """Left / Right   person
+B              the person the whole crowd is, if it is one
+Tab            level of detail
+C              cheer          X  sulk
+S              holding a sign
+T  P           shirt, trouser colour
+R              a random fan
+W              wireframe      F  flat (no lighting tricks: the raw atlas)
+Space          turn by itself
+Drag / wheel   turn / zoom    Home  reset the view"""
 const PART_NAMES: PackedStringArray = ["head", "outfit", "legs"]
 const SHIRTS: Array[Color] = [
 	Color(0.95, 0.8, 0.1), Color(0.75, 0.1, 0.12), Color(0.92, 0.92, 0.9), Color(0.2, 0.4, 0.75),
@@ -53,6 +71,8 @@ var _label: Label
 var _flat: StandardMaterial3D
 
 var _kit: int = 0
+## Which of the whole people is shown, where the crowd is made of them.
+var _person: int = 0
 var _head: int = 0
 var _torso: int = 0
 var _legs: int = 0
@@ -123,7 +143,8 @@ func _ready() -> void:
 	add_child(_stage)
 	_flat = StandardMaterial3D.new()
 	_flat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_flat.albedo_texture = load(Stadium.KIT_ATLAS) as Texture2D
+	_flat.albedo_texture = load(Stadium.KIT_ATLAS if _stadium._people.is_empty() else Stadium.PEOPLE_ATLAS) as Texture2D
+	_person = maxi(_stadium.person_index(tuning.crowd_person), 0)
 
 	var layer: CanvasLayer = CanvasLayer.new()
 	add_child(layer)
@@ -146,6 +167,7 @@ func _ready() -> void:
 		elif arg.begins_with("look="):
 			var picks: PackedStringArray = arg.trim_prefix("look=").split(",")
 			_head = int(picks[0]) if picks.size() > 0 else 0
+			_person = _head
 			_torso = int(picks[1]) if picks.size() > 1 else 0
 			_legs = int(picks[2]) if picks.size() > 2 else 0
 		elif arg.begins_with("view="):
@@ -187,7 +209,7 @@ func _exit_tree() -> void:
 
 
 func _process(delta: float) -> void:
-	if _stadium._kits.is_empty():
+	if _stadium._kits.is_empty() and _stadium._people.is_empty():
 		return
 	if _spin:
 		_yaw += delta * 0.8
@@ -213,9 +235,30 @@ func _unhandled_input(event: InputEvent) -> void:
 			_distance = minf(_distance / 0.9, ZOOM_LIMITS.y)
 		return
 	var key: InputEventKey = event as InputEventKey
-	if key == null or not key.pressed or key.echo or _stadium._kits.is_empty():
+	if key == null or not key.pressed or key.echo or (_stadium._kits.is_empty() and _stadium._people.is_empty()):
 		return
-	var kit: Stadium.Kit = _stadium._kits[_kit]
+	if not _stadium._people.is_empty():
+		# The keys that pick somebody; the rest are the same for parts and people.
+		var count: int = _stadium._people.size()
+		match key.keycode:
+			KEY_RIGHT:
+				_person = posmod(_person + 1, count)
+			KEY_LEFT:
+				_person = posmod(_person - 1, count)
+			KEY_B:
+				_person = maxi(_stadium.person_index(_stadium.tuning.crowd_person), 0)
+			KEY_R:
+				_person = randi() % count
+				_shirt = randi() % SHIRTS.size()
+				_pants = randi() % (Stadium.PANTS_COLORS.size() + 2)
+			KEY_UP, KEY_DOWN, KEY_L, KEY_G, KEY_1, KEY_2, KEY_3, KEY_E, KEY_K, KEY_H:
+				return
+			_:
+				count = 0
+		if count > 0:
+			_build()
+			return
+	var kit: Stadium.Kit = _stadium._kits[_kit] if not _stadium._kits.is_empty() else null
 	match key.keycode:
 		KEY_RIGHT:
 			_head = posmod(_head + 1, (kit.heads[0] as Array).size())
@@ -287,8 +330,11 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build() -> void:
 	for old: Node in _stage.get_children():
 		old.free()
+	if not _stadium._people.is_empty():
+		_build_person()
+		return
 	if _stadium._kits.is_empty():
-		_label.text = "No kit of parts: run tools/prep_crowd.py (see docs/stadium.md)."
+		_label.text = "Nobody to show: run tools/prep_people.py (see docs/stadium.md)."
 		return
 	var kit: Stadium.Kit = _stadium._kits[_kit]
 	_head = mini(_head, (kit.heads[0] as Array).size() - 1)
@@ -349,6 +395,35 @@ func _build() -> void:
 			state.append(flag[1])
 	text += "  shirt %d  skin %d  hair %d  trousers %d%s\n\n" % [_shirt + 1, _skin + 1, _hair + 1, _pants + 1, ("   " + ", ".join(state)) if not state.is_empty() else ""]
 	_label.text = text + KEYS
+
+
+## Puts the person that is picked on the stage and says who it is.
+func _build_person() -> void:
+	_person = clampi(_person, 0, _stadium._people.size() - 1)
+	var person: Stadium.Person = _stadium._people[_person]
+	var color: Color = SHIRTS[_shirt].srgb_to_linear()
+	color.a = 0.0 + 2.0 * float(_pants)
+	var fan: Array = [Transform3D(Basis.from_scale(Vector3.ONE * Stadium.FAN_SCALE), Vector3.ZERO), color, Color(0.3, 0.5, 0.0, 0.5)]
+	var mesh: Mesh = person.sign_meshes[_tier] if _sign else person.meshes[_tier]
+	var material: Material = _flat if _raw else (mesh.get_meta(&"material") as Material)
+	_stage.add_child(_stadium._scatter(mesh, [fan], Vector3.ZERO, material))
+	@warning_ignore("integer_division")
+	var triangles: int = (mesh as ArrayMesh).surface_get_array_index_len(0) / 3
+	var who: String = person.id
+	if _person == _stadium.person_index(_stadium.tuning.crowd_person):
+		who += ", the whole crowd"
+	var text: String = "person %d/%d (%s, %s)   %s   %d triangles
+" % [
+		_person + 1, _stadium._people.size(), who, "a man" if person.gender == "m" else "a woman",
+		Stadium.TIER_NAMES[_tier].to_lower(), triangles]
+	var state: PackedStringArray = PackedStringArray()
+	for flag: Array in [[_cheer, "cheering"], [_sulk, "sulking"], [_sign, "holding a sign"], [_wire, "wireframe"], [_raw, "raw atlas"]]:
+		if flag[0]:
+			state.append(flag[1])
+	text += "  shirt %d  trousers %d%s
+
+" % [_shirt + 1, _pants + 1, ("   " + ", ".join(state)) if not state.is_empty() else ""]
+	_label.text = text + KEYS_PEOPLE
 
 
 func _save_shot() -> void:

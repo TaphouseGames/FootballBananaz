@@ -26,6 +26,11 @@ render_mode specular_disabled, shadows_disabled;
 // hair on a head, trousers on legs), G the fan's skin tone.
 uniform sampler2D atlas_tex : source_color, filter_linear_mipmap;
 uniform sampler2D mask_tex : hint_default_black, filter_linear_mipmap;
+// Whole people (tools/prep_people.py) instead of the kit of parts: one mesh a
+// fan, and the mask says R the top (the shirt colour), G the trousers. Skin
+// and hair are the person's own. They have a normal map, in the same cells.
+uniform bool people = false;
+uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap;
 // Darker and greyer than the field, so the players and the ball stand out.
 uniform float dim = 0.62;
 uniform float saturation = 0.7;
@@ -47,6 +52,7 @@ uniform vec3 pants_colors[8] : source_color;
 
 varying vec3 tint;
 varying vec3 skin;
+varying vec3 trousers;
 varying float shade;
 
 
@@ -63,12 +69,14 @@ void vertex() {
 		v = crowd_swing(v, angle, shoulder);
 		v.x += sign(arm) * abs(arm) * 0.08 * sin(angle);
 		n = crowd_swing(n, angle, vec3(0.0));
+		TANGENT = crowd_swing(TANGENT, angle, vec3(0.0));
 	}
 	if (held > 0.02) {
 		v = crowd_rock(v, m.rock * held, shoulder.y);
 		n = crowd_rock(n, m.rock * held, 0.0);
 	}
 	tint = COLOR.rgb;
+	trousers = pants_colors[int(clamp(floor(COLOR.a * 0.5), 0.0, 7.0))];
 	if (part > 1.5) {
 		tint = pants_colors[int(clamp(floor(COLOR.a * 0.5), 0.0, 7.0))];
 	} else if (part > 0.5) {
@@ -89,7 +97,9 @@ void fragment() {
 	vec3 shading = min(base * detail_gain, vec3(1.25));
 	vec3 colour = base * brightness;
 	colour = mix(colour, tint * shading, paint.r);
-	colour = mix(colour, skin * shading, paint.g);
+	colour = mix(colour, (people ? trousers : skin) * shading, paint.g);
+	// Flat where there is no map (the kit of parts has none).
+	NORMAL_MAP = people ? texture(normal_tex, UV).rgb : vec3(0.5, 0.5, 1.0);
 	float grey = dot(colour, vec3(0.2126, 0.7152, 0.0722));
 	colour = mix(vec3(grey), colour, saturation) * dim * shade;
 

@@ -1,0 +1,8 @@
+task created a19346d0-39d5-4530-98df-a7503d4d5033 (@crowd-p11-uv)
+mesh_uv · queued
+mesh_uv · running 75% · a19346d0
+mesh_uv · success 100% · a19346d0
+[32m✓[39m mesh_uv · a19346d0-39d5-4530-98df-a7503d4d5033 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p11_uv\tripo-out\crowd-p11-uv-a19346d0
+{"task_id":"a19346d0-39d5-4530-98df-a7503d4d5033","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"p11_uv\\tripo-out\\crowd-p11-uv-a19346d0","files":["model.glb","uv_render.webp"],"model_file":"p11_uv\\tripo-out\\crowd-p11-uv-a19346d0\\model.glb"}

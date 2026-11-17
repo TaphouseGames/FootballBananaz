@@ -1,0 +1,8 @@
+task created 3eb1dce9-9a32-44ab-8582-d94f16c24846 (@crowd-p05-uv)
+mesh_uv · queued
+mesh_uv · running 50% · 3eb1dce9
+mesh_uv · success 100% · 3eb1dce9
+[32m✓[39m mesh_uv · 3eb1dce9-9a32-44ab-8582-d94f16c24846 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p05_uv\tripo-out\crowd-p05-uv-3eb1dce9
+{"task_id":"3eb1dce9-9a32-44ab-8582-d94f16c24846","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"p05_uv\\tripo-out\\crowd-p05-uv-3eb1dce9","files":["model.glb","uv_render.webp"],"model_file":"p05_uv\\tripo-out\\crowd-p05-uv-3eb1dce9\\model.glb"}

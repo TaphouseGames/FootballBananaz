@@ -56,8 +56,14 @@ route = PackedVector2Array(2.5, 0, 4, -18)
 [sub_resource type="Resource" id="motion"]
 script = ExtResource("2_assign")
 label = "HB"
-start = Vector2(-2.2, -6)
-route = PackedVector2Array(3.5, -2, 5, -10)
+start = Vector2(-4.6, 0)
+route = PackedVector2Array(1.6, -6, 6.6, -15)
+
+[sub_resource type="Resource" id="motion_set"]
+script = ExtResource("2_assign")
+label = "HB"
+start = Vector2(-4.6, -6)
+route = PackedVector2Array(5.5, -2, 7.5, -10)
 
 [resource]
 script = ExtResource("1_play")
@@ -67,6 +73,7 @@ group = 4
 handoff_delay = 0.4
 play_action = true
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
-motion = 2
-motion_to = Vector2(-2.2, -6)
+motion = 3
+motion_to = Vector2(-4.6, -6)
 motion_assignment = SubResource("motion")
+motion_set_assignment = SubResource("motion_set")

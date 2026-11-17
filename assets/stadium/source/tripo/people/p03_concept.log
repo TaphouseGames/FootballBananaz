@@ -1,0 +1,10 @@
+task created 8af84e34-16b6-4416-b29a-417b9abd3c07 (@crowd-p03-concept)
+generate_image · queued
+generate_image · running · 8af84e34
+generate_image · running · 8af84e34
+generate_image · running · 8af84e34
+generate_image · success 100% · 8af84e34
+[32m✓[39m generate_image · 8af84e34-16b6-4416-b29a-417b9abd3c07 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p03_concept\tripo-out\crowd-p03-concept-8af84e34
+{"task_id":"8af84e34-16b6-4416-b29a-417b9abd3c07","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p03_concept\\tripo-out\\crowd-p03-concept-8af84e34","files":["generated_image.png","preview.png"],"preview":"p03_concept\\tripo-out\\crowd-p03-concept-8af84e34\\preview.png"}

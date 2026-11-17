@@ -1,0 +1,10 @@
+task created 9b97a3d1-58f8-4024-bf43-96d2b183250a (@crowd-p05-concept)
+generate_image · queued
+generate_image · running · 9b97a3d1
+generate_image · running · 9b97a3d1
+generate_image · running · 9b97a3d1
+generate_image · success 100% · 9b97a3d1
+[32m✓[39m generate_image · 9b97a3d1-58f8-4024-bf43-96d2b183250a · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p05_concept\tripo-out\crowd-p05-concept-9b97a3d1
+{"task_id":"9b97a3d1-58f8-4024-bf43-96d2b183250a","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p05_concept\\tripo-out\\crowd-p05-concept-9b97a3d1","files":["generated_image.png","preview.png"],"preview":"p05_concept\\tripo-out\\crowd-p05-concept-9b97a3d1\\preview.png"}

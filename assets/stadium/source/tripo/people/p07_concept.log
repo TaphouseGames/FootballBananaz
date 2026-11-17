@@ -1,0 +1,10 @@
+task created 1909647b-2e63-4851-828e-e6adf4236b1f (@crowd-p07-concept)
+generate_image · queued
+generate_image · running · 1909647b
+generate_image · running · 1909647b
+generate_image · running · 1909647b
+generate_image · success 100% · 1909647b
+[32m✓[39m generate_image · 1909647b-2e63-4851-828e-e6adf4236b1f · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p07_concept\tripo-out\crowd-p07-concept-1909647b
+{"task_id":"1909647b-2e63-4851-828e-e6adf4236b1f","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p07_concept\\tripo-out\\crowd-p07-concept-1909647b","files":["generated_image.png","preview.png"],"preview":"p07_concept\\tripo-out\\crowd-p07-concept-1909647b\\preview.png"}

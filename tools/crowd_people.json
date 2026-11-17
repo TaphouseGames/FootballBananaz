@@ -1,0 +1,115 @@
+{
+  "_about": "The people the crowd is made of (tools/prep_people.py makes assets/stadium/crowd_people.glb and its three pictures from this). Every person is one whole Tripo character of about 1,500 triangles. `template` is the prompt for the concept picture, with `{who}` from the person; image[1] is `style` [0] and image[2] is `style` [1]. The top is always plain light grey and the trousers plain mid grey: those two greys are what the game repaints per fan (see `keys`). `source` is the raw model, from the project root; a person without one is skipped, so the list can hold people who are still to be made. `yaw` turns the model to face -Y in Blender (-90 for a model as Tripo gives it: they come facing +X). `height` (metres) overrides the gender's. `joints` overrides a joint prep_people.py found (names as printed after JOINTS; [x, y, z] with the height = 1, front = -Y, the person's left = +X). `keys` overrides a colour it sampled (`top`, `pants`: [r, g, b] 0..1 as in the texture; null: that part is not repainted). `options` tunes how the texture is read: `chroma` (0.07: how far from a sampled colour a pixel may be and still count as it) and `luma` ([0.5, 1.7]: how much darker and brighter), `sleeves` (\"wrist\", \"elbow\" or \"shoulder\": how far out along the arm the top goes; beyond it nothing is the top), `legs` (\"ankle\" or \"knee\": how far down the trousers go), `collar` (0.03: how far above the neck line the top goes in the middle; more for a top that comes up to the chin on somebody with no neck to speak of). `budgets` are the triangles of the middle and the plainest level; the nearest level is the model as it came.",
+  "style": [
+    "assets/stadium/source/tripo/people/style_players.png",
+    "assets/stadium/source/tripo/mascot/tripo-out/mascot-07cf547b/generated_image.jpeg"
+  ],
+  "template": "A new character: a sports fan in the stands, {who}. Full body, front view, standing upright in a T-pose with arms straight out to the sides, palms down, and legs slightly apart. Stylized chunky 3D cartoon character with simple rounded shapes, a slightly big head, slightly oversized hands and shoes, in exactly the smooth matte clay 3D art style, face style and lighting of the characters in image[1], with the toy-like proportions of image[2]. The top is plain light grey and the trousers are plain mid grey, both one flat colour with no logos, no prints, no text, no stripes and no pockets in another colour. Bare hands, mouth closed or a closed-mouth smile. Matte, no gloss. Single isolated figure on a plain flat grey background, no floor shadow, no props.",
+  "genders": {
+    "m": {"height": 1.85},
+    "f": {"height": 1.72}
+  },
+  "budgets": {"mid": 450, "far": 150},
+  "atlas_cell": 512,
+  "atlas_grid": 4,
+  "people": {
+    "p01": {
+      "gender": "f",
+      "who": "a Black woman in her thirties with dark brown skin and big round curly black hair, medium build, a wide friendly closed-mouth grin, wearing a short-sleeved T-shirt, jeans and white sneakers",
+      "source": "assets/stadium/source/tripo/people/p01_uv/tripo-out/crowd-p01-uv-8a069749/model.glb",
+      "yaw": -90,
+      "options": {"sleeves": "elbow"}
+    },
+    "p02": {
+      "gender": "m",
+      "who": "a very chunky, wide and heavy white man in his fifties with a bald head and a thick grey moustache, a big round belly, a thick neck, thick arms and thick legs, wearing a long-sleeved sweatshirt, trousers and brown boots",
+      "source": "assets/stadium/source/tripo/people/p02_uv/tripo-out/crowd-p02-uv-4e866ff9/model.glb",
+      "yaw": -90,
+      "options": {"collar": 0.1}
+    },
+    "p03": {
+      "gender": "f",
+      "who": "a slim East Asian woman in her twenties with straight black hair in a high ponytail, wearing a hoodie with the hood down, trousers and white sneakers",
+      "source": "assets/stadium/source/tripo/people/p03_uv/tripo-out/crowd-p03-uv-9184927b/model.glb",
+      "yaw": -90
+    },
+    "p04": {
+      "gender": "m",
+      "who": "a tall lean Black man in his twenties with dark skin and a short flat-top haircut, wearing a short-sleeved football jersey, shorts to the knee and red sneakers",
+      "source": "assets/stadium/source/tripo/people/p04_uv/tripo-out/crowd-p04-uv-dcd2ad68/model.glb",
+      "yaw": -90,
+      "options": {"sleeves": "elbow", "legs": "knee"}
+    },
+    "p05": {
+      "gender": "f",
+      "who": "a very chunky, short and wide white woman in her sixties with short curly grey hair and round glasses, a round body, thick arms and thick legs, wearing a long-sleeved cardigan buttoned up, trousers and blue shoes",
+      "source": "assets/stadium/source/tripo/people/p05_uv/tripo-out/crowd-p05-uv-3eb1dce9/model.glb",
+      "yaw": -90
+    },
+    "p06": {
+      "gender": "m",
+      "who": "a stocky Latino man in his forties with tan skin, short black hair and a black goatee, wearing a blue baseball cap, a short-sleeved polo shirt, trousers and white sneakers",
+      "source": "assets/stadium/source/tripo/people/p06_uv/tripo-out/crowd-p06-uv-3cf376ce/model.glb",
+      "yaw": -90,
+      "options": {"sleeves": "elbow"}
+    },
+    "p07": {
+      "gender": "f",
+      "who": "a South Asian woman in her forties with brown skin and a long thick black braid over one shoulder, medium build, wearing a long-sleeved top, trousers and yellow sneakers",
+      "source": "assets/stadium/source/tripo/people/p07_uv/tripo-out/crowd-p07-uv-83e34ed2/model.glb",
+      "yaw": -90
+    },
+    "p08": {
+      "gender": "m",
+      "who": "a skinny white teenage boy with freckles and messy red hair, wearing an oversized hoodie with the hood down, trousers and green sneakers",
+      "source": "assets/stadium/source/tripo/people/p08_uv/tripo-out/crowd-p08-uv-55ce4334/model.glb",
+      "yaw": -90
+    },
+    "p09": {
+      "gender": "f",
+      "who": "a tall athletic white woman in her thirties with a blonde bob haircut, wearing a sleeveless tank top, shorts to the knee and white sneakers",
+      "source": "assets/stadium/source/tripo/people/p09_uv/tripo-out/crowd-p09-uv-1af39b81/model.glb",
+      "yaw": -90,
+      "options": {"sleeves": "shoulder", "legs": "knee"}
+    },
+    "p10": {
+      "gender": "m",
+      "who": "a very chunky, huge and wide Pacific Islander man in his thirties with brown skin and black hair tied in a bun on top, massive shoulders, a barrel chest, a big belly, thick arms and thick legs, wearing a short-sleeved T-shirt, shorts to the knee and black sneakers",
+      "source": "assets/stadium/source/tripo/people/p10_uv/tripo-out/crowd-p10-uv-9e253e1f/model.glb",
+      "yaw": -90,
+      "options": {"sleeves": "elbow", "legs": "knee"}
+    },
+    "p11": {
+      "gender": "f",
+      "who": "a very chunky, wide and heavy Black woman in her fifties with medium brown skin and short grey natural hair, big hoop earrings, a round body, thick arms and thick legs, wearing a long-sleeved sweatshirt, trousers and purple sneakers",
+      "source": "assets/stadium/source/tripo/people/p11_uv/tripo-out/crowd-p11-uv-a19346d0/model.glb",
+      "yaw": -90
+    },
+    "p12": {
+      "gender": "m",
+      "who": "an old East Asian man in his seventies with thin white hair, a small white beard and a kind smile, slight build, wearing a zipped-up jacket, trousers and brown shoes",
+      "source": "assets/stadium/source/tripo/people/p12_uv/tripo-out/crowd-p12-uv-b38394bb/model.glb",
+      "yaw": -90
+    },
+    "p13": {
+      "gender": "f",
+      "who": "a Latina woman in her twenties with light brown skin and long wavy dark brown hair, wearing a white woolly bobble hat, a short-sleeved football jersey, trousers and red sneakers",
+      "source": "assets/stadium/source/tripo/people/p13_uv/tripo-out/crowd-p13-uv-a149e58d/model.glb",
+      "yaw": -90,
+      "keys": {"top": [0.67, 0.66, 0.67]},
+      "options": {"sleeves": "elbow"}
+    },
+    "p14": {
+      "gender": "m",
+      "who": "a Middle Eastern man in his thirties with olive skin, short dark curly hair and a full black beard, medium build, wearing a long-sleeved shirt with the collar open, trousers and white sneakers",
+      "source": "assets/stadium/source/tripo/people/p14_uv/tripo-out/crowd-p14-uv-d4e57ebe/model.glb",
+      "yaw": -90
+    },
+    "p15": {
+      "gender": "f",
+      "who": "a small white woman in her forties with a pixie cut dyed bright pink, wearing a striped scarf in white and black, a long-sleeved jumper, trousers and black boots",
+      "source": "assets/stadium/source/tripo/people/p15_uv/tripo-out/crowd-p15-uv-bd98fa46/model.glb",
+      "yaw": -90
+    }
+  }
+}

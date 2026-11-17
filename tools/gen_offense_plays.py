@@ -226,16 +226,22 @@ Z_ZIP, Z_RETURN = (-1.5, 8.5), (-1.2, 13.5)                                     
 Z_ACROSS = (-2.4, -9)
 SL_ACROSS, SL_ORBIT, SL_JET, SL_RETURN = (-2.2, 8.3), (-7, -2.5), (-5.5, 8.3), (-1.2, -4.5)   # Gun Spread: the slot
 W_ACROSS, W_ORBIT, W_JET, W_RETURN = (-2.2, -6), (-7, 2.5), (-5.5, -6), (-1.5, 9)   # Gun Trips: the wing
-# Where a jet motion passes in front of the shotgun quarterback.
-MESH = (-5.5, 0)
+# A jet crosses in front of the quarterback at the depth of the spot it ends
+# on: a yard and a half in front of him for a handoff (shotgun: 5.5 back,
+# under center: 2.4), further up when the ball does not go to the jet man.
+Z_JET = (-2.4, -9)        # Under center: the flanker, all the way across
+W_JET_HIGH = (-4.6, -6)   # Gun Trips: in front of the back who fakes the other way
 
 
-def mo(kind, to, job=None, handoff=False):
-    return (kind, to, job, handoff)
+def mo(kind, to, job=None, handoff=False, late=None):
+    """`late` (JET): his job once he has gone past the quarterback or has set,
+    from the spot he sets on. Without one he blocks."""
+    return (kind, to, job, handoff, late)
 
 
 # file -> motion, target spot, his job from there (routes relative to the new
-# spot; JET: relative to MESH, for a snap while he runs). RETURN keeps the job
+# spot; JET: relative to the point in front of the quarterback, for a snap
+# while he runs, and `late` for one after that). RETURN keeps the job
 # the play draws. A play that is not here has no motion.
 MOTIONS = {
     # Singleback
@@ -256,7 +262,11 @@ MOTIONS = {
     "flood": mo(ACROSS, Z_ACROSS, rt(13, 0, 41, 9)),
     # Heavy
     "double_tight_power": mo(ZIP, Z_ZIP, lead(2.5, -4.5, 5, -5.5)),
-    "hb_dive": mo(RETURN, Z_RETURN),
+    # A jet under center: the flanker takes the ball in front of the
+    # quarterback at a sprint and cuts up between the left guard and the
+    # tight end, where the line opens a hole for him. Round the end nobody
+    # blocks the corner (2 yards a carry, against nearly 5 through the hole).
+    "hb_dive": mo(JET, Z_JET, run(1, -2.4, 4, -2.8, 12, -3), handoff=True),
     "power_sweep": mo(ZIP, Z_ZIP, lead(2.5, -2.5, 5, -1.5)),
     # Runs the coverage off on the left: the right is empty for the back's flat.
     "te_delay": mo(ACROSS, Z_ACROSS, rt(41, 0)),
@@ -289,7 +299,9 @@ MOTIONS = {
     # A corner route on the left, over the back's swing: the two in-breakers
     # come across underneath it.
     "gun_levels": mo(ACROSS, W_ACROSS, rt(10, 0, 18, -9)),
-    "gun_boot": mo(ACROSS, W_ACROSS, rt(3.5, -2, 5, -10)),
+    # A jet on a pass: he is in the left flat at a sprint as the quarterback
+    # rolls out that way. Snapped late he runs the same flat from a standstill.
+    "gun_boot": mo(JET, W_JET_HIGH, rt(1.6, -6, 6.6, -15), late=rt(5.5, -2, 7.5, -10)),
     # Still the flat level of the flood, swinging out of the backfield.
     "gun_trips_flood": mo(ORBIT, W_ORBIT, rt(1, 6.6, 4, 15.2)),
     "scissors": mo(ORBIT, W_ORBIT, rt(1, 6.6, 4, 15.2)),
@@ -352,15 +364,21 @@ def write_play(spec):
         out.append(sub(ids[4 + i], label, kind, start, route, settle, bt))
     motion = MOTIONS.get(file)
     if motion:
-        kind, to, job, handoff = motion
+        kind, to, job, handoff, late = motion
         man = pick(skill)
         assert man >= 0, "%s: nobody may go in motion" % file
         assert (job is None) == (kind == RETURN), file
+        assert late is None or kind == JET, file
         if job:
-            start = MESH if kind == JET else to
+            # A jet man's job starts at the point in front of the quarterback.
+            start = (to[0], 0) if kind == JET else to
             settle = job[2] if len(job) > 2 else False
             bt = job[3] if len(job) > 3 else 0.0
             out.append(sub("motion", skill[man][0], job[0], start, job[1], settle, bt))
+        if late:
+            settle = late[2] if len(late) > 2 else False
+            bt = late[3] if len(late) > 3 else 0.0
+            out.append(sub("motion_set", skill[man][0], late[0], to, late[1], settle, bt))
     res = ["[resource]", 'script = ExtResource("1_play")', 'play_name = "%s"' % name, 'description = "%s"' % desc]
     if category != SHORT:
         res.append("category = %d" % category)
@@ -379,6 +397,8 @@ def write_play(spec):
         res.append("motion_to = %s" % vec(motion[1]))
         if motion[2]:
             res.append('motion_assignment = SubResource("motion")')
+        if motion[4]:
+            res.append('motion_set_assignment = SubResource("motion_set")')
         if motion[3]:
             res.append("motion_handoff = true")
     out.append("\n".join(res) + "\n")

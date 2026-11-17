@@ -1,0 +1,10 @@
+task created 9027b97c-eb75-4aaa-b03a-eb6fa955cdd8 (@crowd-p12-concept)
+generate_image · queued
+generate_image · running · 9027b97c
+generate_image · running · 9027b97c
+generate_image · running · 9027b97c
+generate_image · success 100% · 9027b97c
+[32m✓[39m generate_image · 9027b97c-eb75-4aaa-b03a-eb6fa955cdd8 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p12_concept\tripo-out\crowd-p12-concept-9027b97c
+{"task_id":"9027b97c-eb75-4aaa-b03a-eb6fa955cdd8","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p12_concept\\tripo-out\\crowd-p12-concept-9027b97c","files":["generated_image.png","preview.png"],"preview":"p12_concept\\tripo-out\\crowd-p12-concept-9027b97c\\preview.png"}

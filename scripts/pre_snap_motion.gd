@@ -202,6 +202,9 @@ func settle() -> bool:
 				after = play.motion_assignment
 				anchored = false
 				jet_sweep = play.motion_handoff
+			elif play.motion_set_assignment != null:
+				# Too late for that: the job the play has for him on the far side.
+				after = play.motion_set_assignment
 			else:
 				# Too late: he is a blocker on the far side.
 				after = OffenseAssignment.new()

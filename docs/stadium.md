@@ -48,7 +48,7 @@ The wall is 2.3 yards high (`WALL_HEIGHT`), a little taller than a player (1.95)
 
 All under `Field/Stadium/Props` at run time (the nodes are made in `Stadium._build_props()`, which is where to move them):
 
-- `Jumbotrons/Jumbotron0` and `Jumbotron4`: behind the back wall at each end. The score is a `Label3D` on a quad in front of the model's screen (`SCREEN_RECT`). Hidden on the main menu, where the title stands in front of one.
+- `Jumbotrons/Jumbotron0` and `Jumbotron4`: behind the back wall at each end. The score is a `Label3D` on a quad in front of the model's screen (`SCREEN_RECT`). On the main menu `Stadium.show_title()` puts the game's title and subtitle on `Jumbotron0` in place of the score (`Title`, `Subtitle`), and stands it `MainMenu.JUMBOTRON_SCALE` times its size.
 - `LightTowers/LightTower1, 3, 5, 7`: outside the four corners.
 - `HotDogStand`: on the walkway at the top of the home stand (-Z), about 30 % of the way along.
 - `BoothAnchor`: an empty marker at the top of the home stand at midfield. There is no booth model yet; this is where one would go.
@@ -64,7 +64,8 @@ blender -b --factory-startup --python tools/prep_prop.py -- assets/stadium/sourc
 
 - `crowd_kit.glb`, `crowd_atlas.png` and `crowd_mask.png` are the crowd's parts; see "The crowd's parts" below. The kit's import has `generate_lods` off, since the levels are made by the script. (`fan.glb` and `tools/prep_fan.py` are the old single-model crowd and are no longer used.)
 - The signs are not files. `Stadium._bake_signs()` writes the 16 texts into one picture at the start of a match (a viewport that is thrown away afterwards) and the crowd shader shows one cell on the front of each board. The picture is ready by the second frame of a match. Headless runs skip the bake.
-- `jumbotron.glb` and `hot_dog_stand.glb` are Tripo models (prompts in each `task.json`), and `light_tower.glb` is made from `TripoModels/stadium_light_tower/stadium_light_tower.fbx` (`tris=9000`, which leaves it whole, and no `yaw`; the script reads FBX too). The others are cut to 5,000 triangles or fewer and 1024 px textures. `yaw=-90` because Tripo's models came out facing +X. `Stadium._prop()` scales each to the height it wants, and shows a plain box if a file is missing.
+- `jumbotron.glb` and `hot_dog_stand.glb` are Tripo models (prompts in each `task.json`), and `light_tower.glb` is made from `TripoModels/industrial_floodlight_3d_model/industrial_floodlight_3d_model.fbx` (`tris=9000`, down from 27,000, and no `yaw`; the script reads FBX too). The others are cut to 5,000 triangles or fewer and 1024 px textures. `yaw=-90` because Tripo's models came out facing +X. `Stadium._prop()` scales each to the height it wants, and shows a plain box if a file is missing.
+- The sky of a match is `assets/stadium/cartoon_sky.gdshader`, set on the environment in `scenes/main.tscn` and `scenes/main_menu.tscn`: its colours, how many clouds (`cloud_cover`), their size (`cloud_columns`) and drift (`cloud_speed`) are the shader's parameters. The clouds sit low, just over the stands, since that is all of the sky the intro's camera sees.
 - `assets/stadium/source/` has a `.gdignore`, so Godot does not import the raw models.
 
 ## The crowd's parts
@@ -169,7 +170,7 @@ So the kit is a little faster than the one man it replaced: about a third fewer 
 
 ## Open issues
 
-- The game camera looks down at the field and never sees above the top rows, so the jumbotrons and light towers only show in the intro, on the menu (towers) and in shots from further out.
+- The game camera looks down at the field and never sees above the top rows, so the jumbotrons and light towers only show in the intro, on the menu (the far jumbotron with the title on it, between its two towers) and in shots from further out.
 - When the ball carrier is deep in their own end zone, the stand behind fills the bottom third of the picture (the camera is over its rows). It does not cover the field.
 - A ball in the stands lies on the row it landed on, among the fans; it does not bounce off them, and nobody throws it back.
 - With no sideline to run out of, plays to the edge gain more than they did and the clock never stops for a carrier going out. Nothing has been retuned for that yet.

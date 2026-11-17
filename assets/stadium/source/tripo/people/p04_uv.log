@@ -1,0 +1,9 @@
+task created dcd2ad68-0c3c-453f-bf23-581f493960d4 (@crowd-p04-uv)
+mesh_uv · queued
+mesh_uv · running 78% · dcd2ad68
+mesh_uv · running 99% · dcd2ad68
+mesh_uv · success 100% · dcd2ad68
+[32m✓[39m mesh_uv · dcd2ad68-0c3c-453f-bf23-581f493960d4 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p04_uv\tripo-out\crowd-p04-uv-dcd2ad68
+{"task_id":"dcd2ad68-0c3c-453f-bf23-581f493960d4","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"p04_uv\\tripo-out\\crowd-p04-uv-dcd2ad68","files":["model.glb","uv_render.webp"],"model_file":"p04_uv\\tripo-out\\crowd-p04-uv-dcd2ad68\\model.glb"}

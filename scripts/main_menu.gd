@@ -1,7 +1,7 @@
 class_name MainMenu
 extends Node3D
-## The title screen the game opens on: the field at dusk behind the title and
-## four buttons. Season brings up the season's screen (SeasonHub): the table,
+## The title screen the game opens on: the field under a blue sky, the title on the
+## jumbotron over the far end and four buttons. Season brings up the season's screen (SeasonHub): the table,
 ## the stats and the way into the person's next game. Exhibition brings up the
 ## team select, where the person picks the two teams of the league and their
 ## own side, and which fades to a match that counts for nothing and its intro;
@@ -23,14 +23,19 @@ const BUTTON_COLOR: Color = Color(0.13, 0.36, 0.72, 0.95)
 const BUTTON_HOVER_COLOR: Color = Color(0.2, 0.5, 0.92, 1.0)
 const BUTTON_BORDER: Color = Color(0.45, 0.85, 1.0)
 const BUTTON_SIZE: Vector2 = Vector2(300.0, 60.0)
-## Heavy fonts for the title and the buttons, the first one installed wins.
+## Heavy fonts for the buttons, the first one installed wins.
 const FONT_NAMES: PackedStringArray = ["Impact", "Haettenschweiler", "Arial Black"]
 ## The camera stands on the field looking at the right end zone, whose word
 ## reads the right way up from here, and drifts from side to side.
 const CAMERA_FROM: Vector3 = Vector3(62.0, 4.0, 0.0)
-const CAMERA_AT: Vector3 = Vector3(112.0, 5.0, 0.0)
+const CAMERA_AT: Vector3 = Vector3(112.0, 11.0, 0.0)
 const CAMERA_SWAY: float = 6.0
 const CAMERA_SWAY_SPEED: float = 0.12
+## What the jumbotron over that end zone says under the title, and how many
+## times its size it stands, to be read from here.
+const SUBTITLE: String = "EXTREMELY REALISTIC
+AMERICAN FOOTBALL SIMULATOR"
+const JUMBOTRON_SCALE: float = 1.5
 
 @export var tuning: Tuning
 ## The teams the team select has to offer.
@@ -47,7 +52,6 @@ var team_select: TeamSelect
 ## Made the first time SEASON is pressed.
 var season_hub: SeasonHub
 
-var _title: Control
 var _buttons: Control
 ## Held so the match does not have to be loaded a second time.
 var _game_scene: PackedScene
@@ -103,11 +107,9 @@ func _ready() -> void:
 	_visited = true
 	booth.consider(welcome, 1.0, tuning.menu_voice_welcome_delay, 0.0, false, true)
 
-	_build_title()
 	_build_buttons()
 	season_button.grab_focus()
 	if from_season and Season.current != null:
-		_title.visible = false
 		_buttons.visible = false
 		_open_hub()
 	_sounds_on = true
@@ -150,13 +152,12 @@ func _place_camera() -> void:
 
 # --- Buttons -------------------------------------------------------------------------
 
-## On to the season's screen, in place of the title and the buttons.
+## On to the season's screen, in place of the buttons.
 func _on_season() -> void:
 	if _starting or _leaving:
 		return
 	_play(CONFIRM_SOUND)
 	booth.react(&"season_pick" if Season.current == null else &"season_open")
-	ScreenFade.pop(_title, false)
 	ScreenFade.pop(_buttons, false)
 	_open_hub()
 	ScreenFade.pop(season_hub, true)
@@ -178,12 +179,11 @@ func _open_hub() -> void:
 	season_hub.open()
 
 
-## Back to the title. SEASON taking the focus makes the sound.
+## Back to the buttons. SEASON taking the focus makes the sound.
 func _on_hub_closed() -> void:
 	booth.react(&"back")
 	season_hub.close()
 	season_button.text = _season_text()
-	ScreenFade.pop(_title, true)
 	ScreenFade.pop(_buttons, true)
 	season_button.grab_focus()
 
@@ -229,7 +229,7 @@ func _season_text() -> String:
 	return "SEASON" if Season.current == null else "CONTINUE SEASON"
 
 
-## On to the team select, in place of the title and the buttons.
+## On to the team select, in place of the buttons.
 func _on_start() -> void:
 	if _starting or _leaving:
 		return
@@ -246,17 +246,15 @@ func _on_start() -> void:
 		team_select.team_changed.connect(_remark_select.bind(&"team"))
 		team_select.side_changed.connect(_remark_select.bind(&"side"))
 		ui.add_child(team_select)
-	ScreenFade.pop(_title, false)
 	ScreenFade.pop(_buttons, false)
 	team_select.open()
 	ScreenFade.pop(team_select, true)
 
 
-## Back to the title. EXHIBITION taking the focus makes the sound.
+## Back to the buttons. EXHIBITION taking the focus makes the sound.
 func _on_select_cancelled() -> void:
 	booth.react(&"back")
 	team_select.close()
-	ScreenFade.pop(_title, true)
 	ScreenFade.pop(_buttons, true)
 	start_button.grab_focus()
 
@@ -372,7 +370,8 @@ func _play(stream: AudioStream) -> void:
 # --- Building blocks -----------------------------------------------------------------
 
 ## The field only asks its teams for a colour and a word for each end zone:
-## between them they spell the title.
+## between them they spell the title, which the jumbotron over the far end
+## shows too.
 func _build_field() -> void:
 	var left: Team = Team.new()
 	left.short_name = "BLUE"
@@ -384,51 +383,9 @@ func _build_field() -> void:
 	right.attack_dir = -1
 	field.setup(tuning, left, right)
 	field.markers.visible = false
-	field.stadium.show_jumbotrons(false)
+	field.stadium.show_title(PackedStringArray(["BLUE", "42"]), PackedColorArray([BLUE, GOLD]), SUBTITLE, JUMBOTRON_SCALE)
 	left.free()
 	right.free()
-
-
-func _build_title() -> void:
-	var column: VBoxContainer = VBoxContainer.new()
-	column.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	column.offset_top = 36.0
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override(&"separation", -6)
-	ui.add_child(column)
-	_title = column
-
-	var title: HBoxContainer = HBoxContainer.new()
-	title.alignment = BoxContainer.ALIGNMENT_CENTER
-	title.add_theme_constant_override(&"separation", 22)
-	title.add_child(_title_label("BLUE", BLUE))
-	title.add_child(_title_label("42", GOLD))
-	column.add_child(title)
-
-	var subtitle: Label = Label.new()
-	subtitle.text = "EXTREMELY REALISTIC AMERICAN FOOTBALL SIMULATOR"
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_override(&"font", _font)
-	subtitle.add_theme_font_size_override(&"font_size", 26)
-	subtitle.add_theme_color_override(&"font_color", Color.WHITE)
-	subtitle.add_theme_color_override(&"font_outline_color", OUTLINE)
-	subtitle.add_theme_constant_override(&"outline_size", 8)
-	column.add_child(subtitle)
-
-
-func _title_label(text: String, color: Color) -> Label:
-	var label: Label = Label.new()
-	label.text = text
-	label.add_theme_font_override(&"font", _font)
-	label.add_theme_font_size_override(&"font_size", 170)
-	label.add_theme_color_override(&"font_color", color)
-	label.add_theme_color_override(&"font_outline_color", OUTLINE)
-	label.add_theme_constant_override(&"outline_size", 22)
-	label.add_theme_color_override(&"font_shadow_color", Color(0.0, 0.0, 0.0, 0.5))
-	label.add_theme_constant_override(&"shadow_offset_x", 5)
-	label.add_theme_constant_override(&"shadow_offset_y", 7)
-	label.add_theme_constant_override(&"shadow_outline_size", 22)
-	return label
 
 
 func _build_buttons() -> void:

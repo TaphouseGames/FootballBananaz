@@ -1,0 +1,8 @@
+task created a149e58d-1eeb-4831-9383-0ef34a947eb4 (@crowd-p13-uv)
+mesh_uv · queued
+mesh_uv · running 99% · a149e58d
+mesh_uv · success 100% · a149e58d
+[32m✓[39m mesh_uv · a149e58d-1eeb-4831-9383-0ef34a947eb4 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p13_uv\tripo-out\crowd-p13-uv-a149e58d
+{"task_id":"a149e58d-1eeb-4831-9383-0ef34a947eb4","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"p13_uv\\tripo-out\\crowd-p13-uv-a149e58d","files":["model.glb","uv_render.webp"],"model_file":"p13_uv\\tripo-out\\crowd-p13-uv-a149e58d\\model.glb"}

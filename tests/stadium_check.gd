@@ -34,7 +34,7 @@ func _run() -> void:
 	for prop: String in ["Jumbotrons", "LightTowers", "HotDogStand", "BoothAnchor"]:
 		if stadium.props.get_node_or_null(NodePath(prop)) == null:
 			_failures.append("no %s under Stadium/Props" % prop)
-	for file: String in ["jumbotron.glb", "light_tower.glb", "hot_dog_stand.glb", Stadium.MASCOT_FALLBACK, "crowd_kit.glb", "crowd_atlas.png", "crowd_mask.png"]:
+	for file: String in ["jumbotron.glb", "light_tower.glb", "hot_dog_stand.glb", Stadium.MASCOT_FALLBACK, "crowd_people.glb", "crowd_people_atlas.png", "crowd_people_mask.png", "crowd_people_normal.png"]:
 		if not ResourceLoader.exists(Stadium.PROP_DIR + file):
 			_failures.append("assets/stadium/%s is missing" % file)
 
@@ -50,6 +50,10 @@ func _run() -> void:
 	var heads: Dictionary = {}
 	var torsos: Dictionary = {}
 	var legs: Dictionary = {}
+	# The people (of tools/crowd_people.json) who are in the stands, where the
+	# crowd is made of whole people: one mesh a fan at every level of detail.
+	var whole: bool = not stadium._people.is_empty()
+	var persons: Dictionary = {}
 	for chunk: Node in stadium.get_node(^"Crowd").get_children():
 		var parts: Dictionary = {}
 		for child: Node in chunk.get_children():
@@ -59,33 +63,43 @@ func _run() -> void:
 					heads[(child as MultiMeshInstance3D).multimesh.mesh.get_meta(&"fan", "")] = true
 				elif String(child.get_meta(&"kind", "?")) == "torso":
 					torsos[(child as MultiMeshInstance3D).multimesh.mesh.get_meta(&"fan", "")] = true
+				elif String(child.get_meta(&"kind", "?")) == "person":
+					persons[(child as MultiMeshInstance3D).multimesh.mesh.get_meta(&"fan", "")] = true
 				elif String(child.get_meta(&"kind", "?")) == "legs":
 					legs[(child as MultiMeshInstance3D).multimesh.mesh.get_meta(&"fan", "")] = true
 				var key: String = "%s %s" % [tier, child.get_meta(&"kind", "?")]
 				parts[key] = int(parts.get(key, 0)) + (child as MultiMeshInstance3D).multimesh.instance_count
 		chunks += 1
-		var fans: int = int(parts.get("Far head", 0))
+		var fans: int = int(parts.get("Far person" if whole else "Far head", 0))
 		counted += fans
-		if parts.size() != 9:
+		if parts.size() != (3 if whole else 9):
 			uneven += 1
 			continue
-		for key: String in ["Near head", "Near torso", "Near legs", "Mid head", "Mid torso", "Mid legs", "Far torso", "Far legs"]:
+		var wanted: Array[String] = ["Near head", "Near torso", "Near legs", "Mid head", "Mid torso", "Mid legs", "Far torso", "Far legs"]
+		if whole:
+			wanted = ["Near person", "Mid person"]
+		for key: String in wanted:
 			if int(parts.get(key, -1)) != fans:
 				uneven += 1
 				break
-	print("Pieces of the stands: %d.  Kits of parts: %d.  Heads from: %s.  Outfits from: %s." % [chunks, stadium._kits.size(), heads.keys(), torsos.keys()])
+	print("Pieces of the stands: %d.  People: %s.  Kits of parts: %d.  Heads from: %s.  Outfits from: %s." % [chunks, persons.keys(), stadium._kits.size(), heads.keys(), torsos.keys()])
+	# Everybody is the one person that was asked for, or everyone is somewhere.
+	if whole and tuning.crowd_person != "" and persons.keys() != [tuning.crowd_person]:
+		_failures.append("crowd_person is '%s', but the people in the stands are %s" % [tuning.crowd_person, persons.keys()])
+	if whole and tuning.crowd_person == "" and persons.size() != stadium._people.size():
+		_failures.append("there are %d people, but the stands have %s only" % [stadium._people.size(), persons.keys()])
 	# Everybody has the one head, the one outfit and the legs that were asked for.
-	if tuning.crowd_legs != "" and legs.keys() != [tuning.crowd_legs]:
+	if not whole and tuning.crowd_legs != "" and legs.keys() != [tuning.crowd_legs]:
 		_failures.append("crowd_legs is '%s', but the legs in the stands are from %s" % [tuning.crowd_legs, legs.keys()])
-	if tuning.crowd_torso != "" and torsos.keys() != [tuning.crowd_torso]:
+	if not whole and tuning.crowd_torso != "" and torsos.keys() != [tuning.crowd_torso]:
 		_failures.append("crowd_torso is '%s', but the outfits in the stands are from %s" % [tuning.crowd_torso, torsos.keys()])
 	# Or, with no one head asked for, every head of the kit is somewhere.
 	if tuning.crowd_head == "" and not stadium._kits.is_empty() and heads.size() != (stadium._kits[0].heads[0] as Array).size():
 		_failures.append("the kit has %d heads, but the stands have those of %s only" % [(stadium._kits[0].heads[0] as Array).size(), heads.keys()])
-	if tuning.crowd_head != "" and heads.keys() != [tuning.crowd_head]:
+	if not whole and tuning.crowd_head != "" and heads.keys() != [tuning.crowd_head]:
 		_failures.append("crowd_head is '%s', but the heads in the stands are from %s" % [tuning.crowd_head, heads.keys()])
 	if uneven > 0:
-		_failures.append("%d of %d pieces of the stands do not hold a head, a torso and legs for every fan at every level of detail" % [uneven, chunks])
+		_failures.append("%d of %d pieces of the stands do not hold every fan (whole, or a head, a torso and legs) at every level of detail" % [uneven, chunks])
 	for at: Vector3 in stadium.fan_positions:
 		if at.y < Stadium.FIRST_ROW_HEIGHT or field_rect.grow(tuning.wall_gap).has_point(Vector2(at.x, at.z)):
 			inside += 1

@@ -1,0 +1,8 @@
+task created 3cf376ce-a540-4684-9e0f-1b14708ebee8 (@crowd-p06-uv)
+mesh_uv · queued
+mesh_uv · running 73% · 3cf376ce
+mesh_uv · success 100% · 3cf376ce
+[32m✓[39m mesh_uv · 3cf376ce-a540-4684-9e0f-1b14708ebee8 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p06_uv\tripo-out\crowd-p06-uv-3cf376ce
+{"task_id":"3cf376ce-a540-4684-9e0f-1b14708ebee8","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"p06_uv\\tripo-out\\crowd-p06-uv-3cf376ce","files":["model.glb","uv_render.webp"],"model_file":"p06_uv\\tripo-out\\crowd-p06-uv-3cf376ce\\model.glb"}

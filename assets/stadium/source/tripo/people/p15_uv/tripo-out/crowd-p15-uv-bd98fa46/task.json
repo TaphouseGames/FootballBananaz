@@ -1,0 +1,21 @@
+{
+  "task_id": "bd98fa46-a2b7-4021-be73-e8f96591101b",
+  "type": "mesh_uv",
+  "status": "success",
+  "input": {
+    "bake": true,
+    "model_version": "default",
+    "original_model_id": "07473506-6bfa-409a-94be-c038dccec002"
+  },
+  "output_fields": [
+    "model_url",
+    "uv_render_url"
+  ],
+  "credits_consumed": 20,
+  "created_at": "2026-11-17T21:13:44.980652Z",
+  "completed_at": "2026-11-17T21:14:09.635773Z",
+  "files": [
+    "model.glb",
+    "uv_render.webp"
+  ]
+}

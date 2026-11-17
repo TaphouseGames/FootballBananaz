@@ -1,0 +1,10 @@
+task created 9dc2e987-540d-4043-a02d-c817e3a66d8f (@crowd-p14-concept)
+generate_image · queued
+generate_image · running · 9dc2e987
+generate_image · running · 9dc2e987
+generate_image · running · 9dc2e987
+generate_image · success 100% · 9dc2e987
+[32m✓[39m generate_image · 9dc2e987-540d-4043-a02d-c817e3a66d8f · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p14_concept\tripo-out\crowd-p14-concept-9dc2e987
+{"task_id":"9dc2e987-540d-4043-a02d-c817e3a66d8f","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p14_concept\\tripo-out\\crowd-p14-concept-9dc2e987","files":["generated_image.png","preview.png"],"preview":"p14_concept\\tripo-out\\crowd-p14-concept-9dc2e987\\preview.png"}

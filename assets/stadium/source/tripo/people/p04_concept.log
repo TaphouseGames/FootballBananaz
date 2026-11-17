@@ -1,0 +1,10 @@
+task created a113a3dc-bb35-4ae6-a39e-8e2b6824431d (@crowd-p04-concept)
+generate_image · queued
+generate_image · running · a113a3dc
+generate_image · running · a113a3dc
+generate_image · running · a113a3dc
+generate_image · success 100% · a113a3dc
+[32m✓[39m generate_image · a113a3dc-bb35-4ae6-a39e-8e2b6824431d · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p04_concept\tripo-out\crowd-p04-concept-a113a3dc
+{"task_id":"a113a3dc-bb35-4ae6-a39e-8e2b6824431d","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p04_concept\\tripo-out\\crowd-p04-concept-a113a3dc","files":["generated_image.png","preview.png"],"preview":"p04_concept\\tripo-out\\crowd-p04-concept-a113a3dc\\preview.png"}

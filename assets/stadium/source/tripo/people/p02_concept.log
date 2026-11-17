@@ -1,0 +1,10 @@
+task created 1ce539f5-2714-4b36-bc4f-c3516ab652c1 (@crowd-p02-concept)
+generate_image · queued
+generate_image · running · 1ce539f5
+generate_image · running · 1ce539f5
+generate_image · running · 1ce539f5
+generate_image · success 100% · 1ce539f5
+[32m✓[39m generate_image · 1ce539f5-2714-4b36-bc4f-c3516ab652c1 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p02_concept\tripo-out\crowd-p02-concept-1ce539f5
+{"task_id":"1ce539f5-2714-4b36-bc4f-c3516ab652c1","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p02_concept\\tripo-out\\crowd-p02-concept-1ce539f5","files":["generated_image.png","preview.png"],"preview":"p02_concept\\tripo-out\\crowd-p02-concept-1ce539f5\\preview.png"}

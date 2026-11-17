@@ -28,12 +28,10 @@
 [ext_resource type="Resource" path="res://resources/teams/bananaz.tres" id="20_bananaz"]
 [ext_resource type="Resource" path="res://resources/teams/coconuts.tres" id="21_coconuts"]
 [ext_resource type="Resource" path="res://resources/league.tres" id="26_league"]
+[ext_resource type="Shader" path="res://assets/stadium/cartoon_sky.gdshader" id="27_sky"]
 
-[sub_resource type="ProceduralSkyMaterial" id="sky_material"]
-sky_top_color = Color(0.2, 0.4, 0.72, 1)
-sky_horizon_color = Color(0.62, 0.73, 0.84, 1)
-ground_bottom_color = Color(0.08, 0.15, 0.08, 1)
-ground_horizon_color = Color(0.62, 0.73, 0.84, 1)
+[sub_resource type="ShaderMaterial" id="sky_material"]
+shader = ExtResource("27_sky")
 
 [sub_resource type="Sky" id="sky"]
 sky_material = SubResource("sky_material")
@@ -45,8 +43,9 @@ ambient_light_source = 3
 ambient_light_energy = 0.7
 tonemap_mode = 2
 fog_enabled = true
-fog_light_color = Color(0.62, 0.73, 0.84, 1)
+fog_light_color = Color(0.56, 0.8, 0.96, 1)
 fog_density = 0.0008
+fog_sky_affect = 0.0
 
 [node name="Game" type="Node3D"]
 script = ExtResource("1_game")

@@ -1,0 +1,21 @@
+[1m── Plan ──────────────────────────[22m
+input: ./p03_concept/tripo-out/crowd-p03-concept-8af84e34/generated_image.png
+model: P2-20260801[2m — explicit --model[22m
+steps:
+  1. image-to-model  [2mPOST /v3/generation/image-to-model[22m — generate a 3D model from one image
+[2m     face_limit=1500 pbr=true model="P2-20260801"[22m
+deliverables: GLB
+cost impact:
+  · estimated generation cost: 110 credits (official list price)
+[1m──────────────────────────────────[22m
+model: P2-20260801 (explicit --model)
+task created f6b68024-7abd-4814-a713-778d65afaf48 (@crowd-p03)
+image_to_model · queued
+image_to_model · running 6% · f6b68024
+image_to_model · running 19% · f6b68024
+image_to_model · running 31% · f6b68024
+image_to_model · success 100% · f6b68024
+[32m✓[39m image_to_model · f6b68024-7abd-4814-a713-778d65afaf48 · 110 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p03\tripo-out\crowd-p03-f6b68024
+{"task_id":"f6b68024-7abd-4814-a713-778d65afaf48","type":"image_to_model","status":"success","credits_consumed":110,"output_dir":"p03\\tripo-out\\crowd-p03-f6b68024","files":["model.glb","rendered_image.webp","preview.png"],"model_file":"p03\\tripo-out\\crowd-p03-f6b68024\\model.glb","preview":"p03\\tripo-out\\crowd-p03-f6b68024\\preview.png"}

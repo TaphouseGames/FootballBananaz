@@ -1,0 +1,10 @@
+task created a0af3552-56fd-45d8-a2a9-338b4c0a7ff0 (@crowd-p13-concept)
+generate_image · queued
+generate_image · running · a0af3552
+generate_image · running · a0af3552
+generate_image · running · a0af3552
+generate_image · success 100% · a0af3552
+[32m✓[39m generate_image · a0af3552-56fd-45d8-a2a9-338b4c0a7ff0 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p13_concept\tripo-out\crowd-p13-concept-a0af3552
+{"task_id":"a0af3552-56fd-45d8-a2a9-338b4c0a7ff0","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p13_concept\\tripo-out\\crowd-p13-concept-a0af3552","files":["generated_image.png","preview.png"],"preview":"p13_concept\\tripo-out\\crowd-p13-concept-a0af3552\\preview.png"}

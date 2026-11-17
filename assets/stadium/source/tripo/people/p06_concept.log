@@ -1,0 +1,10 @@
+task created ca9d35dd-8847-4a79-a2a2-df3ba1c61880 (@crowd-p06-concept)
+generate_image · queued
+generate_image · running · ca9d35dd
+generate_image · running · ca9d35dd
+generate_image · running · ca9d35dd
+generate_image · success 100% · ca9d35dd
+[32m✓[39m generate_image · ca9d35dd-8847-4a79-a2a2-df3ba1c61880 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p06_concept\tripo-out\crowd-p06-concept-ca9d35dd
+{"task_id":"ca9d35dd-8847-4a79-a2a2-df3ba1c61880","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p06_concept\\tripo-out\\crowd-p06-concept-ca9d35dd","files":["generated_image.png","preview.png"],"preview":"p06_concept\\tripo-out\\crowd-p06-concept-ca9d35dd\\preview.png"}

@@ -1,0 +1,10 @@
+task created e4dc0073-0b0a-441f-bad0-a8c0e73442fc (@crowd-p15-concept)
+generate_image · queued
+generate_image · running · e4dc0073
+generate_image · running · e4dc0073
+generate_image · running · e4dc0073
+generate_image · success 100% · e4dc0073
+[32m✓[39m generate_image · e4dc0073-0b0a-441f-bad0-a8c0e73442fc · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p15_concept\tripo-out\crowd-p15-concept-e4dc0073
+{"task_id":"e4dc0073-0b0a-441f-bad0-a8c0e73442fc","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p15_concept\\tripo-out\\crowd-p15-concept-e4dc0073","files":["generated_image.png","preview.png"],"preview":"p15_concept\\tripo-out\\crowd-p15-concept-e4dc0073\\preview.png"}

@@ -1,0 +1,10 @@
+task created fbb35676-08ac-442f-902f-18ab2aa45d17 (@crowd-p11-concept)
+generate_image · queued
+generate_image · running · fbb35676
+generate_image · running · fbb35676
+generate_image · running · fbb35676
+generate_image · success 100% · fbb35676
+[32m✓[39m generate_image · fbb35676-08ac-442f-902f-18ab2aa45d17 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p11_concept\tripo-out\crowd-p11-concept-fbb35676
+{"task_id":"fbb35676-08ac-442f-902f-18ab2aa45d17","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"p11_concept\\tripo-out\\crowd-p11-concept-fbb35676","files":["generated_image.png","preview.png"],"preview":"p11_concept\\tripo-out\\crowd-p11-concept-fbb35676\\preview.png"}

@@ -1,0 +1,9 @@
+task created bd98fa46-a2b7-4021-be73-e8f96591101b (@crowd-p15-uv)
+mesh_uv · queued
+mesh_uv · running 47% · bd98fa46
+mesh_uv · running 99% · bd98fa46
+mesh_uv · success 100% · bd98fa46
+[32m✓[39m mesh_uv · bd98fa46-a2b7-4021-be73-e8f96591101b · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p15_uv\tripo-out\crowd-p15-uv-bd98fa46
+{"task_id":"bd98fa46-a2b7-4021-be73-e8f96591101b","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"p15_uv\\tripo-out\\crowd-p15-uv-bd98fa46","files":["model.glb","uv_render.webp"],"model_file":"p15_uv\\tripo-out\\crowd-p15-uv-bd98fa46\\model.glb"}

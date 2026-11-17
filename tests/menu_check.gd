@@ -55,6 +55,7 @@ func _tick() -> void:
 				_failures.append("SEASON does not have the focus")
 			if _menu.season_button.text != "SEASON" or _menu.start_button.text != "EXHIBITION":
 				_failures.append("the first two buttons read %s and %s" % [_menu.season_button.text, _menu.start_button.text])
+			_expect_title()
 			_menu.options_button.pressed.emit()
 			if current_scene != _menu or _menu.team_select != null:
 				_failures.append("OPTIONS left the menu")
@@ -164,6 +165,38 @@ func _wait_for_match() -> void:
 		print("FAIL: %s" % failure)
 	print("menu check %s" % ("PASSED" if _failures.is_empty() else "FAILED"))
 	quit(0 if _failures.is_empty() else 1)
+
+
+## The jumbotron over the far end shows the title and its subtitle in place of
+## the score, inside its screen.
+func _expect_title() -> void:
+	var board: Node3D = _menu.field.stadium.props.get_node_or_null(^"Jumbotrons/Jumbotron0") as Node3D
+	if board == null or not board.is_visible_in_tree():
+		_failures.append("no jumbotron over the far end")
+		return
+	var title: Node3D = board.get_node_or_null(^"Title") as Node3D
+	var subtitle: Label3D = board.get_node_or_null(^"Subtitle") as Label3D
+	if title == null or subtitle == null:
+		_failures.append("the jumbotron has no title or no subtitle")
+		return
+	var words: PackedStringArray = PackedStringArray()
+	var left: float = INF
+	var right: float = -INF
+	for word: Label3D in title.get_children():
+		words.append(word.text)
+		var half: float = word.font.get_string_size(word.text, HORIZONTAL_ALIGNMENT_CENTER, -1.0, word.font_size).x * word.pixel_size * 0.5
+		left = minf(left, word.position.x - half)
+		right = maxf(right, word.position.x + half)
+	if words != PackedStringArray(["BLUE", "42"]):
+		_failures.append("the jumbotron's title reads %s" % [words])
+	if subtitle.text != MainMenu.SUBTITLE:
+		_failures.append("the jumbotron's subtitle reads '%s'" % subtitle.text)
+	var room: Vector2 = ((board.get_node(^"Screen") as MeshInstance3D).mesh as QuadMesh).size
+	var wide: float = subtitle.font.get_multiline_string_size(subtitle.text, HORIZONTAL_ALIGNMENT_CENTER, -1.0, subtitle.font_size).x * subtitle.pixel_size
+	if right - left > room.x or absf(left + right) > 0.01 or wide > room.x:
+		_failures.append("the title (%.1f) or the subtitle (%.1f) is wider than the screen (%.1f), or off its middle" % [right - left, wide, room.x])
+	if (board.get_node(^"Score") as Label3D).visible or (board.get_node(^"Flash") as Label3D).visible:
+		_failures.append("the score is up on the jumbotron behind the title")
 
 
 ## The team select is up, the menu is still the scene and the controller is at `side`.

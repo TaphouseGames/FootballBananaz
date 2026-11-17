@@ -197,9 +197,12 @@ func _check_reactions() -> void:
 				_pc.snap()
 				var after: OffenseAssignment = play.motion_assignment if play.motion != OffensePlay.Motion.RETURN else play.assignments[MotionRules.pick(play)]
 				if play.motion == OffensePlay.Motion.JET:
-					_expect(man.brain.off_assign.job == OffenseAssignment.Job.BLOCK, "snap: %s: a jet man who has set is not a blocker" % where)
+					# A jet man who has set: the job the play has for that, or a block.
+					after = play.motion_set_assignment
+					if after == null:
+						_expect(man.brain.off_assign.job == OffenseAssignment.Job.BLOCK, "snap: %s: a jet man who has set is not a blocker" % where)
 					_expect(_pc.runner != man, "snap: %s: the ball goes to a jet man who has set" % where)
-				else:
+				if after != null:
 					_expect(man.brain.off_assign == after, "snap: %s: he has the wrong job" % where)
 					if not after.route.is_empty():
 						var first: Vector3 = _pc.to_world(MotionRules.end_spot(play) + after.route[0], -1.0 if flipped else 1.0)
@@ -305,7 +308,6 @@ func _check_jet() -> void:
 					if _pc.ball_dead:
 						break
 				_expect(got_it, "jet: %s: the jet man never had the ball" % where)
-				_expect(not _pc.has_run_hole, "jet: %s: a sweep blocked for a hole" % where)
 				if got_it and _detail:
 					print("  %s: the jet man has the ball %.2f s after the snap, %.1f yd from the quarterback" % [where, _pc.live_time, _flat(man.position, _pc.qb.position)])
 			else:

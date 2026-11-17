@@ -52,6 +52,13 @@ label = "TE"
 job = 2
 start = Vector2(-0.6, 3.4)
 
+[sub_resource type="Resource" id="motion"]
+script = ExtResource("2_assign")
+label = "WR"
+job = 3
+start = Vector2(-2.4, 0)
+route = PackedVector2Array(1, -2.4, 4, -2.8, 12, -3)
+
 [resource]
 script = ExtResource("1_play")
 play_name = "HB Dive"
@@ -61,5 +68,7 @@ group = 2
 is_run = true
 handoff_delay = 0.35
 assignments = Array[ExtResource("2_assign")]([SubResource("qb"), SubResource("c"), SubResource("lg"), SubResource("rg"), SubResource("x"), SubResource("z"), SubResource("back"), SubResource("y")])
-motion = 5
-motion_to = Vector2(-1.2, 13.5)
+motion = 3
+motion_to = Vector2(-2.4, -9)
+motion_assignment = SubResource("motion")
+motion_handoff = true

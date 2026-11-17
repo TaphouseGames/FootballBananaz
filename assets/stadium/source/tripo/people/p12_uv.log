@@ -1,0 +1,9 @@
+task created b38394bb-3da5-4153-ab24-028aaa4d13be (@crowd-p12-uv)
+mesh_uv · queued
+mesh_uv · running 99% · b38394bb
+mesh_uv · running 99% · b38394bb
+mesh_uv · success 100% · b38394bb
+[32m✓[39m mesh_uv · b38394bb-3da5-4153-ab24-028aaa4d13be · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to p12_uv\tripo-out\crowd-p12-uv-b38394bb
+{"task_id":"b38394bb-3da5-4153-ab24-028aaa4d13be","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"p12_uv\\tripo-out\\crowd-p12-uv-b38394bb","files":["model.glb","uv_render.webp"],"model_file":"p12_uv\\tripo-out\\crowd-p12-uv-b38394bb\\model.glb"}

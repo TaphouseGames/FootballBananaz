@@ -135,7 +135,7 @@ static func line_count(play: OffensePlay, moved: bool) -> int:
 static func problems(play: OffensePlay, half_width: float) -> PackedStringArray:
 	var found: PackedStringArray = PackedStringArray()
 	if play.motion == OffensePlay.Motion.NONE:
-		if play.motion_assignment != null or play.motion_handoff:
+		if play.motion_assignment != null or play.motion_set_assignment != null or play.motion_handoff:
 			found.append("motion details on a play with no motion")
 		return found
 	var man: int = pick(play)
@@ -170,7 +170,7 @@ static func problems(play: OffensePlay, half_width: float) -> PackedStringArray:
 
 	var after: OffenseAssignment = play.motion_assignment
 	if is_return:
-		if after != null:
+		if after != null or play.motion_set_assignment != null:
 			found.append("a return motion with a new job")
 		if play.motion_handoff:
 			found.append("a handoff to a man on a return motion")
@@ -189,8 +189,24 @@ static func problems(play: OffensePlay, half_width: float) -> PackedStringArray:
 		found.append("the motion man becomes the quarterback")
 	if after.job != OffenseAssignment.Job.BLOCK and after.route.is_empty():
 		found.append("nowhere to run after the motion")
+	var late: OffenseAssignment = play.motion_set_assignment
+	if late != null:
+		if not is_jet:
+			found.append("a job for a jet man who has set on a motion that is not a jet")
+		if late.start.distance_to(to) > 0.01:
+			found.append("the job of a jet man who has set does not start where he sets")
+		for waypoint: Vector2 in late.route:
+			if absf(late.start.y + waypoint.y) > limit:
+				found.append("the route of a jet man who has set leaves the field")
+				break
+		if late.job == OffenseAssignment.Job.QB or late.job == OffenseAssignment.Job.RUNNER:
+			found.append("a jet man who has set is the quarterback or the runner")
+		elif late.job != OffenseAssignment.Job.BLOCK and late.route.is_empty():
+			found.append("nowhere to run for a jet man who has set")
 	if is_jet and not play.is_run:
-		found.append("a jet motion on a pass play")
+		# Snapped late he has to be a receiver still, or the pass buttons change.
+		if late == null or late.job == OffenseAssignment.Job.BLOCK:
+			found.append("a jet motion on a pass play with no route for a man who has set")
 	if play.motion_handoff:
 		if not is_jet or not play.is_run:
 			found.append("a handoff to the motion man on a play that is not a jet run")
