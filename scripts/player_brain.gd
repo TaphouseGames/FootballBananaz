@@ -97,6 +97,9 @@ var _move_late: float = 0.0
 var _secure_target: Player
 var _secure_on: bool = false
 var _secure_power: bool = false
+## The chaser the carrier last thought of pulling away from, and what he chose.
+var _chase_target: Player
+var _chase_on: bool = false
 ## The CPU quarterback rolls once per play for keeping the ball by design:
 ## the time he goes (negative = he does not).
 var _keeper_rolled: bool = false
@@ -180,9 +183,10 @@ func assign_defense(assignment: DefenseAssignment, start: Vector3, target: Playe
 func think(pc: PlayController, delta: float) -> void:
 	player.move_input = Vector3.ZERO
 	player.wants_turbo = false
-	# With a tackler on his back a carrier always has both arms round the ball.
-	# (He does no other thinking then: see can_act below.)
-	player.wants_secure = player.state == Player.State.DRAGGING
+	# With a tackler on his back a carrier gets both arms round the ball if he
+	# still can. (He does no other thinking then: see can_act below.)
+	if player.state == Player.State.DRAGGING:
+		pc.do_secure(player)
 	player.is_blocking = false
 	player.calling_for_ball = false
 	player.ai_speed_scale = 1.0
@@ -1199,6 +1203,7 @@ func _carry(pc: PlayController) -> void:
 		return
 	if _hurdles(pc):
 		return
+	_bursts_away(pc, nearest_opponent, nearest)
 	if _secures(pc, nearest_opponent, nearest):
 		return
 	if _decision_timer <= 0.0 and _move_due(pc, nearest_opponent, nearest):
@@ -1207,21 +1212,36 @@ func _carry(pc: PlayController) -> void:
 		_carrier_move(pc, nearest_opponent)
 
 
-## Sets wants_secure for this tick, and returns true when the carrier means to
-## run `opponent` over, so that no spin or stiff arm gets in the way.
-## - Short yardage: a back strong enough to drag a tackler holds it all the way
-##   through the line.
-## - A tackler about to arrive, decided once for each: the carrier a good deal
+## A chaser at his back or his side who is gaining on him: the burst of speed
+## that comes with securing the ball is spent on pulling away. Decided once
+## for each chaser, with the same chance as securing it for a tackler.
+func _bursts_away(pc: PlayController, opponent: Player, dist: float) -> void:
+	if dist > tuning.ai_secure_chase_range or player.secure_cooldown > 0.0:
+		return
+	var to: Vector3 = opponent.position - player.position
+	to.y = 0.0
+	to /= maxf(dist, 0.01)
+	if to.dot(player.facing) > 0.0 or (player.velocity - opponent.velocity).dot(to) <= 0.0:
+		return
+	if _chase_target != opponent:
+		_chase_target = opponent
+		_chase_on = randf() < _sharp(tuning.ai_secure_chance, tuning.ai_edge_secure_chance)
+	if _chase_on:
+		pc.game.add_stat(&"secures_chase")
+		pc.do_secure(player)
+
+
+## Secures the ball as a tackler is about to arrive, and returns true when the
+## carrier means to run `opponent` over, so that no spin or stiff arm gets in
+## the way.
+## - Short yardage: a back strong enough to drag a tackler always does.
+## - Otherwise decided once for each tackler: the carrier a good deal
 ##   stronger than a tackler on his feet in front of him lowers his shoulder.
 ##   Anyone else covers the ball only if no spin or stiff arm came of it, so
 ##   the small quick carrier mostly just looks after the ball.
 func _secures(pc: PlayController, opponent: Player, dist: float) -> bool:
 	if dist > tuning.ai_move_range:
 		return false
-	if _short_yardage(pc):
-		var drag_time: float = PlayerRatings.blend(player.ratings.strength, tuning.drag_time_low, tuning.drag_time_high)
-		if drag_time * tuning.secure_drag_time_scale >= tuning.drag_min_time:
-			player.wants_secure = true
 	var to: Vector3 = opponent.position - player.position
 	to.y = 0.0
 	to /= maxf(dist, 0.01)
@@ -1230,6 +1250,10 @@ func _secures(pc: PlayController, opponent: Player, dist: float) -> bool:
 	var contact: float = (dist - tuning.tackle_radius) / maxf(closing, 0.5)
 	if contact > tuning.ai_secure_lead:
 		return false
+	if _short_yardage(pc):
+		var drag_time: float = PlayerRatings.blend(player.ratings.strength, tuning.drag_time_low, tuning.drag_time_high)
+		if drag_time * tuning.secure_drag_time_scale >= tuning.drag_min_time:
+			pc.do_secure(player)
 	if _secure_target != opponent:
 		_secure_target = opponent
 		var stronger: float = float(player.ratings.strength - opponent.ratings.strength)
@@ -1242,11 +1266,11 @@ func _secures(pc: PlayController, opponent: Player, dist: float) -> bool:
 	if not _secure_on:
 		return false
 	if _secure_power:
-		player.wants_secure = true
+		pc.do_secure(player)
 		return true
 	# His move has been and gone, or he chose to make none.
 	if _decision_timer > 0.0 or player.move_cooldown > 0.0:
-		player.wants_secure = true
+		pc.do_secure(player)
 	return false
 
 
@@ -2066,6 +2090,8 @@ func _reset() -> void:
 	_secure_target = null
 	_secure_on = false
 	_secure_power = false
+	_chase_target = null
+	_chase_on = false
 	_keeper_rolled = false
 	_keeper_time = -1.0
 	_late_hit_used = false

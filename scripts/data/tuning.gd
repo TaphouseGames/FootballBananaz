@@ -111,17 +111,20 @@ extends Resource
 ## How long the arm stays out. The carrier can still steer.
 @export var stiff_arm_time: float = 0.5
 @export var stiff_arm_speed_scale: float = 0.9
-## Securing the ball (held): both arms round it, leaning forward. He is this
-## much slower for it.
-@export var secure_speed_scale: float = 0.9
+## Securing the ball (one press): both arms round it, shoulder down, for
+## secure_time seconds. He is this much faster for it.
+@export var secure_speed_scale: float = 1.15
+@export var secure_time: float = 0.6
+## Seconds from the press before he can do it again.
+@export var secure_cooldown: float = 2.5
 ## Multiplies his chance of fumbling when he is tackled.
 @export var secure_fumble_scale: float = 0.8
 ## He runs over a tackler on his feet in front of him with this chance per
 ## point his strength is above the tackler's, up to the most. "In front" is the
 ## least dot of his facing with the way to the tackler, and he has to be moving
 ## at this speed or more. He keeps this share of his speed through it.
-@export var secure_truck_chance_per_point: float = 0.015
-@export var secure_truck_chance_max: float = 0.7
+@export var secure_truck_chance_per_point: float = 0.018
+@export var secure_truck_chance_max: float = 0.75
 @export var secure_truck_front_dot: float = 0.5
 @export var secure_truck_min_speed: float = 3.0
 @export var secure_truck_speed_keep: float = 0.6
@@ -1090,6 +1093,9 @@ extends Resource
 ## The runner secures the ball through the line with this many yards or fewer
 ## to go for the first down or the goal line.
 @export var ai_secure_short_yards: float = 2.0
+## A chaser behind or beside the carrier, within this many yards and gaining:
+## the carrier uses the burst to pull away (same chance as ai_secure_chance).
+@export var ai_secure_chase_range: float = 3.0
 ## A CPU carrier dives when the goal line or the first-down marker is this close
 ## and a defender is nearer than the matching pressure distance.
 @export var ai_dive_reach: float = 3.0

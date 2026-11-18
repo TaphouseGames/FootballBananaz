@@ -1,6 +1,7 @@
 extends SceneTree
-## Headless check of securing the ball (held A with the ball in his hands):
-## - he is slower by Tuning.secure_speed_scale;
+## Headless check of securing the ball (A pressed with the ball in his hands:
+## a short burst, then a cooldown):
+## - he is faster by Tuning.secure_speed_scale;
 ## - running a tackler over: only one in front of a moving carrier who is
 ##   stronger, likelier the bigger the gap in strength, and half as likely
 ##   against a dive;
@@ -8,8 +9,9 @@ extends SceneTree
 ## - he shakes off a tackler on his back more often;
 ## - the CPU carrier: the strong one lowers his shoulder and runs a weak
 ##   tackler over, the weak one only covers the ball;
-## - the button: A secures for a carrier (and no longer jumps him), and stays a
-##   pass button for a quarterback who can throw.
+## - the button: a press of A secures for a carrier (and does not jump him),
+##   holding it adds nothing, a second press waits for the cooldown, and it
+##   stays a pass button for a quarterback who can throw.
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/secure_check.gd
 ## About 3 minutes. `-- quick` runs a third of the trials (wider tolerances).
@@ -137,7 +139,7 @@ func _tick_truck(trial: Dictionary) -> void:
 			_tackler.state = Player.State.DIVING
 		_man.velocity = Vector3(_dir * speed, 0.0, 0.0)
 		_man.facing = Vector3(_dir, 0.0, 0.0)
-		_man.wants_secure = secure
+		_man.secure_timer = 1.0 if secure else 0.0
 		if _pc._try_truck(_tackler, _man, -offset.normalized()):
 			hits += 1
 			_expect(_tackler.is_down(), "run over but still on his feet")
@@ -152,18 +154,18 @@ func _tick_truck(trial: Dictionary) -> void:
 	_expect(_gained(&"trucks") == hits, "the trucks counter says %d, there were %d" % [_gained(&"trucks"), hits])
 
 	if trial["label"] == "gap +0":
-		# While he is set up with the ball: how much slower securing makes him.
-		_man.wants_secure = false
+		# While he is set up with the ball: how much faster securing makes him.
+		_man.secure_timer = 0.0
 		var plain: float = _man.max_speed()
-		_man.wants_secure = true
-		var slow: float = _man.max_speed()
-		print("top speed %.2f, securing %.2f: x%.2f (should be x%.2f)" % [plain, slow, slow / plain, _secure_speed_scale])
-		_expect(absf(slow / plain - _secure_speed_scale) < 0.001, "securing makes him x%.3f as fast, should be x%.3f" % [slow / plain, _secure_speed_scale])
-		_expect(_secure_speed_scale < 1.0, "securing does not slow him down")
+		_man.secure_timer = 1.0
+		var quick: float = _man.max_speed()
+		print("top speed %.2f, securing %.2f: x%.2f (should be x%.2f)" % [plain, quick, quick / plain, _secure_speed_scale])
+		_expect(absf(quick / plain - _secure_speed_scale) < 0.001, "securing makes him x%.3f as fast, should be x%.3f" % [quick / plain, _secure_speed_scale])
+		_expect(_secure_speed_scale > 1.0, "securing does not speed him up")
 		_man.state = Player.State.SPINNING
 		_expect(not _man.is_securing(), "securing in the middle of a spin")
 		_man.state = Player.State.NORMAL
-	_man.wants_secure = false
+	_man.secure_timer = 0.0
 	_next()
 
 
@@ -207,21 +209,42 @@ func _tick_cpu(trial: Dictionary) -> void:
 	_next()
 
 
-## The person's carrier with A held: the button is both `secure_ball` and
-## `jump_alt`.
+## The person's carrier and A, which is both `secure_ball` and `jump_alt`:
+## pressed and held past the end of the burst, then pressed again before the
+## cooldown is over, and once more after it.
 func _tick_button() -> void:
+	var burst: int = ceili(_tuning.secure_time * 60.0)
+	var cooldown: int = ceili(_tuning.secure_cooldown * 60.0)
 	if _ticks == 1:
-		_expect(not _man.wants_secure, "securing before the button is down")
-		Input.action_press(&"secure_ball")
-		Input.action_press(&"jump_alt")
-		return
-	if _ticks < 5:
-		return
-	_expect(_man.wants_secure and _man.is_securing(), "A held and he is not securing the ball")
-	_expect(_man.state != Player.State.JUMPING, "A still jumps a ball carrier")
-	Input.action_release(&"secure_ball")
-	Input.action_release(&"jump_alt")
-	_next()
+		_expect(not _man.is_securing(), "securing before the button is down")
+		_press_a(true)
+	elif _ticks == 5:
+		_expect(_man.is_securing(), "A pressed and he is not securing the ball")
+		_expect(_man.state != Player.State.JUMPING, "A still jumps a ball carrier")
+	elif _ticks == burst + 6:
+		_expect(not _man.is_securing(), "A still held and he secures the ball past the end of the burst")
+		_press_a(false)
+	elif _ticks == burst + 8:
+		_expect(not _man.is_securing(), "securing again when A is let go")
+		_press_a(true)
+	elif _ticks == burst + 12:
+		_expect(not _man.is_securing(), "a second press before the cooldown is over secures the ball")
+		_press_a(false)
+	elif _ticks == cooldown + 6:
+		_expect(_man.secure_cooldown <= 0.0, "the cooldown is not over %d ticks after the press" % (_ticks - 1))
+		_press_a(true)
+	elif _ticks == cooldown + 10:
+		_expect(_man.is_securing(), "a press after the cooldown does not secure the ball")
+		_press_a(false)
+		_next()
+
+
+func _press_a(down: bool) -> void:
+	for action: StringName in [&"secure_ball", &"jump_alt"]:
+		if down:
+			Input.action_press(action)
+		else:
+			Input.action_release(action)
 
 
 func _tick_passer() -> void:
@@ -233,7 +256,7 @@ func _tick_passer() -> void:
 	var qb: Player = _pc.qb
 	_expect(qb.has_ball and _pc.can_pass(), "the quarterback cannot throw: nothing checked")
 	_expect(_game.human.controlled == qb, "the person is not the quarterback")
-	_expect(not qb.wants_secure and not qb.is_securing(), "a quarterback who can throw secures the ball")
+	_expect(not qb.is_securing() and qb.secure_cooldown <= 0.0, "a quarterback who can throw secures the ball")
 	Input.action_release(&"secure_ball")
 	_next()
 

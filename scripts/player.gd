@@ -65,8 +65,6 @@ var velocity: Vector3 = Vector3.ZERO
 ## Desired direction, length 0..1, on the XZ plane.
 var move_input: Vector3 = Vector3.ZERO
 var wants_turbo: bool = false
-## Held by a ball carrier to secure the ball (see is_securing).
-var wants_secure: bool = false
 var facing: Vector3 = Vector3.RIGHT
 ## When set, the player faces this way instead of the way he is moving
 ## (a quarterback dropping back keeps his eyes downfield).
@@ -133,6 +131,10 @@ var burst_timer: float = 0.0
 var spin_evade_timer: float = 0.0
 ## Shared by spin and stiff arm.
 var move_cooldown: float = 0.0
+## Above 0 while a ball carrier is securing the ball (see start_secure), and
+## the time before he can do it again.
+var secure_timer: float = 0.0
+var secure_cooldown: float = 0.0
 var jump_cooldown: float = 0.0
 var tackle_cooldown: float = 0.0
 ## Above 0 during a dive and for a moment after landing: the dive still reaches
@@ -209,7 +211,8 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	velocity = Vector3.ZERO
 	move_input = Vector3.ZERO
 	wants_turbo = false
-	wants_secure = false
+	secure_timer = 0.0
+	secure_cooldown = 0.0
 	facing = face_dir
 	look_dir = Vector3.ZERO
 	state = State.NORMAL
@@ -456,11 +459,24 @@ func is_tucked() -> bool:
 
 
 ## The carrier has the ball in both arms against his chest and leans into the
-## run: slower, but he fumbles less, runs over a weaker tackler in front of him
-## and shakes off a tackler on his back more often. Not during a spin, a stiff
-## arm, a jump or a dive.
+## run: for a moment he is faster, fumbles less, runs over a weaker tackler in
+## front of him and shakes off a tackler on his back more often. Not during a
+## spin, a stiff arm, a jump or a dive.
 func is_securing() -> bool:
-	return has_ball and wants_secure and (state == State.NORMAL or state == State.DRAGGING)
+	return has_ball and secure_timer > 0.0 and (state == State.NORMAL or state == State.DRAGGING)
+
+
+## One press: he secures the ball for tuning.secure_time, and cannot again
+## until the cooldown is over. Also with a tackler on his back, where it lasts
+## until the drag ends (see _tick_timers).
+func start_secure() -> bool:
+	if not has_ball or frozen or secure_cooldown > 0.0:
+		return false
+	if state != State.NORMAL and state != State.DRAGGING:
+		return false
+	secure_timer = tuning.secure_time
+	secure_cooldown = tuning.secure_cooldown
+	return true
 
 
 ## Lying dazed after a jump dive, or after being flattened against the wall.
@@ -856,6 +872,10 @@ func _move_normal(delta: float) -> void:
 func _tick_timers(delta: float) -> void:
 	spin_evade_timer = maxf(spin_evade_timer - delta, 0.0)
 	move_cooldown = maxf(move_cooldown - delta, 0.0)
+	secure_cooldown = maxf(secure_cooldown - delta, 0.0)
+	# Wrapped up he hangs on to it until the drag is over.
+	if state != State.DRAGGING:
+		secure_timer = maxf(secure_timer - delta, 0.0)
 	jump_cooldown = maxf(jump_cooldown - delta, 0.0)
 	tackle_cooldown = maxf(tackle_cooldown - delta, 0.0)
 	dive_reach_timer = maxf(dive_reach_timer - delta, 0.0)

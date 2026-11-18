@@ -84,12 +84,13 @@ func _run() -> void:
 	if carrier != null:
 		await _shot("14_carrier", carrier.position + Vector3(1.0, 1.5, 5.0), carrier.position + Vector3(0.0, 0.9, 0.0))
 		# The same man securing the ball, from the side and from in front.
-		Input.action_press(&"secure_ball")
+		# Longer than the game gives him, so that both pictures get taken.
+		carrier.secure_timer = 10.0
 		await _wait(0.3)
 		if pc.ball.carrier == carrier and carrier.is_securing():
 			await _shot("15_carrier_secure", carrier.position + Vector3(1.0, 1.5, 5.0), carrier.position + Vector3(0.0, 0.9, 0.0))
 			await _shot("15_carrier_secure_front", carrier.position + carrier.facing * 4.0 + Vector3(0.0, 1.5, 0.0), carrier.position + Vector3(0.0, 0.9, 0.0))
-		Input.action_release(&"secure_ball")
+		carrier.secure_timer = 0.0
 	quit(0)
 
 

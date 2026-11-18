@@ -2201,6 +2201,14 @@ func do_spin(player: Player, side: float, juke: bool = false) -> void:
 		game.audio.action(player, &"spin")
 
 
+func do_secure(player: Player) -> void:
+	if _thinking:
+		_queued_actions.append(do_secure.bind(player))
+		return
+	if player.start_secure():
+		game.audio.action(player, &"spin")
+
+
 func do_stiff_arm(player: Player, side: float) -> void:
 	if _thinking:
 		_queued_actions.append(do_stiff_arm.bind(player, side))

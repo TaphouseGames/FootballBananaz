@@ -131,7 +131,6 @@ func update_live() -> void:
 	player.ai_speed_scale = 1.0
 	player.move_input = move
 	player.wants_turbo = Input.is_action_pressed(&"turbo")
-	player.wants_secure = false
 
 	# Play action: he stays with the back until the fake is over.
 	if player == pc.qb and player.has_ball and pc.faking():
@@ -164,9 +163,11 @@ func update_live() -> void:
 
 	var carrier: Player = pc.ball.carrier
 	var is_passer: bool = pc.can_pass() and player == pc.qb
-	# Held with the ball in his hands: he secures it. While the quarterback can
-	# throw the same button is a pass button.
-	player.wants_secure = player.has_ball and not is_passer and Input.is_action_pressed(&"secure_ball")
+	# Pressed with the ball in his hands: he secures it for a moment, also with
+	# a tackler on his back. While the quarterback can throw the same button is
+	# a pass button.
+	if player.has_ball and not is_passer and Input.is_action_just_pressed(&"secure_ball"):
+		pc.do_secure(player)
 
 	# In the pocket the pass buttons win: they share A, X, B and (with four men
 	# out) Y with other actions.
@@ -269,8 +270,8 @@ func _in_exchange() -> bool:
 
 
 ## Running with the ball: spin, a stiff arm to either side, or a dive that
-## gives himself up for the last few yards. (Securing the ball is a held
-## button, read in update_live.)
+## gives himself up for the last few yards. (Securing the ball is read in
+## update_live: it also works with a tackler on his back.)
 func _carrier_moves(player: Player, move: Vector3, moving: bool) -> void:
 	if Input.is_action_just_pressed(&"stiff_arm_left"):
 		pc.do_stiff_arm(player, 1.0)
@@ -321,7 +322,6 @@ func update_dead() -> void:
 	player.ai_speed_scale = 1.0
 	player.move_input = move
 	player.wants_turbo = Input.is_action_pressed(&"turbo")
-	player.wants_secure = false
 	if not Input.is_action_just_pressed(&"action") or not player.can_act():
 		return
 	var on_defense: bool = is_defending()
