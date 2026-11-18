@@ -1,0 +1,9 @@
+task created 68f14a46-fa7a-4367-bc9f-0c7e91fc5c13 (@player-moose-macaroon-uv)
+mesh_uv · queued
+mesh_uv · running 31% · 68f14a46
+mesh_uv · running 99% · 68f14a46
+mesh_uv · success 100% · 68f14a46
+[32m✓[39m mesh_uv · 68f14a46-fa7a-4367-bc9f-0c7e91fc5c13 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to moose_macaroon_uv\tripo-out\player-moose-macaroon-uv-68f14a46
+{"task_id":"68f14a46-fa7a-4367-bc9f-0c7e91fc5c13","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"moose_macaroon_uv\\tripo-out\\player-moose-macaroon-uv-68f14a46","files":["model.fbx","uv_render.webp"],"model_file":"moose_macaroon_uv\\tripo-out\\player-moose-macaroon-uv-68f14a46\\model.fbx"}

@@ -1,0 +1,8 @@
+task created 9ac9436e-ad9c-404f-b4bb-1ef1de29ef45 (@player-stone-palm-rig)
+animate_rig · queued
+animate_rig · queued 0% · 9ac9436e
+animate_rig · success 100% · 9ac9436e
+[32m✓[39m animate_rig · 9ac9436e-ad9c-404f-b4bb-1ef1de29ef45 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to stone_palm_rig\tripo-out\player-stone-palm-rig-9ac9436e
+{"task_id":"9ac9436e-ad9c-404f-b4bb-1ef1de29ef45","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"stone_palm_rig\\tripo-out\\player-stone-palm-rig-9ac9436e","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"stone_palm_rig\\tripo-out\\player-stone-palm-rig-9ac9436e\\model.fbx","preview":"stone_palm_rig\\tripo-out\\player-stone-palm-rig-9ac9436e\\preview.png"}

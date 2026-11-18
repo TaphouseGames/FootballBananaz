@@ -2,10 +2,68 @@
 
 [ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
 [ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://ntulcvmygfjd" path="res://scripts/data/player_look.gd" id="3_look"]
+
+[sub_resource type="Resource" id="look_rocket_husk"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "rocket_husk"
+height_in = 77
+
+[sub_resource type="Resource" id="look_stone_palm"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "stone_palm"
+height_in = 63
+
+[sub_resource type="Resource" id="look_rex_shell"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "rex_shell"
+height_in = 68
+
+[sub_resource type="Resource" id="look_tank_copra"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "tank_copra"
+height_in = 67
+
+[sub_resource type="Resource" id="look_miles_frond"]
+script = ExtResource("3_look")
+gender = 0
+build = 0
+person = "miles_frond"
+height_in = 70
+
+[sub_resource type="Resource" id="look_hands_kernel"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "hands_kernel"
+height_in = 61
+
+[sub_resource type="Resource" id="look_bruno_drupe"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "bruno_drupe"
+height_in = 66
+
+[sub_resource type="Resource" id="look_moose_macaroon"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "moose_macaroon"
+height_in = 75
 
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Rocket Husk"
+look = SubResource("look_rocket_husk")
 position = "QB"
 number = 12
 speed = 38
@@ -25,6 +83,7 @@ agility = 30
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")
 display_name = "Stone Palm"
+look = SubResource("look_stone_palm")
 number = 66
 speed = 45
 strength = 70
@@ -36,6 +95,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Rex Shell"
+look = SubResource("look_rex_shell")
 number = 52
 blocking = 58
 tackling = 55
@@ -45,6 +105,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Tank Copra"
+look = SubResource("look_tank_copra")
 number = 79
 strength = 65
 blocking = 72
@@ -55,6 +116,7 @@ get_open = 20
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Miles Frond"
+look = SubResource("look_miles_frond")
 position = "WR"
 number = 84
 speed = 76
@@ -70,6 +132,7 @@ security = 60
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Hands Kernel"
+look = SubResource("look_hands_kernel")
 position = "WR"
 number = 80
 speed = 68
@@ -84,6 +147,7 @@ security = 65
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Bruno Drupe"
+look = SubResource("look_bruno_drupe")
 position = "RB"
 number = 34
 speed = 55
@@ -99,6 +163,7 @@ security = 80
 [sub_resource type="Resource" id="player_7"]
 script = ExtResource("1_ratings")
 display_name = "Moose Macaroon"
+look = SubResource("look_moose_macaroon")
 position = "TE"
 number = 43
 speed = 45

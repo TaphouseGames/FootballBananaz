@@ -1,0 +1,8 @@
+task created 0596f4bc-05cb-44f8-98f2-752dde549076 (@player-rocket-husk-uv)
+mesh_uv · queued
+mesh_uv · running 16% · 0596f4bc
+mesh_uv · success 100% · 0596f4bc
+[32m✓[39m mesh_uv · 0596f4bc-05cb-44f8-98f2-752dde549076 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rocket_husk_uv\tripo-out\player-rocket-husk-uv-0596f4bc
+{"task_id":"0596f4bc-05cb-44f8-98f2-752dde549076","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"rocket_husk_uv\\tripo-out\\player-rocket-husk-uv-0596f4bc","files":["model.fbx","uv_render.webp"],"model_file":"rocket_husk_uv\\tripo-out\\player-rocket-husk-uv-0596f4bc\\model.fbx"}

@@ -1,0 +1,7 @@
+task created db27cecd-b11d-479c-9be4-a433a15c363f (@player-tank-copra-rig)
+animate_rig · queued
+animate_rig · running 27% · db27cecd
+[32m✓[39m animate_rig · db27cecd-b11d-479c-9be4-a433a15c363f · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to tank_copra_rig\tripo-out\player-tank-copra-rig-db27cecd
+{"task_id":"db27cecd-b11d-479c-9be4-a433a15c363f","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"tank_copra_rig\\tripo-out\\player-tank-copra-rig-db27cecd","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"tank_copra_rig\\tripo-out\\player-tank-copra-rig-db27cecd\\model.fbx","preview":"tank_copra_rig\\tripo-out\\player-tank-copra-rig-db27cecd\\preview.png"}

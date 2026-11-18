@@ -1,0 +1,20 @@
+{
+  "task_id": "4b075e0a-8b1f-4293-9de3-5237e36d87aa",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Completely show the full body of the character in T-pose. Standing upright, facing forward. Arms raise horizontally at shoulder height. Palms facing down, remove handheld objects but keep hand-worn equipment and accessories. Legs straight, feet shoulder-width apart. Keep natural body proportions and anatomy. Front view, neutral background.\nA new character: an amateur football player, a Samoan American man in his forties, a quarterback with a cannon for an arm who never moves his feet: very tall and big, heavy and broad with a thick waist, wide shoulders, huge thick arms and tree-trunk legs, warm brown skin, long wavy black hair tied in a knot on top of his head, thick black eyebrows, a broad nose, a clean-shaven round face and a calm, sure closed-mouth smile, wearing mustard yellow high-top sneakers. He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no bald head and no beard: long hair in a top knot and a clean-shaven face. Full body, front view, standing upright in a T-pose with arms straight out to the sides, palms down, fingers slightly apart, legs slightly apart. Stylized 3D cartoon character, an everyday person rather than an athlete, with a slightly big head, slightly oversized hands and shoes, smooth matte clay look, a detailed and expressive face, sculpted chunky hair, soft folds in the clothes, and well-defined hands, elbows and knees. The kit: a loose short-sleeved football jersey in plain near-white, pants ending just below the knee in plain mid grey, long socks in plain dark grey, each one flat colour with no logos, no numbers, no text, no stripes and no trim in another colour. Bare arms and bare hands, no helmet, no pads. Mouth closed. Matte, no gloss. Flat, even lighting. Single isolated figure on a plain flat blue-grey background, no floor shadow, no props.",
+    "template": "t_pose",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T00:14:35.001521Z",
+  "completed_at": "2026-11-18T00:15:15.737640Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

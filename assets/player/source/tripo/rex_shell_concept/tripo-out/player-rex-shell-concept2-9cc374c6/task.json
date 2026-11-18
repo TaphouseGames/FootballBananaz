@@ -1,0 +1,19 @@
+{
+  "task_id": "9cc374c6-821c-4ebc-b1f7-33caeadae48d",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Exactly the same character, the same face, hair, body, pose, clothes, clay art style, lighting and background. Change only the skin colour: his skin everywhere (face, ears, neck, arms, hands, legs) is a medium brown, the skin of a man from India.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T00:24:43.865937Z",
+  "completed_at": "2026-11-18T00:25:06.927386Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

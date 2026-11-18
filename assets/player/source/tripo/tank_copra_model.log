@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 20e10ec6-59d5-4fe7-93db-d2edf5e0b506 (@player-tank-copra)
+image_to_model · queued
+image_to_model · running 3% · 20e10ec6
+image_to_model · running 9% · 20e10ec6
+image_to_model · running 13% · 20e10ec6
+image_to_model · running 21% · 20e10ec6
+image_to_model · running 32% · 20e10ec6
+image_to_model · running 46% · 20e10ec6
+image_to_model · running 61% · 20e10ec6
+image_to_model · running 75% · 20e10ec6
+image_to_model · running 90% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · running 99% · 20e10ec6
+image_to_model · success 100% · 20e10ec6
+[32m✓[39m image_to_model · 20e10ec6-59d5-4fe7-93db-d2edf5e0b506 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to tank_copra_model\tripo-out\player-tank-copra-20e10ec6
+{"task_id":"20e10ec6-59d5-4fe7-93db-d2edf5e0b506","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"tank_copra_model\\tripo-out\\player-tank-copra-20e10ec6","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"tank_copra_model\\tripo-out\\player-tank-copra-20e10ec6\\model.fbx","preview":"tank_copra_model\\tripo-out\\player-tank-copra-20e10ec6\\preview.png"}

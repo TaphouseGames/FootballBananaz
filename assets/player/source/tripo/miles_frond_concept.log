@@ -1,0 +1,10 @@
+task created d4cbc493-2f75-4540-8dca-9e831c7914c3 (@player-miles-frond-concept)
+generate_image · queued
+generate_image · running · d4cbc493
+generate_image · running · d4cbc493
+generate_image · running · d4cbc493
+generate_image · success 100% · d4cbc493
+[32m✓[39m generate_image · d4cbc493-2f75-4540-8dca-9e831c7914c3 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to miles_frond_concept\tripo-out\player-miles-frond-concept-d4cbc493
+{"task_id":"d4cbc493-2f75-4540-8dca-9e831c7914c3","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"miles_frond_concept\\tripo-out\\player-miles-frond-concept-d4cbc493","files":["generated_image.png","preview.png"],"preview":"miles_frond_concept\\tripo-out\\player-miles-frond-concept-d4cbc493\\preview.png"}

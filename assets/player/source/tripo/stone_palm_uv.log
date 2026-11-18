@@ -1,0 +1,9 @@
+task created e256837b-a626-4ca2-beef-c759fc455ebb (@player-stone-palm-uv)
+mesh_uv · queued
+mesh_uv · running 99% · e256837b
+mesh_uv · running 99% · e256837b
+mesh_uv · success 100% · e256837b
+[32m✓[39m mesh_uv · e256837b-a626-4ca2-beef-c759fc455ebb · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to stone_palm_uv\tripo-out\player-stone-palm-uv-e256837b
+{"task_id":"e256837b-a626-4ca2-beef-c759fc455ebb","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"stone_palm_uv\\tripo-out\\player-stone-palm-uv-e256837b","files":["model.fbx","uv_render.webp"],"model_file":"stone_palm_uv\\tripo-out\\player-stone-palm-uv-e256837b\\model.fbx"}

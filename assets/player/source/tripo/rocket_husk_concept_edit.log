@@ -1,0 +1,9 @@
+task created fcafafda-a2a5-4bf0-9b29-4c55b79ff1aa (@player-rocket-husk-concept2)
+generate_image · queued
+generate_image · running · fcafafda
+generate_image · running · fcafafda
+generate_image · success 100% · fcafafda
+[32m✓[39m generate_image · fcafafda-a2a5-4bf0-9b29-4c55b79ff1aa · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rocket_husk_concept\tripo-out\player-rocket-husk-concept2-fcafafda
+{"task_id":"fcafafda-a2a5-4bf0-9b29-4c55b79ff1aa","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"rocket_husk_concept\\tripo-out\\player-rocket-husk-concept2-fcafafda","files":["generated_image.png","preview.png"],"preview":"rocket_husk_concept\\tripo-out\\player-rocket-husk-concept2-fcafafda\\preview.png"}

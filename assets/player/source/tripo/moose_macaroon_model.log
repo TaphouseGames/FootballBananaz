@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 2eeeaf3f-0c3c-45f0-b1a5-7bd143e4bf71 (@player-moose-macaroon)
+image_to_model · queued
+image_to_model · running 2% · 2eeeaf3f
+image_to_model · running 5% · 2eeeaf3f
+image_to_model · running 8% · 2eeeaf3f
+image_to_model · running 12% · 2eeeaf3f
+image_to_model · running 18% · 2eeeaf3f
+image_to_model · running 26% · 2eeeaf3f
+image_to_model · running 34% · 2eeeaf3f
+image_to_model · running 42% · 2eeeaf3f
+image_to_model · running 50% · 2eeeaf3f
+image_to_model · running 58% · 2eeeaf3f
+image_to_model · running 66% · 2eeeaf3f
+image_to_model · running 74% · 2eeeaf3f
+image_to_model · running 82% · 2eeeaf3f
+image_to_model · running 90% · 2eeeaf3f
+image_to_model · running 98% · 2eeeaf3f
+image_to_model · running 99% · 2eeeaf3f
+image_to_model · running 99% · 2eeeaf3f
+image_to_model · running 99% · 2eeeaf3f
+image_to_model · running 99% · 2eeeaf3f
+image_to_model · success 100% · 2eeeaf3f
+[32m✓[39m image_to_model · 2eeeaf3f-0c3c-45f0-b1a5-7bd143e4bf71 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to moose_macaroon_model\tripo-out\player-moose-macaroon-2eeeaf3f
+{"task_id":"2eeeaf3f-0c3c-45f0-b1a5-7bd143e4bf71","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"moose_macaroon_model\\tripo-out\\player-moose-macaroon-2eeeaf3f","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"moose_macaroon_model\\tripo-out\\player-moose-macaroon-2eeeaf3f\\model.fbx","preview":"moose_macaroon_model\\tripo-out\\player-moose-macaroon-2eeeaf3f\\preview.png"}

@@ -1,0 +1,9 @@
+task created 1652799d-3d8e-471a-a74c-818b84205530 (@player-bruno-drupe-concept3)
+generate_image · queued
+generate_image · running · 1652799d
+generate_image · running · 1652799d
+generate_image · success 100% · 1652799d
+[32m✓[39m generate_image · 1652799d-3d8e-471a-a74c-818b84205530 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bruno_drupe_concept\tripo-out\player-bruno-drupe-concept3-1652799d
+{"task_id":"1652799d-3d8e-471a-a74c-818b84205530","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"bruno_drupe_concept\\tripo-out\\player-bruno-drupe-concept3-1652799d","files":["generated_image.png","preview.png"],"preview":"bruno_drupe_concept\\tripo-out\\player-bruno-drupe-concept3-1652799d\\preview.png"}

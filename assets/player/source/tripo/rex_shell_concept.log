@@ -1,0 +1,10 @@
+task created adb0ea8d-8040-40ce-b15b-c44192ffec91 (@player-rex-shell-concept)
+generate_image · queued
+generate_image · running · adb0ea8d
+generate_image · running · adb0ea8d
+generate_image · running · adb0ea8d
+generate_image · success 100% · adb0ea8d
+[32m✓[39m generate_image · adb0ea8d-8040-40ce-b15b-c44192ffec91 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rex_shell_concept\tripo-out\player-rex-shell-concept-adb0ea8d
+{"task_id":"adb0ea8d-8040-40ce-b15b-c44192ffec91","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"rex_shell_concept\\tripo-out\\player-rex-shell-concept-adb0ea8d","files":["generated_image.png","preview.png"],"preview":"rex_shell_concept\\tripo-out\\player-rex-shell-concept-adb0ea8d\\preview.png"}

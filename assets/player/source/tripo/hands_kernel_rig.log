@@ -1,0 +1,8 @@
+task created 573363c8-b997-487c-893f-571f4302b25e (@player-hands-kernel-rig)
+animate_rig · queued
+animate_rig · running 60% · 573363c8
+animate_rig · success 100% · 573363c8
+[32m✓[39m animate_rig · 573363c8-b997-487c-893f-571f4302b25e · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hands_kernel_rig\tripo-out\player-hands-kernel-rig-573363c8
+{"task_id":"573363c8-b997-487c-893f-571f4302b25e","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"hands_kernel_rig\\tripo-out\\player-hands-kernel-rig-573363c8","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"hands_kernel_rig\\tripo-out\\player-hands-kernel-rig-573363c8\\model.fbx","preview":"hands_kernel_rig\\tripo-out\\player-hands-kernel-rig-573363c8\\preview.png"}

@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 03b56fcd-932c-4cf7-b70b-e756e3cb7415 (@player-rocket-husk)
+image_to_model · queued
+image_to_model · running 2% · 03b56fcd
+image_to_model · running 5% · 03b56fcd
+image_to_model · running 8% · 03b56fcd
+image_to_model · running 13% · 03b56fcd
+image_to_model · running 19% · 03b56fcd
+image_to_model · running 28% · 03b56fcd
+image_to_model · running 36% · 03b56fcd
+image_to_model · running 45% · 03b56fcd
+image_to_model · running 54% · 03b56fcd
+image_to_model · running 62% · 03b56fcd
+image_to_model · running 71% · 03b56fcd
+image_to_model · running 79% · 03b56fcd
+image_to_model · running 88% · 03b56fcd
+image_to_model · running 97% · 03b56fcd
+image_to_model · running 99% · 03b56fcd
+image_to_model · running 99% · 03b56fcd
+image_to_model · running 99% · 03b56fcd
+image_to_model · running 99% · 03b56fcd
+image_to_model · success 100% · 03b56fcd
+[32m✓[39m image_to_model · 03b56fcd-932c-4cf7-b70b-e756e3cb7415 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rocket_husk_model\tripo-out\player-rocket-husk-03b56fcd
+{"task_id":"03b56fcd-932c-4cf7-b70b-e756e3cb7415","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"rocket_husk_model\\tripo-out\\player-rocket-husk-03b56fcd","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"rocket_husk_model\\tripo-out\\player-rocket-husk-03b56fcd\\model.fbx","preview":"rocket_husk_model\\tripo-out\\player-rocket-husk-03b56fcd\\preview.png"}

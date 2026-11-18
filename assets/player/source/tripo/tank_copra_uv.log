@@ -1,0 +1,8 @@
+task created a2d49338-d82a-4263-9775-f00f390c3ef2 (@player-tank-copra-uv)
+mesh_uv · queued
+mesh_uv · running 22% · a2d49338
+mesh_uv · success 100% · a2d49338
+[32m✓[39m mesh_uv · a2d49338-d82a-4263-9775-f00f390c3ef2 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to tank_copra_uv\tripo-out\player-tank-copra-uv-a2d49338
+{"task_id":"a2d49338-d82a-4263-9775-f00f390c3ef2","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"tank_copra_uv\\tripo-out\\player-tank-copra-uv-a2d49338","files":["model.fbx","uv_render.webp"],"model_file":"tank_copra_uv\\tripo-out\\player-tank-copra-uv-a2d49338\\model.fbx"}

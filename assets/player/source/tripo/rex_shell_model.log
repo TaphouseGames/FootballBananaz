@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created d10d4608-bdc9-469b-81a5-012b89492125 (@player-rex-shell)
+image_to_model · queued
+image_to_model · running 3% · d10d4608
+image_to_model · running 9% · d10d4608
+image_to_model · running 13% · d10d4608
+image_to_model · running 21% · d10d4608
+image_to_model · running 32% · d10d4608
+image_to_model · running 46% · d10d4608
+image_to_model · running 61% · d10d4608
+image_to_model · running 75% · d10d4608
+image_to_model · running 90% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · running 99% · d10d4608
+image_to_model · success 100% · d10d4608
+[32m✓[39m image_to_model · d10d4608-bdc9-469b-81a5-012b89492125 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rex_shell_model\tripo-out\player-rex-shell-d10d4608
+{"task_id":"d10d4608-bdc9-469b-81a5-012b89492125","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"rex_shell_model\\tripo-out\\player-rex-shell-d10d4608","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"rex_shell_model\\tripo-out\\player-rex-shell-d10d4608\\model.fbx","preview":"rex_shell_model\\tripo-out\\player-rex-shell-d10d4608\\preview.png"}

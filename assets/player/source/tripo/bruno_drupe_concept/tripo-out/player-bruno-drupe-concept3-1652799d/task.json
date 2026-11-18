@@ -1,0 +1,19 @@
+{
+  "task_id": "1652799d-3d8e-471a-a74c-818b84205530",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Exactly the same character, the same face, hair, body, pose, clothes, clay art style, lighting and background. Change only the shoes: remove the swoosh logo from their sides, so that the shoes are plain red with no logo, keeping their shape.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T00:27:17.484719Z",
+  "completed_at": "2026-11-18T00:27:41.825509Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

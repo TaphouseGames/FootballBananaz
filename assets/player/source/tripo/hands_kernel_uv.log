@@ -1,0 +1,8 @@
+task created 25b7705a-5b81-44bb-8b40-dcda8f43ad72 (@player-hands-kernel-uv)
+mesh_uv · queued
+mesh_uv · running 31% · 25b7705a
+mesh_uv · success 100% · 25b7705a
+[32m✓[39m mesh_uv · 25b7705a-5b81-44bb-8b40-dcda8f43ad72 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hands_kernel_uv\tripo-out\player-hands-kernel-uv-25b7705a
+{"task_id":"25b7705a-5b81-44bb-8b40-dcda8f43ad72","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"hands_kernel_uv\\tripo-out\\player-hands-kernel-uv-25b7705a","files":["model.fbx","uv_render.webp"],"model_file":"hands_kernel_uv\\tripo-out\\player-hands-kernel-uv-25b7705a\\model.fbx"}

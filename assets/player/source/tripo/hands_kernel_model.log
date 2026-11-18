@@ -1,0 +1,24 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 0598cc14-2d9f-4fdb-9e0d-926c7e8219db (@player-hands-kernel)
+image_to_model · queued
+image_to_model · running 3% · 0598cc14
+image_to_model · running 8% · 0598cc14
+image_to_model · running 12% · 0598cc14
+image_to_model · running 18% · 0598cc14
+image_to_model · running 28% · 0598cc14
+image_to_model · running 40% · 0598cc14
+image_to_model · running 53% · 0598cc14
+image_to_model · running 65% · 0598cc14
+image_to_model · running 77% · 0598cc14
+image_to_model · running 90% · 0598cc14
+image_to_model · running 99% · 0598cc14
+image_to_model · running 99% · 0598cc14
+image_to_model · running 99% · 0598cc14
+image_to_model · running 99% · 0598cc14
+image_to_model · running 99% · 0598cc14
+image_to_model · running 99% · 0598cc14
+image_to_model · success 100% · 0598cc14
+[32m✓[39m image_to_model · 0598cc14-2d9f-4fdb-9e0d-926c7e8219db · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hands_kernel_model\tripo-out\player-hands-kernel-0598cc14
+{"task_id":"0598cc14-2d9f-4fdb-9e0d-926c7e8219db","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"hands_kernel_model\\tripo-out\\player-hands-kernel-0598cc14","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"hands_kernel_model\\tripo-out\\player-hands-kernel-0598cc14\\model.fbx","preview":"hands_kernel_model\\tripo-out\\player-hands-kernel-0598cc14\\preview.png"}

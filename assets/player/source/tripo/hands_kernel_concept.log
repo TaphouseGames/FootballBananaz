@@ -1,0 +1,10 @@
+task created e7a5957a-4842-4ab2-8982-5f3f50df5ecb (@player-hands-kernel-concept-2)
+generate_image · queued
+generate_image · running · e7a5957a
+generate_image · running · e7a5957a
+generate_image · running · e7a5957a
+generate_image · success 100% · e7a5957a
+[32m✓[39m generate_image · e7a5957a-4842-4ab2-8982-5f3f50df5ecb · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hands_kernel_concept\tripo-out\player-hands-kernel-concept-2-e7a5957a
+{"task_id":"e7a5957a-4842-4ab2-8982-5f3f50df5ecb","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"hands_kernel_concept\\tripo-out\\player-hands-kernel-concept-2-e7a5957a","files":["generated_image.png","preview.png"],"preview":"hands_kernel_concept\\tripo-out\\player-hands-kernel-concept-2-e7a5957a\\preview.png"}

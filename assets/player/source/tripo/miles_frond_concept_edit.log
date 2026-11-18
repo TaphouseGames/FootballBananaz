@@ -1,0 +1,10 @@
+task created 242d0609-6cd1-4a09-98cd-e2f71a5c90ef (@player-miles-frond-concept2)
+generate_image · queued
+generate_image · running · 242d0609
+generate_image · running · 242d0609
+generate_image · running · 242d0609
+generate_image · success 100% · 242d0609
+[32m✓[39m generate_image · 242d0609-6cd1-4a09-98cd-e2f71a5c90ef · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to miles_frond_concept\tripo-out\player-miles-frond-concept2-242d0609
+{"task_id":"242d0609-6cd1-4a09-98cd-e2f71a5c90ef","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"miles_frond_concept\\tripo-out\\player-miles-frond-concept2-242d0609","files":["generated_image.png","preview.png"],"preview":"miles_frond_concept\\tripo-out\\player-miles-frond-concept2-242d0609\\preview.png"}

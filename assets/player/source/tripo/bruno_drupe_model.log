@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 7a2b4c8b-d041-4f5a-90f3-7f268cbf7f20 (@player-bruno-drupe)
+image_to_model · queued
+image_to_model · running 1% · 7a2b4c8b
+image_to_model · running 4% · 7a2b4c8b
+image_to_model · running 6% · 7a2b4c8b
+image_to_model · running 8% · 7a2b4c8b
+image_to_model · running 13% · 7a2b4c8b
+image_to_model · running 18% · 7a2b4c8b
+image_to_model · running 24% · 7a2b4c8b
+image_to_model · running 29% · 7a2b4c8b
+image_to_model · running 35% · 7a2b4c8b
+image_to_model · running 40% · 7a2b4c8b
+image_to_model · running 46% · 7a2b4c8b
+image_to_model · running 52% · 7a2b4c8b
+image_to_model · running 57% · 7a2b4c8b
+image_to_model · running 63% · 7a2b4c8b
+image_to_model · running 68% · 7a2b4c8b
+image_to_model · running 74% · 7a2b4c8b
+image_to_model · running 80% · 7a2b4c8b
+image_to_model · running 85% · 7a2b4c8b
+image_to_model · running 91% · 7a2b4c8b
+image_to_model · success 100% · 7a2b4c8b
+[32m✓[39m image_to_model · 7a2b4c8b-d041-4f5a-90f3-7f268cbf7f20 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bruno_drupe_model\tripo-out\player-bruno-drupe-7a2b4c8b
+{"task_id":"7a2b4c8b-d041-4f5a-90f3-7f268cbf7f20","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"bruno_drupe_model\\tripo-out\\player-bruno-drupe-7a2b4c8b","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"bruno_drupe_model\\tripo-out\\player-bruno-drupe-7a2b4c8b\\model.fbx","preview":"bruno_drupe_model\\tripo-out\\player-bruno-drupe-7a2b4c8b\\preview.png"}

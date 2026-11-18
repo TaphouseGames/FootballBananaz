@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 0f637faa-86c7-4dc7-93ad-7420b7700baf (@player-stone-palm)
+image_to_model · queued
+image_to_model · running 2% · 0f637faa
+image_to_model · running 6% · 0f637faa
+image_to_model · running 10% · 0f637faa
+image_to_model · running 15% · 0f637faa
+image_to_model · running 23% · 0f637faa
+image_to_model · running 33% · 0f637faa
+image_to_model · running 43% · 0f637faa
+image_to_model · running 54% · 0f637faa
+image_to_model · running 64% · 0f637faa
+image_to_model · running 74% · 0f637faa
+image_to_model · running 84% · 0f637faa
+image_to_model · running 94% · 0f637faa
+image_to_model · running 99% · 0f637faa
+image_to_model · running 99% · 0f637faa
+image_to_model · running 99% · 0f637faa
+image_to_model · running 99% · 0f637faa
+image_to_model · running 99% · 0f637faa
+image_to_model · running 99% · 0f637faa
+image_to_model · success 100% · 0f637faa
+[32m✓[39m image_to_model · 0f637faa-86c7-4dc7-93ad-7420b7700baf · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to stone_palm_model\tripo-out\player-stone-palm-0f637faa
+{"task_id":"0f637faa-86c7-4dc7-93ad-7420b7700baf","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"stone_palm_model\\tripo-out\\player-stone-palm-0f637faa","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"stone_palm_model\\tripo-out\\player-stone-palm-0f637faa\\model.fbx","preview":"stone_palm_model\\tripo-out\\player-stone-palm-0f637faa\\preview.png"}

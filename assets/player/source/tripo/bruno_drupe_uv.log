@@ -1,0 +1,9 @@
+task created e9533bda-3b88-4199-87c7-e3b736ae6d4c (@player-bruno-drupe-uv)
+mesh_uv · queued
+mesh_uv · running 32% · e9533bda
+mesh_uv · running 99% · e9533bda
+mesh_uv · success 100% · e9533bda
+[32m✓[39m mesh_uv · e9533bda-3b88-4199-87c7-e3b736ae6d4c · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bruno_drupe_uv\tripo-out\player-bruno-drupe-uv-e9533bda
+{"task_id":"e9533bda-3b88-4199-87c7-e3b736ae6d4c","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"bruno_drupe_uv\\tripo-out\\player-bruno-drupe-uv-e9533bda","files":["model.fbx","uv_render.webp"],"model_file":"bruno_drupe_uv\\tripo-out\\player-bruno-drupe-uv-e9533bda\\model.fbx"}

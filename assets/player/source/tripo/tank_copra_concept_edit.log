@@ -1,0 +1,9 @@
+task created 598c0551-a79c-47e0-9982-30d50e600ed9 (@player-tank-copra-concept2)
+generate_image · queued
+generate_image · running · 598c0551
+generate_image · running · 598c0551
+generate_image · success 100% · 598c0551
+[32m✓[39m generate_image · 598c0551-a79c-47e0-9982-30d50e600ed9 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to tank_copra_concept\tripo-out\player-tank-copra-concept2-598c0551
+{"task_id":"598c0551-a79c-47e0-9982-30d50e600ed9","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"tank_copra_concept\\tripo-out\\player-tank-copra-concept2-598c0551","files":["generated_image.png","preview.png"],"preview":"tank_copra_concept\\tripo-out\\player-tank-copra-concept2-598c0551\\preview.png"}

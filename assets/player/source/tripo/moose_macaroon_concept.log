@@ -1,0 +1,10 @@
+task created ec036695-b3e7-43a6-8308-5a6ebd6a327c (@player-moose-macaroon-concept)
+generate_image · queued
+generate_image · running · ec036695
+generate_image · running · ec036695
+generate_image · running · ec036695
+generate_image · success 100% · ec036695
+[32m✓[39m generate_image · ec036695-b3e7-43a6-8308-5a6ebd6a327c · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to moose_macaroon_concept\tripo-out\player-moose-macaroon-concept-ec036695
+{"task_id":"ec036695-b3e7-43a6-8308-5a6ebd6a327c","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"moose_macaroon_concept\\tripo-out\\player-moose-macaroon-concept-ec036695","files":["generated_image.png","preview.png"],"preview":"moose_macaroon_concept\\tripo-out\\player-moose-macaroon-concept-ec036695\\preview.png"}

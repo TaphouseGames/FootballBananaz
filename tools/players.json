@@ -184,6 +184,185 @@
         "assets/player/source/tripo/dash_plantain_concept/tripo-out/player-dash-plantain-concept3-97012b4a/generated_image.png"
       ],
       "source": "assets/player/source/tripo/bo_split_rig/tripo-out/player-bo-split-rig-b2503bdf/model.fbx"
+    },
+    "rocket_husk": {
+      "name": "Rocket Husk",
+      "character": {
+        "team": "coconuts",
+        "position": "QB",
+        "number": 12,
+        "summary": "huge, calm Samoan American man in his forties with long wavy black hair in a top knot and heavy black eyebrows, mustard yellow high-top sneakers",
+        "gender": "man",
+        "age": "forties",
+        "heritage": "Samoan American",
+        "build": "very big and heavy: broad shoulders, a large round belly, massive thick arms and thick legs",
+        "look": "long wavy black hair pulled into a knot on top with the rest falling behind his shoulders, thick black eyebrows, broad nose, clean-shaven round face, warm brown skin",
+        "personality": "calm, sure of himself and unhurried; plants his feet, never runs and trusts his arm completely",
+        "plays_like": "a cannon arm (power 92, accuracy 75) on a statue (speed 38, agility 30); strong (70) and hard to strip (security 65)"
+      },
+      "who": "a Samoan American man in his forties, a quarterback with a cannon for an arm who never moves his feet: very tall and big, heavy and broad with a thick waist, wide shoulders, huge thick arms and tree-trunk legs, warm brown skin, long wavy black hair tied in a knot on top of his head, thick black eyebrows, a broad nose, a clean-shaven round face and a calm, sure closed-mouth smile, wearing mustard yellow high-top sneakers",
+      "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no bald head and no beard: long hair in a top knot and a clean-shaven face.",
+      "images": [
+        "assets/player/source/tripo/big_bunch_concept/tripo-out/player-big-bunch-concept-c3c28dda/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/rocket_husk_rig/tripo-out/player-rocket-husk-rig-dc6b00ed/model.fbx"
+    },
+    "stone_palm": {
+      "name": "Stone Palm",
+      "character": {
+        "team": "coconuts",
+        "position": "LINE",
+        "number": 66,
+        "summary": "short, stout Native American woman around sixty with a long grey braid over her shoulder, a deeply lined face and a flat stare through half-closed eyes, pink sneakers",
+        "gender": "woman",
+        "age": "around sixty",
+        "heritage": "Native American",
+        "build": "short, stout and solid, with a thick middle, strong veined forearms and muscular legs",
+        "look": "grey hair pulled back into one long thick braid over her right shoulder, high cheekbones, heavy eyelids nearly closed, deep lines on the forehead and by the mouth, copper-brown skin",
+        "personality": "stone-faced and unimpressed; says almost nothing, never hurries and never moves out of the way",
+        "plays_like": "the hardest tackler on the team (70), strong (70) and a good blocker (68), but slow (45)"
+      },
+      "who": "a Native American woman in her fifties, a stone-faced lineman and the hardest tackler on the team: short, stout and solid as a rock, with a wide waist, broad shoulders, thick strong arms and sturdy legs, copper-brown skin, grey-streaked black hair in one long thick braid over her shoulder, high cheekbones, heavy eyelids, deep lines by the mouth and a flat, unimpressed closed-mouth stare, wearing bright pink sneakers",
+      "refs": "She wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no glasses and no bob, and a shorter, much stouter and wider woman's figure.",
+      "images": [
+        "assets/player/source/tripo/bo_split_concept/tripo-out/player-bo-split-concept2-feee084c/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/stone_palm_rig/tripo-out/player-stone-palm-rig-9ac9436e/model.fbx"
+    },
+    "rex_shell": {
+      "name": "Rex Shell",
+      "character": {
+        "team": "coconuts",
+        "position": "LINE",
+        "number": 52,
+        "summary": "round-bellied Indian American office dad in his forties with side-parted black hair, a neat black beard and big friendly eyes, green canvas sneakers",
+        "gender": "man",
+        "age": "mid forties",
+        "heritage": "Indian American",
+        "build": "medium height with a big round belly, soft shoulders and short legs",
+        "look": "thick side-parted black hair, heavy black eyebrows, a short neat full black beard and moustache, big round brown eyes, round cheeks, medium brown skin",
+        "personality": "mild, polite and agreeable; an ordinary dad who turned up to help and apologises when he blocks somebody",
+        "plays_like": "average at everything, a little better at blocking (58) and tackling (55) than the rest"
+      },
+      "who": "an Indian American man in his mid forties, an ordinary office dad who plays lineman and is perfectly average at everything: medium height with a soft dad body, a small round paunch, sloping shoulders and ordinary arms and legs, medium brown skin, thick neatly side-parted black hair, a short neat full black beard, round cheeks, big friendly brown eyes and a mild, polite closed-mouth smile, wearing bright green sneakers",
+      "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no grey hair, no wrinkles and no hard stare: a soft friendly face.",
+      "images": [
+        "assets/player/source/tripo/lou_ripe_concept/tripo-out/player-lou-ripe-concept-3-4c5323ab/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/rex_shell_rig/tripo-out/player-rex-shell-rig-7bc25ee7/model.fbx"
+    },
+    "tank_copra": {
+      "name": "Tank Copra",
+      "character": {
+        "team": "coconuts",
+        "position": "LINE",
+        "number": 79,
+        "summary": "short, very wide African American man of twenty-two with a flat-top, a baby face and a furious glare, orange and white high-top sneakers",
+        "gender": "man",
+        "age": "twenty-two",
+        "heritage": "African American",
+        "build": "short and extremely wide, square as a box, with a thick neck, a big solid belly, thick arms and short thick legs",
+        "look": "black flat-top haircut, heavy black eyebrows pulled down hard, small glaring eyes, a smooth round young face, small ears that stick out, dark brown skin",
+        "personality": "dead serious and intense; takes every snap personally and glares at everybody, a baby face trying hard to look dangerous",
+        "plays_like": "the best blocker on the team (72), strong (65) and a decent tackler (62)"
+      },
+      "who": "an African American man of twenty-two, a lineman built like a tank, the best blocker on the team: short and extremely wide, square as a box, with a thick neck, huge square shoulders, a broad flat chest, thick arms and short thick legs, dark brown skin, a black flat-top haircut, a smooth round baby face with a heavy brow, small serious eyes and a determined closed-mouth pout, wearing bright orange high-top sneakers",
+      "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no blond hair, no red nose, no beard, no wrinkles and no big belly: a smooth young face.",
+      "images": [
+        "assets/player/source/tripo/moe_peel_concept/tripo-out/player-moe-peel-concept2-c15c0bac/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/tank_copra_rig/tripo-out/player-tank-copra-rig-db27cecd/model.fbx"
+    },
+    "miles_frond": {
+      "name": "Miles Frond",
+      "character": {
+        "team": "coconuts",
+        "position": "WR",
+        "number": 84,
+        "summary": "lean, sinewy Latino man in his fifties with curly salt-and-pepper hair, bushy black eyebrows and a wide cheerful grin, turquoise running shoes",
+        "gender": "man",
+        "age": "fifties",
+        "heritage": "Latino",
+        "build": "medium height, lean and sinewy, with thin veined arms, knobbly knees and long thin runner's legs",
+        "look": "short curly salt-and-pepper hair, bushy black eyebrows, a long thin face with a big nose, deep laugh lines, ears that stick out, tanned olive-brown skin",
+        "personality": "cheerful, eager and tireless; a marathon jogger who talks about his times and is still fresh in the fourth quarter",
+        "plays_like": "the fastest on the team (speed 76), a sound all-round receiver (catching 72, coverage 68, get open 65)"
+      },
+      "who": "a Latino man in his fifties, a keen marathon jogger who plays receiver and can run all day: medium height, lean and sinewy with narrow shoulders, thin arms, knobbly knees and long lean runner's legs, tanned olive-brown skin, short curly salt-and-pepper hair, a long thin face with a big nose, bushy dark eyebrows, laugh lines and a cheerful, eager closed-mouth smile, wearing turquoise running shoes",
+      "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no moustache and no bald head: a full head of curly hair and a clean-shaven face.",
+      "images": [
+        "assets/player/source/tripo/dash_plantain_concept/tripo-out/player-dash-plantain-concept3-97012b4a/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/miles_frond_rig/tripo-out/player-miles-frond-rig-35a3795d/model.fbx"
+    },
+    "hands_kernel": {
+      "name": "Hands Kernel",
+      "character": {
+        "team": "coconuts",
+        "position": "WR",
+        "number": 80,
+        "summary": "slight teenage Asian American girl of about fourteen with black pigtails, a straight fringe, freckles and a proud little smile, chunky purple sneakers",
+        "gender": "girl",
+        "age": "about fourteen",
+        "heritage": "Chinese American",
+        "build": "small, slight and thin-limbed, with long arms and big hands",
+        "look": "straight black hair in two short low pigtails with a straight fringe, thick black eyebrows, big dark eyes, freckles across the nose and cheeks, light skin",
+        "personality": "quietly proud and focused; the youngest on the team, lets her catches do the talking",
+        "plays_like": "the surest hands on the team (catching 80), quick enough (speed 68) and tougher than she looks (strength 60)"
+      },
+      "who": "a Chinese American teenage girl of fifteen, not a little child, a receiver who catches everything: slight, with a teenager's long thin arms and legs and very big hands with long fingers, light skin, straight black hair in two short stubby pigtails with a straight fringe, a smooth young face with freckles on the nose, focused dark eyes and a proud little closed-mouth smile, wearing purple sneakers",
+      "refs": "She wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no high-top fade, no big grin and no brown skin, and shorter than him.",
+      "images": [
+        "assets/player/source/tripo/zip_cavendish_concept/tripo-out/player-zip-cavendish-concept-b4293a44/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/hands_kernel_rig/tripo-out/player-hands-kernel-rig-573363c8/model.fbx"
+    },
+    "bruno_drupe": {
+      "name": "Bruno Drupe",
+      "character": {
+        "team": "coconuts",
+        "position": "RB",
+        "number": 34,
+        "summary": "massive, scowling Italian American man in his sixties with swept-back grey curls, a short grey beard, a big nose and very hairy arms, red high-top sneakers",
+        "gender": "man",
+        "age": "sixties",
+        "heritage": "Italian American",
+        "build": "barrel-chested and very heavy, with a bull neck, a big hard belly, enormous hairy arms and thick legs",
+        "look": "thick grey curly hair swept back, heavy grey eyebrows, a big broad nose, a short grey beard, a lined forehead, tanned olive-brown skin",
+        "personality": "stubborn, gruff and proud; never goes round anybody he can go through and never admits he is tired",
+        "plays_like": "by far the strongest on the team (strength 95), never fumbles (security 80), keeps going all game (endurance 75), not fast (speed 55)"
+      },
+      "who": "an Italian American man in his sixties, a running back who is by far the strongest on the team and runs straight through people: short and barrel-chested with a bull neck, huge round shoulders, very thick hairy forearms, a hard round belly and short powerful legs, olive skin, thick curly iron-grey hair, a big hooked nose, grey stubble, a jutting chin and a stubborn closed-mouth frown, wearing bright red sneakers",
+      "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no bald head, no black beard and no brown skin, and much shorter: curly grey hair and olive skin.",
+      "images": [
+        "assets/player/source/tripo/big_bunch_concept/tripo-out/player-big-bunch-concept-c3c28dda/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/bruno_drupe_rig/tripo-out/player-bruno-drupe-rig-27e51c35/model.fbx"
+    },
+    "moose_macaroon": {
+      "name": "Moose Macaroon",
+      "character": {
+        "team": "coconuts",
+        "position": "TE",
+        "number": 43,
+        "summary": "big, sturdy white woman in her late twenties with shoulder-length ginger curls, freckles and a shy, gentle smile, light blue canvas sneakers",
+        "gender": "woman",
+        "age": "late twenties",
+        "heritage": "white American",
+        "build": "big-boned and sturdy, with wide shoulders, strong arms and thick muscular legs",
+        "look": "shoulder-length curly ginger hair, ginger eyebrows, freckles across the nose and cheeks, a round soft face, pale skin",
+        "personality": "shy, gentle and a bit goofy; apologises to people after flattening them",
+        "plays_like": "blocks like a wall (blocking 76, strength 78) and tackles well (68), but slow (45) with unreliable hands (catching 48)"
+      },
+      "who": "a white woman in her late twenties, a big, slow, gentle tight end who blocks like a wall: very tall and big-boned with wide shoulders, long heavy arms, wide hips and long thick legs, standing a little awkwardly, pale freckled skin, short curly ginger hair, a long face with a big chin, pale eyebrows, rosy cheeks and a shy, goofy closed-mouth smile, wearing light blue sneakers",
+      "refs": "She wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no glasses and no black bob, and a much taller, bigger and heavier-boned woman's figure.",
+      "images": [
+        "assets/player/source/tripo/bo_split_concept/tripo-out/player-bo-split-concept2-feee084c/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/moose_macaroon_rig/tripo-out/player-moose-macaroon-rig-f815d043/model.fbx",
+      "options": {
+        "chroma": 0.8
+      }
     }
   }
 }

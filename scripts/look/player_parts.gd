@@ -111,6 +111,46 @@ const PEOPLE: Dictionary[String, Dictionary] = {
 		"path": "res://assets/player/people/bo_split.glb",
 		"mask": "res://assets/player/people/bo_split_mask.png",
 	},
+	"rocket_husk": {
+		"name": "Rocket Husk",
+		"path": "res://assets/player/people/rocket_husk.glb",
+		"mask": "res://assets/player/people/rocket_husk_mask.png",
+	},
+	"stone_palm": {
+		"name": "Stone Palm",
+		"path": "res://assets/player/people/stone_palm.glb",
+		"mask": "res://assets/player/people/stone_palm_mask.png",
+	},
+	"rex_shell": {
+		"name": "Rex Shell",
+		"path": "res://assets/player/people/rex_shell.glb",
+		"mask": "res://assets/player/people/rex_shell_mask.png",
+	},
+	"tank_copra": {
+		"name": "Tank Copra",
+		"path": "res://assets/player/people/tank_copra.glb",
+		"mask": "res://assets/player/people/tank_copra_mask.png",
+	},
+	"miles_frond": {
+		"name": "Miles Frond",
+		"path": "res://assets/player/people/miles_frond.glb",
+		"mask": "res://assets/player/people/miles_frond_mask.png",
+	},
+	"hands_kernel": {
+		"name": "Hands Kernel",
+		"path": "res://assets/player/people/hands_kernel.glb",
+		"mask": "res://assets/player/people/hands_kernel_mask.png",
+	},
+	"bruno_drupe": {
+		"name": "Bruno Drupe",
+		"path": "res://assets/player/people/bruno_drupe.glb",
+		"mask": "res://assets/player/people/bruno_drupe_mask.png",
+	},
+	"moose_macaroon": {
+		"name": "Moose Macaroon",
+		"path": "res://assets/player/people/moose_macaroon.glb",
+		"mask": "res://assets/player/people/moose_macaroon_mask.png",
+	},
 }
 const HEAD_FIT: Dictionary = {"size": 0.3, "neck": 0.15, "sink": 0.035, "forward": 0.0, "flare": 0.12, "tilt": 0.0}
 

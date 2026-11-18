@@ -1,0 +1,9 @@
+task created 9cc374c6-821c-4ebc-b1f7-33caeadae48d (@player-rex-shell-concept2)
+generate_image · queued
+generate_image · running · 9cc374c6
+generate_image · running · 9cc374c6
+generate_image · success 100% · 9cc374c6
+[32m✓[39m generate_image · 9cc374c6-821c-4ebc-b1f7-33caeadae48d · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rex_shell_concept\tripo-out\player-rex-shell-concept2-9cc374c6
+{"task_id":"9cc374c6-821c-4ebc-b1f7-33caeadae48d","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"rex_shell_concept\\tripo-out\\player-rex-shell-concept2-9cc374c6","files":["generated_image.png","preview.png"],"preview":"rex_shell_concept\\tripo-out\\player-rex-shell-concept2-9cc374c6\\preview.png"}

@@ -1,0 +1,8 @@
+task created f503fc43-4551-4091-8665-0f5ccf6557c1 (@player-miles-frond-uv)
+mesh_uv · queued
+mesh_uv · running 34% · f503fc43
+mesh_uv · success 100% · f503fc43
+[32m✓[39m mesh_uv · f503fc43-4551-4091-8665-0f5ccf6557c1 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to miles_frond_uv\tripo-out\player-miles-frond-uv-f503fc43
+{"task_id":"f503fc43-4551-4091-8665-0f5ccf6557c1","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"miles_frond_uv\\tripo-out\\player-miles-frond-uv-f503fc43","files":["model.fbx","uv_render.webp"],"model_file":"miles_frond_uv\\tripo-out\\player-miles-frond-uv-f503fc43\\model.fbx"}

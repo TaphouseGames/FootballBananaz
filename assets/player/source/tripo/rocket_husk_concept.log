@@ -1,0 +1,10 @@
+task created 4b075e0a-8b1f-4293-9de3-5237e36d87aa (@player-rocket-husk-concept)
+generate_image · queued
+generate_image · running · 4b075e0a
+generate_image · running · 4b075e0a
+generate_image · running · 4b075e0a
+generate_image · success 100% · 4b075e0a
+[32m✓[39m generate_image · 4b075e0a-8b1f-4293-9de3-5237e36d87aa · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rocket_husk_concept\tripo-out\player-rocket-husk-concept-4b075e0a
+{"task_id":"4b075e0a-8b1f-4293-9de3-5237e36d87aa","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"rocket_husk_concept\\tripo-out\\player-rocket-husk-concept-4b075e0a","files":["generated_image.png","preview.png"],"preview":"rocket_husk_concept\\tripo-out\\player-rocket-husk-concept-4b075e0a\\preview.png"}

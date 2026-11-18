@@ -1,0 +1,8 @@
+task created 35a3795d-2700-4f0d-9c43-b13245ba71e1 (@player-miles-frond-rig)
+animate_rig · queued
+animate_rig · running 72% · 35a3795d
+animate_rig · success 100% · 35a3795d
+[32m✓[39m animate_rig · 35a3795d-2700-4f0d-9c43-b13245ba71e1 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to miles_frond_rig\tripo-out\player-miles-frond-rig-35a3795d
+{"task_id":"35a3795d-2700-4f0d-9c43-b13245ba71e1","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"miles_frond_rig\\tripo-out\\player-miles-frond-rig-35a3795d","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"miles_frond_rig\\tripo-out\\player-miles-frond-rig-35a3795d\\model.fbx","preview":"miles_frond_rig\\tripo-out\\player-miles-frond-rig-35a3795d\\preview.png"}

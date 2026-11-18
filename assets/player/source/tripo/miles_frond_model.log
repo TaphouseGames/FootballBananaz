@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created c90d08cf-df43-4f79-9061-edc362749894 (@player-miles-frond)
+image_to_model · queued
+image_to_model · running 4% · c90d08cf
+image_to_model · running 11% · c90d08cf
+image_to_model · running 17% · c90d08cf
+image_to_model · running 27% · c90d08cf
+image_to_model · running 40% · c90d08cf
+image_to_model · running 59% · c90d08cf
+image_to_model · running 77% · c90d08cf
+image_to_model · running 96% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · running 99% · c90d08cf
+image_to_model · success 100% · c90d08cf
+[32m✓[39m image_to_model · c90d08cf-df43-4f79-9061-edc362749894 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to miles_frond_model\tripo-out\player-miles-frond-c90d08cf
+{"task_id":"c90d08cf-df43-4f79-9061-edc362749894","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"miles_frond_model\\tripo-out\\player-miles-frond-c90d08cf","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"miles_frond_model\\tripo-out\\player-miles-frond-c90d08cf\\model.fbx","preview":"miles_frond_model\\tripo-out\\player-miles-frond-c90d08cf\\preview.png"}

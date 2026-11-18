@@ -1,0 +1,10 @@
+task created 529de71b-5ce0-4f28-9f9b-b33f4b73d1f4 (@player-stone-palm-concept)
+generate_image · queued
+generate_image · running · 529de71b
+generate_image · running · 529de71b
+generate_image · running · 529de71b
+generate_image · success 100% · 529de71b
+[32m✓[39m generate_image · 529de71b-5ce0-4f28-9f9b-b33f4b73d1f4 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to stone_palm_concept\tripo-out\player-stone-palm-concept-529de71b
+{"task_id":"529de71b-5ce0-4f28-9f9b-b33f4b73d1f4","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"stone_palm_concept\\tripo-out\\player-stone-palm-concept-529de71b","files":["generated_image.png","preview.png"],"preview":"stone_palm_concept\\tripo-out\\player-stone-palm-concept-529de71b\\preview.png"}

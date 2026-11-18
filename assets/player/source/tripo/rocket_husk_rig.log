@@ -1,0 +1,7 @@
+task created dc6b00ed-9106-4070-aa9d-5096b7434a23 (@player-rocket-husk-rig)
+animate_rig · queued
+animate_rig · running 41% · dc6b00ed
+[32m✓[39m animate_rig · dc6b00ed-9106-4070-aa9d-5096b7434a23 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rocket_husk_rig\tripo-out\player-rocket-husk-rig-dc6b00ed
+{"task_id":"dc6b00ed-9106-4070-aa9d-5096b7434a23","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"rocket_husk_rig\\tripo-out\\player-rocket-husk-rig-dc6b00ed","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"rocket_husk_rig\\tripo-out\\player-rocket-husk-rig-dc6b00ed\\model.fbx","preview":"rocket_husk_rig\\tripo-out\\player-rocket-husk-rig-dc6b00ed\\preview.png"}
