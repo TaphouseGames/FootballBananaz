@@ -1,0 +1,8 @@
+task created 49753e8d-2cf3-4140-9212-fd3fd7a7185b (@player-crush-merlot-uv)
+mesh_uv · queued
+mesh_uv · running 40% · 49753e8d
+mesh_uv · success 100% · 49753e8d
+[32m✓[39m mesh_uv · 49753e8d-2cf3-4140-9212-fd3fd7a7185b · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to crush_merlot_uv\tripo-out\player-crush-merlot-uv-49753e8d
+{"task_id":"49753e8d-2cf3-4140-9212-fd3fd7a7185b","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"crush_merlot_uv\\tripo-out\\player-crush-merlot-uv-49753e8d","files":["model.fbx","uv_render.webp"],"model_file":"crush_merlot_uv\\tripo-out\\player-crush-merlot-uv-49753e8d\\model.fbx"}

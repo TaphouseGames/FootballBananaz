@@ -1,0 +1,9 @@
+task created 9261db40-6259-4990-81c0-6e70d36a0fdf (@player-bram-russet-uv)
+mesh_uv · queued
+mesh_uv · running 56% · 9261db40
+mesh_uv · running 99% · 9261db40
+mesh_uv · success 100% · 9261db40
+[32m✓[39m mesh_uv · 9261db40-6259-4990-81c0-6e70d36a0fdf · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bram_russet_uv\tripo-out\player-bram-russet-uv-9261db40
+{"task_id":"9261db40-6259-4990-81c0-6e70d36a0fdf","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"bram_russet_uv\\tripo-out\\player-bram-russet-uv-9261db40","files":["model.fbx","uv_render.webp"],"model_file":"bram_russet_uv\\tripo-out\\player-bram-russet-uv-9261db40\\model.fbx"}

@@ -1,0 +1,7 @@
+task created 58c200ab-67bf-40a5-a8f1-1c8eb24600e4 (@player-cannon-cortland-rig)
+animate_rig · queued
+animate_rig · running 86% · 58c200ab
+[32m✓[39m animate_rig · 58c200ab-67bf-40a5-a8f1-1c8eb24600e4 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to cannon_cortland_rig\tripo-out\player-cannon-cortland-rig-58c200ab
+{"task_id":"58c200ab-67bf-40a5-a8f1-1c8eb24600e4","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"cannon_cortland_rig\\tripo-out\\player-cannon-cortland-rig-58c200ab","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"cannon_cortland_rig\\tripo-out\\player-cannon-cortland-rig-58c200ab\\model.fbx","preview":"cannon_cortland_rig\\tripo-out\\player-cannon-cortland-rig-58c200ab\\preview.png"}

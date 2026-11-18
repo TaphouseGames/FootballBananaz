@@ -1,0 +1,10 @@
+task created b134997f-6699-4b23-a8a0-61770a873386 (@player-granny-smith-concept)
+generate_image · queued
+generate_image · running · b134997f
+generate_image · running · b134997f
+generate_image · running · b134997f
+generate_image · success 100% · b134997f
+[32m✓[39m generate_image · b134997f-6699-4b23-a8a0-61770a873386 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to granny_smith_concept\tripo-out\player-granny-smith-concept-b134997f
+{"task_id":"b134997f-6699-4b23-a8a0-61770a873386","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"granny_smith_concept\\tripo-out\\player-granny-smith-concept-b134997f","files":["generated_image.png","preview.png"],"preview":"granny_smith_concept\\tripo-out\\player-granny-smith-concept-b134997f\\preview.png"}

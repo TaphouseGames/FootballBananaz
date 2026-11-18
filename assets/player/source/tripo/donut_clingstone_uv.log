@@ -1,0 +1,8 @@
+task created 6f00292f-d246-4414-ad3b-1805816ee8a2 (@player-donut-clingstone-uv)
+mesh_uv · queued
+mesh_uv · running 51% · 6f00292f
+mesh_uv · success 100% · 6f00292f
+[32m✓[39m mesh_uv · 6f00292f-d246-4414-ad3b-1805816ee8a2 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to donut_clingstone_uv\tripo-out\player-donut-clingstone-uv-6f00292f
+{"task_id":"6f00292f-d246-4414-ad3b-1805816ee8a2","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"donut_clingstone_uv\\tripo-out\\player-donut-clingstone-uv-6f00292f","files":["model.fbx","uv_render.webp"],"model_file":"donut_clingstone_uv\\tripo-out\\player-donut-clingstone-uv-6f00292f\\model.fbx"}

@@ -1,0 +1,10 @@
+task created b4f4e76f-345e-4a4f-9daa-4a2977844f04 (@player-sol-briar-concept2)
+generate_image · queued
+generate_image · running · b4f4e76f
+generate_image · running · b4f4e76f
+generate_image · running · b4f4e76f
+generate_image · success 100% · b4f4e76f
+[32m✓[39m generate_image · b4f4e76f-345e-4a4f-9daa-4a2977844f04 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to sol_briar_concept\tripo-out\player-sol-briar-concept2-b4f4e76f
+{"task_id":"b4f4e76f-345e-4a4f-9daa-4a2977844f04","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"sol_briar_concept\\tripo-out\\player-sol-briar-concept2-b4f4e76f","files":["generated_image.png","preview.png"],"preview":"sol_briar_concept\\tripo-out\\player-sol-briar-concept2-b4f4e76f\\preview.png"}

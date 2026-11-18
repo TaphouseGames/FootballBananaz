@@ -1,0 +1,10 @@
+task created 2c6ae21b-3527-4a64-b782-fb895d9645c6 (@player-boyd-mulberry-concept)
+generate_image · queued
+generate_image · running · 2c6ae21b
+generate_image · running · 2c6ae21b
+generate_image · running · 2c6ae21b
+generate_image · success 100% · 2c6ae21b
+[32m✓[39m generate_image · 2c6ae21b-3527-4a64-b782-fb895d9645c6 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to boyd_mulberry_concept\tripo-out\player-boyd-mulberry-concept-2c6ae21b
+{"task_id":"2c6ae21b-3527-4a64-b782-fb895d9645c6","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"boyd_mulberry_concept\\tripo-out\\player-boyd-mulberry-concept-2c6ae21b","files":["generated_image.png","preview.png"],"preview":"boyd_mulberry_concept\\tripo-out\\player-boyd-mulberry-concept-2c6ae21b\\preview.png"}

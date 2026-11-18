@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 98a39c8f-4a78-4dc0-ab76-9fd03bb9b1c5 (@player-donut-clingstone)
+image_to_model · queued
+image_to_model · running 3% · 98a39c8f
+image_to_model · running 7% · 98a39c8f
+image_to_model · running 11% · 98a39c8f
+image_to_model · running 17% · 98a39c8f
+image_to_model · running 25% · 98a39c8f
+image_to_model · running 37% · 98a39c8f
+image_to_model · running 48% · 98a39c8f
+image_to_model · running 60% · 98a39c8f
+image_to_model · running 71% · 98a39c8f
+image_to_model · running 82% · 98a39c8f
+image_to_model · running 94% · 98a39c8f
+image_to_model · running 99% · 98a39c8f
+image_to_model · running 99% · 98a39c8f
+image_to_model · running 99% · 98a39c8f
+image_to_model · running 99% · 98a39c8f
+image_to_model · running 99% · 98a39c8f
+image_to_model · running 99% · 98a39c8f
+image_to_model · running 99% · 98a39c8f
+image_to_model · success 100% · 98a39c8f
+[32m✓[39m image_to_model · 98a39c8f-4a78-4dc0-ab76-9fd03bb9b1c5 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to donut_clingstone_model\tripo-out\player-donut-clingstone-98a39c8f
+{"task_id":"98a39c8f-4a78-4dc0-ab76-9fd03bb9b1c5","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"donut_clingstone_model\\tripo-out\\player-donut-clingstone-98a39c8f","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"donut_clingstone_model\\tripo-out\\player-donut-clingstone-98a39c8f\\model.fbx","preview":"donut_clingstone_model\\tripo-out\\player-donut-clingstone-98a39c8f\\preview.png"}

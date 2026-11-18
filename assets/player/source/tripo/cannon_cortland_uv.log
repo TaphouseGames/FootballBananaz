@@ -1,0 +1,9 @@
+task created 17d7825c-9639-40f5-a7f0-05fddb438c11 (@player-cannon-cortland-uv)
+mesh_uv · queued
+mesh_uv · running 35% · 17d7825c
+mesh_uv · running 99% · 17d7825c
+mesh_uv · success 100% · 17d7825c
+[32m✓[39m mesh_uv · 17d7825c-9639-40f5-a7f0-05fddb438c11 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to cannon_cortland_uv\tripo-out\player-cannon-cortland-uv-17d7825c
+{"task_id":"17d7825c-9639-40f5-a7f0-05fddb438c11","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"cannon_cortland_uv\\tripo-out\\player-cannon-cortland-uv-17d7825c","files":["model.fbx","uv_render.webp"],"model_file":"cannon_cortland_uv\\tripo-out\\player-cannon-cortland-uv-17d7825c\\model.fbx"}

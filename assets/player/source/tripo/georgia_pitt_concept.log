@@ -1,0 +1,10 @@
+task created 9159725b-2d35-476c-8f5e-428472a26100 (@player-georgia-pitt-concept)
+generate_image · queued
+generate_image · running · 9159725b
+generate_image · running · 9159725b
+generate_image · running · 9159725b
+generate_image · success 100% · 9159725b
+[32m✓[39m generate_image · 9159725b-2d35-476c-8f5e-428472a26100 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to georgia_pitt_concept\tripo-out\player-georgia-pitt-concept-9159725b
+{"task_id":"9159725b-2d35-476c-8f5e-428472a26100","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"georgia_pitt_concept\\tripo-out\\player-georgia-pitt-concept-9159725b","files":["generated_image.png","preview.png"],"preview":"georgia_pitt_concept\\tripo-out\\player-georgia-pitt-concept-9159725b\\preview.png"}

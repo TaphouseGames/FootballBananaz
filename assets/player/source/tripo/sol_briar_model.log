@@ -1,0 +1,28 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 98392bb8-e4ba-48a6-97f3-de805af652ce (@player-sol-briar)
+image_to_model · queued
+image_to_model · running 5% · 98392bb8
+image_to_model · running 13% · 98392bb8
+image_to_model · running 21% · 98392bb8
+image_to_model · running 31% · 98392bb8
+image_to_model · running 48% · 98392bb8
+image_to_model · running 70% · 98392bb8
+image_to_model · running 92% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · running 99% · 98392bb8
+image_to_model · success 100% · 98392bb8
+[32m✓[39m image_to_model · 98392bb8-e4ba-48a6-97f3-de805af652ce · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to sol_briar_model\tripo-out\player-sol-briar-98392bb8
+{"task_id":"98392bb8-e4ba-48a6-97f3-de805af652ce","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"sol_briar_model\\tripo-out\\player-sol-briar-98392bb8","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"sol_briar_model\\tripo-out\\player-sol-briar-98392bb8\\model.fbx","preview":"sol_briar_model\\tripo-out\\player-sol-briar-98392bb8\\preview.png"}

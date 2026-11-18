@@ -1,0 +1,10 @@
+task created ef0fcf2d-92b8-4010-85db-779e060c1f1a (@player-tad-thorn-uv)
+mesh_uv · queued
+mesh_uv · running 99% · ef0fcf2d
+mesh_uv · running 99% · ef0fcf2d
+mesh_uv · running 99% · ef0fcf2d
+mesh_uv · success 100% · ef0fcf2d
+[32m✓[39m mesh_uv · ef0fcf2d-92b8-4010-85db-779e060c1f1a · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to tad_thorn_uv\tripo-out\player-tad-thorn-uv-ef0fcf2d
+{"task_id":"ef0fcf2d-92b8-4010-85db-779e060c1f1a","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"tad_thorn_uv\\tripo-out\\player-tad-thorn-uv-ef0fcf2d","files":["model.fbx","uv_render.webp"],"model_file":"tad_thorn_uv\\tripo-out\\player-tad-thorn-uv-ef0fcf2d\\model.fbx"}

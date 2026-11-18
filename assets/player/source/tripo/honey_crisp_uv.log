@@ -1,0 +1,8 @@
+task created e62d8729-af83-4fb0-895a-47e7bb5715e4 (@player-honey-crisp-uv)
+mesh_uv · queued
+mesh_uv · running 63% · e62d8729
+mesh_uv · success 100% · e62d8729
+[32m✓[39m mesh_uv · e62d8729-af83-4fb0-895a-47e7bb5715e4 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to honey_crisp_uv\tripo-out\player-honey-crisp-uv-e62d8729
+{"task_id":"e62d8729-af83-4fb0-895a-47e7bb5715e4","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"honey_crisp_uv\\tripo-out\\player-honey-crisp-uv-e62d8729","files":["model.fbx","uv_render.webp"],"model_file":"honey_crisp_uv\\tripo-out\\player-honey-crisp-uv-e62d8729\\model.fbx"}

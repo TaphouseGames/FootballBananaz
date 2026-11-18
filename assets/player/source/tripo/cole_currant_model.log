@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 72deb8a8-044a-461d-89d8-242ee7e6d09d (@player-cole-currant)
+image_to_model · queued
+image_to_model · running 2% · 72deb8a8
+image_to_model · running 6% · 72deb8a8
+image_to_model · running 10% · 72deb8a8
+image_to_model · running 15% · 72deb8a8
+image_to_model · running 23% · 72deb8a8
+image_to_model · running 33% · 72deb8a8
+image_to_model · running 43% · 72deb8a8
+image_to_model · running 53% · 72deb8a8
+image_to_model · running 63% · 72deb8a8
+image_to_model · running 73% · 72deb8a8
+image_to_model · running 83% · 72deb8a8
+image_to_model · running 93% · 72deb8a8
+image_to_model · running 99% · 72deb8a8
+image_to_model · running 99% · 72deb8a8
+image_to_model · running 99% · 72deb8a8
+image_to_model · running 99% · 72deb8a8
+image_to_model · running 99% · 72deb8a8
+image_to_model · running 99% · 72deb8a8
+image_to_model · success 100% · 72deb8a8
+[32m✓[39m image_to_model · 72deb8a8-044a-461d-89d8-242ee7e6d09d · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to cole_currant_model\tripo-out\player-cole-currant-72deb8a8
+{"task_id":"72deb8a8-044a-461d-89d8-242ee7e6d09d","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"cole_currant_model\\tripo-out\\player-cole-currant-72deb8a8","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"cole_currant_model\\tripo-out\\player-cole-currant-72deb8a8\\model.fbx","preview":"cole_currant_model\\tripo-out\\player-cole-currant-72deb8a8\\preview.png"}

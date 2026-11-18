@@ -1,0 +1,11 @@
+task created 7b7f0623-1bbb-4106-b6a2-6b3d16866e84 (@player-otis-raisin-concept)
+generate_image · queued
+generate_image · running · 7b7f0623
+generate_image · running · 7b7f0623
+generate_image · running · 7b7f0623
+generate_image · running · 7b7f0623
+generate_image · success 100% · 7b7f0623
+[32m✓[39m generate_image · 7b7f0623-1bbb-4106-b6a2-6b3d16866e84 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to otis_raisin_concept\tripo-out\player-otis-raisin-concept-7b7f0623
+{"task_id":"7b7f0623-1bbb-4106-b6a2-6b3d16866e84","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"otis_raisin_concept\\tripo-out\\player-otis-raisin-concept-7b7f0623","files":["generated_image.png","preview.png"],"preview":"otis_raisin_concept\\tripo-out\\player-otis-raisin-concept-7b7f0623\\preview.png"}

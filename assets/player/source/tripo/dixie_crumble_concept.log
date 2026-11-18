@@ -1,0 +1,10 @@
+task created 5b40771a-5daa-43c2-ba09-be1a8a952fb2 (@player-dixie-crumble-concept3)
+generate_image · queued
+generate_image · running · 5b40771a
+generate_image · running · 5b40771a
+generate_image · running · 5b40771a
+generate_image · success 100% · 5b40771a
+[32m✓[39m generate_image · 5b40771a-5daa-43c2-ba09-be1a8a952fb2 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to dixie_crumble_concept\tripo-out\player-dixie-crumble-concept3-5b40771a
+{"task_id":"5b40771a-5daa-43c2-ba09-be1a8a952fb2","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"dixie_crumble_concept\\tripo-out\\player-dixie-crumble-concept3-5b40771a","files":["generated_image.png","preview.png"],"preview":"dixie_crumble_concept\\tripo-out\\player-dixie-crumble-concept3-5b40771a\\preview.png"}

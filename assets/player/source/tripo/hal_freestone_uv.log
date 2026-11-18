@@ -1,0 +1,8 @@
+task created a5838b9a-36a6-443b-9b19-15ab486082c7 (@player-hal-freestone-uv)
+mesh_uv · queued
+mesh_uv · running 73% · a5838b9a
+mesh_uv · success 100% · a5838b9a
+[32m✓[39m mesh_uv · a5838b9a-36a6-443b-9b19-15ab486082c7 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hal_freestone_uv\tripo-out\player-hal-freestone-uv-a5838b9a
+{"task_id":"a5838b9a-36a6-443b-9b19-15ab486082c7","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"hal_freestone_uv\\tripo-out\\player-hal-freestone-uv-a5838b9a","files":["model.fbx","uv_render.webp"],"model_file":"hal_freestone_uv\\tripo-out\\player-hal-freestone-uv-a5838b9a\\model.fbx"}

@@ -1,0 +1,8 @@
+task created 62eea298-f667-4ba0-8aa4-499622798019 (@player-georgia-pitt-uv)
+mesh_uv · queued
+mesh_uv · running 88% · 62eea298
+mesh_uv · success 100% · 62eea298
+[32m✓[39m mesh_uv · 62eea298-f667-4ba0-8aa4-499622798019 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to georgia_pitt_uv\tripo-out\player-georgia-pitt-uv-62eea298
+{"task_id":"62eea298-f667-4ba0-8aa4-499622798019","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"georgia_pitt_uv\\tripo-out\\player-georgia-pitt-uv-62eea298","files":["model.fbx","uv_render.webp"],"model_file":"georgia_pitt_uv\\tripo-out\\player-georgia-pitt-uv-62eea298\\model.fbx"}

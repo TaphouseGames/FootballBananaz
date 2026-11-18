@@ -1,0 +1,23 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created e52ea4ad-e170-487d-936a-8ba84d6ba1c1 (@player-hal-freestone)
+image_to_model · queued
+image_to_model · running 3% · e52ea4ad
+image_to_model · running 7% · e52ea4ad
+image_to_model · running 11% · e52ea4ad
+image_to_model · running 17% · e52ea4ad
+image_to_model · running 26% · e52ea4ad
+image_to_model · running 37% · e52ea4ad
+image_to_model · running 48% · e52ea4ad
+image_to_model · running 60% · e52ea4ad
+image_to_model · running 71% · e52ea4ad
+image_to_model · running 82% · e52ea4ad
+image_to_model · running 94% · e52ea4ad
+image_to_model · running 99% · e52ea4ad
+image_to_model · running 99% · e52ea4ad
+image_to_model · running 99% · e52ea4ad
+image_to_model · running 99% · e52ea4ad
+image_to_model · success 100% · e52ea4ad
+[32m✓[39m image_to_model · e52ea4ad-e170-487d-936a-8ba84d6ba1c1 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hal_freestone_model\tripo-out\player-hal-freestone-e52ea4ad
+{"task_id":"e52ea4ad-e170-487d-936a-8ba84d6ba1c1","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"hal_freestone_model\\tripo-out\\player-hal-freestone-e52ea4ad","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"hal_freestone_model\\tripo-out\\player-hal-freestone-e52ea4ad\\model.fbx","preview":"hal_freestone_model\\tripo-out\\player-hal-freestone-e52ea4ad\\preview.png"}

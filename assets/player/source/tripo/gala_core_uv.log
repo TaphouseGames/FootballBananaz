@@ -1,0 +1,9 @@
+task created 4a943a5b-e809-4241-aca0-558d3578ad12 (@player-gala-core-uv)
+mesh_uv · queued
+mesh_uv · running 35% · 4a943a5b
+mesh_uv · running 99% · 4a943a5b
+mesh_uv · success 100% · 4a943a5b
+[32m✓[39m mesh_uv · 4a943a5b-e809-4241-aca0-558d3578ad12 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to gala_core_uv\tripo-out\player-gala-core-uv-4a943a5b
+{"task_id":"4a943a5b-e809-4241-aca0-558d3578ad12","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"gala_core_uv\\tripo-out\\player-gala-core-uv-4a943a5b","files":["model.fbx","uv_render.webp"],"model_file":"gala_core_uv\\tripo-out\\player-gala-core-uv-4a943a5b\\model.fbx"}

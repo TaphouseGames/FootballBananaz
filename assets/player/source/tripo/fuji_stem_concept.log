@@ -1,0 +1,10 @@
+task created f333ff1e-f88b-44a2-b935-bff9aece870c (@player-fuji-stem-concept)
+generate_image · queued
+generate_image · running · f333ff1e
+generate_image · running · f333ff1e
+generate_image · running · f333ff1e
+generate_image · success 100% · f333ff1e
+[32m✓[39m generate_image · f333ff1e-f88b-44a2-b935-bff9aece870c · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to fuji_stem_concept\tripo-out\player-fuji-stem-concept-f333ff1e
+{"task_id":"f333ff1e-f88b-44a2-b935-bff9aece870c","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"fuji_stem_concept\\tripo-out\\player-fuji-stem-concept-f333ff1e","files":["generated_image.png","preview.png"],"preview":"fuji_stem_concept\\tripo-out\\player-fuji-stem-concept-f333ff1e\\preview.png"}

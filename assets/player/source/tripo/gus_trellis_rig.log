@@ -1,0 +1,10 @@
+task created a98cd7e1-7765-4284-a875-5eabf79087aa (@player-gus-trellis-rig)
+animate_rig · queued
+animate_rig · running 35% · a98cd7e1
+animate_rig · running 99% · a98cd7e1
+animate_rig · running 99% · a98cd7e1
+animate_rig · success 100% · a98cd7e1
+[32m✓[39m animate_rig · a98cd7e1-7765-4284-a875-5eabf79087aa · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to gus_trellis_rig\tripo-out\player-gus-trellis-rig-a98cd7e1
+{"task_id":"a98cd7e1-7765-4284-a875-5eabf79087aa","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"gus_trellis_rig\\tripo-out\\player-gus-trellis-rig-a98cd7e1","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"gus_trellis_rig\\tripo-out\\player-gus-trellis-rig-a98cd7e1\\model.fbx","preview":"gus_trellis_rig\\tripo-out\\player-gus-trellis-rig-a98cd7e1\\preview.png"}

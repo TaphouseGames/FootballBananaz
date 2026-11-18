@@ -1,0 +1,28 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 4ffb7832-3b91-435f-b308-e02c826de974 (@player-tad-thorn)
+image_to_model · queued
+image_to_model · running 5% · 4ffb7832
+image_to_model · running 12% · 4ffb7832
+image_to_model · running 20% · 4ffb7832
+image_to_model · running 31% · 4ffb7832
+image_to_model · running 48% · 4ffb7832
+image_to_model · running 69% · 4ffb7832
+image_to_model · running 92% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · running 99% · 4ffb7832
+image_to_model · success 100% · 4ffb7832
+[32m✓[39m image_to_model · 4ffb7832-3b91-435f-b308-e02c826de974 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to tad_thorn_model\tripo-out\player-tad-thorn-4ffb7832
+{"task_id":"4ffb7832-3b91-435f-b308-e02c826de974","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"tad_thorn_model\\tripo-out\\player-tad-thorn-4ffb7832","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"tad_thorn_model\\tripo-out\\player-tad-thorn-4ffb7832\\model.fbx","preview":"tad_thorn_model\\tripo-out\\player-tad-thorn-4ffb7832\\preview.png"}

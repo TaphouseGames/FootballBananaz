@@ -1,0 +1,8 @@
+task created 46138f3d-7056-4ff6-ac22-fa73072277bc (@player-skip-blossom-uv)
+mesh_uv · queued
+mesh_uv · running 65% · 46138f3d
+mesh_uv · success 100% · 46138f3d
+[32m✓[39m mesh_uv · 46138f3d-7056-4ff6-ac22-fa73072277bc · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to skip_blossom_uv\tripo-out\player-skip-blossom-uv-46138f3d
+{"task_id":"46138f3d-7056-4ff6-ac22-fa73072277bc","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"skip_blossom_uv\\tripo-out\\player-skip-blossom-uv-46138f3d","files":["model.fbx","uv_render.webp"],"model_file":"skip_blossom_uv\\tripo-out\\player-skip-blossom-uv-46138f3d\\model.fbx"}

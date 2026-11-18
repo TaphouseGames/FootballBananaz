@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 1b5c2e0b-c8df-402e-8f9f-852707bfeb6a (@player-fuji-stem)
+image_to_model · queued
+image_to_model · running 2% · 1b5c2e0b
+image_to_model · running 4% · 1b5c2e0b
+image_to_model · running 6% · 1b5c2e0b
+image_to_model · running 8% · 1b5c2e0b
+image_to_model · running 13% · 1b5c2e0b
+image_to_model · running 18% · 1b5c2e0b
+image_to_model · running 24% · 1b5c2e0b
+image_to_model · running 30% · 1b5c2e0b
+image_to_model · running 35% · 1b5c2e0b
+image_to_model · running 41% · 1b5c2e0b
+image_to_model · running 47% · 1b5c2e0b
+image_to_model · running 52% · 1b5c2e0b
+image_to_model · running 58% · 1b5c2e0b
+image_to_model · running 64% · 1b5c2e0b
+image_to_model · running 69% · 1b5c2e0b
+image_to_model · running 75% · 1b5c2e0b
+image_to_model · running 81% · 1b5c2e0b
+image_to_model · running 86% · 1b5c2e0b
+image_to_model · running 92% · 1b5c2e0b
+image_to_model · success 100% · 1b5c2e0b
+[32m✓[39m image_to_model · 1b5c2e0b-c8df-402e-8f9f-852707bfeb6a · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to fuji_stem_model\tripo-out\player-fuji-stem-1b5c2e0b
+{"task_id":"1b5c2e0b-c8df-402e-8f9f-852707bfeb6a","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"fuji_stem_model\\tripo-out\\player-fuji-stem-1b5c2e0b","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"fuji_stem_model\\tripo-out\\player-fuji-stem-1b5c2e0b\\model.fbx","preview":"fuji_stem_model\\tripo-out\\player-fuji-stem-1b5c2e0b\\preview.png"}

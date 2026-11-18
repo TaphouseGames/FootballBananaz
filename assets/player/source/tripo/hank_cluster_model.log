@@ -1,0 +1,29 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created a29f3f92-1c7c-42c5-aace-527f6f96e858 (@player-hank-cluster)
+image_to_model · queued
+image_to_model · running 2% · a29f3f92
+image_to_model · running 6% · a29f3f92
+image_to_model · running 9% · a29f3f92
+image_to_model · running 13% · a29f3f92
+image_to_model · running 20% · a29f3f92
+image_to_model · running 29% · a29f3f92
+image_to_model · running 38% · a29f3f92
+image_to_model · running 46% · a29f3f92
+image_to_model · running 55% · a29f3f92
+image_to_model · running 64% · a29f3f92
+image_to_model · running 73% · a29f3f92
+image_to_model · running 82% · a29f3f92
+image_to_model · running 91% · a29f3f92
+image_to_model · running 99% · a29f3f92
+image_to_model · running 99% · a29f3f92
+image_to_model · running 99% · a29f3f92
+image_to_model · running 99% · a29f3f92
+image_to_model · running 99% · a29f3f92
+image_to_model · running 99% · a29f3f92
+image_to_model · running 99% · a29f3f92
+image_to_model · running 99% · a29f3f92
+image_to_model · success 100% · a29f3f92
+[32m✓[39m image_to_model · a29f3f92-1c7c-42c5-aace-527f6f96e858 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hank_cluster_model\tripo-out\player-hank-cluster-a29f3f92
+{"task_id":"a29f3f92-1c7c-42c5-aace-527f6f96e858","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"hank_cluster_model\\tripo-out\\player-hank-cluster-a29f3f92","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"hank_cluster_model\\tripo-out\\player-hank-cluster-a29f3f92\\model.fbx","preview":"hank_cluster_model\\tripo-out\\player-hank-cluster-a29f3f92\\preview.png"}

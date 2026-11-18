@@ -1,0 +1,7 @@
+task created 8d5c9146-d60c-4eca-8319-da8194c042be (@player-georgia-pitt-rig)
+animate_rig · queued
+animate_rig · running 44% · 8d5c9146
+[32m✓[39m animate_rig · 8d5c9146-d60c-4eca-8319-da8194c042be · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to georgia_pitt_rig\tripo-out\player-georgia-pitt-rig-8d5c9146
+{"task_id":"8d5c9146-d60c-4eca-8319-da8194c042be","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"georgia_pitt_rig\\tripo-out\\player-georgia-pitt-rig-8d5c9146","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"georgia_pitt_rig\\tripo-out\\player-georgia-pitt-rig-8d5c9146\\model.fbx","preview":"georgia_pitt_rig\\tripo-out\\player-georgia-pitt-rig-8d5c9146\\preview.png"}

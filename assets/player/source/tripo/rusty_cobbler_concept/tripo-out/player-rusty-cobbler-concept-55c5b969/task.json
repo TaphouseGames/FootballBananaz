@@ -1,0 +1,20 @@
+{
+  "task_id": "55c5b969-8ec0-45ae-85c4-34b090e43953",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Completely show the full body of the character in T-pose. Standing upright, facing forward. Arms raise horizontally at shoulder height. Palms facing down, remove handheld objects but keep hand-worn equipment and accessories. Legs straight, feet shoulder-width apart. Keep natural body proportions and anatomy. Front view, neutral background.\nA new character: an amateur football player, a white man in his mid thirties, a scruffy, easy-going running back: medium height, stocky and solid with a deep chest, strong freckled forearms and thick strong legs, pale freckled sunburnt skin, a messy mop of rust-red hair, a short scruffy rust-red beard, a snub nose, pale eyebrows, a lopsided, relaxed closed-mouth grin, wearing royal blue sneakers. He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no grey hair, no wrinkles, no moustache alone and no hard stare: a young freckled face with red hair and less belly. Full body, front view, standing upright in a T-pose with arms straight out to the sides, palms down, fingers slightly apart, legs slightly apart. Stylized 3D cartoon character, an everyday person rather than an athlete, with a slightly big head, slightly oversized hands and shoes, smooth matte clay look, a detailed and expressive face, sculpted chunky hair, soft folds in the clothes, and well-defined hands, elbows and knees. The kit: a loose short-sleeved football jersey in plain near-white, pants ending just below the knee in plain mid grey, long socks in plain dark grey, each one flat colour with no logos, no numbers, no text, no stripes and no trim in another colour. Bare arms and bare hands, no helmet, no pads. Mouth closed. Matte, no gloss. Flat, even lighting. Single isolated figure on a plain flat blue-grey background, no floor shadow, no props.",
+    "template": "t_pose",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T02:37:29.624890Z",
+  "completed_at": "2026-11-18T02:38:11.847765Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

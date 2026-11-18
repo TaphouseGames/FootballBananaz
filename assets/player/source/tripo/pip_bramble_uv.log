@@ -1,0 +1,8 @@
+task created 90a8350c-2e85-4a4f-8b61-6a8fdbbaec1b (@player-pip-bramble-uv)
+mesh_uv · queued
+mesh_uv · running 25% · 90a8350c
+mesh_uv · success 100% · 90a8350c
+[32m✓[39m mesh_uv · 90a8350c-2e85-4a4f-8b61-6a8fdbbaec1b · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to pip_bramble_uv\tripo-out\player-pip-bramble-uv-90a8350c
+{"task_id":"90a8350c-2e85-4a4f-8b61-6a8fdbbaec1b","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"pip_bramble_uv\\tripo-out\\player-pip-bramble-uv-90a8350c","files":["model.fbx","uv_render.webp"],"model_file":"pip_bramble_uv\\tripo-out\\player-pip-bramble-uv-90a8350c\\model.fbx"}

@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 9013ccd5-fe21-444e-85f6-bd6b10f9ec70 (@player-georgia-pitt)
+image_to_model · queued
+image_to_model · running 2% · 9013ccd5
+image_to_model · running 5% · 9013ccd5
+image_to_model · running 8% · 9013ccd5
+image_to_model · running 13% · 9013ccd5
+image_to_model · running 19% · 9013ccd5
+image_to_model · running 28% · 9013ccd5
+image_to_model · running 37% · 9013ccd5
+image_to_model · running 45% · 9013ccd5
+image_to_model · running 54% · 9013ccd5
+image_to_model · running 63% · 9013ccd5
+image_to_model · running 71% · 9013ccd5
+image_to_model · running 80% · 9013ccd5
+image_to_model · running 89% · 9013ccd5
+image_to_model · running 97% · 9013ccd5
+image_to_model · running 99% · 9013ccd5
+image_to_model · running 99% · 9013ccd5
+image_to_model · running 99% · 9013ccd5
+image_to_model · running 99% · 9013ccd5
+image_to_model · running 99% · 9013ccd5
+image_to_model · success 100% · 9013ccd5
+[32m✓[39m image_to_model · 9013ccd5-fe21-444e-85f6-bd6b10f9ec70 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to georgia_pitt_model\tripo-out\player-georgia-pitt-9013ccd5
+{"task_id":"9013ccd5-fe21-444e-85f6-bd6b10f9ec70","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"georgia_pitt_model\\tripo-out\\player-georgia-pitt-9013ccd5","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"georgia_pitt_model\\tripo-out\\player-georgia-pitt-9013ccd5\\model.fbx","preview":"georgia_pitt_model\\tripo-out\\player-georgia-pitt-9013ccd5\\preview.png"}

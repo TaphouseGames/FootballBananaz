@@ -1,0 +1,44 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://wn7nsmmmovwp"
+path.s3tc="res://.godot/imported/brick_tannin_tripo_image_tripo_node_12571bee_metallic-tripo_image_tripo_node_12571bee_roughness.jpg-33ebd8c77c73429be6295a0a44a06c2d.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "b43689f0f4ed306a671e4ff5ce3e3455"
+}
+
+[deps]
+
+source_file="res://assets/player/people/brick_tannin_tripo_image_tripo_node_12571bee_metallic-tripo_image_tripo_node_12571bee_roughness.jpg"
+dest_files=["res://.godot/imported/brick_tannin_tripo_image_tripo_node_12571bee_metallic-tripo_image_tripo_node_12571bee_roughness.jpg-33ebd8c77c73429be6295a0a44a06c2d.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

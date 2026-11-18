@@ -1,0 +1,10 @@
+task created 7f362141-d060-4c5a-8dbe-4a175346884b (@player-mack-vine-concept)
+generate_image · queued
+generate_image · running · 7f362141
+generate_image · running · 7f362141
+generate_image · running · 7f362141
+generate_image · success 100% · 7f362141
+[32m✓[39m generate_image · 7f362141-d060-4c5a-8dbe-4a175346884b · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to mack_vine_concept\tripo-out\player-mack-vine-concept-7f362141
+{"task_id":"7f362141-d060-4c5a-8dbe-4a175346884b","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"mack_vine_concept\\tripo-out\\player-mack-vine-concept-7f362141","files":["generated_image.png","preview.png"],"preview":"mack_vine_concept\\tripo-out\\player-mack-vine-concept-7f362141\\preview.png"}

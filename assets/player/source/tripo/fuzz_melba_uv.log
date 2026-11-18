@@ -1,0 +1,8 @@
+task created 2421a219-e4b9-4eb8-a440-6ad26c96dee1 (@player-fuzz-melba-uv)
+mesh_uv · queued
+mesh_uv · running 99% · 2421a219
+mesh_uv · success 100% · 2421a219
+[32m✓[39m mesh_uv · 2421a219-e4b9-4eb8-a440-6ad26c96dee1 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to fuzz_melba_uv\tripo-out\player-fuzz-melba-uv-2421a219
+{"task_id":"2421a219-e4b9-4eb8-a440-6ad26c96dee1","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"fuzz_melba_uv\\tripo-out\\player-fuzz-melba-uv-2421a219","files":["model.fbx","uv_render.webp"],"model_file":"fuzz_melba_uv\\tripo-out\\player-fuzz-melba-uv-2421a219\\model.fbx"}

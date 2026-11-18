@@ -1,0 +1,8 @@
+task created 28339aa5-d806-4ea6-b1c2-0ce5e0836be8 (@player-boyd-mulberry-uv)
+mesh_uv · queued
+mesh_uv · running 99% · 28339aa5
+mesh_uv · success 100% · 28339aa5
+[32m✓[39m mesh_uv · 28339aa5-d806-4ea6-b1c2-0ce5e0836be8 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to boyd_mulberry_uv\tripo-out\player-boyd-mulberry-uv-28339aa5
+{"task_id":"28339aa5-d806-4ea6-b1c2-0ce5e0836be8","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"boyd_mulberry_uv\\tripo-out\\player-boyd-mulberry-uv-28339aa5","files":["model.fbx","uv_render.webp"],"model_file":"boyd_mulberry_uv\\tripo-out\\player-boyd-mulberry-uv-28339aa5\\model.fbx"}

@@ -1,0 +1,9 @@
+task created ab893650-5f95-4718-af40-acda2c56e5df (@player-brick-tannin-concept-edit)
+generate_image · queued
+generate_image · running · ab893650
+generate_image · running · ab893650
+generate_image · success 100% · ab893650
+[32m✓[39m generate_image · ab893650-5f95-4718-af40-acda2c56e5df · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to brick_tannin_concept\tripo-out\player-brick-tannin-concept-edit-ab893650
+{"task_id":"ab893650-5f95-4718-af40-acda2c56e5df","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"brick_tannin_concept\\tripo-out\\player-brick-tannin-concept-edit-ab893650","files":["generated_image.png","preview.png"],"preview":"brick_tannin_concept\\tripo-out\\player-brick-tannin-concept-edit-ab893650\\preview.png"}

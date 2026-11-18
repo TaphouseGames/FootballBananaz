@@ -1,0 +1,9 @@
+task created 53364a63-ee30-4d3a-858c-9965711e282f (@player-flash-elder-concept-edit)
+generate_image · queued
+generate_image · running · 53364a63
+generate_image · running · 53364a63
+generate_image · success 100% · 53364a63
+[32m✓[39m generate_image · 53364a63-ee30-4d3a-858c-9965711e282f · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to flash_elder_concept\tripo-out\player-flash-elder-concept-edit-53364a63
+{"task_id":"53364a63-ee30-4d3a-858c-9965711e282f","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"flash_elder_concept\\tripo-out\\player-flash-elder-concept-edit-53364a63","files":["generated_image.png","preview.png"],"preview":"flash_elder_concept\\tripo-out\\player-flash-elder-concept-edit-53364a63\\preview.png"}

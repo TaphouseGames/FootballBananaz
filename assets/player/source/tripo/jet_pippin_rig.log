@@ -1,0 +1,8 @@
+task created 934eef69-3c77-4a73-8484-d17facce3953 (@player-jet-pippin-rig)
+animate_rig · queued
+animate_rig · running 7% · 934eef69
+animate_rig · success 100% · 934eef69
+[32m✓[39m animate_rig · 934eef69-3c77-4a73-8484-d17facce3953 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to jet_pippin_rig\tripo-out\player-jet-pippin-rig-934eef69
+{"task_id":"934eef69-3c77-4a73-8484-d17facce3953","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"jet_pippin_rig\\tripo-out\\player-jet-pippin-rig-934eef69","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"jet_pippin_rig\\tripo-out\\player-jet-pippin-rig-934eef69\\model.fbx","preview":"jet_pippin_rig\\tripo-out\\player-jet-pippin-rig-934eef69\\preview.png"}

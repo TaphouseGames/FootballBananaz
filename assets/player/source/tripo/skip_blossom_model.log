@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created c8a2c946-f74f-4031-8c6a-79a91193c034 (@player-skip-blossom)
+image_to_model · queued
+image_to_model · running 4% · c8a2c946
+image_to_model · running 12% · c8a2c946
+image_to_model · running 18% · c8a2c946
+image_to_model · running 28% · c8a2c946
+image_to_model · running 42% · c8a2c946
+image_to_model · running 61% · c8a2c946
+image_to_model · running 80% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · running 99% · c8a2c946
+image_to_model · success 100% · c8a2c946
+[32m✓[39m image_to_model · c8a2c946-f74f-4031-8c6a-79a91193c034 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to skip_blossom_model\tripo-out\player-skip-blossom-c8a2c946
+{"task_id":"c8a2c946-f74f-4031-8c6a-79a91193c034","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"skip_blossom_model\\tripo-out\\player-skip-blossom-c8a2c946","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"skip_blossom_model\\tripo-out\\player-skip-blossom-c8a2c946\\model.fbx","preview":"skip_blossom_model\\tripo-out\\player-skip-blossom-c8a2c946\\preview.png"}

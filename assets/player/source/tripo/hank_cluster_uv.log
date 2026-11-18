@@ -1,0 +1,8 @@
+task created dd43993e-bff7-4b05-a3bd-26ebf1b35794 (@player-hank-cluster-uv)
+mesh_uv · queued
+mesh_uv · running 55% · dd43993e
+mesh_uv · success 100% · dd43993e
+[32m✓[39m mesh_uv · dd43993e-bff7-4b05-a3bd-26ebf1b35794 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hank_cluster_uv\tripo-out\player-hank-cluster-uv-dd43993e
+{"task_id":"dd43993e-bff7-4b05-a3bd-26ebf1b35794","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"hank_cluster_uv\\tripo-out\\player-hank-cluster-uv-dd43993e","files":["model.fbx","uv_render.webp"],"model_file":"hank_cluster_uv\\tripo-out\\player-hank-cluster-uv-dd43993e\\model.fbx"}

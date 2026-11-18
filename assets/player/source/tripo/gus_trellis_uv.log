@@ -1,0 +1,7 @@
+task created f09c2b6b-37b3-4383-808f-5bd117d95785 (@player-gus-trellis-uv)
+mesh_uv · queued
+mesh_uv · running 99% · f09c2b6b
+[32m✓[39m mesh_uv · f09c2b6b-37b3-4383-808f-5bd117d95785 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to gus_trellis_uv\tripo-out\player-gus-trellis-uv-f09c2b6b
+{"task_id":"f09c2b6b-37b3-4383-808f-5bd117d95785","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"gus_trellis_uv\\tripo-out\\player-gus-trellis-uv-f09c2b6b","files":["model.fbx","uv_render.webp"],"model_file":"gus_trellis_uv\\tripo-out\\player-gus-trellis-uv-f09c2b6b\\model.fbx"}

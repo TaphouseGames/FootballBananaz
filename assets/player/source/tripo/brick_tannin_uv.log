@@ -1,0 +1,8 @@
+task created 9976a2c1-b2ac-4aea-b26f-ddf28a63ce67 (@player-brick-tannin-uv)
+mesh_uv · queued
+mesh_uv · running 99% · 9976a2c1
+mesh_uv · success 100% · 9976a2c1
+[32m✓[39m mesh_uv · 9976a2c1-b2ac-4aea-b26f-ddf28a63ce67 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to brick_tannin_uv\tripo-out\player-brick-tannin-uv-9976a2c1
+{"task_id":"9976a2c1-b2ac-4aea-b26f-ddf28a63ce67","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"brick_tannin_uv\\tripo-out\\player-brick-tannin-uv-9976a2c1","files":["model.fbx","uv_render.webp"],"model_file":"brick_tannin_uv\\tripo-out\\player-brick-tannin-uv-9976a2c1\\model.fbx"}

@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 5bcea18c-7a4a-4224-b6d0-ecd6adbfa630 (@player-boyd-mulberry)
+image_to_model · queued
+image_to_model · running 2% · 5bcea18c
+image_to_model · running 6% · 5bcea18c
+image_to_model · running 9% · 5bcea18c
+image_to_model · running 14% · 5bcea18c
+image_to_model · running 22% · 5bcea18c
+image_to_model · running 32% · 5bcea18c
+image_to_model · running 41% · 5bcea18c
+image_to_model · running 51% · 5bcea18c
+image_to_model · running 60% · 5bcea18c
+image_to_model · running 70% · 5bcea18c
+image_to_model · running 80% · 5bcea18c
+image_to_model · running 90% · 5bcea18c
+image_to_model · running 99% · 5bcea18c
+image_to_model · running 99% · 5bcea18c
+image_to_model · running 99% · 5bcea18c
+image_to_model · running 99% · 5bcea18c
+image_to_model · running 99% · 5bcea18c
+image_to_model · success 100% · 5bcea18c
+[32m✓[39m image_to_model · 5bcea18c-7a4a-4224-b6d0-ecd6adbfa630 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to boyd_mulberry_model\tripo-out\player-boyd-mulberry-5bcea18c
+{"task_id":"5bcea18c-7a4a-4224-b6d0-ecd6adbfa630","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"boyd_mulberry_model\\tripo-out\\player-boyd-mulberry-5bcea18c","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"boyd_mulberry_model\\tripo-out\\player-boyd-mulberry-5bcea18c\\model.fbx","preview":"boyd_mulberry_model\\tripo-out\\player-boyd-mulberry-5bcea18c\\preview.png"}

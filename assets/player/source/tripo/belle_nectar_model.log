@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 7465a76e-1449-492c-b935-7229382b3019 (@player-belle-nectar)
+image_to_model · queued
+image_to_model · running 6% · 7465a76e
+image_to_model · running 15% · 7465a76e
+image_to_model · running 25% · 7465a76e
+image_to_model · running 38% · 7465a76e
+image_to_model · running 57% · 7465a76e
+image_to_model · running 83% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · running 99% · 7465a76e
+image_to_model · success 100% · 7465a76e
+[32m✓[39m image_to_model · 7465a76e-1449-492c-b935-7229382b3019 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to belle_nectar_model\tripo-out\player-belle-nectar-7465a76e
+{"task_id":"7465a76e-1449-492c-b935-7229382b3019","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"belle_nectar_model\\tripo-out\\player-belle-nectar-7465a76e","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"belle_nectar_model\\tripo-out\\player-belle-nectar-7465a76e\\model.fbx","preview":"belle_nectar_model\\tripo-out\\player-belle-nectar-7465a76e\\preview.png"}

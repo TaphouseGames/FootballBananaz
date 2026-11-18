@@ -1,0 +1,9 @@
+task created 7a50c958-b6df-467e-8142-dc1fba61fad7 (@player-skip-blossom-concept-2)
+generate_image · queued
+generate_image · running · 7a50c958
+generate_image · running · 7a50c958
+generate_image · success 100% · 7a50c958
+[32m✓[39m generate_image · 7a50c958-b6df-467e-8142-dc1fba61fad7 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to skip_blossom_concept\tripo-out\player-skip-blossom-concept-2-7a50c958
+{"task_id":"7a50c958-b6df-467e-8142-dc1fba61fad7","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"skip_blossom_concept\\tripo-out\\player-skip-blossom-concept-2-7a50c958","files":["generated_image.png","preview.png"],"preview":"skip_blossom_concept\\tripo-out\\player-skip-blossom-concept-2-7a50c958\\preview.png"}

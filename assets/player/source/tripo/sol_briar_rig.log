@@ -1,0 +1,8 @@
+task created 2b9c192f-1691-4e56-9f85-46282c5632fd (@player-sol-briar-rig)
+animate_rig · queued
+animate_rig · running 47% · 2b9c192f
+animate_rig · success 100% · 2b9c192f
+[32m✓[39m animate_rig · 2b9c192f-1691-4e56-9f85-46282c5632fd · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to sol_briar_rig\tripo-out\player-sol-briar-rig-2b9c192f
+{"task_id":"2b9c192f-1691-4e56-9f85-46282c5632fd","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"sol_briar_rig\\tripo-out\\player-sol-briar-rig-2b9c192f","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"sol_briar_rig\\tripo-out\\player-sol-briar-rig-2b9c192f\\model.fbx","preview":"sol_briar_rig\\tripo-out\\player-sol-briar-rig-2b9c192f\\preview.png"}

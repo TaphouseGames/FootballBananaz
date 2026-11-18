@@ -1,0 +1,12 @@
+task created c0e0c88a-5883-427e-9056-1e0a014bca5a (@player-crush-merlot-rig)
+animate_rig · queued
+animate_rig · running 9% · c0e0c88a
+animate_rig · running 26% · c0e0c88a
+animate_rig · running 40% · c0e0c88a
+animate_rig · running 61% · c0e0c88a
+animate_rig · running 93% · c0e0c88a
+animate_rig · success 100% · c0e0c88a
+[32m✓[39m animate_rig · c0e0c88a-5883-427e-9056-1e0a014bca5a · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to crush_merlot_rig\tripo-out\player-crush-merlot-rig-c0e0c88a
+{"task_id":"c0e0c88a-5883-427e-9056-1e0a014bca5a","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"crush_merlot_rig\\tripo-out\\player-crush-merlot-rig-c0e0c88a","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"crush_merlot_rig\\tripo-out\\player-crush-merlot-rig-c0e0c88a\\model.fbx","preview":"crush_merlot_rig\\tripo-out\\player-crush-merlot-rig-c0e0c88a\\preview.png"}

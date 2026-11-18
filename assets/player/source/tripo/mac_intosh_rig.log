@@ -1,0 +1,10 @@
+task created 34ff20bd-7902-4d35-9b8e-d5cb29be6e4c (@player-mac-intosh-rig)
+animate_rig · queued
+animate_rig · running 13% · 34ff20bd
+animate_rig · running 36% · 34ff20bd
+animate_rig · running 59% · 34ff20bd
+animate_rig · success 100% · 34ff20bd
+[32m✓[39m animate_rig · 34ff20bd-7902-4d35-9b8e-d5cb29be6e4c · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to mac_intosh_rig\tripo-out\player-mac-intosh-rig-34ff20bd
+{"task_id":"34ff20bd-7902-4d35-9b8e-d5cb29be6e4c","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"mac_intosh_rig\\tripo-out\\player-mac-intosh-rig-34ff20bd","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"mac_intosh_rig\\tripo-out\\player-mac-intosh-rig-34ff20bd\\model.fbx","preview":"mac_intosh_rig\\tripo-out\\player-mac-intosh-rig-34ff20bd\\preview.png"}

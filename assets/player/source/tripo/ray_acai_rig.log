@@ -1,0 +1,10 @@
+task created 72020dcd-78d9-4afa-a467-c6d21015de8c (@player-ray-acai-rig)
+animate_rig · queued
+animate_rig · running 42% · 72020dcd
+animate_rig · running 99% · 72020dcd
+animate_rig · running 99% · 72020dcd
+animate_rig · success 100% · 72020dcd
+[32m✓[39m animate_rig · 72020dcd-78d9-4afa-a467-c6d21015de8c · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to ray_acai_rig\tripo-out\player-ray-acai-rig-72020dcd
+{"task_id":"72020dcd-78d9-4afa-a467-c6d21015de8c","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"ray_acai_rig\\tripo-out\\player-ray-acai-rig-72020dcd","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"ray_acai_rig\\tripo-out\\player-ray-acai-rig-72020dcd\\model.fbx","preview":"ray_acai_rig\\tripo-out\\player-ray-acai-rig-72020dcd\\preview.png"}

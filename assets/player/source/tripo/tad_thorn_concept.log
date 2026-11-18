@@ -1,0 +1,9 @@
+task created 39c9c02b-5154-4a3d-8394-9d4d4d0168b8 (@player-tad-thorn-concept)
+generate_image · queued
+generate_image · running · 39c9c02b
+generate_image · running · 39c9c02b
+generate_image · success 100% · 39c9c02b
+[32m✓[39m generate_image · 39c9c02b-5154-4a3d-8394-9d4d4d0168b8 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to tad_thorn_concept\tripo-out\player-tad-thorn-concept-39c9c02b
+{"task_id":"39c9c02b-5154-4a3d-8394-9d4d4d0168b8","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"tad_thorn_concept\\tripo-out\\player-tad-thorn-concept-39c9c02b","files":["generated_image.png","preview.png"],"preview":"tad_thorn_concept\\tripo-out\\player-tad-thorn-concept-39c9c02b\\preview.png"}

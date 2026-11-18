@@ -1,0 +1,8 @@
+task created cc666758-a1b9-4c14-ab33-d37d18c8b384 (@player-clyde-concord-uv)
+mesh_uv · queued
+mesh_uv · running 99% · cc666758
+mesh_uv · success 100% · cc666758
+[32m✓[39m mesh_uv · cc666758-a1b9-4c14-ab33-d37d18c8b384 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to clyde_concord_uv\tripo-out\player-clyde-concord-uv-cc666758
+{"task_id":"cc666758-a1b9-4c14-ab33-d37d18c8b384","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"clyde_concord_uv\\tripo-out\\player-clyde-concord-uv-cc666758","files":["model.fbx","uv_render.webp"],"model_file":"clyde_concord_uv\\tripo-out\\player-clyde-concord-uv-cc666758\\model.fbx"}

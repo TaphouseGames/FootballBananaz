@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 18aa86af-ac10-4f49-b489-ef289edc02f9 (@player-jet-huckle)
+image_to_model · queued
+image_to_model · running 2% · 18aa86af
+image_to_model · running 7% · 18aa86af
+image_to_model · running 10% · 18aa86af
+image_to_model · running 16% · 18aa86af
+image_to_model · running 25% · 18aa86af
+image_to_model · running 36% · 18aa86af
+image_to_model · running 46% · 18aa86af
+image_to_model · running 57% · 18aa86af
+image_to_model · running 69% · 18aa86af
+image_to_model · running 79% · 18aa86af
+image_to_model · running 90% · 18aa86af
+image_to_model · running 99% · 18aa86af
+image_to_model · running 99% · 18aa86af
+image_to_model · running 99% · 18aa86af
+image_to_model · running 99% · 18aa86af
+image_to_model · running 99% · 18aa86af
+image_to_model · running 99% · 18aa86af
+image_to_model · running 99% · 18aa86af
+image_to_model · success 100% · 18aa86af
+[32m✓[39m image_to_model · 18aa86af-ac10-4f49-b489-ef289edc02f9 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to jet_huckle_model\tripo-out\player-jet-huckle-18aa86af
+{"task_id":"18aa86af-ac10-4f49-b489-ef289edc02f9","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"jet_huckle_model\\tripo-out\\player-jet-huckle-18aa86af","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"jet_huckle_model\\tripo-out\\player-jet-huckle-18aa86af\\model.fbx","preview":"jet_huckle_model\\tripo-out\\player-jet-huckle-18aa86af\\preview.png"}

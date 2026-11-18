@@ -1,0 +1,10 @@
+task created ecd5ce31-31be-4790-a3c6-23cb9cee466b (@player-honey-crisp-concept)
+generate_image · queued
+generate_image · running · ecd5ce31
+generate_image · running · ecd5ce31
+generate_image · running · ecd5ce31
+generate_image · success 100% · ecd5ce31
+[32m✓[39m generate_image · ecd5ce31-31be-4790-a3c6-23cb9cee466b · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to honey_crisp_concept\tripo-out\player-honey-crisp-concept-ecd5ce31
+{"task_id":"ecd5ce31-31be-4790-a3c6-23cb9cee466b","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"honey_crisp_concept\\tripo-out\\player-honey-crisp-concept-ecd5ce31","files":["generated_image.png","preview.png"],"preview":"honey_crisp_concept\\tripo-out\\player-honey-crisp-concept-ecd5ce31\\preview.png"}

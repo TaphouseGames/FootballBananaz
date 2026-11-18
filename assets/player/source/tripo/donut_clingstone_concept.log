@@ -1,0 +1,10 @@
+task created 2ed6f766-7381-4e2d-afa7-d4f25df9dcb9 (@player-donut-clingstone-concept)
+generate_image · queued
+generate_image · running · 2ed6f766
+generate_image · running · 2ed6f766
+generate_image · running · 2ed6f766
+generate_image · success 100% · 2ed6f766
+[32m✓[39m generate_image · 2ed6f766-7381-4e2d-afa7-d4f25df9dcb9 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to donut_clingstone_concept\tripo-out\player-donut-clingstone-concept-2ed6f766
+{"task_id":"2ed6f766-7381-4e2d-afa7-d4f25df9dcb9","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"donut_clingstone_concept\\tripo-out\\player-donut-clingstone-concept-2ed6f766","files":["generated_image.png","preview.png"],"preview":"donut_clingstone_concept\\tripo-out\\player-donut-clingstone-concept-2ed6f766\\preview.png"}

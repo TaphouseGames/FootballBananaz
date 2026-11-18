@@ -1,0 +1,7 @@
+task created 99404dfb-c93c-43bf-8034-ad3a59a9b12d (@player-granny-smith-rig)
+animate_rig · queued
+animate_rig · running 73% · 99404dfb
+[32m✓[39m animate_rig · 99404dfb-c93c-43bf-8034-ad3a59a9b12d · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to granny_smith_rig\tripo-out\player-granny-smith-rig-99404dfb
+{"task_id":"99404dfb-c93c-43bf-8034-ad3a59a9b12d","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"granny_smith_rig\\tripo-out\\player-granny-smith-rig-99404dfb","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"granny_smith_rig\\tripo-out\\player-granny-smith-rig-99404dfb\\model.fbx","preview":"granny_smith_rig\\tripo-out\\player-granny-smith-rig-99404dfb\\preview.png"}

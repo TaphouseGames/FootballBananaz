@@ -1,0 +1,8 @@
+task created c430c5f9-08dd-4c56-9f85-0ad8de2ac7b7 (@player-mac-intosh-uv)
+mesh_uv · queued
+mesh_uv · running 40% · c430c5f9
+mesh_uv · success 100% · c430c5f9
+[32m✓[39m mesh_uv · c430c5f9-08dd-4c56-9f85-0ad8de2ac7b7 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to mac_intosh_uv\tripo-out\player-mac-intosh-uv-c430c5f9
+{"task_id":"c430c5f9-08dd-4c56-9f85-0ad8de2ac7b7","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"mac_intosh_uv\\tripo-out\\player-mac-intosh-uv-c430c5f9","files":["model.fbx","uv_render.webp"],"model_file":"mac_intosh_uv\\tripo-out\\player-mac-intosh-uv-c430c5f9\\model.fbx"}

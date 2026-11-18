@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 12571bee-16f7-4af8-ac9b-cdc73e389d77 (@player-brick-tannin)
+image_to_model · queued
+image_to_model · running 2% · 12571bee
+image_to_model · running 4% · 12571bee
+image_to_model · running 6% · 12571bee
+image_to_model · running 9% · 12571bee
+image_to_model · running 14% · 12571bee
+image_to_model · running 20% · 12571bee
+image_to_model · running 26% · 12571bee
+image_to_model · running 32% · 12571bee
+image_to_model · running 39% · 12571bee
+image_to_model · running 45% · 12571bee
+image_to_model · running 51% · 12571bee
+image_to_model · running 57% · 12571bee
+image_to_model · running 63% · 12571bee
+image_to_model · running 69% · 12571bee
+image_to_model · running 75% · 12571bee
+image_to_model · running 81% · 12571bee
+image_to_model · running 87% · 12571bee
+image_to_model · running 94% · 12571bee
+image_to_model · success 100% · 12571bee
+[32m✓[39m image_to_model · 12571bee-16f7-4af8-ac9b-cdc73e389d77 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to brick_tannin_model\tripo-out\player-brick-tannin-12571bee
+{"task_id":"12571bee-16f7-4af8-ac9b-cdc73e389d77","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"brick_tannin_model\\tripo-out\\player-brick-tannin-12571bee","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"brick_tannin_model\\tripo-out\\player-brick-tannin-12571bee\\model.fbx","preview":"brick_tannin_model\\tripo-out\\player-brick-tannin-12571bee\\preview.png"}

@@ -1,0 +1,8 @@
+task created d0f6a859-7692-48f3-91e9-d3e2fc053a07 (@player-fuzz-melba-rig)
+animate_rig · queued
+animate_rig · running 26% · d0f6a859
+animate_rig · success 100% · d0f6a859
+[32m✓[39m animate_rig · d0f6a859-7692-48f3-91e9-d3e2fc053a07 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to fuzz_melba_rig\tripo-out\player-fuzz-melba-rig-d0f6a859
+{"task_id":"d0f6a859-7692-48f3-91e9-d3e2fc053a07","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"fuzz_melba_rig\\tripo-out\\player-fuzz-melba-rig-d0f6a859","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"fuzz_melba_rig\\tripo-out\\player-fuzz-melba-rig-d0f6a859\\model.fbx","preview":"fuzz_melba_rig\\tripo-out\\player-fuzz-melba-rig-d0f6a859\\preview.png"}

@@ -1,0 +1,19 @@
+{
+  "task_id": "ab893650-5f95-4718-af40-acda2c56e5df",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Exactly the same character, the same face, body, pose, clothes, shoes, art style and background. Change only her skin: warm golden brown Polynesian skin on her face, neck, arms, hands and legs, all the same colour, not pale.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T04:32:04.694363Z",
+  "completed_at": "2026-11-18T04:32:23.558654Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

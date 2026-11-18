@@ -1,0 +1,7 @@
+task created f5c11713-d34f-4e46-aa39-3de0fb2c5ae1 (@player-skip-blossom-rig)
+animate_rig · queued
+animate_rig · running 41% · f5c11713
+[32m✓[39m animate_rig · f5c11713-d34f-4e46-aa39-3de0fb2c5ae1 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to skip_blossom_rig\tripo-out\player-skip-blossom-rig-f5c11713
+{"task_id":"f5c11713-d34f-4e46-aa39-3de0fb2c5ae1","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"skip_blossom_rig\\tripo-out\\player-skip-blossom-rig-f5c11713","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"skip_blossom_rig\\tripo-out\\player-skip-blossom-rig-f5c11713\\model.fbx","preview":"skip_blossom_rig\\tripo-out\\player-skip-blossom-rig-f5c11713\\preview.png"}

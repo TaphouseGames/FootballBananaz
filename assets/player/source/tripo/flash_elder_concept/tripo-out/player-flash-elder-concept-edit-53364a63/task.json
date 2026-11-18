@@ -1,0 +1,19 @@
+{
+  "task_id": "53364a63-ee30-4d3a-858c-9965711e282f",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Exactly the same character, the same face, body, pose, clothes, shoes, art style and background. Change only the head so that she is clearly an old woman, a grandmother: thin fine grey eyebrows instead of bushy ones, silver hair in a short neat chin-length bob with a fringe, a softer and smaller woman's face, the same wrinkles, tanned skin and gleeful closed-mouth grin.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T04:32:35.350265Z",
+  "completed_at": "2026-11-18T04:32:54.287253Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

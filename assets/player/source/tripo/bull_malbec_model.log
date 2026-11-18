@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 6525cac5-389f-4164-9667-c591afeb3d42 (@player-bull-malbec)
+image_to_model · queued
+image_to_model · running 3% · 6525cac5
+image_to_model · running 8% · 6525cac5
+image_to_model · running 13% · 6525cac5
+image_to_model · running 19% · 6525cac5
+image_to_model · running 29% · 6525cac5
+image_to_model · running 42% · 6525cac5
+image_to_model · running 55% · 6525cac5
+image_to_model · running 68% · 6525cac5
+image_to_model · running 81% · 6525cac5
+image_to_model · running 94% · 6525cac5
+image_to_model · running 99% · 6525cac5
+image_to_model · running 99% · 6525cac5
+image_to_model · running 99% · 6525cac5
+image_to_model · running 99% · 6525cac5
+image_to_model · running 99% · 6525cac5
+image_to_model · running 99% · 6525cac5
+image_to_model · running 99% · 6525cac5
+image_to_model · running 99% · 6525cac5
+image_to_model · success 100% · 6525cac5
+[32m✓[39m image_to_model · 6525cac5-389f-4164-9667-c591afeb3d42 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bull_malbec_model\tripo-out\player-bull-malbec-6525cac5
+{"task_id":"6525cac5-389f-4164-9667-c591afeb3d42","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"bull_malbec_model\\tripo-out\\player-bull-malbec-6525cac5","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"bull_malbec_model\\tripo-out\\player-bull-malbec-6525cac5\\model.fbx","preview":"bull_malbec_model\\tripo-out\\player-bull-malbec-6525cac5\\preview.png"}

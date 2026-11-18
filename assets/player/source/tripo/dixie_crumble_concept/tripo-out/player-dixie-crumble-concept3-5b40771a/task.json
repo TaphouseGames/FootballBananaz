@@ -1,0 +1,19 @@
+{
+  "task_id": "5b40771a-5daa-43c2-ba09-be1a8a952fb2",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Exactly the same character, same face, same curly grey hair, same body, same pose, same white jersey, same grey shorts, same teal green sneakers, same clay style and same background. Change only three things: her socks are plain dark charcoal grey ribbed socks instead of white; the wristwatch is removed so that her wrist is bare skin; the earrings are removed so that her ears are bare. Everything else stays exactly the same.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T02:44:29.999209Z",
+  "completed_at": "2026-11-18T02:44:58.532745Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

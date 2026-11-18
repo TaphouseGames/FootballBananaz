@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 57df95a1-2f2f-4b73-9df1-0d73697f2bd1 (@player-fuzz-melba)
+image_to_model · queued
+image_to_model · running 5% · 57df95a1
+image_to_model · running 14% · 57df95a1
+image_to_model · running 21% · 57df95a1
+image_to_model · running 34% · 57df95a1
+image_to_model · running 51% · 57df95a1
+image_to_model · running 74% · 57df95a1
+image_to_model · running 97% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · running 99% · 57df95a1
+image_to_model · success 100% · 57df95a1
+[32m✓[39m image_to_model · 57df95a1-2f2f-4b73-9df1-0d73697f2bd1 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to fuzz_melba_model\tripo-out\player-fuzz-melba-57df95a1
+{"task_id":"57df95a1-2f2f-4b73-9df1-0d73697f2bd1","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"fuzz_melba_model\\tripo-out\\player-fuzz-melba-57df95a1","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"fuzz_melba_model\\tripo-out\\player-fuzz-melba-57df95a1\\model.fbx","preview":"fuzz_melba_model\\tripo-out\\player-fuzz-melba-57df95a1\\preview.png"}

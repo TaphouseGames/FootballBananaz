@@ -1,0 +1,8 @@
+task created ee512923-937f-4749-ac82-c0019f13782c (@player-jet-pippin-uv)
+mesh_uv · queued
+mesh_uv · running 99% · ee512923
+mesh_uv · success 100% · ee512923
+[32m✓[39m mesh_uv · ee512923-937f-4749-ac82-c0019f13782c · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to jet_pippin_uv\tripo-out\player-jet-pippin-uv-ee512923
+{"task_id":"ee512923-937f-4749-ac82-c0019f13782c","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"jet_pippin_uv\\tripo-out\\player-jet-pippin-uv-ee512923","files":["model.fbx","uv_render.webp"],"model_file":"jet_pippin_uv\\tripo-out\\player-jet-pippin-uv-ee512923\\model.fbx"}

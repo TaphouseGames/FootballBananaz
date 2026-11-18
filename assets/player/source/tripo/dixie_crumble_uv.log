@@ -1,0 +1,9 @@
+task created ecdd6d73-a7b8-46c0-9504-45d0b8dc4604 (@player-dixie-crumble-uv)
+mesh_uv · queued
+mesh_uv · running 44% · ecdd6d73
+mesh_uv · running 99% · ecdd6d73
+mesh_uv · success 100% · ecdd6d73
+[32m✓[39m mesh_uv · ecdd6d73-a7b8-46c0-9504-45d0b8dc4604 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to dixie_crumble_uv\tripo-out\player-dixie-crumble-uv-ecdd6d73
+{"task_id":"ecdd6d73-a7b8-46c0-9504-45d0b8dc4604","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"dixie_crumble_uv\\tripo-out\\player-dixie-crumble-uv-ecdd6d73","files":["model.fbx","uv_render.webp"],"model_file":"dixie_crumble_uv\\tripo-out\\player-dixie-crumble-uv-ecdd6d73\\model.fbx"}

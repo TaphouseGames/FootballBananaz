@@ -1,0 +1,8 @@
+task created d5bc2166-25f3-44e0-9218-4e2623a5450a (@player-fuji-stem-rig)
+animate_rig · queued
+animate_rig · running 65% · d5bc2166
+animate_rig · success 100% · d5bc2166
+[32m✓[39m animate_rig · d5bc2166-25f3-44e0-9218-4e2623a5450a · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to fuji_stem_rig\tripo-out\player-fuji-stem-rig-d5bc2166
+{"task_id":"d5bc2166-25f3-44e0-9218-4e2623a5450a","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"fuji_stem_rig\\tripo-out\\player-fuji-stem-rig-d5bc2166","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"fuji_stem_rig\\tripo-out\\player-fuji-stem-rig-d5bc2166\\model.fbx","preview":"fuji_stem_rig\\tripo-out\\player-fuji-stem-rig-d5bc2166\\preview.png"}

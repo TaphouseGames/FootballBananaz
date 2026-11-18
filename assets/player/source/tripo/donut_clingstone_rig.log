@@ -1,0 +1,8 @@
+task created dcc4a282-cbbf-49dc-bafd-91a00b77ac99 (@player-donut-clingstone-rig)
+animate_rig · queued
+animate_rig · running 54% · dcc4a282
+animate_rig · success 100% · dcc4a282
+[32m✓[39m animate_rig · dcc4a282-cbbf-49dc-bafd-91a00b77ac99 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to donut_clingstone_rig\tripo-out\player-donut-clingstone-rig-dcc4a282
+{"task_id":"dcc4a282-cbbf-49dc-bafd-91a00b77ac99","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"donut_clingstone_rig\\tripo-out\\player-donut-clingstone-rig-dcc4a282","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"donut_clingstone_rig\\tripo-out\\player-donut-clingstone-rig-dcc4a282\\model.fbx","preview":"donut_clingstone_rig\\tripo-out\\player-donut-clingstone-rig-dcc4a282\\preview.png"}

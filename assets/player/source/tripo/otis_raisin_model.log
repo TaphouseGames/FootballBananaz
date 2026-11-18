@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 802ff00a-d995-4003-bd77-e6bd21ea55ca (@player-otis-raisin)
+image_to_model · queued
+image_to_model · running 2% · 802ff00a
+image_to_model · running 4% · 802ff00a
+image_to_model · running 6% · 802ff00a
+image_to_model · running 10% · 802ff00a
+image_to_model · running 14% · 802ff00a
+image_to_model · running 20% · 802ff00a
+image_to_model · running 27% · 802ff00a
+image_to_model · running 33% · 802ff00a
+image_to_model · running 39% · 802ff00a
+image_to_model · running 45% · 802ff00a
+image_to_model · running 51% · 802ff00a
+image_to_model · running 58% · 802ff00a
+image_to_model · running 64% · 802ff00a
+image_to_model · running 70% · 802ff00a
+image_to_model · running 76% · 802ff00a
+image_to_model · running 82% · 802ff00a
+image_to_model · running 89% · 802ff00a
+image_to_model · running 95% · 802ff00a
+image_to_model · running 99% · 802ff00a
+image_to_model · success 100% · 802ff00a
+[32m✓[39m image_to_model · 802ff00a-d995-4003-bd77-e6bd21ea55ca · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to otis_raisin_model\tripo-out\player-otis-raisin-802ff00a
+{"task_id":"802ff00a-d995-4003-bd77-e6bd21ea55ca","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"otis_raisin_model\\tripo-out\\player-otis-raisin-802ff00a","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"otis_raisin_model\\tripo-out\\player-otis-raisin-802ff00a\\model.fbx","preview":"otis_raisin_model\\tripo-out\\player-otis-raisin-802ff00a\\preview.png"}

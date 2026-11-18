@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 4a371158-d25d-4fb6-af24-64c40941a645 (@player-gus-trellis)
+image_to_model · queued
+image_to_model · running 2% · 4a371158
+image_to_model · running 6% · 4a371158
+image_to_model · running 9% · 4a371158
+image_to_model · running 13% · 4a371158
+image_to_model · running 20% · 4a371158
+image_to_model · running 29% · 4a371158
+image_to_model · running 38% · 4a371158
+image_to_model · running 46% · 4a371158
+image_to_model · running 55% · 4a371158
+image_to_model · running 64% · 4a371158
+image_to_model · running 73% · 4a371158
+image_to_model · running 82% · 4a371158
+image_to_model · running 91% · 4a371158
+image_to_model · running 99% · 4a371158
+image_to_model · running 99% · 4a371158
+image_to_model · running 99% · 4a371158
+image_to_model · running 99% · 4a371158
+image_to_model · success 100% · 4a371158
+[32m✓[39m image_to_model · 4a371158-d25d-4fb6-af24-64c40941a645 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to gus_trellis_model\tripo-out\player-gus-trellis-4a371158
+{"task_id":"4a371158-d25d-4fb6-af24-64c40941a645","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"gus_trellis_model\\tripo-out\\player-gus-trellis-4a371158","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"gus_trellis_model\\tripo-out\\player-gus-trellis-4a371158\\model.fbx","preview":"gus_trellis_model\\tripo-out\\player-gus-trellis-4a371158\\preview.png"}

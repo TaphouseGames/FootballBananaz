@@ -1,0 +1,8 @@
+task created bc0805fe-0643-4263-9894-ebc74e75ed20 (@player-belle-nectar-uv)
+mesh_uv · queued
+mesh_uv · running 65% · bc0805fe
+mesh_uv · success 100% · bc0805fe
+[32m✓[39m mesh_uv · bc0805fe-0643-4263-9894-ebc74e75ed20 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to belle_nectar_uv\tripo-out\player-belle-nectar-uv-bc0805fe
+{"task_id":"bc0805fe-0643-4263-9894-ebc74e75ed20","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"belle_nectar_uv\\tripo-out\\player-belle-nectar-uv-bc0805fe","files":["model.fbx","uv_render.webp"],"model_file":"belle_nectar_uv\\tripo-out\\player-belle-nectar-uv-bc0805fe\\model.fbx"}

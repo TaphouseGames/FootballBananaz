@@ -1,0 +1,10 @@
+task created 28b9bcb0-7b6e-4d1c-84cb-990f4e2a5b90 (@player-cole-currant-concept)
+generate_image · queued
+generate_image · running · 28b9bcb0
+generate_image · running · 28b9bcb0
+generate_image · running · 28b9bcb0
+generate_image · success 100% · 28b9bcb0
+[32m✓[39m generate_image · 28b9bcb0-7b6e-4d1c-84cb-990f4e2a5b90 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to cole_currant_concept\tripo-out\player-cole-currant-concept-28b9bcb0
+{"task_id":"28b9bcb0-7b6e-4d1c-84cb-990f4e2a5b90","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"cole_currant_concept\\tripo-out\\player-cole-currant-concept-28b9bcb0","files":["generated_image.png","preview.png"],"preview":"cole_currant_concept\\tripo-out\\player-cole-currant-concept-28b9bcb0\\preview.png"}

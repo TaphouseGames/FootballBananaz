@@ -1,0 +1,7 @@
+task created 3d98dfbe-c112-44a5-affc-c26b4f6982dc (@player-otis-raisin-rig)
+animate_rig · queued
+animate_rig · running 5% · 3d98dfbe
+[32m✓[39m animate_rig · 3d98dfbe-c112-44a5-affc-c26b4f6982dc · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to otis_raisin_rig\tripo-out\player-otis-raisin-rig-3d98dfbe
+{"task_id":"3d98dfbe-c112-44a5-affc-c26b4f6982dc","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"otis_raisin_rig\\tripo-out\\player-otis-raisin-rig-3d98dfbe","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"otis_raisin_rig\\tripo-out\\player-otis-raisin-rig-3d98dfbe\\model.fbx","preview":"otis_raisin_rig\\tripo-out\\player-otis-raisin-rig-3d98dfbe\\preview.png"}

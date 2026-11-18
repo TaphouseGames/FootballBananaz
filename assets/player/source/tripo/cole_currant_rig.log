@@ -1,0 +1,11 @@
+task created f95fc473-e1ad-4988-b307-890530e6760a (@player-cole-currant-rig)
+animate_rig · queued
+animate_rig · running 51% · f95fc473
+animate_rig · running 99% · f95fc473
+animate_rig · running 99% · f95fc473
+animate_rig · running 99% · f95fc473
+animate_rig · success 100% · f95fc473
+[32m✓[39m animate_rig · f95fc473-e1ad-4988-b307-890530e6760a · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to cole_currant_rig\tripo-out\player-cole-currant-rig-f95fc473
+{"task_id":"f95fc473-e1ad-4988-b307-890530e6760a","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"cole_currant_rig\\tripo-out\\player-cole-currant-rig-f95fc473","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"cole_currant_rig\\tripo-out\\player-cole-currant-rig-f95fc473\\model.fbx","preview":"cole_currant_rig\\tripo-out\\player-cole-currant-rig-f95fc473\\preview.png"}

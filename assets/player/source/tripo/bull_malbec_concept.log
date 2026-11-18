@@ -1,0 +1,11 @@
+task created 12dcb809-188d-4b23-9fa1-233fb29683b1 (@player-bull-malbec-concept-3)
+generate_image · queued
+generate_image · running · 12dcb809
+generate_image · running · 12dcb809
+generate_image · running · 12dcb809
+generate_image · running · 12dcb809
+generate_image · success 100% · 12dcb809
+[32m✓[39m generate_image · 12dcb809-188d-4b23-9fa1-233fb29683b1 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bull_malbec_concept\tripo-out\player-bull-malbec-concept-3-12dcb809
+{"task_id":"12dcb809-188d-4b23-9fa1-233fb29683b1","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"bull_malbec_concept\\tripo-out\\player-bull-malbec-concept-3-12dcb809","files":["generated_image.png","preview.png"],"preview":"bull_malbec_concept\\tripo-out\\player-bull-malbec-concept-3-12dcb809\\preview.png"}

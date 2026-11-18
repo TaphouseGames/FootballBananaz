@@ -1,0 +1,28 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 7e00a10f-5956-4d0f-bbbe-2681378a61ad (@player-mac-intosh)
+image_to_model · queued
+image_to_model · running 2% · 7e00a10f
+image_to_model · running 4% · 7e00a10f
+image_to_model · running 7% · 7e00a10f
+image_to_model · running 10% · 7e00a10f
+image_to_model · running 15% · 7e00a10f
+image_to_model · running 21% · 7e00a10f
+image_to_model · running 28% · 7e00a10f
+image_to_model · running 35% · 7e00a10f
+image_to_model · running 41% · 7e00a10f
+image_to_model · running 48% · 7e00a10f
+image_to_model · running 54% · 7e00a10f
+image_to_model · running 61% · 7e00a10f
+image_to_model · running 67% · 7e00a10f
+image_to_model · running 74% · 7e00a10f
+image_to_model · running 80% · 7e00a10f
+image_to_model · running 87% · 7e00a10f
+image_to_model · running 94% · 7e00a10f
+image_to_model · running 99% · 7e00a10f
+image_to_model · running 99% · 7e00a10f
+image_to_model · running 99% · 7e00a10f
+image_to_model · success 100% · 7e00a10f
+[32m✓[39m image_to_model · 7e00a10f-5956-4d0f-bbbe-2681378a61ad · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to mac_intosh_model\tripo-out\player-mac-intosh-7e00a10f
+{"task_id":"7e00a10f-5956-4d0f-bbbe-2681378a61ad","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"mac_intosh_model\\tripo-out\\player-mac-intosh-7e00a10f","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"mac_intosh_model\\tripo-out\\player-mac-intosh-7e00a10f\\model.fbx","preview":"mac_intosh_model\\tripo-out\\player-mac-intosh-7e00a10f\\preview.png"}

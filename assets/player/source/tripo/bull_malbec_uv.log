@@ -1,0 +1,8 @@
+task created 0354086c-d475-4ef8-8eff-6ac689d5e989 (@player-bull-malbec-uv)
+mesh_uv · queued
+mesh_uv · running 40% · 0354086c
+mesh_uv · success 100% · 0354086c
+[32m✓[39m mesh_uv · 0354086c-d475-4ef8-8eff-6ac689d5e989 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bull_malbec_uv\tripo-out\player-bull-malbec-uv-0354086c
+{"task_id":"0354086c-d475-4ef8-8eff-6ac689d5e989","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"bull_malbec_uv\\tripo-out\\player-bull-malbec-uv-0354086c","files":["model.fbx","uv_render.webp"],"model_file":"bull_malbec_uv\\tripo-out\\player-bull-malbec-uv-0354086c\\model.fbx"}

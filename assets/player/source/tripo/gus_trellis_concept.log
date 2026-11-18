@@ -1,0 +1,10 @@
+task created c353422c-4e44-4c97-96c2-9be1f17539e0 (@player-gus-trellis-concept)
+generate_image · queued
+generate_image · running · c353422c
+generate_image · running · c353422c
+generate_image · running · c353422c
+generate_image · success 100% · c353422c
+[32m✓[39m generate_image · c353422c-4e44-4c97-96c2-9be1f17539e0 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to gus_trellis_concept\tripo-out\player-gus-trellis-concept-c353422c
+{"task_id":"c353422c-4e44-4c97-96c2-9be1f17539e0","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"gus_trellis_concept\\tripo-out\\player-gus-trellis-concept-c353422c","files":["generated_image.png","preview.png"],"preview":"gus_trellis_concept\\tripo-out\\player-gus-trellis-concept-c353422c\\preview.png"}

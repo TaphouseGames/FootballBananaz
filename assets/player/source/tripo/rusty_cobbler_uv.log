@@ -1,0 +1,8 @@
+task created f8c72ec0-90f3-403f-bb70-ed7a9a690707 (@player-rusty-cobbler-uv)
+mesh_uv · queued
+mesh_uv · running 77% · f8c72ec0
+mesh_uv · success 100% · f8c72ec0
+[32m✓[39m mesh_uv · f8c72ec0-90f3-403f-bb70-ed7a9a690707 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rusty_cobbler_uv\tripo-out\player-rusty-cobbler-uv-f8c72ec0
+{"task_id":"f8c72ec0-90f3-403f-bb70-ed7a9a690707","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"rusty_cobbler_uv\\tripo-out\\player-rusty-cobbler-uv-f8c72ec0","files":["model.fbx","uv_render.webp"],"model_file":"rusty_cobbler_uv\\tripo-out\\player-rusty-cobbler-uv-f8c72ec0\\model.fbx"}

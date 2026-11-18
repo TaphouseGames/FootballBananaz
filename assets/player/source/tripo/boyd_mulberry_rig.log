@@ -1,0 +1,8 @@
+task created 31396f8d-313a-4708-9942-da1398f7615e (@player-boyd-mulberry-rig)
+animate_rig · queued
+animate_rig · running 8% · 31396f8d
+animate_rig · success 100% · 31396f8d
+[32m✓[39m animate_rig · 31396f8d-313a-4708-9942-da1398f7615e · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to boyd_mulberry_rig\tripo-out\player-boyd-mulberry-rig-31396f8d
+{"task_id":"31396f8d-313a-4708-9942-da1398f7615e","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"boyd_mulberry_rig\\tripo-out\\player-boyd-mulberry-rig-31396f8d","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"boyd_mulberry_rig\\tripo-out\\player-boyd-mulberry-rig-31396f8d\\model.fbx","preview":"boyd_mulberry_rig\\tripo-out\\player-boyd-mulberry-rig-31396f8d\\preview.png"}

@@ -1,0 +1,8 @@
+task created da41b9a2-3467-41a1-b721-34ffbffa9a84 (@player-flash-elder-uv)
+mesh_uv · queued
+mesh_uv · running 99% · da41b9a2
+mesh_uv · success 100% · da41b9a2
+[32m✓[39m mesh_uv · da41b9a2-3467-41a1-b721-34ffbffa9a84 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to flash_elder_uv\tripo-out\player-flash-elder-uv-da41b9a2
+{"task_id":"da41b9a2-3467-41a1-b721-34ffbffa9a84","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"flash_elder_uv\\tripo-out\\player-flash-elder-uv-da41b9a2","files":["model.fbx","uv_render.webp"],"model_file":"flash_elder_uv\\tripo-out\\player-flash-elder-uv-da41b9a2\\model.fbx"}

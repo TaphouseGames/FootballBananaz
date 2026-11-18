@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 491098da-c335-4c4e-a633-fe03bc06290f (@player-rusty-cobbler)
+image_to_model · queued
+image_to_model · running 2% · 491098da
+image_to_model · running 4% · 491098da
+image_to_model · running 6% · 491098da
+image_to_model · running 10% · 491098da
+image_to_model · running 15% · 491098da
+image_to_model · running 21% · 491098da
+image_to_model · running 28% · 491098da
+image_to_model · running 34% · 491098da
+image_to_model · running 41% · 491098da
+image_to_model · running 47% · 491098da
+image_to_model · running 54% · 491098da
+image_to_model · running 60% · 491098da
+image_to_model · running 67% · 491098da
+image_to_model · running 73% · 491098da
+image_to_model · running 80% · 491098da
+image_to_model · running 86% · 491098da
+image_to_model · running 93% · 491098da
+image_to_model · success 100% · 491098da
+[32m✓[39m image_to_model · 491098da-c335-4c4e-a633-fe03bc06290f · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rusty_cobbler_model\tripo-out\player-rusty-cobbler-491098da
+{"task_id":"491098da-c335-4c4e-a633-fe03bc06290f","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"rusty_cobbler_model\\tripo-out\\player-rusty-cobbler-491098da","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"rusty_cobbler_model\\tripo-out\\player-rusty-cobbler-491098da\\model.fbx","preview":"rusty_cobbler_model\\tripo-out\\player-rusty-cobbler-491098da\\preview.png"}

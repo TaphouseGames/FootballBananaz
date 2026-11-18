@@ -1,0 +1,9 @@
+task created 15eaf463-f1f0-4474-8c18-14fe663efc96 (@player-mac-intosh-concept)
+generate_image · queued
+generate_image · running · 15eaf463
+generate_image · running · 15eaf463
+generate_image · success 100% · 15eaf463
+[32m✓[39m generate_image · 15eaf463-f1f0-4474-8c18-14fe663efc96 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to mac_intosh_concept\tripo-out\player-mac-intosh-concept-15eaf463
+{"task_id":"15eaf463-f1f0-4474-8c18-14fe663efc96","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"mac_intosh_concept\\tripo-out\\player-mac-intosh-concept-15eaf463","files":["generated_image.png","preview.png"],"preview":"mac_intosh_concept\\tripo-out\\player-mac-intosh-concept-15eaf463\\preview.png"}

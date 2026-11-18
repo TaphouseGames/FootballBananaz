@@ -151,6 +151,166 @@ const PEOPLE: Dictionary[String, Dictionary] = {
 		"path": "res://assets/player/people/moose_macaroon.glb",
 		"mask": "res://assets/player/people/moose_macaroon_mask.png",
 	},
+	"georgia_pitt": {
+		"name": "Georgia Pitt",
+		"path": "res://assets/player/people/georgia_pitt.glb",
+		"mask": "res://assets/player/people/georgia_pitt_mask.png",
+	},
+	"fuzz_melba": {
+		"name": "Fuzz Melba",
+		"path": "res://assets/player/people/fuzz_melba.glb",
+		"mask": "res://assets/player/people/fuzz_melba_mask.png",
+	},
+	"donut_clingstone": {
+		"name": "Donut Clingstone",
+		"path": "res://assets/player/people/donut_clingstone.glb",
+		"mask": "res://assets/player/people/donut_clingstone_mask.png",
+	},
+	"hal_freestone": {
+		"name": "Hal Freestone",
+		"path": "res://assets/player/people/hal_freestone.glb",
+		"mask": "res://assets/player/people/hal_freestone_mask.png",
+	},
+	"belle_nectar": {
+		"name": "Belle Nectar",
+		"path": "res://assets/player/people/belle_nectar.glb",
+		"mask": "res://assets/player/people/belle_nectar_mask.png",
+	},
+	"skip_blossom": {
+		"name": "Skip Blossom",
+		"path": "res://assets/player/people/skip_blossom.glb",
+		"mask": "res://assets/player/people/skip_blossom_mask.png",
+	},
+	"rusty_cobbler": {
+		"name": "Rusty Cobbler",
+		"path": "res://assets/player/people/rusty_cobbler.glb",
+		"mask": "res://assets/player/people/rusty_cobbler_mask.png",
+	},
+	"dixie_crumble": {
+		"name": "Dixie Crumble",
+		"path": "res://assets/player/people/dixie_crumble.glb",
+		"mask": "res://assets/player/people/dixie_crumble_mask.png",
+	},
+	"cannon_cortland": {
+		"name": "Cannon Cortland",
+		"path": "res://assets/player/people/cannon_cortland.glb",
+		"mask": "res://assets/player/people/cannon_cortland_mask.png",
+	},
+	"granny_smith": {
+		"name": "Granny Smith",
+		"path": "res://assets/player/people/granny_smith.glb",
+		"mask": "res://assets/player/people/granny_smith_mask.png",
+	},
+	"mac_intosh": {
+		"name": "Mac Intosh",
+		"path": "res://assets/player/people/mac_intosh.glb",
+		"mask": "res://assets/player/people/mac_intosh_mask.png",
+	},
+	"gala_core": {
+		"name": "Gala Core",
+		"path": "res://assets/player/people/gala_core.glb",
+		"mask": "res://assets/player/people/gala_core_mask.png",
+	},
+	"jet_pippin": {
+		"name": "Jet Pippin",
+		"path": "res://assets/player/people/jet_pippin.glb",
+		"mask": "res://assets/player/people/jet_pippin_mask.png",
+	},
+	"fuji_stem": {
+		"name": "Fuji Stem",
+		"path": "res://assets/player/people/fuji_stem.glb",
+		"mask": "res://assets/player/people/fuji_stem_mask.png",
+	},
+	"honey_crisp": {
+		"name": "Honey Crisp",
+		"path": "res://assets/player/people/honey_crisp.glb",
+		"mask": "res://assets/player/people/honey_crisp_mask.png",
+	},
+	"bram_russet": {
+		"name": "Bram Russet",
+		"path": "res://assets/player/people/bram_russet.glb",
+		"mask": "res://assets/player/people/bram_russet_mask.png",
+	},
+	"jet_huckle": {
+		"name": "Jet Huckle",
+		"path": "res://assets/player/people/jet_huckle.glb",
+		"mask": "res://assets/player/people/jet_huckle_mask.png",
+	},
+	"pip_bramble": {
+		"name": "Pip Bramble",
+		"path": "res://assets/player/people/pip_bramble.glb",
+		"mask": "res://assets/player/people/pip_bramble_mask.png",
+	},
+	"tad_thorn": {
+		"name": "Tad Thorn",
+		"path": "res://assets/player/people/tad_thorn.glb",
+		"mask": "res://assets/player/people/tad_thorn_mask.png",
+	},
+	"sol_briar": {
+		"name": "Sol Briar",
+		"path": "res://assets/player/people/sol_briar.glb",
+		"mask": "res://assets/player/people/sol_briar_mask.png",
+	},
+	"ray_acai": {
+		"name": "Ray Acai",
+		"path": "res://assets/player/people/ray_acai.glb",
+		"mask": "res://assets/player/people/ray_acai_mask.png",
+	},
+	"cole_currant": {
+		"name": "Cole Currant",
+		"path": "res://assets/player/people/cole_currant.glb",
+		"mask": "res://assets/player/people/cole_currant_mask.png",
+	},
+	"flash_elder": {
+		"name": "Flash Elder",
+		"path": "res://assets/player/people/flash_elder.glb",
+		"mask": "res://assets/player/people/flash_elder_mask.png",
+	},
+	"boyd_mulberry": {
+		"name": "Boyd Mulberry",
+		"path": "res://assets/player/people/boyd_mulberry.glb",
+		"mask": "res://assets/player/people/boyd_mulberry_mask.png",
+	},
+	"clyde_concord": {
+		"name": "Clyde Concord",
+		"path": "res://assets/player/people/clyde_concord.glb",
+		"mask": "res://assets/player/people/clyde_concord_mask.png",
+	},
+	"mack_vine": {
+		"name": "Mack Vine",
+		"path": "res://assets/player/people/mack_vine.glb",
+		"mask": "res://assets/player/people/mack_vine_mask.png",
+	},
+	"otis_raisin": {
+		"name": "Otis Raisin",
+		"path": "res://assets/player/people/otis_raisin.glb",
+		"mask": "res://assets/player/people/otis_raisin_mask.png",
+	},
+	"brick_tannin": {
+		"name": "Brick Tannin",
+		"path": "res://assets/player/people/brick_tannin.glb",
+		"mask": "res://assets/player/people/brick_tannin_mask.png",
+	},
+	"gus_trellis": {
+		"name": "Gus Trellis",
+		"path": "res://assets/player/people/gus_trellis.glb",
+		"mask": "res://assets/player/people/gus_trellis_mask.png",
+	},
+	"hank_cluster": {
+		"name": "Hank Cluster",
+		"path": "res://assets/player/people/hank_cluster.glb",
+		"mask": "res://assets/player/people/hank_cluster_mask.png",
+	},
+	"crush_merlot": {
+		"name": "Crush Merlot",
+		"path": "res://assets/player/people/crush_merlot.glb",
+		"mask": "res://assets/player/people/crush_merlot_mask.png",
+	},
+	"bull_malbec": {
+		"name": "Bull Malbec",
+		"path": "res://assets/player/people/bull_malbec.glb",
+		"mask": "res://assets/player/people/bull_malbec_mask.png",
+	},
 }
 const HEAD_FIT: Dictionary = {"size": 0.3, "neck": 0.15, "sink": 0.035, "forward": 0.0, "flare": 0.12, "tilt": 0.0}
 

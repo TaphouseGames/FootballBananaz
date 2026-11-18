@@ -1,0 +1,10 @@
+task created 1415a1c8-8ca2-45c0-bdc8-8f62b2d4837e (@player-belle-nectar-concept-2)
+generate_image · queued
+generate_image · running · 1415a1c8
+generate_image · running · 1415a1c8
+generate_image · running · 1415a1c8
+generate_image · success 100% · 1415a1c8
+[32m✓[39m generate_image · 1415a1c8-8ca2-45c0-bdc8-8f62b2d4837e · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to belle_nectar_concept\tripo-out\player-belle-nectar-concept-2-1415a1c8
+{"task_id":"1415a1c8-8ca2-45c0-bdc8-8f62b2d4837e","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"belle_nectar_concept\\tripo-out\\player-belle-nectar-concept-2-1415a1c8","files":["generated_image.png","preview.png"],"preview":"belle_nectar_concept\\tripo-out\\player-belle-nectar-concept-2-1415a1c8\\preview.png"}

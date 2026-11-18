@@ -1,0 +1,10 @@
+task created 0a1c725c-51d7-4ecf-8ccd-fcf20a11bb90 (@player-jet-pippin-concept-2)
+generate_image · queued
+generate_image · running · 0a1c725c
+generate_image · running · 0a1c725c
+generate_image · running · 0a1c725c
+generate_image · success 100% · 0a1c725c
+[32m✓[39m generate_image · 0a1c725c-51d7-4ecf-8ccd-fcf20a11bb90 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to jet_pippin_concept\tripo-out\player-jet-pippin-concept-2-0a1c725c
+{"task_id":"0a1c725c-51d7-4ecf-8ccd-fcf20a11bb90","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"jet_pippin_concept\\tripo-out\\player-jet-pippin-concept-2-0a1c725c","files":["generated_image.png","preview.png"],"preview":"jet_pippin_concept\\tripo-out\\player-jet-pippin-concept-2-0a1c725c\\preview.png"}

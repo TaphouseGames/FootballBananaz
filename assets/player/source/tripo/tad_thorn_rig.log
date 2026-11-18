@@ -1,0 +1,8 @@
+task created e7f88fb9-a246-45ca-99d8-08cba9b8a7f5 (@player-tad-thorn-rig)
+animate_rig · queued
+animate_rig · running 56% · e7f88fb9
+animate_rig · success 100% · e7f88fb9
+[32m✓[39m animate_rig · e7f88fb9-a246-45ca-99d8-08cba9b8a7f5 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to tad_thorn_rig\tripo-out\player-tad-thorn-rig-e7f88fb9
+{"task_id":"e7f88fb9-a246-45ca-99d8-08cba9b8a7f5","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"tad_thorn_rig\\tripo-out\\player-tad-thorn-rig-e7f88fb9","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"tad_thorn_rig\\tripo-out\\player-tad-thorn-rig-e7f88fb9\\model.fbx","preview":"tad_thorn_rig\\tripo-out\\player-tad-thorn-rig-e7f88fb9\\preview.png"}

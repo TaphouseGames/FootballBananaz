@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 6789f149-99f1-455a-bfcd-ef676cab005d (@player-ray-acai)
+image_to_model · queued
+image_to_model · running 5% · 6789f149
+image_to_model · running 12% · 6789f149
+image_to_model · running 19% · 6789f149
+image_to_model · running 30% · 6789f149
+image_to_model · running 45% · 6789f149
+image_to_model · running 66% · 6789f149
+image_to_model · running 87% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · running 99% · 6789f149
+image_to_model · success 100% · 6789f149
+[32m✓[39m image_to_model · 6789f149-99f1-455a-bfcd-ef676cab005d · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to ray_acai_model\tripo-out\player-ray-acai-6789f149
+{"task_id":"6789f149-99f1-455a-bfcd-ef676cab005d","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"ray_acai_model\\tripo-out\\player-ray-acai-6789f149","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"ray_acai_model\\tripo-out\\player-ray-acai-6789f149\\model.fbx","preview":"ray_acai_model\\tripo-out\\player-ray-acai-6789f149\\preview.png"}

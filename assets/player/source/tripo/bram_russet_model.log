@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created cf85d643-844e-4448-bf1a-cb1b5a7a06a8 (@player-bram-russet)
+image_to_model · queued
+image_to_model · running 2% · cf85d643
+image_to_model · running 5% · cf85d643
+image_to_model · running 8% · cf85d643
+image_to_model · running 12% · cf85d643
+image_to_model · running 18% · cf85d643
+image_to_model · running 26% · cf85d643
+image_to_model · running 34% · cf85d643
+image_to_model · running 42% · cf85d643
+image_to_model · running 50% · cf85d643
+image_to_model · running 58% · cf85d643
+image_to_model · running 66% · cf85d643
+image_to_model · running 74% · cf85d643
+image_to_model · running 82% · cf85d643
+image_to_model · running 90% · cf85d643
+image_to_model · running 98% · cf85d643
+image_to_model · running 99% · cf85d643
+image_to_model · running 99% · cf85d643
+image_to_model · running 99% · cf85d643
+image_to_model · success 100% · cf85d643
+[32m✓[39m image_to_model · cf85d643-844e-4448-bf1a-cb1b5a7a06a8 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bram_russet_model\tripo-out\player-bram-russet-cf85d643
+{"task_id":"cf85d643-844e-4448-bf1a-cb1b5a7a06a8","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"bram_russet_model\\tripo-out\\player-bram-russet-cf85d643","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"bram_russet_model\\tripo-out\\player-bram-russet-cf85d643\\model.fbx","preview":"bram_russet_model\\tripo-out\\player-bram-russet-cf85d643\\preview.png"}

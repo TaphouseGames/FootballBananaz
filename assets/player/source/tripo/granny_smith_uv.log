@@ -1,0 +1,9 @@
+task created 9adf8f07-b14b-4833-9cb8-137bc5f38cd0 (@player-granny-smith-uv)
+mesh_uv · queued
+mesh_uv · running 99% · 9adf8f07
+mesh_uv · running 99% · 9adf8f07
+mesh_uv · success 100% · 9adf8f07
+[32m✓[39m mesh_uv · 9adf8f07-b14b-4833-9cb8-137bc5f38cd0 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to granny_smith_uv\tripo-out\player-granny-smith-uv-9adf8f07
+{"task_id":"9adf8f07-b14b-4833-9cb8-137bc5f38cd0","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"granny_smith_uv\\tripo-out\\player-granny-smith-uv-9adf8f07","files":["model.fbx","uv_render.webp"],"model_file":"granny_smith_uv\\tripo-out\\player-granny-smith-uv-9adf8f07\\model.fbx"}

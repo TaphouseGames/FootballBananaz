@@ -1,0 +1,10 @@
+task created 3ebf2828-bc24-43ff-9fa8-34d2e9ad1aa9 (@player-hal-freestone-concept)
+generate_image · queued
+generate_image · running · 3ebf2828
+generate_image · running · 3ebf2828
+generate_image · running · 3ebf2828
+generate_image · success 100% · 3ebf2828
+[32m✓[39m generate_image · 3ebf2828-bc24-43ff-9fa8-34d2e9ad1aa9 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hal_freestone_concept\tripo-out\player-hal-freestone-concept-3ebf2828
+{"task_id":"3ebf2828-bc24-43ff-9fa8-34d2e9ad1aa9","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"hal_freestone_concept\\tripo-out\\player-hal-freestone-concept-3ebf2828","files":["generated_image.png","preview.png"],"preview":"hal_freestone_concept\\tripo-out\\player-hal-freestone-concept-3ebf2828\\preview.png"}

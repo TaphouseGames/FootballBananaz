@@ -1,0 +1,9 @@
+task created ccffcd48-da19-4d51-8d81-b9c992ef229b (@player-sol-briar-uv)
+mesh_uv · queued
+mesh_uv · running 99% · ccffcd48
+mesh_uv · running 99% · ccffcd48
+mesh_uv · success 100% · ccffcd48
+[32m✓[39m mesh_uv · ccffcd48-da19-4d51-8d81-b9c992ef229b · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to sol_briar_uv\tripo-out\player-sol-briar-uv-ccffcd48
+{"task_id":"ccffcd48-da19-4d51-8d81-b9c992ef229b","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"sol_briar_uv\\tripo-out\\player-sol-briar-uv-ccffcd48","files":["model.fbx","uv_render.webp"],"model_file":"sol_briar_uv\\tripo-out\\player-sol-briar-uv-ccffcd48\\model.fbx"}

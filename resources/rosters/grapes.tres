@@ -2,10 +2,68 @@
 
 [ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
 [ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://ntulcvmygfjd" path="res://scripts/data/player_look.gd" id="3_look"]
+
+[sub_resource type="Resource" id="look_clyde_concord"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "clyde_concord"
+height_in = 68
+
+[sub_resource type="Resource" id="look_mack_vine"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "mack_vine"
+height_in = 78
+
+[sub_resource type="Resource" id="look_otis_raisin"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "otis_raisin"
+height_in = 73
+
+[sub_resource type="Resource" id="look_brick_tannin"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "brick_tannin"
+height_in = 72
+
+[sub_resource type="Resource" id="look_gus_trellis"]
+script = ExtResource("3_look")
+gender = 0
+build = 0
+person = "gus_trellis"
+height_in = 80
+
+[sub_resource type="Resource" id="look_hank_cluster"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "hank_cluster"
+height_in = 66
+
+[sub_resource type="Resource" id="look_crush_merlot"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "crush_merlot"
+height_in = 79
+
+[sub_resource type="Resource" id="look_bull_malbec"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "bull_malbec"
+height_in = 66
 
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Clyde Concord"
+look = SubResource("look_clyde_concord")
 position = "QB"
 number = 14
 speed = 38
@@ -25,6 +83,7 @@ agility = 25
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")
 display_name = "Mack Vine"
+look = SubResource("look_mack_vine")
 number = 70
 speed = 70
 endurance = 80
@@ -37,6 +96,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Otis Raisin"
+look = SubResource("look_otis_raisin")
 number = 63
 speed = 68
 endurance = 80
@@ -49,6 +109,7 @@ get_open = 20
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Brick Tannin"
+look = SubResource("look_brick_tannin")
 number = 77
 speed = 72
 endurance = 80
@@ -61,6 +122,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Gus Trellis"
+look = SubResource("look_gus_trellis")
 position = "WR"
 number = 85
 speed = 48
@@ -77,6 +139,7 @@ security = 60
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Hank Cluster"
+look = SubResource("look_hank_cluster")
 position = "WR"
 number = 83
 speed = 46
@@ -93,6 +156,7 @@ security = 60
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Crush Merlot"
+look = SubResource("look_crush_merlot")
 position = "RB"
 number = 44
 speed = 60
@@ -109,6 +173,7 @@ security = 85
 [sub_resource type="Resource" id="player_7"]
 script = ExtResource("1_ratings")
 display_name = "Bull Malbec"
+look = SubResource("look_bull_malbec")
 position = "TE"
 number = 40
 endurance = 60

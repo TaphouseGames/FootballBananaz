@@ -1,0 +1,10 @@
+task created 2fcac2fd-8d67-4307-8a46-a0bb40170b6c (@player-hank-cluster-rig)
+animate_rig · queued
+animate_rig · running 28% · 2fcac2fd
+animate_rig · running 90% · 2fcac2fd
+animate_rig · running 99% · 2fcac2fd
+animate_rig · success 100% · 2fcac2fd
+[32m✓[39m animate_rig · 2fcac2fd-8d67-4307-8a46-a0bb40170b6c · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hank_cluster_rig\tripo-out\player-hank-cluster-rig-2fcac2fd
+{"task_id":"2fcac2fd-8d67-4307-8a46-a0bb40170b6c","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"hank_cluster_rig\\tripo-out\\player-hank-cluster-rig-2fcac2fd","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"hank_cluster_rig\\tripo-out\\player-hank-cluster-rig-2fcac2fd\\model.fbx","preview":"hank_cluster_rig\\tripo-out\\player-hank-cluster-rig-2fcac2fd\\preview.png"}

@@ -1,0 +1,8 @@
+task created 9c183d63-79a4-4faf-8564-c0f90f7299e4 (@player-bram-russet-rig)
+animate_rig · queued
+animate_rig · running 49% · 9c183d63
+animate_rig · success 100% · 9c183d63
+[32m✓[39m animate_rig · 9c183d63-79a4-4faf-8564-c0f90f7299e4 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bram_russet_rig\tripo-out\player-bram-russet-rig-9c183d63
+{"task_id":"9c183d63-79a4-4faf-8564-c0f90f7299e4","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"bram_russet_rig\\tripo-out\\player-bram-russet-rig-9c183d63","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"bram_russet_rig\\tripo-out\\player-bram-russet-rig-9c183d63\\model.fbx","preview":"bram_russet_rig\\tripo-out\\player-bram-russet-rig-9c183d63\\preview.png"}

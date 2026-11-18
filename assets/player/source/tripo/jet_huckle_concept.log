@@ -1,0 +1,10 @@
+task created ca253049-ce1b-48b7-85b8-cd2604b4ad0a (@player-jet-huckle-concept)
+generate_image · queued
+generate_image · running · ca253049
+generate_image · running · ca253049
+generate_image · running · ca253049
+generate_image · success 100% · ca253049
+[32m✓[39m generate_image · ca253049-ce1b-48b7-85b8-cd2604b4ad0a · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to jet_huckle_concept\tripo-out\player-jet-huckle-concept-ca253049
+{"task_id":"ca253049-ce1b-48b7-85b8-cd2604b4ad0a","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"jet_huckle_concept\\tripo-out\\player-jet-huckle-concept-ca253049","files":["generated_image.png","preview.png"],"preview":"jet_huckle_concept\\tripo-out\\player-jet-huckle-concept-ca253049\\preview.png"}

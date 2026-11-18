@@ -1,0 +1,9 @@
+task created 1cee1d18-6651-4056-ba25-8821505441e6 (@player-jet-huckle-uv)
+mesh_uv · queued
+mesh_uv · running 99% · 1cee1d18
+mesh_uv · running 99% · 1cee1d18
+mesh_uv · success 100% · 1cee1d18
+[32m✓[39m mesh_uv · 1cee1d18-6651-4056-ba25-8821505441e6 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to jet_huckle_uv\tripo-out\player-jet-huckle-uv-1cee1d18
+{"task_id":"1cee1d18-6651-4056-ba25-8821505441e6","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"jet_huckle_uv\\tripo-out\\player-jet-huckle-uv-1cee1d18","files":["model.fbx","uv_render.webp"],"model_file":"jet_huckle_uv\\tripo-out\\player-jet-huckle-uv-1cee1d18\\model.fbx"}

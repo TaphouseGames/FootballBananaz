@@ -1,0 +1,10 @@
+task created f40ac926-7fc9-4d08-a8e9-76f503d3bb1e (@player-hank-cluster-concept)
+generate_image · queued
+generate_image · running · f40ac926
+generate_image · running · f40ac926
+generate_image · running · f40ac926
+generate_image · success 100% · f40ac926
+[32m✓[39m generate_image · f40ac926-7fc9-4d08-a8e9-76f503d3bb1e · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to hank_cluster_concept\tripo-out\player-hank-cluster-concept-f40ac926
+{"task_id":"f40ac926-7fc9-4d08-a8e9-76f503d3bb1e","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"hank_cluster_concept\\tripo-out\\player-hank-cluster-concept-f40ac926","files":["generated_image.png","preview.png"],"preview":"hank_cluster_concept\\tripo-out\\player-hank-cluster-concept-f40ac926\\preview.png"}

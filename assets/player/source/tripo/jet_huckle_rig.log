@@ -1,0 +1,8 @@
+task created 018682e1-a231-42ab-8460-677fa6b4e817 (@player-jet-huckle-rig)
+animate_rig · queued
+animate_rig · running 44% · 018682e1
+animate_rig · success 100% · 018682e1
+[32m✓[39m animate_rig · 018682e1-a231-42ab-8460-677fa6b4e817 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to jet_huckle_rig\tripo-out\player-jet-huckle-rig-018682e1
+{"task_id":"018682e1-a231-42ab-8460-677fa6b4e817","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"jet_huckle_rig\\tripo-out\\player-jet-huckle-rig-018682e1","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"jet_huckle_rig\\tripo-out\\player-jet-huckle-rig-018682e1\\model.fbx","preview":"jet_huckle_rig\\tripo-out\\player-jet-huckle-rig-018682e1\\preview.png"}

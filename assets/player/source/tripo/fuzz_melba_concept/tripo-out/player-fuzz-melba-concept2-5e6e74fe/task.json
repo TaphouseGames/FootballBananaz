@@ -1,0 +1,19 @@
+{
+  "task_id": "5e6e74fe-52b6-488e-a541-c8a51c488438",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Exactly the same character, same face, same huge round afro, same pose, same kit, same clay style and same background. Change only her body: she is much heavier and wider, a big heavy woman with a wide thick waist, a full round belly under the jersey, wide hips, very broad round shoulders, thick heavy soft arms and thick heavy legs without defined muscles. Everything else stays exactly the same.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T02:43:20.506076Z",
+  "completed_at": "2026-11-18T02:43:54.355974Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

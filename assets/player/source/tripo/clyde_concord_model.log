@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 4d2d69bd-f39e-4790-97c4-6f08f494cdde (@player-clyde-concord)
+image_to_model · queued
+image_to_model · running 3% · 4d2d69bd
+image_to_model · running 8% · 4d2d69bd
+image_to_model · running 12% · 4d2d69bd
+image_to_model · running 19% · 4d2d69bd
+image_to_model · running 28% · 4d2d69bd
+image_to_model · running 41% · 4d2d69bd
+image_to_model · running 53% · 4d2d69bd
+image_to_model · running 66% · 4d2d69bd
+image_to_model · running 79% · 4d2d69bd
+image_to_model · running 91% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · running 99% · 4d2d69bd
+image_to_model · success 100% · 4d2d69bd
+[32m✓[39m image_to_model · 4d2d69bd-f39e-4790-97c4-6f08f494cdde · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to clyde_concord_model\tripo-out\player-clyde-concord-4d2d69bd
+{"task_id":"4d2d69bd-f39e-4790-97c4-6f08f494cdde","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"clyde_concord_model\\tripo-out\\player-clyde-concord-4d2d69bd","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"clyde_concord_model\\tripo-out\\player-clyde-concord-4d2d69bd\\model.fbx","preview":"clyde_concord_model\\tripo-out\\player-clyde-concord-4d2d69bd\\preview.png"}

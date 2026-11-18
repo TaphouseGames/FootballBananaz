@@ -1,0 +1,10 @@
+task created 5e6e74fe-52b6-488e-a541-c8a51c488438 (@player-fuzz-melba-concept2)
+generate_image · queued
+generate_image · running · 5e6e74fe
+generate_image · running · 5e6e74fe
+generate_image · running · 5e6e74fe
+generate_image · success 100% · 5e6e74fe
+[32m✓[39m generate_image · 5e6e74fe-52b6-488e-a541-c8a51c488438 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to fuzz_melba_concept\tripo-out\player-fuzz-melba-concept2-5e6e74fe
+{"task_id":"5e6e74fe-52b6-488e-a541-c8a51c488438","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"fuzz_melba_concept\\tripo-out\\player-fuzz-melba-concept2-5e6e74fe","files":["generated_image.png","preview.png"],"preview":"fuzz_melba_concept\\tripo-out\\player-fuzz-melba-concept2-5e6e74fe\\preview.png"}

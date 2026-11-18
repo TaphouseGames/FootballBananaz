@@ -1,0 +1,8 @@
+task created 3b8b1cdf-6771-4d24-9452-c10e5a15ab9f (@player-otis-raisin-uv)
+mesh_uv · queued
+mesh_uv · running 58% · 3b8b1cdf
+mesh_uv · success 100% · 3b8b1cdf
+[32m✓[39m mesh_uv · 3b8b1cdf-6771-4d24-9452-c10e5a15ab9f · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to otis_raisin_uv\tripo-out\player-otis-raisin-uv-3b8b1cdf
+{"task_id":"3b8b1cdf-6771-4d24-9452-c10e5a15ab9f","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"otis_raisin_uv\\tripo-out\\player-otis-raisin-uv-3b8b1cdf","files":["model.fbx","uv_render.webp"],"model_file":"otis_raisin_uv\\tripo-out\\player-otis-raisin-uv-3b8b1cdf\\model.fbx"}

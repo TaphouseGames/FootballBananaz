@@ -1,0 +1,9 @@
+task created b7917d39-8fc2-4354-97ad-4a10536b2275 (@player-cole-currant-uv)
+mesh_uv · queued
+mesh_uv · running 10% · b7917d39
+mesh_uv · running 26% · b7917d39
+mesh_uv · success 100% · b7917d39
+[32m✓[39m mesh_uv · b7917d39-8fc2-4354-97ad-4a10536b2275 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to cole_currant_uv\tripo-out\player-cole-currant-uv-b7917d39
+{"task_id":"b7917d39-8fc2-4354-97ad-4a10536b2275","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"cole_currant_uv\\tripo-out\\player-cole-currant-uv-b7917d39","files":["model.fbx","uv_render.webp"],"model_file":"cole_currant_uv\\tripo-out\\player-cole-currant-uv-b7917d39\\model.fbx"}

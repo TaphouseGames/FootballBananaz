@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 5ad5aa9d-26fa-47bf-ab3e-4a3c875a2f5c (@player-jet-pippin)
+image_to_model · queued
+image_to_model · running 2% · 5ad5aa9d
+image_to_model · running 6% · 5ad5aa9d
+image_to_model · running 8% · 5ad5aa9d
+image_to_model · running 12% · 5ad5aa9d
+image_to_model · running 19% · 5ad5aa9d
+image_to_model · running 28% · 5ad5aa9d
+image_to_model · running 36% · 5ad5aa9d
+image_to_model · running 44% · 5ad5aa9d
+image_to_model · running 53% · 5ad5aa9d
+image_to_model · running 61% · 5ad5aa9d
+image_to_model · running 69% · 5ad5aa9d
+image_to_model · running 78% · 5ad5aa9d
+image_to_model · running 86% · 5ad5aa9d
+image_to_model · running 95% · 5ad5aa9d
+image_to_model · running 99% · 5ad5aa9d
+image_to_model · running 99% · 5ad5aa9d
+image_to_model · running 99% · 5ad5aa9d
+image_to_model · running 99% · 5ad5aa9d
+image_to_model · success 100% · 5ad5aa9d
+[32m✓[39m image_to_model · 5ad5aa9d-26fa-47bf-ab3e-4a3c875a2f5c · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to jet_pippin_model\tripo-out\player-jet-pippin-5ad5aa9d
+{"task_id":"5ad5aa9d-26fa-47bf-ab3e-4a3c875a2f5c","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"jet_pippin_model\\tripo-out\\player-jet-pippin-5ad5aa9d","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"jet_pippin_model\\tripo-out\\player-jet-pippin-5ad5aa9d\\model.fbx","preview":"jet_pippin_model\\tripo-out\\player-jet-pippin-5ad5aa9d\\preview.png"}

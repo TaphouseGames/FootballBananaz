@@ -2,10 +2,68 @@
 
 [ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
 [ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://ntulcvmygfjd" path="res://scripts/data/player_look.gd" id="3_look"]
+
+[sub_resource type="Resource" id="look_georgia_pitt"]
+script = ExtResource("3_look")
+gender = 1
+build = 1
+person = "georgia_pitt"
+height_in = 65
+
+[sub_resource type="Resource" id="look_fuzz_melba"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "fuzz_melba"
+height_in = 70
+
+[sub_resource type="Resource" id="look_donut_clingstone"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "donut_clingstone"
+height_in = 66
+
+[sub_resource type="Resource" id="look_hal_freestone"]
+script = ExtResource("3_look")
+gender = 0
+build = 0
+person = "hal_freestone"
+height_in = 74
+
+[sub_resource type="Resource" id="look_belle_nectar"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "belle_nectar"
+height_in = 68
+
+[sub_resource type="Resource" id="look_skip_blossom"]
+script = ExtResource("3_look")
+gender = 0
+build = 0
+person = "skip_blossom"
+height_in = 64
+
+[sub_resource type="Resource" id="look_rusty_cobbler"]
+script = ExtResource("3_look")
+gender = 0
+build = 1
+person = "rusty_cobbler"
+height_in = 68
+
+[sub_resource type="Resource" id="look_dixie_crumble"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "dixie_crumble"
+height_in = 61
 
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Georgia Pitt"
+look = SubResource("look_georgia_pitt")
 position = "QB"
 number = 10
 speed = 60
@@ -25,6 +83,7 @@ agility = 62
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")
 display_name = "Fuzz Melba"
+look = SubResource("look_fuzz_melba")
 number = 63
 strength = 64
 blocking = 66
@@ -35,6 +94,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Donut Clingstone"
+look = SubResource("look_donut_clingstone")
 number = 70
 strength = 62
 blocking = 64
@@ -45,6 +105,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Hal Freestone"
+look = SubResource("look_hal_freestone")
 number = 58
 strength = 60
 blocking = 62
@@ -55,6 +116,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Belle Nectar"
+look = SubResource("look_belle_nectar")
 position = "WR"
 number = 83
 speed = 74
@@ -69,6 +131,7 @@ security = 60
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Skip Blossom"
+look = SubResource("look_skip_blossom")
 position = "WR"
 number = 86
 speed = 68
@@ -84,6 +147,7 @@ security = 62
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Rusty Cobbler"
+look = SubResource("look_rusty_cobbler")
 position = "RB"
 number = 25
 speed = 70
@@ -100,6 +164,7 @@ security = 66
 [sub_resource type="Resource" id="player_7"]
 script = ExtResource("1_ratings")
 display_name = "Dixie Crumble"
+look = SubResource("look_dixie_crumble")
 position = "TE"
 number = 48
 speed = 56

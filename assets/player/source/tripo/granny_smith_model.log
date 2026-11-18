@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created af846c95-3027-40e9-84f7-cbddfeb79aac (@player-granny-smith)
+image_to_model · queued
+image_to_model · running 2% · af846c95
+image_to_model · running 6% · af846c95
+image_to_model · running 9% · af846c95
+image_to_model · running 14% · af846c95
+image_to_model · running 21% · af846c95
+image_to_model · running 30% · af846c95
+image_to_model · running 39% · af846c95
+image_to_model · running 49% · af846c95
+image_to_model · running 58% · af846c95
+image_to_model · running 68% · af846c95
+image_to_model · running 77% · af846c95
+image_to_model · running 86% · af846c95
+image_to_model · running 95% · af846c95
+image_to_model · running 99% · af846c95
+image_to_model · running 99% · af846c95
+image_to_model · running 99% · af846c95
+image_to_model · running 99% · af846c95
+image_to_model · success 100% · af846c95
+[32m✓[39m image_to_model · af846c95-3027-40e9-84f7-cbddfeb79aac · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to granny_smith_model\tripo-out\player-granny-smith-af846c95
+{"task_id":"af846c95-3027-40e9-84f7-cbddfeb79aac","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"granny_smith_model\\tripo-out\\player-granny-smith-af846c95","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"granny_smith_model\\tripo-out\\player-granny-smith-af846c95\\model.fbx","preview":"granny_smith_model\\tripo-out\\player-granny-smith-af846c95\\preview.png"}

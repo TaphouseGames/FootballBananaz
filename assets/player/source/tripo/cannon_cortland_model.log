@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 338d4948-bbee-4853-aeba-4b23fdcadcd9 (@player-cannon-cortland)
+image_to_model · queued
+image_to_model · running 2% · 338d4948
+image_to_model · running 5% · 338d4948
+image_to_model · running 7% · 338d4948
+image_to_model · running 12% · 338d4948
+image_to_model · running 17% · 338d4948
+image_to_model · running 25% · 338d4948
+image_to_model · running 33% · 338d4948
+image_to_model · running 40% · 338d4948
+image_to_model · running 48% · 338d4948
+image_to_model · running 56% · 338d4948
+image_to_model · running 64% · 338d4948
+image_to_model · running 71% · 338d4948
+image_to_model · running 79% · 338d4948
+image_to_model · running 86% · 338d4948
+image_to_model · running 94% · 338d4948
+image_to_model · running 99% · 338d4948
+image_to_model · running 99% · 338d4948
+image_to_model · success 100% · 338d4948
+[32m✓[39m image_to_model · 338d4948-bbee-4853-aeba-4b23fdcadcd9 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to cannon_cortland_model\tripo-out\player-cannon-cortland-338d4948
+{"task_id":"338d4948-bbee-4853-aeba-4b23fdcadcd9","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"cannon_cortland_model\\tripo-out\\player-cannon-cortland-338d4948","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"cannon_cortland_model\\tripo-out\\player-cannon-cortland-338d4948\\model.fbx","preview":"cannon_cortland_model\\tripo-out\\player-cannon-cortland-338d4948\\preview.png"}

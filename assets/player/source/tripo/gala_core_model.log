@@ -1,0 +1,28 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created c9b4c8dd-0e56-4b2d-8ce1-1c27038a01a8 (@player-gala-core)
+image_to_model · queued
+image_to_model · running 2% · c9b4c8dd
+image_to_model · running 4% · c9b4c8dd
+image_to_model · running 7% · c9b4c8dd
+image_to_model · running 10% · c9b4c8dd
+image_to_model · running 15% · c9b4c8dd
+image_to_model · running 22% · c9b4c8dd
+image_to_model · running 28% · c9b4c8dd
+image_to_model · running 35% · c9b4c8dd
+image_to_model · running 41% · c9b4c8dd
+image_to_model · running 48% · c9b4c8dd
+image_to_model · running 54% · c9b4c8dd
+image_to_model · running 61% · c9b4c8dd
+image_to_model · running 68% · c9b4c8dd
+image_to_model · running 74% · c9b4c8dd
+image_to_model · running 81% · c9b4c8dd
+image_to_model · running 87% · c9b4c8dd
+image_to_model · running 94% · c9b4c8dd
+image_to_model · running 99% · c9b4c8dd
+image_to_model · running 99% · c9b4c8dd
+image_to_model · running 99% · c9b4c8dd
+image_to_model · success 100% · c9b4c8dd
+[32m✓[39m image_to_model · c9b4c8dd-0e56-4b2d-8ce1-1c27038a01a8 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to gala_core_model\tripo-out\player-gala-core-c9b4c8dd
+{"task_id":"c9b4c8dd-0e56-4b2d-8ce1-1c27038a01a8","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"gala_core_model\\tripo-out\\player-gala-core-c9b4c8dd","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"gala_core_model\\tripo-out\\player-gala-core-c9b4c8dd\\model.fbx","preview":"gala_core_model\\tripo-out\\player-gala-core-c9b4c8dd\\preview.png"}

@@ -1,0 +1,7 @@
+task created 424469a7-6c26-4ce3-b3a2-66a4a34bf0b5 (@player-mack-vine-rig)
+animate_rig · queued
+animate_rig · running 40% · 424469a7
+[32m✓[39m animate_rig · 424469a7-6c26-4ce3-b3a2-66a4a34bf0b5 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to mack_vine_rig\tripo-out\player-mack-vine-rig-424469a7
+{"task_id":"424469a7-6c26-4ce3-b3a2-66a4a34bf0b5","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"mack_vine_rig\\tripo-out\\player-mack-vine-rig-424469a7","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"mack_vine_rig\\tripo-out\\player-mack-vine-rig-424469a7\\model.fbx","preview":"mack_vine_rig\\tripo-out\\player-mack-vine-rig-424469a7\\preview.png"}

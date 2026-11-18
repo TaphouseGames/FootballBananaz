@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created e952fe3e-747f-4251-a843-f0d2f24434ab (@player-mack-vine)
+image_to_model · queued
+image_to_model · running 3% · e952fe3e
+image_to_model · running 8% · e952fe3e
+image_to_model · running 12% · e952fe3e
+image_to_model · running 19% · e952fe3e
+image_to_model · running 28% · e952fe3e
+image_to_model · running 41% · e952fe3e
+image_to_model · running 54% · e952fe3e
+image_to_model · running 66% · e952fe3e
+image_to_model · running 79% · e952fe3e
+image_to_model · running 91% · e952fe3e
+image_to_model · running 99% · e952fe3e
+image_to_model · running 99% · e952fe3e
+image_to_model · running 99% · e952fe3e
+image_to_model · running 99% · e952fe3e
+image_to_model · running 99% · e952fe3e
+image_to_model · running 99% · e952fe3e
+image_to_model · running 99% · e952fe3e
+image_to_model · running 99% · e952fe3e
+image_to_model · success 100% · e952fe3e
+[32m✓[39m image_to_model · e952fe3e-747f-4251-a843-f0d2f24434ab · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to mack_vine_model\tripo-out\player-mack-vine-e952fe3e
+{"task_id":"e952fe3e-747f-4251-a843-f0d2f24434ab","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"mack_vine_model\\tripo-out\\player-mack-vine-e952fe3e","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"mack_vine_model\\tripo-out\\player-mack-vine-e952fe3e\\model.fbx","preview":"mack_vine_model\\tripo-out\\player-mack-vine-e952fe3e\\preview.png"}

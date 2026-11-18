@@ -1,0 +1,10 @@
+task created 44b4d9c9-5db2-4a15-84da-ca6d918e93df (@player-ray-acai-concept-2)
+generate_image · queued
+generate_image · running · 44b4d9c9
+generate_image · running · 44b4d9c9
+generate_image · running · 44b4d9c9
+generate_image · success 100% · 44b4d9c9
+[32m✓[39m generate_image · 44b4d9c9-5db2-4a15-84da-ca6d918e93df · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to ray_acai_concept\tripo-out\player-ray-acai-concept-2-44b4d9c9
+{"task_id":"44b4d9c9-5db2-4a15-84da-ca6d918e93df","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"ray_acai_concept\\tripo-out\\player-ray-acai-concept-2-44b4d9c9","files":["generated_image.png","preview.png"],"preview":"ray_acai_concept\\tripo-out\\player-ray-acai-concept-2-44b4d9c9\\preview.png"}

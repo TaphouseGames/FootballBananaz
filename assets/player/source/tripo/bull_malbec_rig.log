@@ -1,0 +1,12 @@
+task created 911d5abc-fb54-4f94-90a2-6d4ac4da1940 (@player-bull-malbec-rig)
+animate_rig · queued
+animate_rig · running 11% · 911d5abc
+animate_rig · running 34% · 911d5abc
+animate_rig · running 52% · 911d5abc
+animate_rig · running 80% · 911d5abc
+animate_rig · running 99% · 911d5abc
+animate_rig · success 100% · 911d5abc
+[32m✓[39m animate_rig · 911d5abc-fb54-4f94-90a2-6d4ac4da1940 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bull_malbec_rig\tripo-out\player-bull-malbec-rig-911d5abc
+{"task_id":"911d5abc-fb54-4f94-90a2-6d4ac4da1940","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"bull_malbec_rig\\tripo-out\\player-bull-malbec-rig-911d5abc","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"bull_malbec_rig\\tripo-out\\player-bull-malbec-rig-911d5abc\\model.fbx","preview":"bull_malbec_rig\\tripo-out\\player-bull-malbec-rig-911d5abc\\preview.png"}

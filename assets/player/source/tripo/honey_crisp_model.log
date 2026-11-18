@@ -1,0 +1,28 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 6a3ba7da-08b7-4fb3-9963-6da88bc95a3e (@player-honey-crisp)
+image_to_model · queued
+image_to_model · running 2% · 6a3ba7da
+image_to_model · running 5% · 6a3ba7da
+image_to_model · running 8% · 6a3ba7da
+image_to_model · running 12% · 6a3ba7da
+image_to_model · running 18% · 6a3ba7da
+image_to_model · running 26% · 6a3ba7da
+image_to_model · running 34% · 6a3ba7da
+image_to_model · running 42% · 6a3ba7da
+image_to_model · running 50% · 6a3ba7da
+image_to_model · running 58% · 6a3ba7da
+image_to_model · running 66% · 6a3ba7da
+image_to_model · running 74% · 6a3ba7da
+image_to_model · running 82% · 6a3ba7da
+image_to_model · running 90% · 6a3ba7da
+image_to_model · running 98% · 6a3ba7da
+image_to_model · running 99% · 6a3ba7da
+image_to_model · running 99% · 6a3ba7da
+image_to_model · running 99% · 6a3ba7da
+image_to_model · running 99% · 6a3ba7da
+image_to_model · running 99% · 6a3ba7da
+image_to_model · success 100% · 6a3ba7da
+[32m✓[39m image_to_model · 6a3ba7da-08b7-4fb3-9963-6da88bc95a3e · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to honey_crisp_model\tripo-out\player-honey-crisp-6a3ba7da
+{"task_id":"6a3ba7da-08b7-4fb3-9963-6da88bc95a3e","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"honey_crisp_model\\tripo-out\\player-honey-crisp-6a3ba7da","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"honey_crisp_model\\tripo-out\\player-honey-crisp-6a3ba7da\\model.fbx","preview":"honey_crisp_model\\tripo-out\\player-honey-crisp-6a3ba7da\\preview.png"}

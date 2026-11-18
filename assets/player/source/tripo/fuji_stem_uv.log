@@ -1,0 +1,8 @@
+task created fd65f0c1-5c0f-4156-9f83-4589ae538e13 (@player-fuji-stem-uv)
+mesh_uv · queued
+mesh_uv · running 99% · fd65f0c1
+mesh_uv · success 100% · fd65f0c1
+[32m✓[39m mesh_uv · fd65f0c1-5c0f-4156-9f83-4589ae538e13 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to fuji_stem_uv\tripo-out\player-fuji-stem-uv-fd65f0c1
+{"task_id":"fd65f0c1-5c0f-4156-9f83-4589ae538e13","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"fuji_stem_uv\\tripo-out\\player-fuji-stem-uv-fd65f0c1","files":["model.fbx","uv_render.webp"],"model_file":"fuji_stem_uv\\tripo-out\\player-fuji-stem-uv-fd65f0c1\\model.fbx"}

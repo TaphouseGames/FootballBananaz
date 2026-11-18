@@ -1,0 +1,7 @@
+task created ca85fd8f-cb11-4033-ace1-f4907a9f2a6d (@player-honey-crisp-rig)
+animate_rig · queued
+animate_rig · running 57% · ca85fd8f
+[32m✓[39m animate_rig · ca85fd8f-cb11-4033-ace1-f4907a9f2a6d · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to honey_crisp_rig\tripo-out\player-honey-crisp-rig-ca85fd8f
+{"task_id":"ca85fd8f-cb11-4033-ace1-f4907a9f2a6d","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"honey_crisp_rig\\tripo-out\\player-honey-crisp-rig-ca85fd8f","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"honey_crisp_rig\\tripo-out\\player-honey-crisp-rig-ca85fd8f\\model.fbx","preview":"honey_crisp_rig\\tripo-out\\player-honey-crisp-rig-ca85fd8f\\preview.png"}

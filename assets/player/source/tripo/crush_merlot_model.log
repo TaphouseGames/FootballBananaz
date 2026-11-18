@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created d2f870b1-2c87-4666-826b-30fd876583b2 (@player-crush-merlot)
+image_to_model · queued
+image_to_model · running 2% · d2f870b1
+image_to_model · running 6% · d2f870b1
+image_to_model · running 9% · d2f870b1
+image_to_model · running 14% · d2f870b1
+image_to_model · running 21% · d2f870b1
+image_to_model · running 31% · d2f870b1
+image_to_model · running 40% · d2f870b1
+image_to_model · running 50% · d2f870b1
+image_to_model · running 60% · d2f870b1
+image_to_model · running 69% · d2f870b1
+image_to_model · running 79% · d2f870b1
+image_to_model · running 88% · d2f870b1
+image_to_model · running 98% · d2f870b1
+image_to_model · running 99% · d2f870b1
+image_to_model · running 99% · d2f870b1
+image_to_model · running 99% · d2f870b1
+image_to_model · running 99% · d2f870b1
+image_to_model · success 100% · d2f870b1
+[32m✓[39m image_to_model · d2f870b1-2c87-4666-826b-30fd876583b2 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to crush_merlot_model\tripo-out\player-crush-merlot-d2f870b1
+{"task_id":"d2f870b1-2c87-4666-826b-30fd876583b2","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"crush_merlot_model\\tripo-out\\player-crush-merlot-d2f870b1","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"crush_merlot_model\\tripo-out\\player-crush-merlot-d2f870b1\\model.fbx","preview":"crush_merlot_model\\tripo-out\\player-crush-merlot-d2f870b1\\preview.png"}

@@ -1,0 +1,10 @@
+task created f41f1a2c-90c0-4efa-b98b-9634db21c4c8 (@player-rusty-cobbler-concept2)
+generate_image · queued
+generate_image · running · f41f1a2c
+generate_image · running · f41f1a2c
+generate_image · running · f41f1a2c
+generate_image · success 100% · f41f1a2c
+[32m✓[39m generate_image · f41f1a2c-90c0-4efa-b98b-9634db21c4c8 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to rusty_cobbler_concept\tripo-out\player-rusty-cobbler-concept2-f41f1a2c
+{"task_id":"f41f1a2c-90c0-4efa-b98b-9634db21c4c8","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"rusty_cobbler_concept\\tripo-out\\player-rusty-cobbler-concept2-f41f1a2c","files":["generated_image.png","preview.png"],"preview":"rusty_cobbler_concept\\tripo-out\\player-rusty-cobbler-concept2-f41f1a2c\\preview.png"}

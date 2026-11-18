@@ -1,0 +1,10 @@
+task created 47bcf437-2e24-4e99-bd63-bbca3c41c52b (@player-pip-bramble-concept)
+generate_image · queued
+generate_image · running · 47bcf437
+generate_image · running · 47bcf437
+generate_image · running · 47bcf437
+generate_image · success 100% · 47bcf437
+[32m✓[39m generate_image · 47bcf437-2e24-4e99-bd63-bbca3c41c52b · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to pip_bramble_concept\tripo-out\player-pip-bramble-concept-47bcf437
+{"task_id":"47bcf437-2e24-4e99-bd63-bbca3c41c52b","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"pip_bramble_concept\\tripo-out\\player-pip-bramble-concept-47bcf437","files":["generated_image.png","preview.png"],"preview":"pip_bramble_concept\\tripo-out\\player-pip-bramble-concept-47bcf437\\preview.png"}

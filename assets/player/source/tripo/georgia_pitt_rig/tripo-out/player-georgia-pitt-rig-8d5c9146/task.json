@@ -1,0 +1,23 @@
+{
+  "task_id": "8d5c9146-d60c-4eca-8319-da8194c042be",
+  "type": "animate_rig",
+  "status": "success",
+  "input": {
+    "spec": "actorcore",
+    "topology": "biped",
+    "out_format": "fbx",
+    "original_model_id": "62eea298-f667-4ba0-8aa4-499622798019"
+  },
+  "output_fields": [
+    "model_url",
+    "rendered_image_url"
+  ],
+  "credits_consumed": 25,
+  "created_at": "2026-11-18T03:21:29.216253Z",
+  "completed_at": "2026-11-18T03:21:38.515302Z",
+  "files": [
+    "model.fbx",
+    "rendered_image.webp",
+    "preview.png"
+  ]
+}

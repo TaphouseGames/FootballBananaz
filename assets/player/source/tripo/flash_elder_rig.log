@@ -1,0 +1,8 @@
+task created f4b4a4e9-91e0-4c26-a66b-4e4a1b97e0df (@player-flash-elder-rig)
+animate_rig · queued
+animate_rig · running 5% · f4b4a4e9
+animate_rig · success 100% · f4b4a4e9
+[32m✓[39m animate_rig · f4b4a4e9-91e0-4c26-a66b-4e4a1b97e0df · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to flash_elder_rig\tripo-out\player-flash-elder-rig-f4b4a4e9
+{"task_id":"f4b4a4e9-91e0-4c26-a66b-4e4a1b97e0df","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"flash_elder_rig\\tripo-out\\player-flash-elder-rig-f4b4a4e9","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"flash_elder_rig\\tripo-out\\player-flash-elder-rig-f4b4a4e9\\model.fbx","preview":"flash_elder_rig\\tripo-out\\player-flash-elder-rig-f4b4a4e9\\preview.png"}

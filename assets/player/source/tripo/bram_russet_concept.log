@@ -1,0 +1,10 @@
+task created 0f79e7b5-826d-4139-bc05-9f2fceb59629 (@player-bram-russet-concept)
+generate_image · queued
+generate_image · running · 0f79e7b5
+generate_image · running · 0f79e7b5
+generate_image · running · 0f79e7b5
+generate_image · success 100% · 0f79e7b5
+[32m✓[39m generate_image · 0f79e7b5-826d-4139-bc05-9f2fceb59629 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bram_russet_concept\tripo-out\player-bram-russet-concept-0f79e7b5
+{"task_id":"0f79e7b5-826d-4139-bc05-9f2fceb59629","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"bram_russet_concept\\tripo-out\\player-bram-russet-concept-0f79e7b5","files":["generated_image.png","preview.png"],"preview":"bram_russet_concept\\tripo-out\\player-bram-russet-concept-0f79e7b5\\preview.png"}

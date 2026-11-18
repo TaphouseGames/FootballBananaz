@@ -1,0 +1,44 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://0pwm6rf34868"
+path.s3tc="res://.godot/imported/donut_clingstone_tripo_image_tripo_node_98a39c8f_normal.jpg-05a8e66b49d0068ccdc1b105b0f677b5.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "8db663a52ec240dee6ad1bfecfc08ed4"
+}
+
+[deps]
+
+source_file="res://assets/player/people/donut_clingstone_tripo_image_tripo_node_98a39c8f_normal.jpg"
+dest_files=["res://.godot/imported/donut_clingstone_tripo_image_tripo_node_98a39c8f_normal.jpg-05a8e66b49d0068ccdc1b105b0f677b5.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/normal_map=1
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=1
+roughness/src_normal="res://assets/player/people/donut_clingstone_tripo_image_tripo_node_98a39c8f_normal.jpg"
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

@@ -1,0 +1,10 @@
+task created a3f162ff-8079-4451-8ae9-f2032277acf3 (@player-gala-core-concept-edit2)
+generate_image · queued
+generate_image · running · a3f162ff
+generate_image · running · a3f162ff
+generate_image · running · a3f162ff
+generate_image · success 100% · a3f162ff
+[32m✓[39m generate_image · a3f162ff-8079-4451-8ae9-f2032277acf3 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to gala_core_concept\tripo-out\player-gala-core-concept-edit2-a3f162ff
+{"task_id":"a3f162ff-8079-4451-8ae9-f2032277acf3","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"gala_core_concept\\tripo-out\\player-gala-core-concept-edit2-a3f162ff","files":["generated_image.png","preview.png"],"preview":"gala_core_concept\\tripo-out\\player-gala-core-concept-edit2-a3f162ff\\preview.png"}

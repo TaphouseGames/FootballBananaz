@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 6623c7e7-d571-415a-a8e5-afe5d00e595e (@player-dixie-crumble)
+image_to_model · queued
+image_to_model · running 2% · 6623c7e7
+image_to_model · running 6% · 6623c7e7
+image_to_model · running 9% · 6623c7e7
+image_to_model · running 15% · 6623c7e7
+image_to_model · running 22% · 6623c7e7
+image_to_model · running 32% · 6623c7e7
+image_to_model · running 42% · 6623c7e7
+image_to_model · running 51% · 6623c7e7
+image_to_model · running 61% · 6623c7e7
+image_to_model · running 71% · 6623c7e7
+image_to_model · running 81% · 6623c7e7
+image_to_model · running 91% · 6623c7e7
+image_to_model · running 99% · 6623c7e7
+image_to_model · running 99% · 6623c7e7
+image_to_model · running 99% · 6623c7e7
+image_to_model · running 99% · 6623c7e7
+image_to_model · running 99% · 6623c7e7
+image_to_model · running 99% · 6623c7e7
+image_to_model · running 99% · 6623c7e7
+image_to_model · success 100% · 6623c7e7
+[32m✓[39m image_to_model · 6623c7e7-d571-415a-a8e5-afe5d00e595e · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to dixie_crumble_model\tripo-out\player-dixie-crumble-6623c7e7
+{"task_id":"6623c7e7-d571-415a-a8e5-afe5d00e595e","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"dixie_crumble_model\\tripo-out\\player-dixie-crumble-6623c7e7","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"dixie_crumble_model\\tripo-out\\player-dixie-crumble-6623c7e7\\model.fbx","preview":"dixie_crumble_model\\tripo-out\\player-dixie-crumble-6623c7e7\\preview.png"}

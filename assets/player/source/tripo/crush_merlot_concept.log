@@ -1,0 +1,10 @@
+task created b84d11a6-5fbd-4ccd-b659-57e9fb9af464 (@player-crush-merlot-concept-2)
+generate_image · queued
+generate_image · running · b84d11a6
+generate_image · running · b84d11a6
+generate_image · running · b84d11a6
+generate_image · success 100% · b84d11a6
+[32m✓[39m generate_image · b84d11a6-5fbd-4ccd-b659-57e9fb9af464 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to crush_merlot_concept\tripo-out\player-crush-merlot-concept-2-b84d11a6
+{"task_id":"b84d11a6-5fbd-4ccd-b659-57e9fb9af464","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"crush_merlot_concept\\tripo-out\\player-crush-merlot-concept-2-b84d11a6","files":["generated_image.png","preview.png"],"preview":"crush_merlot_concept\\tripo-out\\player-crush-merlot-concept-2-b84d11a6\\preview.png"}

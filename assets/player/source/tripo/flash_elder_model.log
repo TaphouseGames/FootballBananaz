@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 556f6902-9509-423e-9079-5ccaa9f1380b (@player-flash-elder)
+image_to_model · queued
+image_to_model · running 5% · 556f6902
+image_to_model · running 14% · 556f6902
+image_to_model · running 22% · 556f6902
+image_to_model · running 33% · 556f6902
+image_to_model · running 51% · 556f6902
+image_to_model · running 75% · 556f6902
+image_to_model · running 98% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · running 99% · 556f6902
+image_to_model · success 100% · 556f6902
+[32m✓[39m image_to_model · 556f6902-9509-423e-9079-5ccaa9f1380b · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to flash_elder_model\tripo-out\player-flash-elder-556f6902
+{"task_id":"556f6902-9509-423e-9079-5ccaa9f1380b","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"flash_elder_model\\tripo-out\\player-flash-elder-556f6902","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"flash_elder_model\\tripo-out\\player-flash-elder-556f6902\\model.fbx","preview":"flash_elder_model\\tripo-out\\player-flash-elder-556f6902\\preview.png"}

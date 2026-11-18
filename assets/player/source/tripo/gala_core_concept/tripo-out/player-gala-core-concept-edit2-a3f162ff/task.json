@@ -1,0 +1,19 @@
+{
+  "task_id": "a3f162ff-8079-4451-8ae9-f2032277acf3",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Recolour both of her arms and both hands: they are now pale pink and must become the same warm tan brown as her legs and knees. Everything else stays exactly as it is: the same face, hair, body, pose, clothes, shoes, clay art style and background.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-18T04:34:33.711227Z",
+  "completed_at": "2026-11-18T04:35:02.789133Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}
