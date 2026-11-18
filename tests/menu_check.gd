@@ -57,7 +57,7 @@ func _tick() -> void:
 				_failures.append("the first two buttons read %s and %s" % [_menu.season_button.text, _menu.start_button.text])
 			_expect_title()
 			_menu.options_button.pressed.emit()
-			if current_scene != _menu or _menu.team_select != null:
+			if current_scene != _menu or (_menu.team_select != null and _menu.team_select.visible):
 				_failures.append("OPTIONS left the menu")
 			# The real thing: (A) on the gamepad with EXHIBITION in focus.
 			_menu.start_button.grab_focus()
@@ -237,6 +237,20 @@ func _expect_mascots(when: String) -> void:
 			_failures.append("the mascot of side %d is in '%s' %s" % [i, select.mascot_clips[i], when])
 		if select._mascot_views[i].render_target_update_mode != SubViewport.UPDATE_ALWAYS:
 			_failures.append("the mascot of side %d is not being drawn %s" % [i, when])
+		# Its players stand beside it, every one of the roster once.
+		var cast: PackedStringArray = select.cast_names[i].duplicate()
+		var roster: PackedStringArray = PackedStringArray()
+		for ratings: PlayerRatings in team.roster.players:
+			roster.append(ratings.display_name)
+		cast.sort()
+		roster.sort()
+		if cast != roster or select._cast_stands[i].get_child_count() != roster.size():
+			_failures.append("side %d shows the players %s, not those of %s, %s" % [i, cast, team.short_name, when])
+		for model: PlayerModel in select._cast_stands[i].get_children():
+			if model.white_kit != (i == 0) or model.team_color != team.team_color:
+				_failures.append("%s of side %d is in the wrong kit %s" % [model.display_name, i, when])
+			if ModelStage.motion_of(model).cheering != mine:
+				_failures.append("%s of side %d is %s %s" % [model.display_name, i, "idling" if mine else "cheering", when])
 
 
 ## Each side shows four bars, at what the roster of its team comes to.

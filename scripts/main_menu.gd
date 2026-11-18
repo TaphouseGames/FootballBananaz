@@ -49,6 +49,9 @@ var options_button: Button
 var exit_button: Button
 ## Made the first time EXHIBITION is pressed.
 var team_select: TeamSelect
+## How far the getting ready ahead of time has come (see _warm_step()): 0 the
+## players, 1 and 2 the sides of the team select, 3 done.
+var _warm_stage: int = 0
 ## Made the first time SEASON is pressed.
 var season_hub: SeasonHub
 
@@ -118,12 +121,47 @@ func _ready() -> void:
 	var fade: ScreenFade = ScreenFade.of(get_tree())
 	fade.cover(0.0)
 	fade.reveal()
+	_warm_players()
 
 
 func _process(delta: float) -> void:
 	_time += delta
 	_place_camera()
 	_update_music(delta)
+	_warm_step()
+
+
+## What _warm_players() started, a little a frame: one of the league's players
+## at a time, then the team select itself, hidden, then the mascot and the
+## players of each of its sides.
+func _warm_step() -> void:
+	if _warm_stage >= 3 or KitBase.warm_step():
+		return
+	if _warm_stage == 0:
+		if ResourceLoader.load_threaded_get_status(GAME_SCENE) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return
+		_make_select()
+	else:
+		team_select.warm_side(_warm_stage - 1)
+	_warm_stage += 1
+
+
+## Has every player of the league, the match and the team select made ready
+## while the menu is up, in the order of the teams, so that nothing has to
+## wait for them later.
+func _warm_players() -> void:
+	if league == null:
+		_warm_stage = 3
+		return
+	ResourceLoader.load_threaded_request(GAME_SCENE)
+	var people: PackedStringArray = PackedStringArray()
+	for team: TeamData in league.teams:
+		if team == null or team.roster == null:
+			continue
+		for ratings: PlayerRatings in team.roster.players:
+			if ratings != null and ratings.look != null and ratings.look.person_id() != "":
+				people.append(ratings.look.person_id())
+	KitBase.warm_start(people)
 
 
 ## Any key, button or click: somebody is there.
@@ -173,9 +211,8 @@ func _open_hub() -> void:
 		season_hub.picked.connect(_play.bind(CONFIRM_SOUND))
 		season_hub.remark.connect(_remark_season)
 		ui.add_child(season_hub)
-	if _game_scene == null:
-		# Loaded here, so the fade into the match does not have to wait for it.
-		_game_scene = load(GAME_SCENE)
+	# Loaded here, so the fade into the match does not have to wait for it.
+	_load_game_scene()
 	season_hub.open()
 
 
@@ -229,23 +266,41 @@ func _season_text() -> String:
 	return "SEASON" if Season.current == null else "CONTINUE SEASON"
 
 
+## Has the match's scene at hand: taken over from the thread that has been
+## reading it since the menu came up (waiting for it if it is not done), or
+## loaded here.
+func _load_game_scene() -> void:
+	if _game_scene != null:
+		return
+	if ResourceLoader.load_threaded_get_status(GAME_SCENE) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		_game_scene = ResourceLoader.load_threaded_get(GAME_SCENE) as PackedScene
+	if _game_scene == null:
+		_game_scene = load(GAME_SCENE)
+
+
+## Builds the team select, hidden, if it is not there yet.
+func _make_select() -> void:
+	if team_select != null:
+		return
+	team_select = TeamSelect.new()
+	# Loaded here, so the fade into the match does not have to wait for it.
+	_load_game_scene()
+	team_select.setup(_font, league.teams)
+	team_select.chosen.connect(_start_match)
+	team_select.cancelled.connect(_on_select_cancelled)
+	team_select.moved.connect(_play.bind(MOVE_SOUND))
+	team_select.team_changed.connect(_remark_select.bind(&"team"))
+	team_select.side_changed.connect(_remark_select.bind(&"side"))
+	ui.add_child(team_select)
+
+
 ## On to the team select, in place of the buttons.
 func _on_start() -> void:
 	if _starting or _leaving:
 		return
 	_play(CONFIRM_SOUND)
 	booth.react(&"start_pick")
-	if team_select == null:
-		team_select = TeamSelect.new()
-		# Loaded here, so the fade into the match does not have to wait for it.
-		_game_scene = load(GAME_SCENE)
-		team_select.setup(_font, league.teams)
-		team_select.chosen.connect(_start_match)
-		team_select.cancelled.connect(_on_select_cancelled)
-		team_select.moved.connect(_play.bind(MOVE_SOUND))
-		team_select.team_changed.connect(_remark_select.bind(&"team"))
-		team_select.side_changed.connect(_remark_select.bind(&"side"))
-		ui.add_child(team_select)
+	_make_select()
 	ScreenFade.pop(_buttons, false)
 	team_select.open()
 	ScreenFade.pop(team_select, true)

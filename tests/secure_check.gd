@@ -134,7 +134,8 @@ func _tick() -> void:
 
 ## What a press costs: a full meter, half of the cost left, and nothing left.
 func _tick_meter() -> void:
-	var cost: float = _tuning.secure_turbo_cost
+	# What this man pays: the tuning value scaled by his endurance.
+	var cost: float = _man.stamina_cost(_tuning.secure_turbo_cost)
 	var scale: float = _tuning.secure_speed_scale
 	_expect(cost > 0.0, "securing the ball costs no turbo")
 	_man.secure_timer = 0.0

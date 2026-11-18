@@ -108,6 +108,27 @@ func _run() -> void:
 	if inside > 0:
 		_failures.append("%d fans are inside the wall or on the ground" % inside)
 
+	# The signs: the share that was asked for, and none near another.
+	var signs: int = stadium.sign_positions.size()
+	var wanted_signs: int = roundi(float(stadium.fan_count) * Stadium.SIGN_SHARE)
+	var apart: float = Stadium.SIGN_SPACING_SEATS * Stadium.SEAT_PITCH
+	var nearest: float = INF
+	for a: int in signs:
+		for b: int in a:
+			nearest = minf(nearest, stadium.sign_positions[a].distance_to(stadium.sign_positions[b]))
+	print("Signs: %d of %d wanted.  The two nearest are %.1f yards apart (at least %.1f)." % [signs, wanted_signs, nearest, apart])
+	if signs < wanted_signs - 3 or signs > wanted_signs:
+		_failures.append("%d fans hold a sign, not the %d that SIGN_SHARE asks for" % [signs, wanted_signs])
+	if nearest < apart:
+		_failures.append("two signs are %.1f yards apart, nearer than %d seats (%.1f yards)" % [nearest, int(Stadium.SIGN_SPACING_SEATS), apart])
+	var boards: int = 0
+	for chunk: Node in stadium.get_node(^"Crowd").get_children():
+		for child: Node in chunk.get_children():
+			if String(child.name).begins_with("Signs"):
+				boards += (child as MultiMeshInstance3D).multimesh.instance_count
+	if boards != signs:
+		_failures.append("sign_positions has %d signs, the MultiMeshes hold %d boards" % [signs, boards])
+
 	var home_share: float = float(stadium.home_side_fans.x) / maxf(float(stadium.home_side_fans.y), 1.0)
 	var away_share: float = 1.0 - float(stadium.away_side_fans.x) / maxf(float(stadium.away_side_fans.y), 1.0)
 	if absf(home_share - tuning.crowd_home_share) > 0.03:

@@ -18,6 +18,10 @@ var assist: bool = false
 ## Pass button being held while the QB winds up (-1 = none), and when it went down.
 var _pass_slot: int = -1
 var _pass_press_time: float = 0.0
+## The right bumper went down by itself while he could throw (and when): let go
+## quickly, with no pass button pressed meanwhile, it is a pump fake.
+var _fake_armed: bool = false
+var _fake_press_time: float = 0.0
 
 
 func setup(p_game: Game) -> void:
@@ -74,8 +78,22 @@ func read_move() -> Vector3:
 
 # --- Events from PlayController --------------------------------------------------
 
+## The receiver whose pass button the person is holding right now (the
+## quarterback is winding up to throw to him), or null; and the power the
+## throw would have if it left now.
+func winding_up() -> Player:
+	if _pass_slot < 0 or _pass_slot >= pc.eligible.size():
+		return null
+	return pc.eligible[_pass_slot]
+
+
+func wind_up_power() -> float:
+	return pc.pass_power(pc.live_time - _pass_press_time)
+
+
 func on_line_up() -> void:
 	_pass_slot = -1
+	_fake_armed = false
 	if not is_active():
 		return
 	if team == pc.offense:
@@ -166,7 +184,15 @@ func update_live() -> void:
 	# Pressed with the ball in his hands: he secures it for a moment, also with
 	# a tackler on his back. While the quarterback can throw the same button is
 	# a pass button.
-	if player.has_ball and not is_passer and Input.is_action_just_pressed(&"secure_ball"):
+	# Wrapped up in the pocket they are pass buttons still: he gets rid of it as
+	# he goes down, for what that throw is worth.
+	var in_grasp: bool = player == pc.qb and pc.in_the_grasp()
+	if in_grasp:
+		for slot: int in mini(PASS_ACTIONS.size(), pc.eligible.size()):
+			if Input.is_action_just_pressed(PASS_ACTIONS[slot]):
+				pc.throw_ball(pc.eligible[slot], tuning.hit_throw_power, _pass_placement(), true)
+				return
+	elif player.has_ball and not is_passer and Input.is_action_just_pressed(&"secure_ball"):
 		pc.do_secure(player)
 
 	# In the pocket the pass buttons win: they share A, X, B and (with four men
@@ -181,6 +207,18 @@ func update_live() -> void:
 			var side: float = signf(move.z) if absf(move.z) > 0.3 else signf(player.position.z)
 			pc.throw_away(side if side != 0.0 else 1.0)
 			return
+		# The right bumper tapped by itself is a pump fake. Held as a pass leaves
+		# it underthrows, so a pass button pressed meanwhile calls the fake off.
+		if Input.is_action_just_pressed(&"pass_under"):
+			_fake_armed = _pass_slot < 0
+			_fake_press_time = pc.live_time
+		if _pass_slot >= 0:
+			_fake_armed = false
+		elif _fake_armed and not Input.is_action_pressed(&"pass_under"):
+			_fake_armed = false
+			if pc.live_time - _fake_press_time <= tuning.pump_tap_time:
+				pc.pump_fake()
+				return
 		if _pass_slot < 0 or _pass_slot >= pc.eligible.size():
 			_pass_slot = -1
 			for slot: int in mini(PASS_ACTIONS.size(), pc.eligible.size()):
@@ -197,6 +235,7 @@ func update_live() -> void:
 				return
 	else:
 		_pass_slot = -1
+		_fake_armed = false
 		# A tucked quarterback is a runner: the pass buttons do nothing until turbo
 		# is released, and the jump and action buttons below work for him.
 		if not player.has_ball and Input.is_action_just_pressed(&"switch_player"):

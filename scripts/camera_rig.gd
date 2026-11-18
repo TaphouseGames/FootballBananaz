@@ -10,6 +10,11 @@ var trauma: float = 0.0
 var facing: float = 1.0
 
 var _shake_clock: float = 0.0
+## A push in (see punch): degrees asked for, falling away at PUNCH_DECAY a
+## second, and the eased value taken off the field of view.
+const PUNCH_DECAY: float = 14.0
+var _punch: float = 0.0
+var _punch_now: float = 0.0
 ## Swing round to the other side: yaw at its start and end, and progress (1 = done).
 var _swing_from: float = 0.0
 var _swing_to: float = 0.0
@@ -111,6 +116,11 @@ func add_trauma(amount: float) -> void:
 	trauma = minf(trauma + amount, 1.0)
 
 
+## A quick push in: the view narrows by `degrees` at once and eases back out.
+func punch(degrees: float) -> void:
+	_punch = maxf(_punch, degrees)
+
+
 func _process(delta: float) -> void:
 	if tuning == null:
 		return
@@ -120,6 +130,10 @@ func _process(delta: float) -> void:
 	var amount: float = trauma * trauma * tuning.shake_max_offset
 	camera.h_offset = amount * (sin(_shake_clock * 61.3) + 0.5 * sin(_shake_clock * 113.7)) / 1.5
 	camera.v_offset = amount * (sin(_shake_clock * 53.1 + 1.3) + 0.5 * sin(_shake_clock * 97.9)) / 1.5
+	if _punch > 0.0 or _punch_now > 0.001:
+		_punch_now = lerpf(_punch_now, _punch, 1.0 - exp(-30.0 * real_delta))
+		_punch = maxf(_punch - PUNCH_DECAY * real_delta, 0.0)
+		camera.fov = tuning.camera_fov - _punch_now
 
 
 func _goal(target: Vector3) -> Vector3:

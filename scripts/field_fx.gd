@@ -59,6 +59,10 @@ var _last_state: PackedInt32Array = PackedInt32Array()
 ## Emitters for jump-dive landings, made at the first one and used in turn.
 var _dust: Array[CPUParticles3D] = []
 var _star_bursts: Array[CPUParticles3D] = []
+## Small dust puffs (see dust_puff), used in turn.
+const PUFF_POOL: int = 6
+var _puffs: Array[CPUParticles3D] = []
+var _next_puff: int = 0
 var _next_impact: int = 0
 
 
@@ -137,6 +141,32 @@ func daze_impact(pos: Vector3, dir: Vector3, speed: float) -> void:
 	stars.restart()
 	_next_impact = (_next_impact + 1) % IMPACT_POOL
 	_mark(pos + along * 1.2, along, _rng.randf_range(2.6, 3.4), _rng.randf_range(1.0, 1.4), DIRT_COLOR, 1.0)
+
+
+## A small puff of dust at `pos`, thrown along `dir` (flat; zero for all round)
+## and up: feet planted hard, or a throw off one foot. `force` of 1 is a stamp.
+func dust_puff(pos: Vector3, dir: Vector3, force: float) -> void:
+	if tuning == null:
+		return
+	if _puffs.is_empty():
+		for i: int in PUFF_POOL:
+			var small: CPUParticles3D = _make_dust()
+			small.amount = 10
+			small.lifetime = 0.5
+			_puffs.append(small)
+	var along: Vector3 = Vector3(dir.x, 0.0, dir.z)
+	var puff: CPUParticles3D = _puffs[_next_puff]
+	_next_puff = (_next_puff + 1) % PUFF_POOL
+	puff.position = Vector3(pos.x, 0.1, pos.z)
+	if along.length_squared() > 0.01:
+		puff.direction = (along.normalized() + Vector3(0.0, 0.6, 0.0)).normalized()
+		puff.spread = 40.0
+	else:
+		puff.direction = Vector3.UP
+		puff.spread = 80.0
+	puff.initial_velocity_min = 0.8 * force
+	puff.initial_velocity_max = 2.6 * force
+	puff.restart()
 
 
 func _make_dust() -> CPUParticles3D:

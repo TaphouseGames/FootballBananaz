@@ -43,6 +43,15 @@ var blown_time: float = 0.0
 ## Set by PlayController at the line-up of a play-action play: until this long
 ## after the snap this coverage defender plays the faked run. 0 = he does not.
 var bite_time: float = 0.0
+## He has bitten on a pump fake (see bite_on_pump): from when until when
+## (live_time), and where he thought the ball was going.
+var pump_bite_from: float = 0.0
+var pump_bite_time: float = 0.0
+var pump_bite_spot: Vector3 = Vector3.ZERO
+## A quarterback wrapped up in the pocket has decided whether to try to throw,
+## and a defender by the passer whether to jump at the ball as it comes out.
+var _grasp_decided: bool = false
+var _line_jump_decided: bool = false
 ## Set by PlayController at the line-up: this long after the snap this coverage
 ## defender dives at his receiver to put him on the ground (negative = he does
 ## not). `takeout_target` is the man he has gone for, until the dive lands.
@@ -186,7 +195,8 @@ func think(pc: PlayController, delta: float) -> void:
 	# With a tackler on his back a carrier gets both arms round the ball if he
 	# still can. (He does no other thinking then: see can_act below.)
 	if player.state == Player.State.DRAGGING:
-		pc.do_secure(player)
+		if not _throws_from_grasp(pc):
+			pc.do_secure(player)
 	player.is_blocking = false
 	player.calling_for_ball = false
 	player.ai_speed_scale = 1.0
@@ -560,6 +570,37 @@ func _offense_pocket(pc: PlayController) -> void:
 				_run_route(pc)
 
 
+## The man a quarterback who is being tackled would try to get the ball to, or
+## null: he is running with it, or there is nobody.
+func hit_throw_target(pc: PlayController) -> Player:
+	if _scrambling or _keep_ball or pc.heave or pc.off_play == null or pc.off_play.is_run:
+		return null
+	return _best_receiver(pc, true)
+
+
+## Wrapped up in the pocket: once a tackle he may try to get rid of the ball
+## instead of going down with it. True on the tick he does.
+func _throws_from_grasp(pc: PlayController) -> bool:
+	if _grasp_decided or player != pc.qb or not pc.in_the_grasp():
+		return false
+	_grasp_decided = true
+	if randf() >= tuning.ai_qb_hit_throw_chance:
+		return false
+	var target: Player = hit_throw_target(pc)
+	if target == null:
+		return false
+	pc.throw_ball(target, tuning.hit_throw_power, PlayController.Placement.NORMAL, true)
+	return true
+
+
+## Sold on a pump fake until `until` (live_time): he breaks on the throw he
+## thought he saw, to `spot`, and is left standing when it does not come.
+func bite_on_pump(from: float, until: float, spot: Vector3) -> void:
+	pump_bite_from = from
+	pump_bite_time = until
+	pump_bite_spot = spot
+
+
 func _quarterback(pc: PlayController) -> void:
 	if _scrambling:
 		_carry(pc)
@@ -616,6 +657,10 @@ func _quarterback(pc: PlayController) -> void:
 			else:
 				_scrambling = true
 			run_kind = &"bail"
+		return
+	if not pressured and not out_of_time and best_open < tuning.ai_qb_open_distance and randf() < tuning.ai_qb_pump_chance:
+		# Nobody open and time to spare: he pumps to move the coverage.
+		pc.pump_fake()
 		return
 	if best_open >= tuning.ai_qb_open_distance or pressured or out_of_time:
 		var power: float = choose_pass(pc, best, best_open, pressured)
@@ -1326,7 +1371,9 @@ func _would_clear(opponent: Player, toward: Vector3, dist: float) -> bool:
 	var t: float = contact / maxf(tuning.jump_time, 0.01)
 	if t >= 1.0:
 		return false
-	return 4.0 * player.jump_height() * t * (1.0 - t) >= tuning.hurdle_clear_height
+	# As high as the stamina he has left would take him.
+	var height: float = player.jump_height(player.move_strength(tuning.jump_stamina_cost, false))
+	return 4.0 * height * t * (1.0 - t) >= tuning.hurdle_clear_height
 
 
 ## True on the tick this carrier means to start his spin or stiff arm against
@@ -1527,6 +1574,13 @@ func _defense_pocket(pc: PlayController) -> void:
 	if pc.live_time < bite_time and pc.phase == PlayController.Phase.POCKET and pc.runner != null:
 		# Sold on the faked handoff: he comes up to stop the run.
 		_seek(pc.runner.position)
+		return
+	if pc.live_time < pump_bite_time and pc.phase == PlayController.Phase.POCKET:
+		# Sold on the pump fake: he breaks on the ball that never left, then
+		# stands there finding out.
+		var into: float = (pc.live_time - pump_bite_from) / maxf(pump_bite_time - pump_bite_from, 0.01)
+		if into < 0.35:
+			_seek(pump_bite_spot)
 		return
 	if _takes_out(pc):
 		return
@@ -1835,6 +1889,14 @@ func _think_air(pc: PlayController) -> void:
 		# Nothing to go and get: he stays on his job.
 		_defense_pocket(pc)
 		return
+	if not _line_jump_decided:
+		# Right by the passer and in the way of it: hands up, and maybe a jump,
+		# to get a finger on the ball as it comes out.
+		_line_jump_decided = true
+		if _in_throwing_lane(pc) and randf() < _sharp(tuning.ai_line_tip_jump_chance, tuning.ai_edge_line_tip_jump_chance):
+			pc.game.add_stat(&"line_tip_jumps")
+			pc.do_jump(player)
+			return
 	var react_time: float = _sharp(tuning.ai_ball_react_time, tuning.ai_edge_ball_react_time)
 	if pc.ball.intended == pc.read_target:
 		# The throw the defense was waiting for.
@@ -1865,6 +1927,25 @@ func _think_air(pc: PlayController) -> void:
 		if randf() < _sharp(tuning.ai_contest_chance, tuning.ai_edge_contest_chance):
 			pc.do_jump(player)
 	_go_for_ball(pc)
+
+
+## Close to the man who has just thrown, and ahead of him within a stride of
+## the line the ball is leaving on.
+func _in_throwing_lane(pc: PlayController) -> bool:
+	var thrower: Player = pc.ball.thrower
+	if thrower == null:
+		return false
+	var to: Vector3 = player.position - thrower.position
+	to.y = 0.0
+	if to.length() > tuning.line_tip_jump_range:
+		return false
+	var line: Vector3 = pc.ball.target_point - thrower.position
+	line.y = 0.0
+	if line.length_squared() < 0.01:
+		return false
+	line = line.normalized()
+	var along: float = to.dot(line)
+	return along > 0.0 and (to - line * along).length() <= 1.5
 
 
 ## Where a defender going for the ball runs to. Mostly where it comes down. But
@@ -2072,6 +2153,10 @@ func _reset() -> void:
 	man_target = null
 	blown_time = 0.0
 	bite_time = 0.0
+	pump_bite_from = 0.0
+	pump_bite_time = 0.0
+	_grasp_decided = false
+	_line_jump_decided = false
 	takeout_time = -1.0
 	takeout_target = null
 	technique = Technique.TIGHT

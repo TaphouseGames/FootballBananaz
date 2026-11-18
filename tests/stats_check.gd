@@ -197,6 +197,11 @@ func _check_menu() -> void:
 			var ratings: PlayerRatings = team.squad[i].ratings
 			_expect(ratings.overall() > 0 and ratings.card_ratings().size() >= 10, "%s has no card" % StatBook.label_of(team.squad[i]))
 			_expect(ratings.number > 0 and ratings.display_name != "", "player %d of %s has no name or number" % [i, team.short_name])
+			# His model is on the card, in the kit he has on the field.
+			var shown: PlayerModel = menu._preview_model
+			_expect(shown.display_name == ratings.display_name and shown.number == ratings.number and shown.rig != null, "the roster's model is not %s" % ratings.display_name)
+			_expect(shown.white_kit == team.white_kit and shown.team_color == team.team_color, "the roster's model of %s is in the wrong kit" % ratings.display_name)
+			_expect(menu._preview_view.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "the roster's model is not being drawn")
 	menu.show_screen(PauseMenu.Screen.CONTROLS)
 	_expect(menu.screen == PauseMenu.Screen.CONTROLS and menu._body.get_child_count() == 1, "the controls screen did not build")
 	menu.show_screen(PauseMenu.Screen.MENU)

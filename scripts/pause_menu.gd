@@ -24,7 +24,9 @@ const CONTROLS: Array[Array] = [
 		["(A) (X) (B)", "Throw to that receiver: tap to lob, hold longer to throw harder"],
 		["Hold (LB)", "Lead him"],
 		["Hold (RB)", "Underthrow"],
-		["Hold RT", "Tuck and run, let go to throw again"],
+		["Tap (RB)", "Pump fake: some defenders bite on it"],
+		["Hold RT", "Tuck and run, let go to throw again. The ring at his feet turns green once they are set: before that the throw is wild"],
+		["Wrapped up", "A pass button gets the ball away as he goes down, mostly short and off target"],
 		["LT", "Throw it away, into the stands"],
 		["(Y)", "Jump. With four men out: throw to the fourth"],
 	]],
@@ -74,6 +76,13 @@ const BAR_COLOR: Color = Color(0.45, 0.62, 0.52)
 const STAT_WIDTH: float = 56.0
 const NAME_WIDTH: float = 150.0
 const SCROLL_SPEED: float = 500.0
+## The chosen player's model on his card in the roster: the size of its
+## picture, how many times finer than that it is drawn, the metres the picture
+## is tall, and how fast he turns round, in radians a second.
+const PREVIEW_SIZE: Vector2 = Vector2(170.0, 300.0)
+const PREVIEW_RENDER_SCALE: int = 2
+const PREVIEW_FRAME: float = 2.3
+const PREVIEW_TURN_SPEED: float = 0.8
 ## Buttons that close or pick something: the game stays paused until all of
 ## them are let go, so the press cannot also snap the ball or throw a pass.
 const HELD_ACTIONS: Array[StringName] = [&"pause", &"confirm", &"back"]
@@ -92,6 +101,11 @@ var _cursor: int = 0
 var _box_page: int = 0
 var _roster_team: int = 0
 var _roster_cursor: int = 0
+## The little world the roster's player is drawn in (see ModelStage), the
+## model in it and whose it is now.
+var _preview_view: SubViewport
+var _preview_model: PlayerModel
+var _preview_player: Player
 
 var _title: Label
 var _body: MarginContainer
@@ -138,6 +152,7 @@ func _process(delta: float) -> void:
 			_update_menu()
 		Screen.ROSTER:
 			_update_roster()
+			_preview_model.rotation.y = wrapf(_preview_model.rotation.y + PREVIEW_TURN_SPEED * delta, 0.0, TAU)
 		_:
 			_update_table(delta)
 
@@ -170,6 +185,7 @@ func close(to_menu: bool = false) -> void:
 	_to_menu = to_menu
 	ScreenFade.pop(self, false, ScreenFade.MENU_FADE, true)
 	game.hud.hint.modulate.a = 1.0
+	_preview_view.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 
 func _finish_close() -> void:
@@ -305,6 +321,8 @@ func _refresh() -> void:
 		_body.remove_child(child)
 		child.queue_free()
 	_scroll.scroll_vertical = 0
+	# The roster's player is only drawn while his card is up.
+	_preview_view.render_target_update_mode = SubViewport.UPDATE_ALWAYS if screen == Screen.ROSTER else SubViewport.UPDATE_DISABLED
 	match screen:
 		Screen.MENU:
 			_title.text = "GAME OVER" if _game_over() else "PAUSED"
@@ -479,7 +497,7 @@ func _roster_view() -> Control:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 24)
 	var list: VBoxContainer = VBoxContainer.new()
-	list.custom_minimum_size.x = 400.0
+	list.custom_minimum_size.x = 340.0
 	list.add_theme_constant_override(&"separation", 6)
 	row.add_child(list)
 	for i: int in team.squad.size():
@@ -535,6 +553,17 @@ func _player_card(player: Player) -> Control:
 	overall.add_child(_label("OVERALL", 12, DIM_TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	column.add_child(_spacer(6.0))
 
+	# The man himself on the left, in his kit, and his numbers beside him.
+	var below: HBoxContainer = HBoxContainer.new()
+	below.add_theme_constant_override(&"separation", 14)
+	below.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(below)
+	below.add_child(_preview_of(player))
+	column = VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override(&"separation", 3)
+	below.add_child(column)
+
 	for rating: Array in ratings.card_ratings():
 		var text: String = rating[0]
 		var value: int = rating[1]
@@ -571,6 +600,23 @@ func _player_card(player: Player) -> Control:
 		for line: String in StatBook.summary_of(season.player_line(season_team, player.index)):
 			column.add_child(_label(line, 15, TEXT))
 	return card
+
+
+## The picture of `player`'s model for his card. There is one model for the
+## menu: it is dressed as him here, and faces front again for a new man.
+func _preview_of(player: Player) -> Control:
+	var ratings: PlayerRatings = player.ratings
+	_preview_model.show_look(ratings.look_or_default(), player.team.team_color, ratings.number, ratings.display_name, player.team.white_kit)
+	if player != _preview_player:
+		_preview_player = player
+		_preview_model.rotation.y = 0.0
+	var picture: TextureRect = TextureRect.new()
+	picture.custom_minimum_size = PREVIEW_SIZE
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	picture.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	picture.texture = _preview_view.get_texture()
+	return picture
 
 
 # --- Building blocks -----------------------------------------------------------------
@@ -624,6 +670,11 @@ func _build() -> void:
 	_sound = AudioStreamPlayer.new()
 	_sound.bus = AudioDirector.BUS_UI
 	add_child(_sound)
+
+	_preview_view = ModelStage.build(Vector2i(PREVIEW_SIZE) * PREVIEW_RENDER_SCALE, PREVIEW_FRAME, 28.0)
+	add_child(_preview_view)
+	_preview_model = ModelStage.model()
+	_preview_view.add_child(_preview_model)
 
 
 # The pieces of the tables are shared with the season's screen (StatTable).

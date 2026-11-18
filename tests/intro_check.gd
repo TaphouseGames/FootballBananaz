@@ -61,7 +61,7 @@ func _process(_delta: float) -> bool:
 			if _frames == 1:
 				if state != &"Intro":
 					_failures.append("the match opened in '%s', not Intro" % state)
-				if _game.hud.top_bar.visible or _game.hud._intro_card == null:
+				if _game.hud.scoreboard.visible or _game.hud._intro_card == null:
 					_failures.append("the intro card is not up in place of the scoreboard")
 				if Game.show_intro:
 					_failures.append("the intro flag was not cleared")
@@ -116,7 +116,7 @@ func _check_handed_over() -> void:
 	var rig: CameraRig = _game.camera_rig
 	if rig._shot or not rig.camera.transform.is_equal_approx(rig._home):
 		_failures.append("the camera did not go back to its rig")
-	if not _game.hud.top_bar.visible or _game.hud._intro_card != null:
+	if not _game.hud.scoreboard.visible or _game.hud._intro_card != null:
 		_failures.append("the scoreboard did not come back")
 
 

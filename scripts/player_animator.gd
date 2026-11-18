@@ -79,6 +79,10 @@ const HIP_ARM: Vector3 = Vector3(24.0, 0.0, -44.0)
 const HIP_FORE: Vector3 = Vector3(0.0, -100.0, 0.0)
 const HIP_HAND: Vector3 = Vector3(0.215, 0.03, 0.06)
 ## Pose branches for a block: waiting for someone, holding a man, being held.
+const MODE_PUMP: int = 22
+const MODE_FLAIR: int = 23
+## How long the stamp lasts that a quarterback sets his feet with.
+const PLANT_TIME: float = 0.26
 const MODE_BLOCK_READY: int = 6
 const MODE_BLOCK_HOLD: int = 8
 const MODE_BLOCK_FIGHT: int = 9
@@ -141,6 +145,8 @@ var _phase: float = 0.0
 var _clock: float = 0.0
 var _throw_timer: float = 0.0
 var _spike_timer: float = 0.0
+## What is left of the stamp a quarterback sets his feet with.
+var _plant_timer: float = 0.0
 ## What is left of the leg kick, and the side it goes to (+1 his right).
 var _kick_timer: float = 0.0
 var _kick_side: float = 1.0
@@ -407,6 +413,7 @@ func update(delta: float, instant: bool) -> void:
 	_clock += delta
 	_throw_timer = maxf(_throw_timer - delta, 0.0)
 	_spike_timer = maxf(_spike_timer - delta, 0.0)
+	_plant_timer = maxf(_plant_timer - delta, 0.0)
 	_kick_timer = maxf(_kick_timer - delta, 0.0)
 	_ground = 1.0
 	_rate = 14.0
@@ -1010,6 +1017,10 @@ func _build_pose(delta: float) -> void:
 		if player == pc.qb and pc.faking() and not pc.flick_returning() and not pc.ball_dead and not player.is_tucked():
 			_mode = 4
 			_fake_handoff()
+		elif player == pc.qb and player.pump_timer > 0.0 and not pc.ball_dead:
+			_mode = MODE_PUMP
+			_qb_cocked()
+			_pump_fake()
 		elif player == pc.qb and pc.phase == PlayController.Phase.POCKET and not pc.ball_dead and not pc.flick_returning() and player.feet_set >= 1.0 and not player.is_tucked():
 			_mode = 2
 			_qb_cocked()
@@ -1019,6 +1030,9 @@ func _build_pose(delta: float) -> void:
 		else:
 			_mode = 1
 			_tuck_ball()
+	elif player.flair_timer > 0.0 and player.flair != Player.Flair.NONE:
+		_mode = MODE_FLAIR
+		_flair_throw()
 	elif _throw_timer > 0.0:
 		_mode = 3
 		_throw_follow_through()
@@ -1272,6 +1286,109 @@ func _qb_cocked() -> void:
 	_pose[B.HAND_R] = Vector3(0.0, 0.0, -20.0)
 	_pose[B.ARM_L] = Vector3(-55.0, 0.0, -62.0)
 	_pose[B.FORE_L] = Vector3(0.0, -70.0, 0.0)
+	# Feet set: a wide base with the knees bent, stamped into as they come set.
+	var stamp: float = sin(clampf(1.0 - _plant_timer / PLANT_TIME, 0.0, 1.0) * PI) if _plant_timer > 0.0 else 0.0
+	for thigh: int in [B.THIGH_L, B.THIGH_R]:
+		_pose[thigh].x -= 10.0 + 22.0 * stamp
+		_pose[thigh].z += 9.0
+	for shin: int in [B.SHIN_L, B.SHIN_R]:
+		_pose[shin].x += 18.0 + 40.0 * stamp
+	_pose[B.SPINE].x += 7.0 * stamp
+
+
+## His feet have just come set: plays the stamp down into the stance.
+func plant() -> void:
+	_plant_timer = PLANT_TIME
+
+
+## Pump fake, over the cocked pose: the arm whips forward as if the ball were
+## leaving and snaps back, the ball in his hand all the way.
+func _pump_fake() -> void:
+	var tuning: Tuning = player.tuning
+	var t: float = clampf(1.0 - player.pump_timer / maxf(tuning.pump_time, 0.01), 0.0, 1.0)
+	# Out fast, back a little slower.
+	var out: float = sin(pow(t, 0.7) * PI)
+	_rate = 34.0
+	_stash()
+	_ball_hand = B.HAND_R
+	_grip = true
+	_pose[B.SPINE] = Vector3(16.0, 0.0, 0.0)
+	_pose[B.CHEST] = Vector3(8.0, 26.0, 0.0)
+	_pose[B.HEAD] = Vector3(-4.0, -6.0, 0.0)
+	_pose[B.ARM_R] = Vector3(-70.0, 0.0, -50.0)
+	_pose[B.FORE_R] = Vector3(0.0, -30.0, 0.0)
+	_pose[B.HAND_R] = Vector3(0.0, 0.0, -20.0)
+	_pose[B.ARM_L] = Vector3(10.0, 0.0, -66.0)
+	_pose[B.FORE_L] = Vector3(0.0, -80.0, 0.0)
+	for leg: int in [B.THIGH_L, B.THIGH_R, B.SHIN_L, B.SHIN_R, B.FOOT_L, B.FOOT_R, B.HIPS]:
+		_pose[leg] = _scratch[leg]
+	_blend_from_stash(out)
+
+
+## A throw on the run, as the ball leaves and after: over the top of whatever
+## his legs are doing. The spinning throw has the arm flung right across him
+## and the off arm out wide as he goes round (Player turns the whole of him);
+## the leap has him off the ground and laid over sideways, slinging it side
+## arm; the fade has him off his back foot, leaning away with a knee up.
+func _flair_throw() -> void:
+	var tuning: Tuning = player.tuning
+	var t: float = clampf(1.0 - player.flair_timer / maxf(tuning.flair_time, 0.01), 0.0, 1.0)
+	var power: float = player.flair_power
+	# Up at once, held, and let go over the last third.
+	var weight: float = smoothstep(0.0, 0.1, t) * (1.0 - smoothstep(0.68, 1.0, t))
+	var air: float = sin(clampf(t / 0.8, 0.0, 1.0) * PI)
+	var side: float = player.flair_side
+	_rate = 30.0
+	_stash()
+	match player.flair:
+		Player.Flair.SPIN:
+			_pose[B.SPINE] = Vector3(14.0, 0.0, 0.0)
+			_pose[B.CHEST] = Vector3(12.0, 48.0, 0.0)
+			_pose[B.HEAD] = Vector3(-10.0, -30.0, 0.0)
+			_pose[B.ARM_R] = Vector3(-40.0, 30.0, -80.0)
+			_pose[B.FORE_R] = Vector3(0.0, -8.0, 0.0)
+			_pose[B.ARM_L] = Vector3(-10.0, -30.0, -8.0)
+			_pose[B.FORE_L] = Vector3(0.0, -20.0, 0.0)
+			_pose[B.THIGH_L] = Vector3(-62.0 * power, 0.0, 8.0)
+			_pose[B.SHIN_L] = Vector3(95.0 * power, 0.0, 0.0)
+			_pose[B.THIGH_R] = Vector3(-6.0, 0.0, 0.0)
+			_pose[B.SHIN_R] = Vector3(14.0, 0.0, 0.0)
+			_ground = 1.0 - 0.6 * air
+			_hop = 0.22 * air * power
+		Player.Flair.LEAP:
+			_pose[B.HIPS] = Vector3(0.0, 0.0, -34.0 * power * side)
+			_pose[B.SPINE] = Vector3(6.0, 0.0, -10.0 * side)
+			_pose[B.CHEST] = Vector3(4.0, 36.0, 0.0)
+			_pose[B.HEAD] = Vector3(-6.0, -20.0, 20.0 * side)
+			_pose[B.ARM_R] = Vector3(-30.0, 40.0, -12.0)
+			_pose[B.FORE_R] = Vector3(0.0, -14.0, 0.0)
+			_pose[B.ARM_L] = Vector3(-120.0, 0.0, -50.0)
+			_pose[B.FORE_L] = Vector3(0.0, -30.0, 0.0)
+			_pose[B.THIGH_L] = Vector3(-50.0, 0.0, 16.0)
+			_pose[B.SHIN_L] = Vector3(88.0, 0.0, 0.0)
+			_pose[B.THIGH_R] = Vector3(18.0, 0.0, 16.0)
+			_pose[B.SHIN_R] = Vector3(60.0, 0.0, 0.0)
+			_pose[B.FOOT_L] = Vector3(30.0, 0.0, 0.0)
+			_pose[B.FOOT_R] = Vector3(30.0, 0.0, 0.0)
+			_ground = 1.0 - air
+			_hop = 0.55 * air * power
+		Player.Flair.FADE:
+			_pose[B.HIPS] = Vector3(-16.0 * power, 0.0, 0.0)
+			_pose[B.SPINE] = Vector3(-18.0 * power, 0.0, 0.0)
+			_pose[B.CHEST] = Vector3(0.0, 34.0, 0.0)
+			_pose[B.HEAD] = Vector3(12.0, -12.0, 0.0)
+			_pose[B.ARM_R] = Vector3(-110.0, 0.0, -40.0)
+			_pose[B.FORE_R] = Vector3(0.0, -10.0, 0.0)
+			_pose[B.ARM_L] = Vector3(-60.0, 0.0, -20.0)
+			_pose[B.FORE_L] = Vector3(0.0, -40.0, 0.0)
+			_pose[B.THIGH_L] = Vector3(-84.0, 0.0, 0.0)
+			_pose[B.SHIN_L] = Vector3(100.0, 0.0, 0.0)
+			_pose[B.THIGH_R] = Vector3(10.0, 0.0, 0.0)
+			_pose[B.SHIN_R] = Vector3(8.0, 0.0, 0.0)
+			_pose[B.FOOT_R] = Vector3(34.0, 0.0, 0.0)
+			_ground = 1.0 - 0.8 * air
+			_hop = 0.3 * air * power
+	_blend_from_stash(weight)
 
 
 ## The quarterback sends a receiver in motion: a leg kick toward `side` (+1 his

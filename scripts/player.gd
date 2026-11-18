@@ -92,6 +92,23 @@ var turbo_active: bool = false
 ## 0 while sprinting on turbo, back to 1 shortly after. A quarterback throws
 ## accurately only with his feet set.
 var feet_set: float = 1.0
+## How long his feet take to set again since they last came unset.
+var _feet_set_time: float = 0.0
+## Above 0 while a quarterback pumps the ball without letting go of it.
+var pump_timer: float = 0.0
+## A throw on the run is an acrobatic one. Visual only: which move, how much of
+## it is left, which way it turns (+1 over his own left), how big it is (0..1)
+## and the turn it makes, from the yaw it started at.
+enum Flair { NONE, SPIN, LEAP, FADE }
+var flair: Flair = Flair.NONE
+var flair_timer: float = 0.0
+var flair_side: float = 1.0
+var flair_power: float = 1.0
+var _flair_from: float = 0.0
+var _flair_sweep: float = 0.0
+## The ring at a quarterback's feet that shows whether they are set. Made the
+## first time he has the ball in the pocket.
+var feet_fx: FeetSetFx
 
 ## Set each tick by the AI while this player is trying to block.
 var is_blocking: bool = false
@@ -137,6 +154,12 @@ var secure_timer: float = 0.0
 var secure_cooldown: float = 0.0
 ## 0..1: how much of the move the turbo he had left paid for (see start_secure).
 var secure_strength: float = 1.0
+## How strong his last jump, dive, spin and stiff arm were for the stamina he
+## had left (see move_strength): 1 for one paid for in full.
+var jump_strength: float = 1.0
+var dive_strength: float = 1.0
+var spin_strength: float = 1.0
+var stiff_arm_strength: float = 1.0
 var jump_cooldown: float = 0.0
 var tackle_cooldown: float = 0.0
 ## Above 0 during a dive and for a moment after landing: the dive still reaches
@@ -216,6 +239,10 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	secure_timer = 0.0
 	secure_cooldown = 0.0
 	secure_strength = 1.0
+	jump_strength = 1.0
+	dive_strength = 1.0
+	spin_strength = 1.0
+	stiff_arm_strength = 1.0
 	facing = face_dir
 	look_dir = Vector3.ZERO
 	state = State.NORMAL
@@ -228,6 +255,10 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	turbo_locked = false
 	turbo_active = false
 	feet_set = 1.0
+	_feet_set_time = 0.0
+	pump_timer = 0.0
+	flair = Flair.NONE
+	flair_timer = 0.0
 	is_blocking = false
 	calling_for_ball = false
 	block_slow_timer = 0.0
@@ -478,29 +509,55 @@ func secure_power() -> float:
 ## One press: he secures the ball for tuning.secure_time, and cannot again
 ## until the cooldown is over. Also with a tackler on his back, where it lasts
 ## until the drag ends (see _tick_timers).
-## It spends tuning.secure_turbo_cost of his turbo. With less than that left it
-## spends what there is and is that much shorter and weaker, and with none it
-## does nothing. Emptying the meter locks turbo, as sprinting it empty does.
+## It spends tuning.secure_turbo_cost of his turbo, scaled by his endurance (see
+## stamina_cost). With less than that left it spends what there is and is that
+## much shorter and weaker, and with none it does nothing. Emptying the meter
+## locks turbo, as sprinting it empty does.
 func start_secure() -> bool:
 	if not has_ball or frozen or secure_cooldown > 0.0:
 		return false
 	if state != State.NORMAL and state != State.DRAGGING:
 		return false
-	var cost: float = tuning.secure_turbo_cost
-	if cost > 0.0:
-		if turbo <= 0.0:
-			return false
-		var spent: float = minf(turbo, cost)
-		turbo -= spent
-		if turbo <= 0.0:
-			turbo = 0.0
-			turbo_locked = true
-		secure_strength = spent / cost
-	else:
-		secure_strength = 1.0
+	if tuning.secure_turbo_cost > 0.0 and turbo <= 0.0:
+		return false
+	secure_strength = _spend_stamina(stamina_cost(tuning.secure_turbo_cost))
 	secure_timer = tuning.secure_time * secure_strength
 	secure_cooldown = tuning.secure_cooldown
 	return true
+
+
+## Takes `cost` off the stamina meter, or what is left of it, and returns the
+## share of the cost that paid: 1 in full, 0 on an empty meter. Emptying the
+## meter locks turbo, as sprinting it empty does.
+func _spend_stamina(cost: float) -> float:
+	if cost <= 0.0:
+		return 1.0
+	var spent: float = clampf(turbo, 0.0, cost)
+	turbo -= spent
+	if turbo <= 0.0:
+		turbo = 0.0
+		turbo_locked = true
+	return spent / cost
+
+
+## What a move with a base cost of `cost` takes off this player's stamina
+## meter: less with good endurance, more with poor (as sprinting drains it).
+func stamina_cost(cost: float) -> float:
+	return cost * PlayerRatings.blend(ratings.endurance, tuning.endurance_drain_low, tuning.endurance_drain_high)
+
+
+## How strong a jump, dive, spin or stiff arm with a base cost of `cost` of the
+## stamina meter comes out, and pays for it (what he pays is scaled by his
+## endurance, see stamina_cost): 1 with enough left, down to
+## tuning.move_min_strength on an empty meter. With `spend` off it only looks.
+func move_strength(cost: float, spend: bool = true) -> float:
+	cost = stamina_cost(cost)
+	var paid: float = 1.0
+	if spend:
+		paid = _spend_stamina(cost)
+	elif cost > 0.0:
+		paid = clampf(turbo, 0.0, cost) / cost
+	return lerpf(tuning.move_min_strength, 1.0, paid)
 
 
 ## Lying dazed after a jump dive, or after being flattened against the wall.
@@ -561,11 +618,15 @@ func air_height() -> float:
 	return 4.0 * jump_height() * t * (1.0 - t)
 
 
-## How high his feet get at the top of a jump: higher with a better juke rating.
-func jump_height() -> float:
+## How high his feet get at the top of a jump: higher with a better juke
+## rating, lower for a jump he was short of stamina for. `strength` below 0
+## means that of his last jump (see move_strength).
+func jump_height(strength: float = -1.0) -> float:
+	if strength < 0.0:
+		strength = jump_strength
 	if ratings == null:
-		return tuning.jump_height
-	return tuning.jump_height * PlayerRatings.blend(ratings.juke, tuning.jump_height_scale_low, tuning.jump_height_scale_high)
+		return tuning.jump_height * strength
+	return tuning.jump_height * strength * PlayerRatings.blend(ratings.juke, tuning.jump_height_scale_low, tuning.jump_height_scale_high)
 
 
 func max_speed() -> float:
@@ -584,16 +645,19 @@ func max_speed() -> float:
 	return speed
 
 
-## `speed` below 0 means the full tuning.dive_speed.
-func start_dive(dir: Vector3, speed: float = -1.0) -> void:
+## `speed` below 0 means the full tuning.dive_speed. It spends
+## tuning.dive_stamina_cost and is that much shorter when he is short of it
+## (see move_strength), unless it is `free`.
+func start_dive(dir: Vector3, speed: float = -1.0, free: bool = false) -> void:
 	if not can_act():
 		return
+	dive_strength = 1.0 if free else move_strength(tuning.dive_stamina_cost)
 	state = State.DIVING
 	jump_dive = false
 	state_timer = tuning.dive_time
 	dive_reach_timer = tuning.dive_time + tuning.dive_catch_grace
 	facing = dir
-	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed)
+	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed) * dive_strength
 
 
 ## How long a jump dive started right now would stay in the air: longer from
@@ -610,6 +674,8 @@ func start_jump_dive(dir: Vector3, speed: float = -1.0) -> bool:
 		return false
 	dive_duration = jump_dive_time()
 	dive_start_height = air_height()
+	# On top of what the jump cost.
+	dive_strength = move_strength(tuning.dive_stamina_cost)
 	state = State.DIVING
 	jump_dive = true
 	state_timer = dive_duration
@@ -617,7 +683,7 @@ func start_jump_dive(dir: Vector3, speed: float = -1.0) -> bool:
 	jump_cooldown = tuning.jump_cooldown
 	turbo_active = false
 	facing = dir
-	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed * tuning.jump_dive_speed_scale)
+	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed * tuning.jump_dive_speed_scale) * dive_strength
 	return true
 
 
@@ -665,6 +731,7 @@ func start_shove(dir: Vector3) -> void:
 func start_jump() -> bool:
 	if not can_act() or jump_cooldown > 0.0:
 		return false
+	jump_strength = move_strength(tuning.jump_stamina_cost)
 	state = State.JUMPING
 	state_timer = tuning.jump_time
 	turbo_active = false
@@ -677,19 +744,22 @@ func start_jump() -> bool:
 func start_spin(side: float, juke: bool = false) -> bool:
 	if not can_act() or move_cooldown > 0.0:
 		return false
+	# Short of stamina it is slower, sidesteps less and takes less off the tackle
+	# (PlayController._on_tackle_contact).
+	spin_strength = move_strength(tuning.spin_stamina_cost)
 	state = State.SPINNING
 	state_timer = tuning.spin_time
 	spin_evade_timer = tuning.spin_evade_time
 	move_cooldown = tuning.move_cooldown
 	move_side = 1.0 if side >= 0.0 else -1.0
 	turbo_active = false
-	velocity *= tuning.spin_speed_scale
+	velocity *= tuning.spin_speed_scale * sqrt(spin_strength)
 	if juke:
 		# He keeps facing down his running line (see integrate), so this slides
 		# him across it.
 		if velocity.length_squared() > 0.6:
 			facing = velocity.normalized()
-		velocity += Vector3.UP.cross(facing) * move_side * tuning.spin_juke_distance / maxf(tuning.spin_time, 0.05)
+		velocity += Vector3.UP.cross(facing) * move_side * tuning.spin_juke_distance * spin_strength / maxf(tuning.spin_time, 0.05)
 	return true
 
 
@@ -698,6 +768,7 @@ func start_spin(side: float, juke: bool = false) -> bool:
 func start_stiff_arm(side: float) -> bool:
 	if not can_act() or move_cooldown > 0.0:
 		return false
+	stiff_arm_strength = move_strength(tuning.stiff_arm_stamina_cost)
 	state = State.STIFF_ARM
 	state_timer = tuning.stiff_arm_time
 	move_cooldown = tuning.move_cooldown
@@ -872,14 +943,16 @@ func _move_normal(delta: float) -> void:
 		if turbo_locked and turbo >= tuning.turbo_restart_threshold:
 			turbo_locked = false
 
-	# A quarterback's feet come unset when he tucks the ball and runs. A more
-	# agile one gets them set again sooner.
-	var unset: bool = turbo_active or is_tucked()
-	var set_time: float = tuning.pass_set_feet_time * PlayerRatings.blend(ratings.agility, tuning.agility_scale_low, tuning.agility_scale_high)
-	if unset or set_time <= 0.0:
-		feet_set = 0.0 if unset else 1.0
+	# A quarterback's feet come unset only when he uses turbo (tucks the ball and
+	# runs), and take a while to set again, less for a more agile one. Moving
+	# about without turbo never unsets them.
+	if turbo_active or is_tucked():
+		feet_set = 0.0
+		_feet_set_time = tuning.pass_set_feet_time * PlayerRatings.blend(ratings.agility, tuning.agility_scale_low, tuning.agility_scale_high)
+	elif _feet_set_time <= 0.0:
+		feet_set = 1.0
 	else:
-		feet_set = minf(feet_set + delta / set_time, 1.0)
+		feet_set = minf(feet_set + delta / _feet_set_time, 1.0)
 
 	if block_slow_timer > 0.0:
 		speed *= tuning.block_slow_factor
@@ -897,6 +970,8 @@ func _tick_timers(delta: float) -> void:
 	spin_evade_timer = maxf(spin_evade_timer - delta, 0.0)
 	move_cooldown = maxf(move_cooldown - delta, 0.0)
 	secure_cooldown = maxf(secure_cooldown - delta, 0.0)
+	pump_timer = maxf(pump_timer - delta, 0.0)
+	flair_timer = maxf(flair_timer - delta, 0.0)
 	# Wrapped up he hangs on to it until the drag is over.
 	if state != State.DRAGGING:
 		secure_timer = maxf(secure_timer - delta, 0.0)
@@ -1031,6 +1106,11 @@ func _update_visual(delta: float, instant: bool) -> void:
 		# One full turn over the spin, ending square to the running line again.
 		var turned: float = clampf(1.0 - state_timer / tuning.spin_time, 0.0, 1.0)
 		rotation.y = target_yaw + move_side * TAU * turned
+	elif flair == Flair.SPIN and flair_timer > 0.0 and state == State.NORMAL:
+		# The spinning throw: all the way round and on to face where it went,
+		# quickest at the start, as the arm comes through.
+		var spun: float = clampf(1.0 - flair_timer / maxf(tuning.flair_time, 0.01), 0.0, 1.0)
+		rotation.y = _flair_from + _flair_sweep * (1.0 - (1.0 - spun) * (1.0 - spun))
 	elif state != State.DOWN:
 		# A player on the turf stays turned the way he fell.
 		rotation.y = lerp_angle(rotation.y, target_yaw, 1.0 - exp(-18.0 * delta))
@@ -1038,6 +1118,58 @@ func _update_visual(delta: float, instant: bool) -> void:
 	if animator != null:
 		animator.update(delta, instant)
 	_update_daze(delta, instant)
+	_update_feet_fx(delta, instant)
+
+
+## A throw on the run, toward `to` (flat): he throws it spinning right round,
+## leaping sideways or fading back off one foot, whichever fits the way he is
+## running. `power` (0..1) is how far from set his feet were. Visual only: the
+## ball has already gone.
+func start_flair(to: Vector3, power: float) -> void:
+	to.y = 0.0
+	if to.length_squared() < 0.01:
+		return
+	to = to.normalized()
+	var run: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
+	var pace: float = run.length()
+	var ahead: float = run.dot(to) / pace if pace > 0.5 else 1.0
+	var across: float = run.dot(Vector3.UP.cross(to)) / pace if pace > 0.5 else 0.0
+	flair_side = 1.0 if across >= 0.0 else -1.0
+	if ahead < -0.35:
+		flair = Flair.FADE
+	elif absf(across) > 0.75:
+		flair = Flair.LEAP
+	else:
+		flair = Flair.SPIN
+	flair_power = clampf(power, 0.3, 1.0)
+	flair_timer = tuning.flair_time
+	_flair_from = rotation.y
+	# Round the way he is already turning, and one whole turn more.
+	var turn: float = angle_difference(rotation.y, atan2(-to.z, to.x))
+	var way: float = signf(turn) if absf(turn) > 0.3 else flair_side
+	_flair_sweep = turn + way * TAU
+
+
+## His feet have just come set under him: he stamps down into his stance, with
+## a flash, dust at his heels and a click. Visual and sound only.
+func feet_planted() -> void:
+	flash(Color(0.6, 1.0, 0.6), 0.3)
+	if animator != null:
+		animator.plant()
+	if play != null:
+		play.on_feet_planted(self)
+
+
+## The ring at a quarterback's feet while he can throw: open and orange while
+## his feet are not set, closed and green once they are. Visual only.
+func _update_feet_fx(delta: float, instant: bool) -> void:
+	var shown: bool = not instant and play != null and play.shows_feet(self)
+	if feet_fx == null:
+		if not shown:
+			return
+		feet_fx = FeetSetFx.new()
+		add_child(feet_fx)
+	feet_fx.update(self, shown, delta)
 
 
 ## Stars round the head for as long as he is dazed. Visual only.

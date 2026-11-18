@@ -354,11 +354,25 @@ func ball_on_text() -> String:
 
 func clock_text() -> String:
 	if overtime:
+		return half_text()
+	return "%s  %s" % [half_text(), time_text()]
+
+
+## The half being played, or sudden death.
+func half_text() -> String:
+	if overtime:
 		return "OT"
+	return "1ST" if half == 1 else "2ND"
+
+
+## What is left of the half. Nothing in sudden death, which has no clock.
+func time_text() -> String:
+	if overtime:
+		return ""
 	var seconds: int = ceili(clock)
 	@warning_ignore("integer_division")
 	var minutes: int = seconds / 60
-	return "%s  %d:%02d" % ["1ST" if half == 1 else "2ND", minutes, seconds % 60]
+	return "%d:%02d" % [minutes, seconds % 60]
 
 
 ## A game of the season's playoffs: the semifinal or the final.

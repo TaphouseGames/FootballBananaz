@@ -1,6 +1,6 @@
 class_name HUD
 extends CanvasLayer
-## Scoreboard, down and distance, clock, turbo meter, banners and the
+## The scoreboard (see Scoreboard), turbo meter, banners and the
 ## play-select panel. Reads everything it shows from Game each frame.
 
 const GRID_COLUMNS: int = 3
@@ -32,10 +32,9 @@ var _tab_selected_style: StyleBoxFlat
 var _intro_card: IntroCard
 var _halftime_card: HalftimeCard
 
-@onready var top_bar: Control = $TopBar
-@onready var score_label: Label = $TopBar/Row/ScoreLabel
-@onready var down_label: Label = $TopBar/Row/DownLabel
-@onready var clock_label: Label = $TopBar/Row/ClockLabel
+@onready var scoreboard: Scoreboard = $Scoreboard
+## The play clock and the play-select timer: the number in the scoreboard's box.
+@onready var countdown: Label = scoreboard.play_clock
 @onready var banner: Label = $Banner
 @onready var sub_banner: Label = $SubBanner
 @onready var hint: Label = $Hint
@@ -45,12 +44,12 @@ var _halftime_card: HalftimeCard
 @onready var play_title: Label = $PlaySelect/Margin/Column/Title
 @onready var play_tabs: HBoxContainer = $PlaySelect/Margin/Column/Tabs
 @onready var play_grid: GridContainer = $PlaySelect/Margin/Column/PlayGrid
-@onready var countdown: Label = $Countdown
 @onready var pause_menu: PauseMenu = $PauseMenu
 
 
 func setup(p_game: Game) -> void:
 	game = p_game
+	scoreboard.setup(p_game)
 	pause_menu.setup(p_game)
 	hide_banner()
 	hide_play_select()
@@ -61,15 +60,7 @@ func setup(p_game: Game) -> void:
 func _process(_delta: float) -> void:
 	if game == null or game.offense == null:
 		return
-	var home_marker: String = "> " if game.offense == game.home else ""
-	var away_marker: String = " <" if game.offense == game.away else ""
-	score_label.text = "%s%s  %d  -  %d  %s%s" % [home_marker, game.home.short_name, game.home.score, game.away.score, game.away.short_name, away_marker]
-	# A kickoff has no spot yet.
-	if game.play_controller.kickoff:
-		down_label.text = game.down_text()
-	else:
-		down_label.text = "%s   |   %s" % [game.down_text(), game.ball_on_text()]
-	clock_label.text = game.clock_text()
+	scoreboard.refresh()
 
 	var controlled: Player = game.human.controlled
 	turbo_box.visible = controlled != null and not play_select.visible and _intro_card == null and _halftime_card == null
@@ -88,7 +79,7 @@ func show_banner(text: String, sub_text: String = "") -> void:
 ## The television graphics of the pregame intro, in place of the scoreboard.
 func show_intro() -> void:
 	hide_intro()
-	top_bar.visible = false
+	scoreboard.visible = false
 	_intro_card = IntroCard.new()
 	add_child(_intro_card)
 	# Under the pause menu.
@@ -97,7 +88,7 @@ func show_intro() -> void:
 
 
 func hide_intro() -> void:
-	top_bar.visible = true
+	scoreboard.visible = true
 	if _intro_card != null:
 		_intro_card.finish()
 		_intro_card = null
@@ -106,7 +97,7 @@ func hide_intro() -> void:
 ## The halftime report, in place of the scoreboard.
 func show_halftime() -> HalftimeCard:
 	hide_halftime()
-	top_bar.visible = false
+	scoreboard.visible = false
 	_halftime_card = HalftimeCard.new()
 	add_child(_halftime_card)
 	# Under the pause menu.
@@ -117,7 +108,7 @@ func show_halftime() -> HalftimeCard:
 
 func hide_halftime() -> void:
 	if _halftime_card != null:
-		top_bar.visible = true
+		scoreboard.visible = true
 		_halftime_card.finish()
 		_halftime_card = null
 

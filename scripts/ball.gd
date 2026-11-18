@@ -80,6 +80,9 @@ var _toss_height: float = 0.0
 var _spin: float = 0.0
 ## The ball in flight was kicked: it tumbles end over end instead of spiralling.
 var _kicked: bool = false
+## The pass in flight came out badly (thrown as he was hit): a wobbling duck,
+## not a spiral. Looks only. Set after throw_to(), which clears it.
+var wobbly: bool = false
 
 @onready var landing_marker: MeshInstance3D = $LandingMarker
 @onready var visual: Node3D = $Visual
@@ -195,6 +198,7 @@ func _launch(p_thrower: Player, p_intended: Player, from: Vector3, point: Vector
 	thrower = p_thrower
 	intended = p_intended
 	state = State.FLIGHT
+	wobbly = false
 	_wild = false
 	grounded = false
 	_gravity = tuning.pass_gravity
@@ -440,6 +444,13 @@ func _update_visual(delta: float) -> void:
 				if flat.length_squared() < 0.01:
 					flat = Vector3.RIGHT
 				visual.basis = _aim_basis(flat).rotated(Vector3.UP.cross(flat).normalized(), -_spin)
+			elif wobbly:
+				# Nose well off the line of flight, going round it.
+				var along: Vector3 = vel.normalized()
+				var across: Vector3 = along.cross(Vector3.UP)
+				across = across.normalized() if across.length_squared() > 0.0001 else Vector3.RIGHT
+				var nose: Vector3 = along.rotated(across, 0.5).rotated(along, _spin * 0.45)
+				visual.basis = _aim_basis(nose).rotated(nose.normalized(), _spin * 0.5)
 			else:
 				visual.basis = _aim_basis(vel).rotated(vel.normalized(), _spin)
 		State.HELD:

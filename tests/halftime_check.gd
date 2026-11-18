@@ -244,7 +244,7 @@ func _process(_delta: float) -> bool:
 		Step.WATCH:
 			if elapsed < 0.3:
 				return false
-			if elapsed < 0.6 and state == &"Halftime" and (hud.top_bar.visible or hud._halftime_card == null):
+			if elapsed < 0.6 and state == &"Halftime" and (hud.scoreboard.visible or hud._halftime_card == null):
 				_failures.append("the report is not up in place of the scoreboard")
 			if _out != "" and _shots_taken < SHOTS.size() and elapsed >= SHOTS[_shots_taken]:
 				root.get_texture().get_image().save_png(_out.path_join("halftime_%d.png" % _shots_taken))
@@ -296,7 +296,7 @@ func _check_second_half() -> void:
 		_failures.append("the second half did not start with a full clock")
 	if _game.offense != _game.opening_receiver.opponent:
 		_failures.append("the second half's kickoff goes to the team that got the first")
-	if not _game.hud.top_bar.visible or _game.hud._halftime_card != null:
+	if not _game.hud.scoreboard.visible or _game.hud._halftime_card != null:
 		_failures.append("the scoreboard did not come back")
 
 

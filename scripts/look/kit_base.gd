@@ -27,6 +27,8 @@ const TUCK_FADE: float = 0.05
 const HEAD_UNIT: float = 0.8
 
 static var _cache: Dictionary[String, KitBase] = {}
+## The whole characters still to be made ahead of time (see warm_start()).
+static var _warming: PackedStringArray = PackedStringArray()
 
 var id: String
 var scene: PackedScene
@@ -79,13 +81,60 @@ static func of_person(person: String) -> KitBase:
 	return _cache[key]
 
 
+## Gets the whole characters `people` ready ahead of the screen that shows
+## them: their files are read on another thread from now on, and warm_step()
+## makes one of them at a time. Anything asked for before its turn is made
+## there and then, as without this.
+static func warm_start(people: PackedStringArray) -> void:
+	for person: String in people:
+		if _cache.has("person:" + person) or _warming.has(person) or not PlayerParts.PEOPLE.has(person):
+			continue
+		var who: Dictionary = PlayerParts.PEOPLE[person]
+		if not ResourceLoader.exists(who["path"]) or not ResourceLoader.exists(who["mask"]):
+			continue
+		ResourceLoader.load_threaded_request(who["path"])
+		ResourceLoader.load_threaded_request(who["mask"])
+		_warming.append(person)
+
+
+## Makes the next character of warm_start() whose files have been read, if
+## there is one: at most one a call, so a frame is not held up for long. False
+## once there is nothing left to make.
+static func warm_step() -> bool:
+	for i: int in _warming.size():
+		var person: String = _warming[i]
+		var who: Dictionary = PlayerParts.PEOPLE[person]
+		var waiting: bool = false
+		for path: String in [who["path"], who["mask"]]:
+			if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				waiting = true
+		if waiting:
+			continue
+		of_person(person)
+		return true
+	return not _warming.is_empty()
+
+
+## The resource at `path`: taken over from the thread that is reading it for
+## warm_start() (waiting for it if it is not done), or loaded here.
+static func _take(path: String) -> Resource:
+	if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		var read: Resource = ResourceLoader.load_threaded_get(path)
+		if read != null:
+			return read
+	return load(path)
+
+
 func _init(body: String, person: bool = false) -> void:
 	id = body
 	is_person = person
 	if person:
 		var who: Dictionary = PlayerParts.PEOPLE[body]
-		scene = load(who["path"])
-		mask = load(who["mask"])
+		scene = _take(who["path"])
+		mask = _take(who["mask"])
+		var warming: int = _warming.find(body)
+		if warming >= 0:
+			_warming.remove_at(warming)
 		_bake_person(who)
 		return
 	var entry: Dictionary = PlayerParts.BODIES[body]

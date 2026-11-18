@@ -28,7 +28,9 @@ const PEOPLE_ATLAS: String = "res://assets/stadium/crowd_people_atlas.png"
 const PEOPLE_MASK: String = "res://assets/stadium/crowd_people_mask.png"
 const PEOPLE_NORMAL: String = "res://assets/stadium/crowd_people_normal.png"
 ## Share of the fans who hold a sign over their heads.
-const SIGN_SHARE: float = 0.03
+const SIGN_SHARE: float = 0.007
+## Nobody holds a sign within this many seats of somebody else who does.
+const SIGN_SPACING_SEATS: float = 8.0
 ## The levels of detail. A fan is a head, an outfit and legs at each of them
 ## (the same ones, so that nobody changes shirts as the camera comes closer),
 ## with fewer triangles the farther off.
@@ -44,9 +46,11 @@ const PANTS_COLORS: Array[Color] = [
 	Color(0.33, 0.34, 0.36), Color(0.3, 0.33, 0.2)]
 ## Share of a team's fans whose trousers are in the team's colour too.
 const TEAM_PANTS_SHARE: float = 0.2
-## The fans' meshes are the size of the character they are made from; this
-## makes them the size of the players (the scale of Model in player.tscn).
-const FAN_SCALE: float = 1.25
+## The fans' meshes are the size of the character they are made from. The
+## players are 1.25 of that (the scale of Model in player.tscn); the fans are
+## 0.7 of the players, or they look like giants behind a player at the wall.
+## The seats and the rows below are sized to fit fans of this size.
+const FAN_SCALE: float = 0.875
 ## A sign, in the fan mesh's units (so FAN_SCALE times this in yards): as wide
 ## as this, with the shape of a cell of the picture of the signs, its bottom
 ## edge this far below the holder's finger tips.
@@ -96,35 +100,36 @@ const WALL_HEIGHT: float = 2.3
 const WALL_THICKNESS: float = 0.4
 ## Height of the first row's floor; each row is ROW_DEPTH deep and ROW_RISE higher.
 const FIRST_ROW_HEIGHT: float = 1.7
-const ROW_DEPTH: float = 1.5
-const ROW_RISE: float = 0.75
+const ROW_DEPTH: float = 1.05
+const ROW_RISE: float = 0.525
 ## A fan's seat above the floor of its row, and the room each one gets.
-const SEAT_HEIGHT: float = 0.48
-const SEAT_PITCH: float = 1.2
+const SEAT_HEIGHT: float = 0.336
+const SEAT_PITCH: float = 0.84
 ## A fan sits this far back from the front of his row, as a share of its depth.
 const SEAT_AT: float = 0.55
 ## The seat under him: how wide it is, how far it reaches to the front and to
 ## the back of where he sits, how thick it is, and the back it hangs from (how
 ## thick, and how high above the floor of the row). tools/prep_crowd.py seats
-## the fans on y = 0 with their backs 0.4 yards behind their middles.
-const SEAT_WIDTH: float = 0.92
-const SEAT_FRONT: float = 0.22
-const SEAT_BACK: float = 0.42
-const SEAT_THICKNESS: float = 0.1
+## the fans on y = 0 with their backs 0.4 yards behind their middles, at the
+## players' size.
+const SEAT_WIDTH: float = 0.644
+const SEAT_FRONT: float = 0.154
+const SEAT_BACK: float = 0.294
+const SEAT_THICKNESS: float = 0.07
 ## The top of the seat is this far below where the fan sits: his thighs hang
 ## a little lower than that.
-const SEAT_SINK: float = 0.09
-const SEAT_REST_THICKNESS: float = 0.08
-const SEAT_REST_HEIGHT: float = 1.05
-const AISLE_WIDTH: float = 1.8
-const BAY_SEATS: int = 9
+const SEAT_SINK: float = 0.063
+const SEAT_REST_THICKNESS: float = 0.056
+const SEAT_REST_HEIGHT: float = 0.735
+const AISLE_WIDTH: float = 1.3
+const BAY_SEATS: int = 13
 ## The walkway behind the top row, and the wall behind that.
 const CONCOURSE_DEPTH: float = 4.0
 const BACK_WALL_HEIGHT: float = 2.6
 const BACK_WALL_THICKNESS: float = 0.6
 const ARC_STEPS: int = 8
 ## Tunnel mouths in the long stands: the rows they take up and half their width.
-const TUNNEL_ROWS: Vector2i = Vector2i(3, 6)
+const TUNNEL_ROWS: Vector2i = Vector2i(4, 9)
 const TUNNEL_HALF_WIDTH: float = 1.6
 
 const CONCRETE: Color = Color(0.23, 0.24, 0.27)
@@ -264,6 +269,8 @@ var tuning: Tuning
 var fan_count: int = 0
 ## Where each one sits (headless Godot cannot read a MultiMesh back).
 var fan_positions: PackedVector3Array = PackedVector3Array()
+## Where the ones with a sign sit.
+var sign_positions: PackedVector3Array = PackedVector3Array()
 var home_side_fans: Vector2i = Vector2i.ZERO
 var away_side_fans: Vector2i = Vector2i.ZERO
 ## What the shader is told, 0 = home and 1 = away.
@@ -318,6 +325,7 @@ func setup(p_tuning: Tuning, home: Team, away: Team, left_is_home: bool) -> void
 		old.free()
 	fan_count = 0
 	fan_positions.clear()
+	sign_positions.clear()
 	_score_labels.clear()
 	_flash_labels.clear()
 	_half_x = 0.0
@@ -946,6 +954,10 @@ func _build_crowd() -> void:
 		push_warning("Stadium: no legs in %s are from the fan '%s' (crowd_legs), so the fans get legs at random." % [KIT_SCENE, tuning.crowd_legs])
 
 	var mid_x: float = tuning.field_length * 0.5
+	# Every fan with the piece of the stands it is in ([chunk, fan], in the
+	# order of fan_positions), and the pieces by name ([name, chunk]).
+	var seated: Array = []
+	var records: Array = []
 	for index: int in runs.size():
 		var run: Run = runs[index]
 		# Per chunk of the run (a bay, or a piece of a corner): what
@@ -964,10 +976,40 @@ func _build_crowd() -> void:
 					chunk = mini(int(s / (PI * 0.5) * float(ARC_CHUNKS)), ARC_CHUNKS - 1)
 				if not chunks.has(chunk):
 					chunks[chunk] = _new_chunk()
-				_seat(chunks[chunk], _fan(run, s, at, mid_x))
+					records.append(["Chunk%d_%d" % [index, chunk], chunks[chunk]])
+				seated.append([chunks[chunk], _fan(run, s, at, mid_x)])
 				fan_positions.append(at)
-		for chunk: int in chunks:
-			_add_chunk(crowd, "Chunk%d_%d" % [index, chunk], chunks[chunk])
+	# Who holds a sign is settled for the whole bowl at once, so that the
+	# signs keep their distance across the pieces too; only then can each fan
+	# be given its meshes.
+	var holders: Dictionary = _pick_sign_holders()
+	for index: int in seated.size():
+		_seat(seated[index][0], seated[index][1], holders.has(index))
+	for record: Array in records:
+		_add_chunk(crowd, record[0], record[1])
+
+
+## Which of the fans (by their place in fan_positions) hold a sign: SIGN_SHARE
+## of them, picked at random, but nobody within SIGN_SPACING_SEATS seats of
+## another who does. Fewer than that if they do not fit.
+func _pick_sign_holders() -> Dictionary:
+	var holders: Dictionary = {}
+	var wanted: int = roundi(float(fan_positions.size()) * SIGN_SHARE)
+	var apart: float = SIGN_SPACING_SEATS * SEAT_PITCH
+	var tries: int = wanted * 30
+	while holders.size() < wanted and tries > 0:
+		tries -= 1
+		var index: int = _rng.randi() % fan_positions.size()
+		var at: Vector3 = fan_positions[index]
+		var free: bool = true
+		for taken: Vector3 in sign_positions:
+			if taken.distance_to(at) < apart:
+				free = false
+				break
+		if free:
+			holders[index] = true
+			sign_positions.append(at)
+	return holders
 
 
 ## What is gathered for one piece of the stands before it is built: per level
@@ -991,7 +1033,7 @@ func person_index(person_id: String) -> int:
 
 ## Makes `fan` one of the people, a woman or a man by crowd_female_share, and
 ## enters it in `chunk` under that person's mesh at each level of detail.
-func _seat_person(chunk: Array, fan: Array) -> void:
+func _seat_person(chunk: Array, fan: Array, holds_sign: bool) -> void:
 	var wanted: String = "f" if _rng.randf() < tuning.crowd_female_share else "m"
 	var of_gender: Array[int] = []
 	for index: int in _people.size():
@@ -1005,7 +1047,6 @@ func _seat_person(chunk: Array, fan: Array) -> void:
 	if same >= 0:
 		which = same
 	var person: Person = _people[which]
-	var holds_sign: bool = _rng.randf() < SIGN_SHARE
 	for tier: int in 3:
 		_enter(chunk[0][tier], person.sign_meshes[tier] if holds_sign else person.meshes[tier], fan)
 	if holds_sign:
@@ -1016,16 +1057,16 @@ func _seat_person(chunk: Array, fan: Array) -> void:
 ## Gives `fan` a gender, a head, an outfit and legs, and enters it in `chunk`
 ## under each of the meshes it is drawn with. All its parts get the same
 ## transform, colour and custom data, so they move as one; the shader takes
-## from them what each part needs.
-func _seat(chunk: Array, fan: Array) -> void:
+## from them what each part needs. `holds_sign`: with the arms up and a sign
+## in them (see _pick_sign_holders).
+func _seat(chunk: Array, fan: Array, holds_sign: bool) -> void:
 	if not _people.is_empty():
-		_seat_person(chunk, fan)
+		_seat_person(chunk, fan, holds_sign)
 		return
 	var which: int = 0
 	if _kits.size() > 1 and _rng.randf() < tuning.crowd_female_share:
 		which = 1
 	var kit: Kit = _kits[which]
-	var holds_sign: bool = _rng.randf() < SIGN_SHARE
 	# Drawn even when everybody gets the same head, so that the rest of the
 	# crowd is the same with it and without.
 	var head: int = _rng.randi() % (kit.heads[0] as Array).size()

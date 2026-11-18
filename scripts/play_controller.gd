@@ -133,6 +133,16 @@ var _tip_tried: Array[Team] = []
 ## When (live_time) it was last tipped, and whether no receiver ever got to it.
 var _tip_at: float = 0.0
 var _tip_bad_throw: bool = false
+## Pump fakes: when (live_time) the quarterback can pump again, and how many he
+## has thrown this play (each one fools fewer).
+var _pump_ready: float = 0.0
+var _pump_count: int = 0
+## The pass in the air came out badly because the passer was hit as he threw.
+var hit_throw: bool = false
+## The tackler whose hit a throw is being got away from (see _throws_as_hit).
+var _hitter: Player
+## Defenders who have had their one go at tipping this pass on its way up.
+var _line_tip_tried: Array[Player] = []
 ## For a CPU quarterback: how much the clock pushes him to look downfield
 ## (0..1), and whether this is a last-play heave. See GameSituation.
 var qb_urgency: float = 0.0
@@ -570,6 +580,11 @@ func _reset_play() -> void:
 	_completed = false
 	_tip_untouched = false
 	_tip_tried.clear()
+	_pump_ready = 0.0
+	_pump_count = 0
+	hit_throw = false
+	_hitter = null
+	_line_tip_tried.clear()
 	qb_urgency = 0.0
 	heave = false
 	qb = null
@@ -998,6 +1013,7 @@ func simulate(delta: float) -> void:
 		if arrived:
 			_resolve_pass_arrival()
 		else:
+			_check_line_tip()
 			_check_tipped_ball()
 		_check_loose_ball(delta)
 		_check_carrier()
@@ -1457,6 +1473,84 @@ func can_pass() -> bool:
 	return not ball_dead and phase == Phase.POCKET and ball.carrier == qb and not off_play.is_run and not faking() and (qb.can_act() or qb.is_airborne()) and not qb.is_tucked()
 
 
+## Wrapped up in the pocket with the ball still in his hands: he cannot throw
+## properly any more, but he can still try to get rid of it (see throw_ball).
+func in_the_grasp() -> bool:
+	return not ball_dead and phase == Phase.POCKET and qb != null and ball.carrier == qb and qb.state == Player.State.DRAGGING \
+			and off_play != null and not off_play.is_run and not faking()
+
+
+## Whether `player` gets the ring at his feet that shows if they are set: the
+## quarterback, for as long as he has the ball to throw.
+func shows_feet(player: Player) -> bool:
+	return player == qb and not ball_dead and phase == Phase.POCKET and ball.carrier == qb and off_play != null \
+			and not off_play.is_run and not faking() and (player.state == Player.State.NORMAL or player.state == Player.State.JUMPING)
+
+
+## The quarterback's feet have just come set (see Player.feet_planted).
+func on_feet_planted(player: Player) -> void:
+	game.field.fx.dust_puff(player.position, Vector3.ZERO, 1.0)
+	if player == human.controlled:
+		# A soft chime of its own, so it is not taken for the play clock's tick.
+		game.audio.play(&"ui_feet_set", 0.7)
+
+
+## Pump fake: the arm goes as if he were throwing to the receiver he is looking
+## at, and the ball stays in his hand. Some of the coverage stop and break on
+## the throw that never comes; a rusher close enough to bat it may jump at it.
+## Better coverage men bite less, and every further fake on a play fools fewer.
+func pump_fake() -> void:
+	if _thinking:
+		_queued_actions.append(pump_fake)
+		return
+	if not can_pass() or qb.is_airborne() or live_time < _pump_ready or eligible.is_empty():
+		return
+	_pump_ready = live_time + tuning.pump_cooldown
+	qb.pump_timer = tuning.pump_time
+	game.add_stat(&"pump_fakes")
+	game.audio.play(&"throw", 0.3, 0.8)
+	var target: Player = eligible[0]
+	var best: float = -INF
+	for receiver: Player in eligible:
+		var to: Vector3 = receiver.position - qb.position
+		to.y = 0.0
+		var facing: float = to.normalized().dot(qb.facing)
+		if not receiver.is_down() and facing > best:
+			best = facing
+			target = receiver
+	var spot: Vector3 = pass_spot(target, pass_speed(0.5))
+	var worth: float = pow(tuning.pump_repeat_scale, float(_pump_count))
+	_pump_count += 1
+	for defender: Player in defense.players:
+		if defender.bystander or defender == human.controlled or not defender.can_act():
+			continue
+		var assignment: DefenseAssignment = defender.brain.def_assign
+		if assignment == null:
+			continue
+		var near: bool = _flat_distance(defender.position, qb.position) <= tuning.line_tip_jump_range
+		var chance: float = tuning.pump_bite_chance * worth
+		match assignment.job:
+			DefenseAssignment.Job.MAN:
+				pass
+			DefenseAssignment.Job.ZONE:
+				if assignment.deep:
+					chance *= tuning.pump_deep_scale
+			_:
+				# A rusher or a spy only goes for it from close enough to bat it.
+				if not near:
+					continue
+		chance *= PlayerRatings.blend(defender.ratings.coverage, tuning.bust_coverage_scale_low, tuning.bust_coverage_scale_high)
+		chance *= lerpf(1.0, tuning.ai_edge_bust_scale, cpu_edge(defender))
+		if randf() >= chance:
+			continue
+		game.add_stat(&"pump_fake_bites")
+		if near:
+			# Up he goes, hands in the air, and the quarterback steps round him.
+			do_jump(defender)
+		else:
+			defender.brain.bite_on_pump(live_time, live_time + randf_range(tuning.pump_bite_time_min, tuning.pump_bite_time_max), spot)
+
+
 ## Furthest the quarterback can throw, in yards.
 func pass_range() -> float:
 	return PlayerRatings.blend(qb.ratings.power, tuning.pass_range_low, tuning.pass_range_high)
@@ -1577,13 +1671,25 @@ func placement_shift(target: Player, point: Vector3, speed: float, placement: Pl
 
 ## `power` runs from 0 (slow, high lob) to 1 (fast, flat bullet). `placement`
 ## leads the receiver or underthrows him on purpose.
-func throw_ball(target: Player, power: float = 0.5, placement: Placement = Placement.NORMAL) -> void:
+##
+## `hit` is a throw got away as he is tackled: the only kind he can make once
+## he is wrapped up. Now and then it comes out clean (more often from a strong
+## quarterback); mostly it floats, comes up well short and goes nowhere near
+## where he aimed. Either way he goes down as it leaves, and it is no sack.
+func throw_ball(target: Player, power: float = 0.5, placement: Placement = Placement.NORMAL, hit: bool = false) -> void:
 	if _thinking:
-		_queued_actions.append(throw_ball.bind(target, power, placement))
+		_queued_actions.append(throw_ball.bind(target, power, placement, hit))
 		return
-	if target == null or not can_pass():
+	if target == null or not (can_pass() or (hit and in_the_grasp())):
+		_hitter = null
 		return
 	var arm: PlayerRatings = qb.ratings
+	var bad: bool = false
+	if hit:
+		game.add_stat(&"hit_throws")
+		bad = randf() >= PlayerRatings.blend(arm.strength, tuning.hit_throw_clean_chance_low, tuning.hit_throw_clean_chance_high)
+		if bad:
+			power = minf(power, tuning.hit_throw_power)
 	var speed: float = pass_speed(power)
 	if power < 0.34:
 		game.add_stat(&"lobs")
@@ -1636,6 +1742,14 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	if qb.feet_set < 1.0:
 		error += tuning.pass_scramble_error * PlayerRatings.blend(arm.agility, tuning.agility_scale_low, tuning.agility_scale_high) * (1.0 - qb.feet_set)
 		game.add_stat(&"scramble_throws")
+	if bad:
+		# The arm was hit, or he never got his body into it.
+		var intended: Vector3 = point - qb.position
+		intended.y = 0.0
+		point = qb.position + intended * randf_range(tuning.hit_throw_short_min, tuning.hit_throw_short_max)
+		point.y = 0.0
+		error += tuning.hit_throw_error
+		game.add_stat(&"bad_hit_throws")
 	if error > 0.0:
 		var miss: float = _flat_distance(qb.position, point) * error
 		point += Vector3.RIGHT.rotated(Vector3.UP, randf() * TAU) * miss * sqrt(randf())
@@ -1643,7 +1757,21 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	var back: float = tuning.end_zone_depth - 1.0
 	point.x = clampf(point.x, -back, tuning.field_length + back)
 	point.z = clampf(point.z, -limit_z, limit_z)
+	# On the run it is thrown with a flourish, and the game takes a breath for
+	# the person's own quarterback. (In the air he is busy enough already.)
+	if qb.feet_set < 1.0 and not hit and qb.state == Player.State.NORMAL:
+		var wild: float = 1.0 - qb.feet_set
+		qb.start_flair(point - qb.position, wild)
+		game.add_stat(&"flair_throws")
+		game.field.fx.dust_puff(qb.position, -(point - qb.position), 1.0 + wild)
+		if qb == human.controlled:
+			game.impact(0.15 * wild, tuning.flair_stop_scale * wild)
+			game.camera_rig.punch(tuning.flair_camera_punch * wild)
+			game.audio.play(&"spin", 0.7, 1.2)
 	ball.throw_to(qb, target, point, speed, tuning)
+	ball.wobbly = bad
+	hit_throw = bad
+	_line_tip_tried.clear()
 	# How far short of his run the ball comes down, whatever the reason.
 	pass_short = 0.0
 	if placement == Placement.UNDER:
@@ -1664,7 +1792,63 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	pass_intended = target
 	game.add_stat(&"passes")
 	game.audio.play(&"throw", 0.45, lerpf(0.9, 1.15, power))
+	if hit:
+		_flatten_passer()
 	human.on_throw(target)
+
+
+## The quarterback has got the ball away with a tackler on him: he goes down
+## all the same, after it has left his hand.
+func _flatten_passer() -> void:
+	var hitter: Player = _hitter if _hitter != null else qb.drag_partner
+	_hitter = null
+	var dir: Vector3 = -qb.facing
+	if hitter != null:
+		dir = qb.position - hitter.position
+		dir.y = 0.0
+		dir = dir.normalized() if dir.length_squared() > 0.0001 else -qb.facing
+	var kind: PlayerFall.Kind = PlayerFall.Kind.LOW if hitter != null and hitter.state == Player.State.DIVING else PlayerFall.Kind.WRAP
+	qb.knock_down(dir * tuning.tackle_knockdown_impulse, tuning.knockdown_time, kind)
+	if hitter != null:
+		game.audio.hit(hitter, qb, false)
+	game.impact(tuning.tackle_shake * 0.7, 0.6)
+	game.audio.play(&"crowd_gasp", 0.6)
+	game.field.fx.blood_burst(qb.position, dir, tuning.blood_drops_knockdown, false)
+
+
+## A pass can be got to while it is still on its way up out of the passer's
+## hand: by a defender right by its path whose hands reach as high as it is,
+## standing or in the air. He gets one go at it. Tipped, it keeps some of its
+## pace, goes up and off line, and is anybody's until it lands.
+func _check_line_tip() -> void:
+	if phase != Phase.AIR or kickoff or thrown_away or ball.state != Ball.State.FLIGHT:
+		return
+	var pace: Vector3 = ball.flight_velocity_now()
+	if pace.y <= 0.0:
+		return
+	var spot: Vector3 = ball.flat_position()
+	for defender: Player in defense.players:
+		if defender.bystander or defender.is_down() or defender.state == Player.State.DIVING or _line_tip_tried.has(defender):
+			continue
+		var up: bool = defender.is_airborne()
+		var reach: float = tuning.line_tip_radius * (tuning.jump_catch_radius_scale if up else 1.0)
+		if ball.position.y > (tuning.line_tip_jump_height if up else tuning.line_tip_height):
+			continue
+		if _flat_distance(defender.position, spot) > reach:
+			continue
+		_line_tip_tried.append(defender)
+		if randf() >= (tuning.line_tip_jump_chance if up else tuning.line_tip_chance):
+			continue
+		var off: Vector3 = Vector3(pace.x, 0.0, pace.z).rotated(Vector3.UP, randf_range(-tuning.line_tip_turn, tuning.line_tip_turn))
+		off *= randf_range(tuning.line_tip_speed_share_min, tuning.line_tip_speed_share_max)
+		off.y = randf_range(tuning.line_tip_up_min, tuning.line_tip_up_max)
+		_tip_tried.clear()
+		_tip_bad_throw = false
+		game.add_stat(&"line_tips")
+		game.audio.play(&"crowd_gasp", 0.7)
+		game.audio.crowd_react(defense, 0.4)
+		_tip_pass(defender, off)
+		return
 
 
 ## The quarterback gets rid of it: over the wall into the stands on `side`
@@ -2091,7 +2275,8 @@ func do_dive(player: Player, dir: Vector3, speed: float = -1.0) -> void:
 		return
 	if not player.can_act():
 		return
-	player.start_dive(dir, speed if speed >= 0.0 else _ball_dive_speed(player, dir))
+	# After the whistle (the party, a pile-on) a dive costs no stamina.
+	player.start_dive(dir, speed if speed >= 0.0 else _ball_dive_speed(player, dir), ball_dead or is_celebrating(player))
 	# A dive into the party is not one for the book.
 	if not is_celebrating(player):
 		game.stat_book.add_dive(player.team)
@@ -2426,11 +2611,11 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 		chance *= tuning.hole_blocked_tackle_scale if tackler.hole_block else tuning.blocked_tackle_scale
 	var spinning: bool = carrier.spin_evade_timer > 0.0
 	if spinning:
-		chance *= PlayerRatings.blend(skills.juke, tuning.spin_tackle_scale_low, tuning.spin_tackle_scale_high)
+		chance *= lerpf(1.0, PlayerRatings.blend(skills.juke, tuning.spin_tackle_scale_low, tuning.spin_tackle_scale_high), carrier.spin_strength)
 	# A stiff arm only helps against a tackler on the side the arm is out.
 	var stiff_armed: bool = carrier.stiff_arm_covers(tackler)
 	if stiff_armed:
-		chance *= PlayerRatings.blend(skills.strength, tuning.stiff_arm_tackle_scale_low, tuning.stiff_arm_tackle_scale_high)
+		chance *= lerpf(1.0, PlayerRatings.blend(skills.strength, tuning.stiff_arm_tackle_scale_low, tuning.stiff_arm_tackle_scale_high), carrier.stiff_arm_strength)
 	chance *= RubberBand.bad(carrier.team, game)
 
 	if randf() >= chance:
@@ -2443,6 +2628,8 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 			move = &"spin"
 			game.add_stat(&"spins")
 		_break_tackle(tackler, carrier, dir, move)
+		return
+	if _throws_as_hit(tackler, carrier, big_hit):
 		return
 	# Wrapped up. A strong carrier stays on his feet and drags the tackler along.
 	var drag_time: float = PlayerRatings.blend(skills.strength, tuning.drag_time_low, tuning.drag_time_high)
@@ -2458,6 +2645,34 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 		game.impact(tuning.shove_shake * 0.6, 0.4)
 	else:
 		_finish_tackle(carrier, dir, kind, tackler, big_hit)
+
+
+## The tackle is made on a quarterback who was in the middle of throwing: the
+## person with a pass button held, a CPU one with a man to throw to. Some of
+## the time the ball still gets away (see throw_ball with `hit`), less often
+## against a dive or a big hit. True if it did: there is no tackle then.
+func _throws_as_hit(tackler: Player, carrier: Player, big_hit: bool) -> bool:
+	if carrier != qb or not can_pass():
+		return false
+	var target: Player = null
+	var power: float = 0.5
+	var chance: float = tuning.ai_qb_hit_throw_chance
+	if carrier == human.controlled and not human.assist:
+		target = human.winding_up()
+		power = human.wind_up_power()
+		chance = tuning.hit_throw_chance
+	else:
+		target = carrier.brain.hit_throw_target(self)
+	if target == null:
+		return false
+	if big_hit or tackler.state == Player.State.DIVING:
+		chance *= tuning.hit_throw_dive_scale
+	if randf() >= chance:
+		return false
+	_hitter = tackler
+	throw_ball(target, power, Placement.NORMAL, true)
+	_hitter = null
+	return phase == Phase.AIR
 
 
 ## A carrier securing the ball runs over a weaker tackler who is on his feet in

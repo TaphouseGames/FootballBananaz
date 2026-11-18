@@ -34,14 +34,29 @@ const SLOT_X: Array[float] = [180.0, 500.0, 820.0]
 ## Player one's row and player two's.
 const ROW_Y: Array[float] = [275.0, 352.0]
 const SLIDE_TIME: float = 0.14
-## Each team's mascot stands on the top edge of its panel, at the outer end:
-## the size of its picture, how far that hangs over the panel's side, how far
-## its feet come down over the edge, and how many times finer than that it is
-## drawn (the screen is scaled up on a big window).
-const MASCOT_VIEW: Vector2 = Vector2(230.0, 190.0)
-const MASCOT_OVERHANG: float = 30.0
+## Each team stands on the top edge of its panel, the mascot at the outer end
+## and its players beside it: the size of their picture, how far that hangs
+## over the panel's outer side, how far their feet come down over the edge, and
+## how many times finer than that it is drawn (the screen is scaled up on a big
+## window).
+const CAST_VIEW: Vector2 = Vector2(500.0, 190.0)
+const CAST_OVERHANG: float = 140.0
 const MASCOT_FEET: float = 9.0
 const MASCOT_RENDER_SCALE: int = 2
+## The title stands this much higher over the board, clear of the players' heads.
+const HEADER_LIFT: float = 84.0
+## How far out from the middle of the picture the mascot stands, and how far in
+## the middle of the players is, in yards of their world.
+const MASCOT_SPOT: float = 3.37
+const CAST_SPOT: float = 1.42
+## The players are in two rows, the taller half behind: yards from one to the
+## next in a row, how far behind the back row is and how much higher it stands
+## (as on a bench, so its faces show over the front row), and how many yards a
+## metre of a player's model is (as in player.tscn).
+const CAST_SPACING: float = 1.4
+const CAST_ROW_DEPTH: float = 1.0
+const CAST_RISER: float = 0.3
+const CAST_SCALE: float = 1.25
 ## Yards of the mascot's world the picture is tall (the banana is 2.8, and
 ## leaves the ground when it cheers), and how far it is turned to the middle.
 const MASCOT_FRAME: float = 3.6
@@ -63,6 +78,8 @@ var rating_bars: Array[Array] = []
 ## clip that one is in ("cheer" on the side the controller is under).
 var mascot_names: PackedStringArray = PackedStringArray()
 var mascot_clips: PackedStringArray = PackedStringArray()
+## Per panel: the names of the players standing on it, from the left.
+var cast_names: Array[PackedStringArray] = []
 
 var _font: SystemFont
 var _teams: Array[TeamData] = []
@@ -82,6 +99,9 @@ var _bar_fills: Array[StyleBoxFlat] = []
 var _mascot_views: Array[SubViewport] = []
 var _mascot_stands: Array[Node3D] = []
 var _mascot_players: Array[AnimationPlayer] = []
+## Per panel: where its team's players go, and whose they are.
+var _cast_stands: Array[Node3D] = []
+var _cast_teams: Array[TeamData] = []
 var _icon: ControllerIcon
 var _choose_hint: Label
 var _start_hint: Label
@@ -117,6 +137,10 @@ func setup(font: SystemFont, teams: Array[TeamData]) -> void:
 
 	var header: Label = _label("CHOOSE YOUR TEAM", 58, Color.WHITE, 12)
 	column.add_child(header)
+	var lift: Control = Control.new()
+	lift.custom_minimum_size.y = HEADER_LIFT - 26.0
+	lift.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(lift)
 	column.add_child(_build_board())
 	column.add_child(_build_hints())
 	# The mascots are only drawn while the screen is up.
@@ -130,6 +154,15 @@ func open() -> void:
 	side = 0
 	visible = true
 	_refresh(false)
+
+
+## Puts the mascot and the players of side `index` (0 left, 1 right) in ahead
+## of time, with the screen still hidden, so open() has nothing to load.
+func warm_side(index: int) -> void:
+	if index < _panels.size():
+		var team: TeamData = _teams[picks[index]]
+		_show_mascot(index, team.short_name, false)
+		_show_cast(index, team)
 
 
 ## Fades the screen out; it takes no more input meanwhile.
@@ -254,6 +287,10 @@ func _refresh(animated: bool) -> void:
 		_styles[i].set_border_width_all(5 if mine else 3)
 		_panels[i].modulate = Color.WHITE if mine or side == 0 else Color(0.5, 0.5, 0.5)
 		_show_mascot(i, team.short_name, mine)
+		_show_cast(i, team)
+		# The players cheer with their mascot on the side the controller is under.
+		for model: PlayerModel in _cast_stands[i].get_children():
+			ModelStage.motion_of(model).cheering = mine
 	_start_hint.modulate.a = 0.35 if side == 0 else 1.0
 
 	var x: float = SLOT_X[side + 1] - ICON_SIZE.x * 0.5
@@ -339,55 +376,80 @@ func _team_panel(index: int) -> Panel:
 	return panel
 
 
-## The picture of the side's mascot, standing on the panel's top edge: a small
-## world of its own with a camera and a light, drawn into a texture. The model
-## is put in by _show_mascot().
+## The picture of the side's mascot and players, standing on the panel's top
+## edge: a small world of its own (see ModelStage), drawn into a texture. The
+## models are put in by _show_mascot() and _show_cast().
 func _build_mascot(panel: Panel, index: int) -> void:
 	var picture: TextureRect = TextureRect.new()
 	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_SCALE
-	picture.size = MASCOT_VIEW
-	picture.position = Vector2(-MASCOT_OVERHANG if index == 0 else PANEL_SIZE.x - MASCOT_VIEW.x + MASCOT_OVERHANG, MASCOT_FEET - MASCOT_VIEW.y)
+	picture.size = CAST_VIEW
+	picture.position = Vector2(-CAST_OVERHANG if index == 0 else PANEL_SIZE.x - CAST_VIEW.x + CAST_OVERHANG, MASCOT_FEET - CAST_VIEW.y)
 	panel.add_child(picture)
 
-	var view: SubViewport = SubViewport.new()
-	view.size = Vector2i(MASCOT_VIEW) * MASCOT_RENDER_SCALE
-	view.own_world_3d = true
-	view.transparent_bg = true
-	view.msaa_3d = Viewport.MSAA_4X
-	view.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	var view: SubViewport = ModelStage.build(Vector2i(CAST_VIEW) * MASCOT_RENDER_SCALE, MASCOT_FRAME, 28.0 if index == 0 else -28.0)
 	picture.add_child(view)
 	picture.texture = view.get_texture()
 
-	var camera: Camera3D = Camera3D.new()
-	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = MASCOT_FRAME
-	# The ground a little above the bottom of the picture.
-	camera.position = Vector3(0.0, MASCOT_FRAME * 0.5 - 0.08, 8.0)
-	view.add_child(camera)
-	var sun: DirectionalLight3D = DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-38.0, 28.0 if index == 0 else -28.0, 0.0)
-	sun.light_energy = 1.25
-	view.add_child(sun)
-	var sky: Environment = Environment.new()
-	sky.background_mode = Environment.BG_CLEAR_COLOR
-	sky.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	sky.ambient_light_color = Color(0.86, 0.9, 1.0)
-	sky.ambient_light_energy = 0.75
-	var world: WorldEnvironment = WorldEnvironment.new()
-	world.environment = sky
-	view.add_child(world)
-	# Turned a little to the middle of the screen, where the other one stands.
+	# Out is to the left on the left panel. Both the mascot and the players are
+	# turned a little to the middle of the screen, where the other team stands.
+	var out: float = -1.0 if index == 0 else 1.0
 	var stand: Node3D = Node3D.new()
-	stand.rotation.y = MASCOT_TURN if index == 0 else -MASCOT_TURN
+	stand.position.x = out * MASCOT_SPOT
+	stand.rotation.y = -out * MASCOT_TURN
 	view.add_child(stand)
+	var cast: Node3D = Node3D.new()
+	cast.position.x = -out * CAST_SPOT
+	cast.rotation.y = -out * MASCOT_TURN
+	view.add_child(cast)
 
 	_mascot_views.append(view)
 	_mascot_stands.append(stand)
 	_mascot_players.append(null)
 	mascot_names.append("")
 	mascot_clips.append("")
+	_cast_stands.append(cast)
+	_cast_teams.append(null)
+	cast_names.append(PackedStringArray())
+
+
+## Stands `team`'s players on panel `index` in the kit they will wear: white
+## for the team on the left, which is at home. The taller half is the back row.
+func _show_cast(index: int, team: TeamData) -> void:
+	if index >= _cast_stands.size() or _cast_teams[index] == team:
+		return
+	_cast_teams[index] = team
+	var stand: Node3D = _cast_stands[index]
+	for old: Node in stand.get_children():
+		stand.remove_child(old)
+		old.queue_free()
+	var players: Array[PlayerRatings] = []
+	if team.roster != null:
+		for ratings: PlayerRatings in team.roster.players:
+			if ratings != null:
+				players.append(ratings)
+	players.sort_custom(func(a: PlayerRatings, b: PlayerRatings) -> bool:
+		return a.look_or_default().height_in > b.look_or_default().height_in)
+	@warning_ignore("integer_division")
+	var behind: int = players.size() / 2
+	var spots: Array[Array] = []
+	for i: int in players.size():
+		var back: bool = i < behind
+		var count: int = behind if back else players.size() - behind
+		var place: int = i if back else i - behind
+		# The back row stands in the gaps of the front one.
+		var x: float = (float(place) - float(count - 1) * 0.5 + (0.25 if back else -0.25)) * CAST_SPACING
+		var model: PlayerModel = ModelStage.player(players[i], team.team_color, index == 0, float(i) * 1.7)
+		model.scale = Vector3.ONE * CAST_SCALE
+		model.position = Vector3(x, CAST_RISER if back else 0.0, -CAST_ROW_DEPTH if back else 0.0)
+		stand.add_child(model)
+		spots.append([x, players[i].display_name])
+	spots.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	var names: PackedStringArray = PackedStringArray()
+	for spot: Array in spots:
+		names.append(spot[1])
+	cast_names[index] = names
 
 
 ## Stands `short_name`'s mascot on panel `index` (the model of the sidelines,

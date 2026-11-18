@@ -74,6 +74,8 @@ extends Resource
 ## into sliding past each other.
 @export var body_slip: float = 1.0
 
+## The meter is the stamina bar: sprinting drains it and every move spends a
+## share of it (secure_turbo_cost and the *_stamina_cost values under Actions).
 @export_group("Turbo")
 @export var turbo_speed_multiplier: float = 1.35
 ## Meter is 0..1. Units per second while held.
@@ -115,10 +117,22 @@ extends Resource
 ## secure_time seconds. He is this much faster for it.
 @export var secure_speed_scale: float = 1.15
 @export var secure_time: float = 0.6
-## Share of the turbo meter a press spends. With less than this left he spends
+## Share of the turbo meter a press spends, for a player of 50 endurance (the
+## rating scales it, see endurance_drain_low). With less than this left he spends
 ## what there is, and the move is that much shorter and weaker (its time and
 ## every one of its effects); with none left the press does nothing. 0 = free.
 @export var secure_turbo_cost: float = 0.25
+## Share of the stamina meter each of the other moves spends (0 = free), for a
+## player of 50 endurance (the rating scales it, see endurance_drain_low). A dive
+## out of a jump pays for both. With less than this left he spends what there
+## is and the move is that much weaker, down to move_min_strength of a full one
+## on an empty meter: a lower jump, a shorter dive, a slower spin and a spin or
+## stiff arm that takes less off the tackle.
+@export var jump_stamina_cost: float = 0.15
+@export var dive_stamina_cost: float = 0.03
+@export var spin_stamina_cost: float = 0.05
+@export var stiff_arm_stamina_cost: float = 0.05
+@export_range(0.0, 1.0) var move_min_strength: float = 0.3
 ## Seconds from the press before he can do it again.
 @export var secure_cooldown: float = 2.5
 ## Multiplies his chance of fumbling when he is tackled.
@@ -218,11 +232,62 @@ extends Resource
 @export var throwaway_speed: float = 24.0
 @export var throwaway_past_sideline: float = 4.0
 @export var throwaway_downfield: float = 12.0
-## Throwing on the run (turbo held): the pass can miss by up to this many yards
-## per yard thrown.
+## Throwing on the run (before the feet are set again): the pass can miss by up
+## to this many yards per yard thrown.
 @export var pass_scramble_error: float = 0.18
-## Seconds after letting go of turbo before the QB's feet are set again. 0 = at once.
-@export var pass_set_feet_time: float = 0.25
+## Seconds after letting go of turbo before the QB's feet are set again. 0 = at
+## once. Only turbo unsets them: moving about without it never does.
+@export var pass_set_feet_time: float = 1.2
+## Pump fake: the right bumper let go within pump_tap_time of going down, with
+## no pass button held. The arm goes for pump_time, and he cannot do it again
+## for pump_cooldown.
+@export var pump_tap_time: float = 0.2
+@export var pump_time: float = 0.3
+@export var pump_cooldown: float = 0.8
+## Chance that a coverage defender (or a rusher close enough to jump at it)
+## bites on a pump fake, before his coverage rating; for how long he is out of
+## the play; scale for a deep zone; and what each further fake on the same play
+## is worth next to the one before.
+@export var pump_bite_chance: float = 0.35
+@export var pump_bite_time_min: float = 0.6
+@export var pump_bite_time_max: float = 1.1
+@export var pump_deep_scale: float = 0.5
+@export var pump_repeat_scale: float = 0.5
+## Hit as he throws. A quarterback winding up when the tackler gets there gets
+## the ball away this often (times hit_throw_dive_scale against a dive or a big
+## hit); wrapped up, a pass button always gets it away. Such a throw is clean
+## hit_throw_clean_chance of the time (low and high by his strength); otherwise
+## it floats, comes down at between these shares of the way to where he aimed,
+## and misses by up to hit_throw_error more yards per yard thrown.
+@export var hit_throw_chance: float = 0.5
+@export var hit_throw_dive_scale: float = 0.6
+@export var hit_throw_clean_chance_low: float = 0.08
+@export var hit_throw_clean_chance_high: float = 0.35
+@export var hit_throw_short_min: float = 0.45
+@export var hit_throw_short_max: float = 0.8
+@export var hit_throw_error: float = 0.3
+@export var hit_throw_power: float = 0.25
+## A pass can be tipped while it is still on its way up out of the passer's
+## hand: by a defender within line_tip_radius of it (flat) with the ball no
+## higher than he reaches, standing or in the air. Each defender gets one try a
+## pass, at these chances. The tipped ball keeps between these shares of its
+## pace, turned by up to line_tip_turn radians, and goes up at between
+## line_tip_up_min and _max yd/s.
+@export var line_tip_radius: float = 1.1
+@export var line_tip_height: float = 2.4
+@export var line_tip_jump_height: float = 3.4
+@export var line_tip_chance: float = 0.3
+@export var line_tip_jump_chance: float = 0.7
+@export var line_tip_speed_share_min: float = 0.35
+@export var line_tip_speed_share_max: float = 0.7
+@export var line_tip_turn: float = 0.6
+@export var line_tip_up_min: float = 2.0
+@export var line_tip_up_max: float = 6.0
+## A throw on the run is an acrobatic one (a spin, a leap, a fade): how long
+## the move lasts, and the slow-motion beat and camera kick at full sprint.
+@export var flair_time: float = 0.5
+@export var flair_stop_scale: float = 0.6
+@export var flair_camera_punch: float = 5.0
 ## Chance that a pass to a receiver on the move is led too far, and by how many
 ## yards past the furthest he could sprint to. He has to jump or dive to get
 ## there.
@@ -330,7 +395,8 @@ extends Resource
 ## Run speed multiplier.
 @export var speed_scale_low: float = 0.88
 @export var speed_scale_high: float = 1.12
-## Turbo drain multiplier.
+## Stamina multiplier: how fast sprinting drains the meter and what every move
+## costs (see Player.stamina_cost).
 @export var endurance_drain_low: float = 1.5
 @export var endurance_drain_high: float = 0.5
 ## Catch chance multiplier (interception chance too).
@@ -763,8 +829,8 @@ extends Resource
 @export var cpu_snap_delay_max: float = 1.8
 ## Seconds the person has to snap the ball before it is snapped for them, and
 ## to pick a play before the highlighted one is taken. 0: no limit.
-@export var play_clock: float = 8.0
-@export var play_select_time: float = 10.0
+@export var play_clock: float = 13.0
+@export var play_select_time: float = 15.0
 ## The last seconds of either, shown in red with a tick each second.
 @export var clock_warning: float = 3.0
 ## Shortest time between two shouts of the person's quarterback (B).
@@ -1008,6 +1074,18 @@ extends Resource
 ## Play action: seconds after the fake that the back keeps running as if he had
 ## the ball.
 @export var play_action_sell_time: float = 0.6
+## A CPU quarterback with nobody open and no rusher on him pumps this often,
+## each time he looks. One hit as he looks to throw, or wrapped up in the
+## pocket, tries to get the ball away this often (once a tackle).
+@export var ai_qb_pump_chance: float = 0.05
+@export var ai_qb_hit_throw_chance: float = 0.3
+## A defender this close to the passer, and in the way of the throw, puts his
+## hands up and jumps as the ball comes out this often (the sharper CPU:
+## ai_edge_line_tip_jump_chance). One who bites on a pump fake from this close
+## jumps at it.
+@export var line_tip_jump_range: float = 3.0
+@export var ai_line_tip_jump_chance: float = 0.35
+@export var ai_edge_line_tip_jump_chance: float = 0.55
 ## Delay before defenders break on a thrown ball.
 @export var ai_ball_react_time: float = 0.25
 @export var ai_ball_react_radius: float = 14.0
@@ -1313,10 +1391,10 @@ extends Resource
 @export var wall_bounce: float = 0.3
 ## The stands, the crowd and the dressing round the field (see Stadium).
 @export var stadium_enabled: bool = true
-## Share of the seats with a fan in them, 0..1. There are about 11,000 seats.
+## Share of the seats with a fan in them, 0..1. There are about 7,900 seats.
 @export_range(0.0, 1.0) var crowd_density: float = 0.85
 ## Rows of seats, counted up from the wall.
-@export var stadium_rows: int = 13
+@export var stadium_rows: int = 19
 ## Share of home fans on the home side (the stand at -Z and the left end) and
 ## of visiting fans on the other. The rest of each are the other lot.
 @export_range(0.0, 1.0) var crowd_home_share: float = 0.85
@@ -1346,8 +1424,8 @@ extends Resource
 ## Yards from the camera to a piece of the stands up to which its fans are
 ## drawn in full detail, and beyond which they are drawn at their plainest
 ## (in between: the middle level). Lower both on a weak graphics card.
-@export var crowd_lod_near: float = 45.0
-@export var crowd_lod_far: float = 110.0
+@export var crowd_lod_near: float = 32.0
+@export var crowd_lod_far: float = 77.0
 ## Seconds between two stadium waves, and how long one takes to go round.
 @export var wave_min_gap: float = 45.0
 @export var wave_max_gap: float = 90.0

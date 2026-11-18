@@ -27,12 +27,19 @@ var _returned: int = 0
 var _passes: int = 0
 var _yards: float = 0.0
 var _failures: PackedStringArray = PackedStringArray()
+var _overrides: Dictionary[String, float] = {}
 
 
 func _initialize() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("snaps="):
 			_snaps = maxi(arg.trim_prefix("snaps=").to_int(), 1)
+		elif arg.begins_with("set="):
+			# set=<name>:<value>[,...] overrides Tuning values for this run.
+			for pair: String in arg.trim_prefix("set=").split(","):
+				var parts: PackedStringArray = pair.split(":")
+				if parts.size() == 2:
+					_overrides[parts[0]] = float(parts[1])
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	_game = scene.instantiate() as Game
 	_game.autoplay = true
@@ -46,6 +53,8 @@ func _tick() -> void:
 	if _pc == null:
 		_pc = _game.play_controller
 		_game.tuning.ai_scout_strength = 0.0
+		for key: String in _overrides:
+			_game.tuning.set(key, _overrides[key])
 		for play: OffensePlay in _game.offense_playbook.plays:
 			if play.flea_flicker:
 				_plays.append(play)

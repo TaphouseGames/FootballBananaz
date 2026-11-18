@@ -43,8 +43,8 @@ func setup(tuning: Tuning, home: Team, away: Team) -> void:
 	material.set_shader_parameter(&"field_width", width)
 	material.set_shader_parameter(&"end_zone_depth", ez)
 	material.set_shader_parameter(&"margin", margin)
-	material.set_shader_parameter(&"left_mascot", _mascot_decal(left_team))
-	material.set_shader_parameter(&"right_mascot", _mascot_decal(right_team))
+	material.set_shader_parameter(&"left_mascot", mascot_decal(left_team))
+	material.set_shader_parameter(&"right_mascot", mascot_decal(right_team))
 	material.set_shader_parameter(&"left_color", left_team.team_color)
 	material.set_shader_parameter(&"right_color", right_team.team_color)
 	material.set_shader_parameter(&"patch_noise", _noise_texture(FastNoiseLite.TYPE_SIMPLEX_SMOOTH, 0.012, 4, false))
@@ -68,7 +68,7 @@ func setup(tuning: Tuning, home: Team, away: Team) -> void:
 
 
 ## The picture of `team`'s mascot that is painted at midfield.
-func _mascot_decal(team: Team) -> Texture2D:
+static func mascot_decal(team: Team) -> Texture2D:
 	var path: String = MASCOT_DECAL % team.short_name.to_lower()
 	if not ResourceLoader.exists(path):
 		path = MASCOT_DECAL_FALLBACK

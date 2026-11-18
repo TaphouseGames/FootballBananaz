@@ -109,7 +109,7 @@ func _tick() -> void:
 				_fail("%d visits to EXIT got %d of its %d lines" % [EXIT_VISITS, heard.size(), booth.line_count(&"exit")])
 			_menu.options_button.pressed.emit()
 			_expect_last(booth, &"options_pick", "after OPTIONS")
-			if current_scene != _menu or _menu.team_select != null:
+			if current_scene != _menu or (_menu.team_select != null and _menu.team_select.visible):
 				_fail("OPTIONS left the menu")
 			# A second visit to the menu.
 			_menu.free()
