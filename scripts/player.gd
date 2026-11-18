@@ -135,6 +135,8 @@ var move_cooldown: float = 0.0
 ## the time before he can do it again.
 var secure_timer: float = 0.0
 var secure_cooldown: float = 0.0
+## 0..1: how much of the move the turbo he had left paid for (see start_secure).
+var secure_strength: float = 1.0
 var jump_cooldown: float = 0.0
 var tackle_cooldown: float = 0.0
 ## Above 0 during a dive and for a moment after landing: the dive still reaches
@@ -213,6 +215,7 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	wants_turbo = false
 	secure_timer = 0.0
 	secure_cooldown = 0.0
+	secure_strength = 1.0
 	facing = face_dir
 	look_dir = Vector3.ZERO
 	state = State.NORMAL
@@ -466,15 +469,36 @@ func is_securing() -> bool:
 	return has_ball and secure_timer > 0.0 and (state == State.NORMAL or state == State.DRAGGING)
 
 
+## 0 when he is not securing the ball, otherwise how much of the move he has
+## (see secure_strength): 1 for one paid for in full.
+func secure_power() -> float:
+	return secure_strength if is_securing() else 0.0
+
+
 ## One press: he secures the ball for tuning.secure_time, and cannot again
 ## until the cooldown is over. Also with a tackler on his back, where it lasts
 ## until the drag ends (see _tick_timers).
+## It spends tuning.secure_turbo_cost of his turbo. With less than that left it
+## spends what there is and is that much shorter and weaker, and with none it
+## does nothing. Emptying the meter locks turbo, as sprinting it empty does.
 func start_secure() -> bool:
 	if not has_ball or frozen or secure_cooldown > 0.0:
 		return false
 	if state != State.NORMAL and state != State.DRAGGING:
 		return false
-	secure_timer = tuning.secure_time
+	var cost: float = tuning.secure_turbo_cost
+	if cost > 0.0:
+		if turbo <= 0.0:
+			return false
+		var spent: float = minf(turbo, cost)
+		turbo -= spent
+		if turbo <= 0.0:
+			turbo = 0.0
+			turbo_locked = true
+		secure_strength = spent / cost
+	else:
+		secure_strength = 1.0
+	secure_timer = tuning.secure_time * secure_strength
 	secure_cooldown = tuning.secure_cooldown
 	return true
 
@@ -554,7 +578,7 @@ func max_speed() -> float:
 	if state == State.STIFF_ARM:
 		speed *= tuning.stiff_arm_speed_scale
 	if is_securing():
-		speed *= tuning.secure_speed_scale
+		speed *= lerpf(1.0, tuning.secure_speed_scale, secure_strength)
 	if burst_timer > 0.0 and has_ball:
 		speed *= tuning.hole_burst_speed
 	return speed

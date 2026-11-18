@@ -115,6 +115,10 @@ extends Resource
 ## secure_time seconds. He is this much faster for it.
 @export var secure_speed_scale: float = 1.15
 @export var secure_time: float = 0.6
+## Share of the turbo meter a press spends. With less than this left he spends
+## what there is, and the move is that much shorter and weaker (its time and
+## every one of its effects); with none left the press does nothing. 0 = free.
+@export var secure_turbo_cost: float = 0.25
 ## Seconds from the press before he can do it again.
 @export var secure_cooldown: float = 2.5
 ## Multiplies his chance of fumbling when he is tackled.

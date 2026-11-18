@@ -2448,8 +2448,7 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 	var drag_time: float = PlayerRatings.blend(skills.strength, tuning.drag_time_low, tuning.drag_time_high)
 	if big_hit:
 		drag_time *= tuning.drag_big_hit_scale
-	if carrier.is_securing():
-		drag_time *= tuning.secure_drag_time_scale
+	drag_time *= lerpf(1.0, tuning.secure_drag_time_scale, carrier.secure_power())
 	var can_drag: bool = carrier.state == Player.State.NORMAL and tackler.state == Player.State.NORMAL
 	if can_drag and drag_time >= tuning.drag_min_time:
 		carrier.start_drag(tackler, drag_time)
@@ -2475,6 +2474,7 @@ func _try_truck(tackler: Player, carrier: Player, dir: Vector3) -> bool:
 	if flat_speed < tuning.secure_truck_min_speed:
 		return false
 	var chance: float = minf(gap * tuning.secure_truck_chance_per_point, tuning.secure_truck_chance_max)
+	chance *= carrier.secure_power()
 	if tackler.state == Player.State.DIVING:
 		chance *= tuning.secure_truck_dive_scale
 	chance *= RubberBand.good(carrier.team, game)
@@ -2490,7 +2490,7 @@ func _try_truck(tackler: Player, carrier: Player, dir: Vector3) -> bool:
 func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackler: Player = null, big: bool = false) -> void:
 	var carried: Vector3 = carrier.velocity
 	# Asked before he goes down: on the turf he is securing nothing.
-	var secured: bool = carrier.is_securing()
+	var secured: float = carrier.secure_power()
 	# A drag that ends with him going down is the tackle of the man hanging on.
 	tackled_by = tackler if tackler != null else carrier.drag_partner
 	carrier.knock_down(dir * tuning.tackle_knockdown_impulse, tuning.knockdown_time, kind)
@@ -2520,13 +2520,13 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 ## The hit may knock the ball out. It leaves the way he was hit (`dir`), more or
 ## less, and the play goes on with the ball on the turf until somebody has it.
 ## `carried` is how fast the carrier was moving when he was hit, `secured`
-## whether he had the ball in both arms.
-func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: Vector3, secured: bool = false) -> bool:
+## how well he had the ball in both arms (Player.secure_power: 0 not at all).
+func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: Vector3, secured: float = 0.0) -> bool:
 	var chance: float = PlayerRatings.blend(carrier.ratings.security, tuning.fumble_chance_low, tuning.fumble_chance_high)
 	if kind != PlayerFall.Kind.WRAP:
 		chance *= tuning.fumble_big_hit_scale
-	if secured:
-		chance *= tuning.secure_fumble_scale
+	if secured > 0.0:
+		chance *= lerpf(1.0, tuning.secure_fumble_scale, secured)
 		game.add_stat(&"secured_tackles")
 	chance *= RubberBand.bad(carrier.team, game)
 	if randf() >= chance:
@@ -2688,7 +2688,7 @@ func _update_drag() -> void:
 	var dir: Vector3 = carrier.facing
 	var escape: float = PlayerRatings.blend(carrier.ratings.strength, tuning.shake_off_chance_low, tuning.shake_off_chance_high)
 	if carrier.is_securing():
-		escape += tuning.secure_shake_off_bonus
+		escape += tuning.secure_shake_off_bonus * carrier.secure_strength
 		game.add_stat(&"secured_drags")
 	if tackler != null and randf() < escape:
 		game.add_stat(&"shake_offs")

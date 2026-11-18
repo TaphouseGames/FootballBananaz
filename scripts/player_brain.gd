@@ -1218,6 +1218,9 @@ func _carry(pc: PlayController) -> void:
 func _bursts_away(pc: PlayController, opponent: Player, dist: float) -> void:
 	if dist > tuning.ai_secure_chase_range or player.secure_cooldown > 0.0:
 		return
+	# Nothing left in the meter to pay for it with.
+	if tuning.secure_turbo_cost > 0.0 and player.turbo <= 0.0:
+		return
 	var to: Vector3 = opponent.position - player.position
 	to.y = 0.0
 	to /= maxf(dist, 0.01)

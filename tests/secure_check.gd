@@ -2,6 +2,9 @@ extends SceneTree
 ## Headless check of securing the ball (A pressed with the ball in his hands:
 ## a short burst, then a cooldown):
 ## - he is faster by Tuning.secure_speed_scale;
+## - a press spends Tuning.secure_turbo_cost of his turbo; with less than that
+##   left the move is that much shorter and weaker, and with none it does
+##   nothing;
 ## - running a tackler over: only one in front of a moving carrier who is
 ##   stronger, likelier the bigger the gap in strength, and half as likely
 ##   against a dive;
@@ -16,7 +19,7 @@ extends SceneTree
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/secure_check.gd
 ## About 3 minutes. `-- quick` runs a third of the trials (wider tolerances).
 
-enum Kind { TRUCK, FUMBLE, DRAG, CPU, BUTTON, PASSER }
+enum Kind { TRUCK, FUMBLE, DRAG, CPU, BUTTON, PASSER, METER }
 
 const STUCK_TICKS: int = 300
 const TRUCK_ROLLS: int = 300
@@ -64,6 +67,8 @@ func _build_trials() -> void:
 	_trials.append({"kind": Kind.TRUCK, "label": "tackler at his side", "gap": 40, "from": Vector3(0.0, 0.0, 1.0), "want": 0.0})
 	_trials.append({"kind": Kind.TRUCK, "label": "a dive", "gap": 40, "diving": true, "want": 40.0 * _tuning.secure_truck_chance_per_point * _tuning.secure_truck_dive_scale})
 	_trials.append({"kind": Kind.TRUCK, "label": "standing still", "gap": 40, "speed": 1.0, "want": 0.0})
+	# Paid for with half of what a press costs: half the chance.
+	_trials.append({"kind": Kind.TRUCK, "label": "half the turbo", "gap": 40, "power": 0.5, "want": 40.0 * _tuning.secure_truck_chance_per_point * 0.5})
 	for i: int in roundi(150 * scale):
 		_trials.append({"kind": Kind.FUMBLE, "label": "fumble plain", "secure": false})
 		_trials.append({"kind": Kind.FUMBLE, "label": "fumble secured", "secure": true})
@@ -76,6 +81,7 @@ func _build_trials() -> void:
 		_trials.append({"kind": Kind.CPU, "label": "CPU weak", "strength": 20})
 	_trials.append({"kind": Kind.BUTTON, "label": "button"})
 	_trials.append({"kind": Kind.PASSER, "label": "passer"})
+	_trials.append({"kind": Kind.METER, "label": "turbo meter"})
 
 
 func _tick() -> void:
@@ -122,6 +128,54 @@ func _tick() -> void:
 			_tick_button()
 		Kind.PASSER:
 			_tick_passer()
+		Kind.METER:
+			_tick_meter()
+
+
+## What a press costs: a full meter, half of the cost left, and nothing left.
+func _tick_meter() -> void:
+	var cost: float = _tuning.secure_turbo_cost
+	var scale: float = _tuning.secure_speed_scale
+	_expect(cost > 0.0, "securing the ball costs no turbo")
+	_man.secure_timer = 0.0
+	var plain: float = _man.max_speed()
+
+	_ready_to_secure(1.0)
+	_expect(_man.start_secure(), "a full meter and he does not secure the ball")
+	var quick: float = _man.max_speed() / plain
+	print("full meter: turbo %.3f left, %.2f s, x%.3f as fast" % [_man.turbo, _man.secure_timer, quick])
+	_expect(absf(_man.turbo - (1.0 - cost)) < 0.001, "turbo is %.3f after the press, should be %.3f" % [_man.turbo, 1.0 - cost])
+	_expect(not _man.turbo_locked, "turbo locked with most of the meter left")
+	_expect(absf(_man.secure_timer - _tuning.secure_time) < 0.001, "lasts %.3f s, should be %.3f" % [_man.secure_timer, _tuning.secure_time])
+	_expect(absf(quick - scale) < 0.001, "x%.3f as fast, should be x%.3f" % [quick, scale])
+	_expect(absf(_man.secure_power() - 1.0) < 0.001, "power %.2f, should be 1" % _man.secure_power())
+
+	_ready_to_secure(cost * 0.5)
+	_expect(_man.start_secure(), "half the cost left and he does not secure the ball")
+	quick = _man.max_speed() / plain
+	var half: float = lerpf(1.0, scale, 0.5)
+	print("half the cost left: turbo %.3f left, %.2f s, x%.3f as fast" % [_man.turbo, _man.secure_timer, quick])
+	_expect(_man.turbo <= 0.0 and _man.turbo_locked, "the meter is not empty and locked (turbo %.3f)" % _man.turbo)
+	_expect(absf(_man.secure_timer - _tuning.secure_time * 0.5) < 0.001, "lasts %.3f s, should be %.3f" % [_man.secure_timer, _tuning.secure_time * 0.5])
+	_expect(absf(quick - half) < 0.001, "x%.3f as fast, should be x%.3f" % [quick, half])
+	_expect(absf(_man.secure_power() - 0.5) < 0.001, "power %.2f, should be 0.5" % _man.secure_power())
+	_expect(absf(_man.secure_cooldown - _tuning.secure_cooldown) < 0.001, "the weaker move has a cooldown of %.2f s" % _man.secure_cooldown)
+
+	_ready_to_secure(0.0)
+	_expect(not _man.start_secure(), "an empty meter and he secures the ball")
+	_expect(not _man.is_securing(), "securing the ball on an empty meter")
+	_expect(_man.secure_cooldown <= 0.0, "a press that did nothing started the cooldown")
+
+	_ready_to_secure(1.0)
+	_next()
+
+
+func _ready_to_secure(turbo: float) -> void:
+	_man.turbo = turbo
+	_man.turbo_locked = false
+	_man.secure_timer = 0.0
+	_man.secure_cooldown = 0.0
+	_man.secure_strength = 1.0
 
 
 ## Rolls the run-over many times over in one tick, putting both men back each time.
@@ -140,6 +194,7 @@ func _tick_truck(trial: Dictionary) -> void:
 		_man.velocity = Vector3(_dir * speed, 0.0, 0.0)
 		_man.facing = Vector3(_dir, 0.0, 0.0)
 		_man.secure_timer = 1.0 if secure else 0.0
+		_man.secure_strength = trial.get("power", 1.0)
 		if _pc._try_truck(_tackler, _man, -offset.normalized()):
 			hits += 1
 			_expect(_tackler.is_down(), "run over but still on his feet")
@@ -153,6 +208,7 @@ func _tick_truck(trial: Dictionary) -> void:
 		_expect(absf(share - want) <= 0.09, "%.0f%% run-overs, should be near %.0f%%" % [share * 100.0, want * 100.0])
 	_expect(_gained(&"trucks") == hits, "the trucks counter says %d, there were %d" % [_gained(&"trucks"), hits])
 
+	_man.secure_strength = 1.0
 	if trial["label"] == "gap +0":
 		# While he is set up with the ball: how much faster securing makes him.
 		_man.secure_timer = 0.0
@@ -278,7 +334,7 @@ func _next() -> void:
 		return
 	var trial: Dictionary = _trials[_trial]
 	var kind: Kind = trial["kind"]
-	var by_hand: bool = kind == Kind.BUTTON or kind == Kind.PASSER
+	var by_hand: bool = kind == Kind.BUTTON or kind == Kind.PASSER or kind == Kind.METER
 	var offense: Team = _person if by_hand else _cpu
 	_dir = float(offense.attack_dir)
 	var middle: float = _tuning.field_length * 0.5
