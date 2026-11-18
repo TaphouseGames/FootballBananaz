@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 9713f4e3-53ef-4745-aa78-236c31ab3fdc (@player-moe-peel)
+image_to_model · queued
+image_to_model · running 3% · 9713f4e3
+image_to_model · running 7% · 9713f4e3
+image_to_model · running 12% · 9713f4e3
+image_to_model · running 17% · 9713f4e3
+image_to_model · running 26% · 9713f4e3
+image_to_model · running 38% · 9713f4e3
+image_to_model · running 49% · 9713f4e3
+image_to_model · running 61% · 9713f4e3
+image_to_model · running 73% · 9713f4e3
+image_to_model · running 84% · 9713f4e3
+image_to_model · running 96% · 9713f4e3
+image_to_model · running 99% · 9713f4e3
+image_to_model · running 99% · 9713f4e3
+image_to_model · running 99% · 9713f4e3
+image_to_model · running 99% · 9713f4e3
+image_to_model · running 99% · 9713f4e3
+image_to_model · running 99% · 9713f4e3
+image_to_model · success 100% · 9713f4e3
+[32m✓[39m image_to_model · 9713f4e3-53ef-4745-aa78-236c31ab3fdc · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to moe_peel_model\tripo-out\player-moe-peel-9713f4e3
+{"task_id":"9713f4e3-53ef-4745-aa78-236c31ab3fdc","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"moe_peel_model\\tripo-out\\player-moe-peel-9713f4e3","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"moe_peel_model\\tripo-out\\player-moe-peel-9713f4e3\\model.fbx","preview":"moe_peel_model\\tripo-out\\player-moe-peel-9713f4e3\\preview.png"}

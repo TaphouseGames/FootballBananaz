@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 53aeaeba-b57d-45ea-9cd5-011ed9acd1e3 (@player-zip-cavendish)
+image_to_model · queued
+image_to_model · running 2% · 53aeaeba
+image_to_model · running 6% · 53aeaeba
+image_to_model · running 10% · 53aeaeba
+image_to_model · running 15% · 53aeaeba
+image_to_model · running 23% · 53aeaeba
+image_to_model · running 34% · 53aeaeba
+image_to_model · running 44% · 53aeaeba
+image_to_model · running 55% · 53aeaeba
+image_to_model · running 65% · 53aeaeba
+image_to_model · running 76% · 53aeaeba
+image_to_model · running 86% · 53aeaeba
+image_to_model · running 97% · 53aeaeba
+image_to_model · running 99% · 53aeaeba
+image_to_model · running 99% · 53aeaeba
+image_to_model · running 99% · 53aeaeba
+image_to_model · running 99% · 53aeaeba
+image_to_model · running 99% · 53aeaeba
+image_to_model · running 99% · 53aeaeba
+image_to_model · success 100% · 53aeaeba
+[32m✓[39m image_to_model · 53aeaeba-b57d-45ea-9cd5-011ed9acd1e3 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to zip_cavendish_model\tripo-out\player-zip-cavendish-53aeaeba
+{"task_id":"53aeaeba-b57d-45ea-9cd5-011ed9acd1e3","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"zip_cavendish_model\\tripo-out\\player-zip-cavendish-53aeaeba","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"zip_cavendish_model\\tripo-out\\player-zip-cavendish-53aeaeba\\model.fbx","preview":"zip_cavendish_model\\tripo-out\\player-zip-cavendish-53aeaeba\\preview.png"}

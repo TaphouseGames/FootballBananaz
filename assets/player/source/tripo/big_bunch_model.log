@@ -1,0 +1,28 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 3756b6f4-d7e1-4dc6-936f-64dcfa880be4 (@player-big-bunch)
+image_to_model · queued
+image_to_model · running 4% · 3756b6f4
+image_to_model · running 13% · 3756b6f4
+image_to_model · running 21% · 3756b6f4
+image_to_model · running 32% · 3756b6f4
+image_to_model · running 49% · 3756b6f4
+image_to_model · running 71% · 3756b6f4
+image_to_model · running 94% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · running 99% · 3756b6f4
+image_to_model · success 100% · 3756b6f4
+[32m✓[39m image_to_model · 3756b6f4-d7e1-4dc6-936f-64dcfa880be4 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to big_bunch_model\tripo-out\player-big-bunch-3756b6f4
+{"task_id":"3756b6f4-d7e1-4dc6-936f-64dcfa880be4","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"big_bunch_model\\tripo-out\\player-big-bunch-3756b6f4","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"big_bunch_model\\tripo-out\\player-big-bunch-3756b6f4\\model.fbx","preview":"big_bunch_model\\tripo-out\\player-big-bunch-3756b6f4\\preview.png"}

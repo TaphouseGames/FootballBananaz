@@ -1,0 +1,10 @@
+task created 97012b4a-07f3-4239-afbd-9c80bda62734 (@player-dash-plantain-concept3)
+generate_image · queued
+generate_image · running · 97012b4a
+generate_image · running · 97012b4a
+generate_image · running · 97012b4a
+generate_image · success 100% · 97012b4a
+[32m✓[39m generate_image · 97012b4a-07f3-4239-afbd-9c80bda62734 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to dash_plantain_concept\tripo-out\player-dash-plantain-concept3-97012b4a
+{"task_id":"97012b4a-07f3-4239-afbd-9c80bda62734","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"dash_plantain_concept\\tripo-out\\player-dash-plantain-concept3-97012b4a","files":["generated_image.png","preview.png"],"preview":"dash_plantain_concept\\tripo-out\\player-dash-plantain-concept3-97012b4a\\preview.png"}

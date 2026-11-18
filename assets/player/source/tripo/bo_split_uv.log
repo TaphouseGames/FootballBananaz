@@ -1,0 +1,8 @@
+task created 6138c2ef-85b3-4574-bfa2-f911aaadc19e (@player-bo-split-uv)
+mesh_uv · queued
+mesh_uv · running 5% · 6138c2ef
+mesh_uv · success 100% · 6138c2ef
+[32m✓[39m mesh_uv · 6138c2ef-85b3-4574-bfa2-f911aaadc19e · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bo_split_uv\tripo-out\player-bo-split-uv-6138c2ef
+{"task_id":"6138c2ef-85b3-4574-bfa2-f911aaadc19e","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"bo_split_uv\\tripo-out\\player-bo-split-uv-6138c2ef","files":["model.fbx","uv_render.webp"],"model_file":"bo_split_uv\\tripo-out\\player-bo-split-uv-6138c2ef\\model.fbx"}

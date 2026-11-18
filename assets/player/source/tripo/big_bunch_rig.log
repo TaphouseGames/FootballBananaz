@@ -1,0 +1,20 @@
+task created 1416865f-5492-4fda-aa5e-acbf50e44347 (@player-big-bunch-rig)
+animate_rig · queued
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · running 99% · 1416865f
+animate_rig · success 100% · 1416865f
+[32m✓[39m animate_rig · 1416865f-5492-4fda-aa5e-acbf50e44347 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to big_bunch_rig\tripo-out\player-big-bunch-rig-1416865f
+{"task_id":"1416865f-5492-4fda-aa5e-acbf50e44347","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"big_bunch_rig\\tripo-out\\player-big-bunch-rig-1416865f","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"big_bunch_rig\\tripo-out\\player-big-bunch-rig-1416865f\\model.fbx","preview":"big_bunch_rig\\tripo-out\\player-big-bunch-rig-1416865f\\preview.png"}

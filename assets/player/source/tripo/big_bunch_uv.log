@@ -1,0 +1,8 @@
+task created 9d7b1735-1a29-4314-af3a-89e5fa141dc8 (@player-big-bunch-uv)
+mesh_uv · queued
+mesh_uv · running 99% · 9d7b1735
+mesh_uv · success 100% · 9d7b1735
+[32m✓[39m mesh_uv · 9d7b1735-1a29-4314-af3a-89e5fa141dc8 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to big_bunch_uv\tripo-out\player-big-bunch-uv-9d7b1735
+{"task_id":"9d7b1735-1a29-4314-af3a-89e5fa141dc8","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"big_bunch_uv\\tripo-out\\player-big-bunch-uv-9d7b1735","files":["model.fbx","uv_render.webp"],"model_file":"big_bunch_uv\\tripo-out\\player-big-bunch-uv-9d7b1735\\model.fbx"}

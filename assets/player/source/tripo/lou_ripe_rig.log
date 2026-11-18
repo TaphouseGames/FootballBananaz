@@ -1,0 +1,8 @@
+task created 1f3bd494-48ba-4c7c-b897-448a4e06c370 (@player-lou-ripe-rig)
+animate_rig · queued
+animate_rig · running 2% · 1f3bd494
+animate_rig · success 100% · 1f3bd494
+[32m✓[39m animate_rig · 1f3bd494-48ba-4c7c-b897-448a4e06c370 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to lou_ripe_rig\tripo-out\player-lou-ripe-rig-1f3bd494
+{"task_id":"1f3bd494-48ba-4c7c-b897-448a4e06c370","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"lou_ripe_rig\\tripo-out\\player-lou-ripe-rig-1f3bd494","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"lou_ripe_rig\\tripo-out\\player-lou-ripe-rig-1f3bd494\\model.fbx","preview":"lou_ripe_rig\\tripo-out\\player-lou-ripe-rig-1f3bd494\\preview.png"}

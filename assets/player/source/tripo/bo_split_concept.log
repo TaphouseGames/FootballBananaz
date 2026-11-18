@@ -1,0 +1,10 @@
+task created feee084c-afe7-4515-90ff-5f723a4d6f78 (@player-bo-split-concept2)
+generate_image · queued
+generate_image · running · feee084c
+generate_image · running · feee084c
+generate_image · running · feee084c
+generate_image · success 100% · feee084c
+[32m✓[39m generate_image · feee084c-afe7-4515-90ff-5f723a4d6f78 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bo_split_concept\tripo-out\player-bo-split-concept2-feee084c
+{"task_id":"feee084c-afe7-4515-90ff-5f723a4d6f78","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"bo_split_concept\\tripo-out\\player-bo-split-concept2-feee084c","files":["generated_image.png","preview.png"],"preview":"bo_split_concept\\tripo-out\\player-bo-split-concept2-feee084c\\preview.png"}

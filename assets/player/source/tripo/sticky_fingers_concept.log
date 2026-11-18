@@ -1,0 +1,10 @@
+task created 1fe71d74-8ad4-4bc0-b2f5-8ade5fd9b430 (@player-sticky-fingers-concept-2)
+generate_image · queued
+generate_image · running · 1fe71d74
+generate_image · running · 1fe71d74
+generate_image · running · 1fe71d74
+generate_image · success 100% · 1fe71d74
+[32m✓[39m generate_image · 1fe71d74-8ad4-4bc0-b2f5-8ade5fd9b430 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to sticky_fingers_concept\tripo-out\player-sticky-fingers-concept-2-1fe71d74
+{"task_id":"1fe71d74-8ad4-4bc0-b2f5-8ade5fd9b430","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"sticky_fingers_concept\\tripo-out\\player-sticky-fingers-concept-2-1fe71d74","files":["generated_image.png","preview.png"],"preview":"sticky_fingers_concept\\tripo-out\\player-sticky-fingers-concept-2-1fe71d74\\preview.png"}

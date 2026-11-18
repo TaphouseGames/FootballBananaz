@@ -1,0 +1,7 @@
+task created b2503bdf-3a76-4f43-b2a1-98211e884e40 (@player-bo-split-rig)
+animate_rig · queued
+animate_rig · running 34% · b2503bdf
+[32m✓[39m animate_rig · b2503bdf-3a76-4f43-b2a1-98211e884e40 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to bo_split_rig\tripo-out\player-bo-split-rig-b2503bdf
+{"task_id":"b2503bdf-3a76-4f43-b2a1-98211e884e40","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"bo_split_rig\\tripo-out\\player-bo-split-rig-b2503bdf","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"bo_split_rig\\tripo-out\\player-bo-split-rig-b2503bdf\\model.fbx","preview":"bo_split_rig\\tripo-out\\player-bo-split-rig-b2503bdf\\preview.png"}

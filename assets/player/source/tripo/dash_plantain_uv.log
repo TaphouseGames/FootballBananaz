@@ -1,0 +1,8 @@
+task created f88c36ad-a012-4e84-aa38-8c08d1ead69c (@player-dash-plantain-uv)
+mesh_uv · queued
+mesh_uv · running 86% · f88c36ad
+mesh_uv · success 100% · f88c36ad
+[32m✓[39m mesh_uv · f88c36ad-a012-4e84-aa38-8c08d1ead69c · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to dash_plantain_uv\tripo-out\player-dash-plantain-uv-f88c36ad
+{"task_id":"f88c36ad-a012-4e84-aa38-8c08d1ead69c","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"dash_plantain_uv\\tripo-out\\player-dash-plantain-uv-f88c36ad","files":["model.fbx","uv_render.webp"],"model_file":"dash_plantain_uv\\tripo-out\\player-dash-plantain-uv-f88c36ad\\model.fbx"}

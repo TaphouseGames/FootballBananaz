@@ -13,8 +13,10 @@ shader_type spatial;
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic;
-// White on clear: the name in the top quarter, the number below it.
-uniform sampler2D kit_tex : filter_linear, repeat_disable;
+// White on black, black too where a number's inline is: the name in the top
+// quarter, the number below it. It has mipmaps (see PlayerModel._bake_kit_map):
+// without them the print breaks up into sparkle on a player far from the camera.
+uniform sampler2D kit_tex : filter_linear_mipmap_anisotropic, repeat_disable;
 
 // As the model was painted, nothing repainted.
 uniform bool plain = false;
@@ -50,7 +52,10 @@ float print_alpha(vec3 box, vec2 cell_from, vec2 cell_size, float side) {
 	if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
 		return 0.0;
 	}
-	return texture(kit_tex, cell_from + uv * cell_size).a;
+	// White is ink; black is the gap between a number and its outline, where
+	// the jersey shows.
+	vec4 print = texture(kit_tex, cell_from + uv * cell_size);
+	return print.a * print.r;
 }
 
 void fragment() {

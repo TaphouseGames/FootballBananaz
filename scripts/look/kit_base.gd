@@ -34,6 +34,14 @@ var scene: PackedScene
 var mesh: ArrayMesh
 var albedo: Texture2D
 var normal_map: Texture2D
+## A whole character (PlayerParts.PEOPLE) and not a body that takes a head:
+## its roughness, and the mask kit_person.gdshader repaints it by.
+var is_person: bool = false
+var roughness_map: Texture2D
+var mask: Texture2D
+## How high the top of a person and the middle of the head are.
+var _top: float = 0.0
+var _head_middle: float = 0.0
 ## The top of the collar, and the middle and half the size of its rim.
 var collar_top: float = 0.0
 var collar_middle: Vector2 = Vector2.ZERO
@@ -63,8 +71,23 @@ static func of(body: String) -> KitBase:
 	return _cache[body]
 
 
-func _init(body: String) -> void:
+## The whole character with this id in PlayerParts.PEOPLE.
+static func of_person(person: String) -> KitBase:
+	var key: String = "person:" + person
+	if not _cache.has(key):
+		_cache[key] = KitBase.new(person, true)
+	return _cache[key]
+
+
+func _init(body: String, person: bool = false) -> void:
 	id = body
+	is_person = person
+	if person:
+		var who: Dictionary = PlayerParts.PEOPLE[body]
+		scene = load(who["path"])
+		mask = load(who["mask"])
+		_bake_person(who)
+		return
 	var entry: Dictionary = PlayerParts.BODIES[body]
 	_head_scale = entry.get("head_scale", 1.0)
 	body_scale = entry.get("scale", 1.0)
@@ -75,17 +98,17 @@ func _init(body: String) -> void:
 ## The head with this id in PlayerParts.HEADS as a mesh that sits in this
 ## body's collar.
 func head_mesh(head: String) -> ArrayMesh:
-	return _head(head)[0]
+	return null if is_person else _head(head)[0]
 
 
 ## How high the top of that head is, which is how tall the player is.
 func top_z(head: String) -> float:
-	return _head(head)[1]
+	return _top if is_person else _head(head)[1]
 
 
 ## How high the middle of that head is.
 func head_middle_z(head: String) -> float:
-	return _head(head)[2]
+	return _head_middle if is_person else _head(head)[2]
 
 
 func _head(head: String) -> Array:
@@ -240,6 +263,69 @@ func _bake(entry: Dictionary) -> void:
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, format)
 
 
+## The mesh of a whole character with what kit_person.gdshader needs baked in.
+## The model stands in the space Godot uses (y up, facing +z); what is baked
+## and measured is in the space this class works in (x across, y back, z up).
+func _bake_person(entry: Dictionary) -> void:
+	var root: Node = scene.instantiate()
+	var instance: MeshInstance3D = root.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	var skeleton: Skeleton3D = instance.get_parent() as Skeleton3D
+	var source: ArrayMesh = instance.mesh as ArrayMesh
+	var skin: Skin = instance.skin
+	var material: BaseMaterial3D = source.surface_get_material(0) as BaseMaterial3D
+	if material != null:
+		albedo = material.albedo_texture
+		normal_map = material.normal_texture
+		roughness_map = material.roughness_texture
+	var worth: Array[Color] = []
+	for bind: int in skin.get_bind_count():
+		var bone: String = skin.get_bind_name(bind)
+		if bone == "" and skeleton != null:
+			bone = skeleton.get_bone_name(skin.get_bind_bone(bind))
+		worth.append(_bone_worth(bone))
+	_measure(skeleton, entry)
+	_measure_print(skeleton, entry)
+	_head_middle = _joint(skeleton, "Head").z
+	root.free()
+
+	var arrays: Array = source.surface_get_arrays(0)
+	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var count: int = points.size()
+	@warning_ignore("integer_division")
+	var per: int = bones.size() / count
+	var colors: PackedColorArray = PackedColorArray()
+	colors.resize(count)
+	var custom: PackedFloat32Array = PackedFloat32Array()
+	custom.resize(count * 4)
+	for i: int in count:
+		var share: Color = Color(0.0, 0.0, 0.0, 0.0)
+		for k: int in per:
+			share += worth[bones[i * per + k]] * weights[i * per + k]
+		colors[i] = share
+		var point: Vector3 = _to_kit(points[i])
+		custom[i * 4] = point.x
+		custom[i * 4 + 1] = point.y
+		custom[i * 4 + 2] = point.z
+		custom[i * 4 + 3] = -normals[i].z
+		_top = maxf(_top, point.z)
+	collar_top = _top
+	_head_middle = (_head_middle + _top) / 2.0
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_CUSTOM0] = custom
+	mesh = ArrayMesh.new()
+	var format: int = Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT
+	format |= source.surface_get_format(0) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, format)
+
+
+## A place in the model of a person (y up, facing +z) in the space of this class.
+func _to_kit(point: Vector3) -> Vector3:
+	return Vector3(point.x, -point.z, point.y)
+
+
 ## Keeps the jersey in the pants. The two are separate shells, the bottom of
 ## the jersey inside the waistband, and as modelled the one goes with the
 ## waist and the other with the pelvis: a player who bends forward pulls his
@@ -350,12 +436,31 @@ func _measure(skeleton: Skeleton3D, entry: Dictionary) -> void:
 	back_name = _box(entry, "back_name", Vector3(hip + chest * 0.815, shoulder * 0.89, chest * 0.105))
 
 
+## Where the print goes on a whole character: big, as on a real jersey. The
+## number fills the chest and the back from the belly to the shoulder blades,
+## the name runs from shoulder to shoulder above it. Each box has the shape
+## of its part of the kit map, so nothing is stretched.
+func _measure_print(skeleton: Skeleton3D, entry: Dictionary) -> void:
+	var hip: float = _joint(skeleton, "Hip").z
+	var chest: float = _joint(skeleton, "NeckTwist01").z - hip
+	var shoulder: float = absf(_joint(skeleton, "L_Upperarm").x)
+	const NUMBER_SHAPE: float = 512.0 / 384.0
+	const NAME_SHAPE: float = 512.0 / 128.0
+	var front: float = minf(chest * 0.38, shoulder * 1.1 / NUMBER_SHAPE)
+	var back: float = minf(chest * 0.4, shoulder * 1.2 / NUMBER_SHAPE)
+	var name_wide: float = shoulder * 1.25
+	front_number = _box(entry, "front_number", Vector3(hip + chest * 0.48, front * NUMBER_SHAPE, front))
+	back_number = _box(entry, "back_number", Vector3(hip + chest * 0.37, back * NUMBER_SHAPE, back))
+	back_name = _box(entry, "back_name", Vector3(hip + chest * 0.37 + back + name_wide / NAME_SHAPE * 0.75, name_wide, name_wide / NAME_SHAPE))
+
+
 func _joint(skeleton: Skeleton3D, bone_name: String) -> Vector3:
 	var bone: int = skeleton.find_bone(bone_name)
 	if bone < 0:
 		push_error("Body %s has no bone %s" % [id, bone_name])
 		return Vector3.ZERO
-	return skeleton.get_bone_global_rest(bone).origin
+	var at: Vector3 = skeleton.get_bone_global_rest(bone).origin
+	return _to_kit(at) if is_person else at
 
 
 func _box(entry: Dictionary, key: String, usual: Vector3) -> Vector3:

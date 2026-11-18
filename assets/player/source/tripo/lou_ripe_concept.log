@@ -1,0 +1,10 @@
+task created 4c5323ab-9e77-4088-b9ad-d8ae49c1b998 (@player-lou-ripe-concept-3)
+generate_image · queued
+generate_image · running · 4c5323ab
+generate_image · running · 4c5323ab
+generate_image · running · 4c5323ab
+generate_image · success 100% · 4c5323ab
+[32m✓[39m generate_image · 4c5323ab-9e77-4088-b9ad-d8ae49c1b998 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to lou_ripe_concept\tripo-out\player-lou-ripe-concept-3-4c5323ab
+{"task_id":"4c5323ab-9e77-4088-b9ad-d8ae49c1b998","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"lou_ripe_concept\\tripo-out\\player-lou-ripe-concept-3-4c5323ab","files":["generated_image.png","preview.png"],"preview":"lou_ripe_concept\\tripo-out\\player-lou-ripe-concept-3-4c5323ab\\preview.png"}

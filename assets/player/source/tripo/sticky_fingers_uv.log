@@ -1,0 +1,8 @@
+task created cf6b9e39-5d93-451a-b3b6-01b6529252ab (@player-sticky-fingers-uv)
+mesh_uv · queued
+mesh_uv · running 99% · cf6b9e39
+mesh_uv · success 100% · cf6b9e39
+[32m✓[39m mesh_uv · cf6b9e39-5d93-451a-b3b6-01b6529252ab · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to sticky_fingers_uv\tripo-out\player-sticky-fingers-uv-cf6b9e39
+{"task_id":"cf6b9e39-5d93-451a-b3b6-01b6529252ab","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"sticky_fingers_uv\\tripo-out\\player-sticky-fingers-uv-cf6b9e39","files":["model.fbx","uv_render.webp"],"model_file":"sticky_fingers_uv\\tripo-out\\player-sticky-fingers-uv-cf6b9e39\\model.fbx"}

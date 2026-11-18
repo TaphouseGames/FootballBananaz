@@ -1,0 +1,27 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created ecec7e06-cae2-42d2-a6f4-ef49789ffbb4 (@player-slip-chiquita)
+image_to_model · queued
+image_to_model · running 4% · ecec7e06
+image_to_model · running 13% · ecec7e06
+image_to_model · running 20% · ecec7e06
+image_to_model · running 31% · ecec7e06
+image_to_model · running 47% · ecec7e06
+image_to_model · running 69% · ecec7e06
+image_to_model · running 90% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · running 99% · ecec7e06
+image_to_model · success 100% · ecec7e06
+[32m✓[39m image_to_model · ecec7e06-cae2-42d2-a6f4-ef49789ffbb4 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to slip_chiquita_model\tripo-out\player-slip-chiquita-ecec7e06
+{"task_id":"ecec7e06-cae2-42d2-a6f4-ef49789ffbb4","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"slip_chiquita_model\\tripo-out\\player-slip-chiquita-ecec7e06","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"slip_chiquita_model\\tripo-out\\player-slip-chiquita-ecec7e06\\model.fbx","preview":"slip_chiquita_model\\tripo-out\\player-slip-chiquita-ecec7e06\\preview.png"}

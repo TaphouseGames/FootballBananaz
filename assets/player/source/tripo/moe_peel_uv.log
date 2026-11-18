@@ -1,0 +1,8 @@
+task created 0396e806-4bf2-42b7-a715-8552aa415325 (@player-moe-peel-uv)
+mesh_uv · queued
+mesh_uv · running 99% · 0396e806
+mesh_uv · success 100% · 0396e806
+[32m✓[39m mesh_uv · 0396e806-4bf2-42b7-a715-8552aa415325 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to moe_peel_uv\tripo-out\player-moe-peel-uv-0396e806
+{"task_id":"0396e806-4bf2-42b7-a715-8552aa415325","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"moe_peel_uv\\tripo-out\\player-moe-peel-uv-0396e806","files":["model.fbx","uv_render.webp"],"model_file":"moe_peel_uv\\tripo-out\\player-moe-peel-uv-0396e806\\model.fbx"}

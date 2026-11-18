@@ -1,0 +1,19 @@
+{
+  "task_id": "97012b4a-07f3-4239-afbd-9c80bda62734",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Exactly the same character, head, face, moustache, kit, shoes, art style, clay material, lighting, camera and background as image[1]. Change only his build: he is now tall, lean and wiry, with a flat stomach, a narrow waist and narrow hips, a slim chest pushed proudly out, thin sinewy arms, and long thin legs with knobbly knees, so the whole figure is clearly taller and much thinner; the head stays the same size. The white jersey hangs loosely and straight with no belly under it. One eyebrow raised and a confident closed-mouth smirk under the moustache. Same plain white jersey, mid grey shorts, dark grey socks and white canvas sneakers. Full body visible from head to shoes, T-pose, arms straight out to the sides at shoulder height.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-17T22:16:29.599140Z",
+  "completed_at": "2026-11-17T22:17:05.362951Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

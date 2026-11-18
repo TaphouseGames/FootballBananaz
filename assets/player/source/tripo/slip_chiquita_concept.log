@@ -1,0 +1,10 @@
+task created 863dcbb3-91e3-4e22-8d9a-6e2f175dab88 (@player-slip-chiquita-concept)
+generate_image · queued
+generate_image · running · 863dcbb3
+generate_image · running · 863dcbb3
+generate_image · running · 863dcbb3
+generate_image · success 100% · 863dcbb3
+[32m✓[39m generate_image · 863dcbb3-91e3-4e22-8d9a-6e2f175dab88 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to slip_chiquita_concept\tripo-out\player-slip-chiquita-concept-863dcbb3
+{"task_id":"863dcbb3-91e3-4e22-8d9a-6e2f175dab88","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"slip_chiquita_concept\\tripo-out\\player-slip-chiquita-concept-863dcbb3","files":["generated_image.png","preview.png"],"preview":"slip_chiquita_concept\\tripo-out\\player-slip-chiquita-concept-863dcbb3\\preview.png"}

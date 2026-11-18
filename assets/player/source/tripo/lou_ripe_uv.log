@@ -1,0 +1,8 @@
+task created 39f10d55-d771-4001-8578-59d419b2b699 (@player-lou-ripe-uv)
+mesh_uv · queued
+mesh_uv · running 46% · 39f10d55
+mesh_uv · success 100% · 39f10d55
+[32m✓[39m mesh_uv · 39f10d55-d771-4001-8578-59d419b2b699 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to lou_ripe_uv\tripo-out\player-lou-ripe-uv-39f10d55
+{"task_id":"39f10d55-d771-4001-8578-59d419b2b699","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"lou_ripe_uv\\tripo-out\\player-lou-ripe-uv-39f10d55","files":["model.fbx","uv_render.webp"],"model_file":"lou_ripe_uv\\tripo-out\\player-lou-ripe-uv-39f10d55\\model.fbx"}

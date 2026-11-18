@@ -1,0 +1,8 @@
+task created 91ffef8b-962e-4309-b595-001876a27629 (@player-zip-cavendish-uv)
+mesh_uv · queued
+mesh_uv · running 87% · 91ffef8b
+mesh_uv · success 100% · 91ffef8b
+[32m✓[39m mesh_uv · 91ffef8b-962e-4309-b595-001876a27629 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to zip_cavendish_uv\tripo-out\player-zip-cavendish-uv-91ffef8b
+{"task_id":"91ffef8b-962e-4309-b595-001876a27629","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"zip_cavendish_uv\\tripo-out\\player-zip-cavendish-uv-91ffef8b","files":["model.fbx","uv_render.webp"],"model_file":"zip_cavendish_uv\\tripo-out\\player-zip-cavendish-uv-91ffef8b\\model.fbx"}

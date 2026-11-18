@@ -2,10 +2,65 @@
 
 [ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
 [ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://ntulcvmygfjd" path="res://scripts/data/player_look.gd" id="3_look"]
+
+[sub_resource type="Resource" id="look_dash"]
+script = ExtResource("3_look")
+person = "dash_plantain"
+height_in = 74
+
+[sub_resource type="Resource" id="look_moe"]
+script = ExtResource("3_look")
+build = 2
+person = "moe_peel"
+height_in = 70
+
+[sub_resource type="Resource" id="look_big_bunch"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "big_bunch"
+height_in = 78
+
+[sub_resource type="Resource" id="look_lou_ripe"]
+script = ExtResource("3_look")
+gender = 0
+build = 2
+person = "lou_ripe"
+height_in = 66
+
+[sub_resource type="Resource" id="look_zip_cavendish"]
+script = ExtResource("3_look")
+gender = 0
+build = 0
+person = "zip_cavendish"
+height_in = 71
+
+[sub_resource type="Resource" id="look_slip_chiquita"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "slip_chiquita"
+height_in = 63
+
+[sub_resource type="Resource" id="look_bo_split"]
+script = ExtResource("3_look")
+gender = 1
+build = 1
+person = "bo_split"
+height_in = 70
+
+[sub_resource type="Resource" id="look_sticky"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "sticky_fingers"
+height_in = 62
 
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Dash Plantain"
+look = SubResource("look_dash")
 position = "QB"
 number = 7
 speed = 62
@@ -25,6 +80,7 @@ agility = 85
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")
 display_name = "Moe Peel"
+look = SubResource("look_moe")
 number = 61
 blocking = 62
 tackling = 55
@@ -34,6 +90,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Big Bunch"
+look = SubResource("look_big_bunch")
 number = 74
 speed = 45
 strength = 65
@@ -45,6 +102,7 @@ get_open = 20
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Lou Ripe"
+look = SubResource("look_lou_ripe")
 number = 55
 blocking = 55
 tackling = 68
@@ -54,6 +112,7 @@ get_open = 25
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Zip Cavendish"
+look = SubResource("look_zip_cavendish")
 position = "WR"
 number = 81
 speed = 88
@@ -70,6 +129,7 @@ security = 45
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Sticky Fingers"
+look = SubResource("look_sticky")
 position = "WR"
 number = 88
 speed = 55
@@ -85,6 +145,7 @@ security = 70
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Slip Chiquita"
+look = SubResource("look_slip_chiquita")
 position = "RB"
 number = 22
 speed = 70
@@ -100,6 +161,7 @@ security = 42
 [sub_resource type="Resource" id="player_7"]
 script = ExtResource("1_ratings")
 display_name = "Bo Split"
+look = SubResource("look_bo_split")
 position = "TE"
 number = 40
 speed = 58

@@ -4,7 +4,9 @@ extends Node3D
 ## by kit_body.gdshader, with his number front and back and his name across
 ## the shoulders, and a head model on its head bone.
 ##
-## Which body and which head come from his PlayerLook (see PlayerParts).
+## Which body and which head come from his PlayerLook (see PlayerParts). A
+## look that names a person (PlayerParts.PEOPLE) is that whole character
+## instead, dressed by kit_person.gdshader, and has no separate head.
 ##
 ## Stands at the origin facing +Z, feet on the ground, as tall as the look
 ## says in metres. Call show_look() again after any change.
@@ -14,11 +16,26 @@ extends Node3D
 ## pose the body was modelled in. Left alone it stands as modelled.
 
 const BODY_SHADER: Shader = preload("res://assets/player/kit_body.gdshader")
+const PERSON_SHADER: Shader = preload("res://assets/player/kit_person.gdshader")
 const KIT_MAP_SIZE: Vector2i = Vector2i(512, 512)
 ## The top quarter of the kit map is the name, the rest the number.
 const NAME_ROWS: int = 128
-const NAME_FONT_SIZE: int = 92
-const NUMBER_FONT_SIZE: int = 300
+const NAME_FONT_SIZE: int = 118
+const NUMBER_FONT_SIZE: int = 325
+## The print is in college block letters. A number is a solid figure with a
+## line round it: the figure, a gap this wide (the jersey shows through) and
+## an outline as far out as NUMBER_OUTLINE, in pixels of the kit map.
+const PRINT_FONT: FontFile = preload("res://assets/fonts/Graduate-Regular.ttf")
+const PRINT_EMBOLDEN: float = 1.1
+const NUMBER_GAP: int = 22
+## The print on a whole character is the same size on everybody, whatever the
+## size of the body: half the width and half the height, in metres, of the
+## number on the chest, the number on the back and the name. (Each has the
+## shape of its part of the kit map.)
+const PRINT_FRONT: Vector2 = Vector2(0.2, 0.15)
+const PRINT_BACK: Vector2 = Vector2(0.215, 0.161)
+const PRINT_NAME: Vector2 = Vector2(0.225, 0.056)
+const NUMBER_OUTLINE: int = 40
 ## How tall the skeleton is in its own units: what PlayerAnimator's
 ## measurements of a body are made for.
 const RIG_HEIGHT: float = 1.85
@@ -46,22 +63,41 @@ var _info: KitBase
 ## The body and the head the rig was last built from.
 var _body_id: String = ""
 var _head_id: String = ""
+var _person_id: String = ""
 var _material: ShaderMaterial
 var _kit_view: SubViewport
 var _name_label: Label
-var _number_label: Label
+## The layers of the number, from the back: outline, gap, figure.
+var _number_labels: Array[Label] = []
+var _print_font: FontVariation
+## How many times the kit map has been asked for: only the last copy is used.
+var _kit_bakes: int = 0
 
 
 func _ready() -> void:
 	_kit_view = SubViewport.new()
 	_kit_view.name = "KitMap"
 	_kit_view.size = KIT_MAP_SIZE
-	_kit_view.transparent_bg = true
+	# Ink is white on black: with no clear texels in it, the map's mipmaps are
+	# exactly how much ink there is in an area.
+	_kit_view.transparent_bg = false
 	_kit_view.disable_3d = true
 	_kit_view.render_target_update_mode = SubViewport.UPDATE_ONCE
 	add_child(_kit_view)
-	_name_label = _print_label(Rect2(0.0, 0.0, KIT_MAP_SIZE.x, NAME_ROWS), NAME_FONT_SIZE)
-	_number_label = _print_label(Rect2(0.0, NAME_ROWS, KIT_MAP_SIZE.x, KIT_MAP_SIZE.y - NAME_ROWS), NUMBER_FONT_SIZE)
+	var paper: ColorRect = ColorRect.new()
+	paper.color = Color.BLACK
+	paper.size = Vector2(KIT_MAP_SIZE)
+	_kit_view.add_child(paper)
+	_print_font = FontVariation.new()
+	_print_font.base_font = PRINT_FONT
+	_print_font.variation_embolden = PRINT_EMBOLDEN
+	_name_label = _print_label(Rect2(0.0, 0.0, KIT_MAP_SIZE.x, NAME_ROWS), NAME_FONT_SIZE, Color.WHITE, 0)
+	var number_box: Rect2 = Rect2(0.0, NAME_ROWS, KIT_MAP_SIZE.x, KIT_MAP_SIZE.y - NAME_ROWS)
+	_number_labels = [
+		_print_label(number_box, NUMBER_FONT_SIZE, Color.WHITE, NUMBER_OUTLINE),
+		_print_label(number_box, NUMBER_FONT_SIZE, Color.BLACK, NUMBER_GAP),
+		_print_label(number_box, NUMBER_FONT_SIZE, Color.WHITE, 0),
+	]
 
 	_material = ShaderMaterial.new()
 	_material.shader = BODY_SHADER
@@ -86,9 +122,16 @@ func show_look(new_look: PlayerLook, color: Color, jersey_number: int, full_name
 func refresh() -> void:
 	if look == null:
 		return
-	if rig == null or look.body_id() != _body_id or look.head_id() != _head_id:
+	if rig == null or look.body_id() != _body_id or look.head_id() != _head_id or look.person_id() != _person_id:
 		_build_rig()
 	rig.scale = Vector3.ONE * look.height_m() * _info.body_scale / RIG_HEIGHT
+	if _info.is_person:
+		# What a metre is in the body's own units, at the height this player has.
+		var metre: float = _info.top_z(_head_id) / (look.height_m() * _info.body_scale)
+		var back_z: float = _info.back_number.x
+		_material.set_shader_parameter(&"front_number", Vector3(_info.front_number.x, PRINT_FRONT.x * metre, PRINT_FRONT.y * metre))
+		_material.set_shader_parameter(&"back_number", Vector3(back_z, PRINT_BACK.x * metre, PRINT_BACK.y * metre))
+		_material.set_shader_parameter(&"back_name", Vector3(back_z + (PRINT_BACK.y + PRINT_NAME.y * 0.75) * metre, PRINT_NAME.x * metre, PRINT_NAME.y * metre))
 
 	_material.set_shader_parameter(&"team_color", team_color)
 	_material.set_shader_parameter(&"white_kit", white_kit)
@@ -100,13 +143,35 @@ func refresh() -> void:
 
 	var last_name: String = PlayerLook.last_name(display_name)
 	var number_text: String = str(number) if number > 0 else ""
-	if _name_label.text != last_name or _number_label.text != number_text:
+	if _name_label.text != last_name or _number_labels[0].text != number_text:
 		_name_label.text = last_name
 		# A long name is set smaller so it still fits across the shoulders.
-		var fitted: int = mini(NAME_FONT_SIZE, int(float(KIT_MAP_SIZE.x) * 1.3 / maxf(float(last_name.length()), 1.0)))
+		var fitted: int = mini(NAME_FONT_SIZE, int(float(KIT_MAP_SIZE.x) * 1.27 / maxf(float(last_name.length()), 1.0)))
 		_name_label.add_theme_font_size_override(&"font_size", fitted)
-		_number_label.text = number_text
+		for label: Label in _number_labels:
+			label.text = number_text
 		_kit_view.render_target_update_mode = SubViewport.UPDATE_ONCE
+		_bake_kit_map()
+
+
+## Gives the material a copy of the kit map that has mipmaps, once the map has
+## been drawn. A viewport's own texture has none, and print sampled without
+## them breaks up on a player far from the camera: the thin lines of a number's
+## outline most of all. Until the copy is there (and where nothing is drawn at
+## all, as when run headless) the material reads the viewport itself.
+func _bake_kit_map() -> void:
+	_kit_bakes += 1
+	var bake: int = _kit_bakes
+	_material.set_shader_parameter(&"kit_tex", _kit_view.get_texture())
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	if bake != _kit_bakes or not is_inside_tree():
+		return
+	var image: Image = _kit_view.get_texture().get_image()
+	if image == null or image.is_empty():
+		return
+	image.generate_mipmaps()
+	_material.set_shader_parameter(&"kit_tex", ImageTexture.create_from_image(image))
 
 
 ## How high the middle of the head is above the ground, in metres.
@@ -124,7 +189,10 @@ func _build_rig() -> void:
 		rig.queue_free()
 	_body_id = look.body_id()
 	_head_id = look.head_id()
-	_info = KitBase.of(_body_id)
+	_person_id = look.person_id()
+	head = null
+	_info = KitBase.of(_body_id) if _person_id == "" else KitBase.of_person(_person_id)
+	_material.shader = PERSON_SHADER if _info.is_person else BODY_SHADER
 	rig = _info.scene.instantiate() as Node3D
 	rig.name = "Rig"
 	add_child(rig)
@@ -142,6 +210,10 @@ func _build_rig() -> void:
 	_material.set_shader_parameter(&"back_name", _info.back_name)
 
 	var from_mesh: Transform3D = _ready_rig()
+	if _info.is_person:
+		_material.set_shader_parameter(&"rough_tex", _info.roughness_map)
+		_material.set_shader_parameter(&"mask_tex", _info.mask)
+		return
 	var bone: int = skeleton.find_bone("Head")
 	var attachment: BoneAttachment3D = BoneAttachment3D.new()
 	attachment.name = "HeadAttachment"
@@ -195,17 +267,18 @@ func _straighten(bones: PackedStringArray, side: String, toward: Vector3) -> voi
 		skeleton.set_bone_rest(bone, rest)
 
 
-func _print_label(box: Rect2, font_size: int) -> Label:
+## A label of the kit map in `color`, with an outline of it `outline` wide.
+func _print_label(box: Rect2, font_size: int, color: Color, outline: int) -> Label:
 	var label: Label = Label.new()
 	label.position = box.position
 	label.size = box.size
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.clip_text = true
+	label.add_theme_font_override(&"font", _print_font)
 	label.add_theme_font_size_override(&"font_size", font_size)
-	label.add_theme_color_override(&"font_color", Color.WHITE)
-	# The outline makes block letters of the editor's thin font.
-	label.add_theme_color_override(&"font_outline_color", Color.WHITE)
-	label.add_theme_constant_override(&"outline_size", 14)
+	label.add_theme_color_override(&"font_color", color)
+	label.add_theme_color_override(&"font_outline_color", color)
+	label.add_theme_constant_override(&"outline_size", outline)
 	_kit_view.add_child(label)
 	return label

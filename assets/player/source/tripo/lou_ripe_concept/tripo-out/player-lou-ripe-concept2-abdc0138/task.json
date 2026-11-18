@@ -1,0 +1,19 @@
+{
+  "task_id": "abdc0138-7613-49dd-9d2a-f434fffbdbfe",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Exactly the same kit, navy sneakers, pose, art style, clay material, lighting, camera and background as image[1], but the man is now clearly an East Asian man in his late sixties, Japanese American: light golden-tan skin, narrow dark monolid eyes, a broad flat face with high cheekbones, deep lines, a flat grey crew cut, straight grey eyebrows, a thin neat grey moustache, a normal skin-coloured nose that is not red, and a hard, stubborn closed-mouth stare. His body is short, compact and stocky with a firm flat stomach instead of a round belly, thick smooth forearms with no hair on them, and slightly bowed legs. Same plain white jersey, mid grey shorts and dark charcoal socks. Full body from head to shoes, T-pose, arms straight out to the sides.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-17T23:13:26.753077Z",
+  "completed_at": "2026-11-17T23:13:59.225879Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

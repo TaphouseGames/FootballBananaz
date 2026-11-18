@@ -1,0 +1,10 @@
+task created 9ad17c24-f54c-466b-9b83-02ebeaba0696 (@player-moe-peel-rig)
+animate_rig · queued
+animate_rig · running 99% · 9ad17c24
+animate_rig · running 99% · 9ad17c24
+animate_rig · running 99% · 9ad17c24
+animate_rig · success 100% · 9ad17c24
+[32m✓[39m animate_rig · 9ad17c24-f54c-466b-9b83-02ebeaba0696 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to moe_peel_rig\tripo-out\player-moe-peel-rig-9ad17c24
+{"task_id":"9ad17c24-f54c-466b-9b83-02ebeaba0696","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"moe_peel_rig\\tripo-out\\player-moe-peel-rig-9ad17c24","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"moe_peel_rig\\tripo-out\\player-moe-peel-rig-9ad17c24\\model.fbx","preview":"moe_peel_rig\\tripo-out\\player-moe-peel-rig-9ad17c24\\preview.png"}

@@ -1,0 +1,11 @@
+task created 9a206c0b-0b56-419b-b3e2-277a4c6a1c9c (@player-dash-plantain-rig)
+animate_rig · queued
+animate_rig · running 31% · 9a206c0b
+animate_rig · running 99% · 9a206c0b
+animate_rig · running 99% · 9a206c0b
+animate_rig · running 99% · 9a206c0b
+animate_rig · success 100% · 9a206c0b
+[32m✓[39m animate_rig · 9a206c0b-0b56-419b-b3e2-277a4c6a1c9c · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to dash_plantain_rig\tripo-out\player-dash-plantain-rig-9a206c0b
+{"task_id":"9a206c0b-0b56-419b-b3e2-277a4c6a1c9c","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"dash_plantain_rig\\tripo-out\\player-dash-plantain-rig-9a206c0b","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"dash_plantain_rig\\tripo-out\\player-dash-plantain-rig-9a206c0b\\model.fbx","preview":"dash_plantain_rig\\tripo-out\\player-dash-plantain-rig-9a206c0b\\preview.png"}

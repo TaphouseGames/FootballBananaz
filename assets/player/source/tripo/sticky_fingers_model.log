@@ -1,0 +1,28 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created fdefaca2-3695-41de-a091-8861c9ce4cdf (@player-sticky-fingers)
+image_to_model · queued
+image_to_model · running 2% · fdefaca2
+image_to_model · running 5% · fdefaca2
+image_to_model · running 9% · fdefaca2
+image_to_model · running 13% · fdefaca2
+image_to_model · running 20% · fdefaca2
+image_to_model · running 29% · fdefaca2
+image_to_model · running 38% · fdefaca2
+image_to_model · running 47% · fdefaca2
+image_to_model · running 56% · fdefaca2
+image_to_model · running 65% · fdefaca2
+image_to_model · running 74% · fdefaca2
+image_to_model · running 83% · fdefaca2
+image_to_model · running 93% · fdefaca2
+image_to_model · running 99% · fdefaca2
+image_to_model · running 99% · fdefaca2
+image_to_model · running 99% · fdefaca2
+image_to_model · running 99% · fdefaca2
+image_to_model · running 99% · fdefaca2
+image_to_model · running 99% · fdefaca2
+image_to_model · running 99% · fdefaca2
+image_to_model · success 100% · fdefaca2
+[32m✓[39m image_to_model · fdefaca2-3695-41de-a091-8861c9ce4cdf · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to sticky_fingers_model\tripo-out\player-sticky-fingers-fdefaca2
+{"task_id":"fdefaca2-3695-41de-a091-8861c9ce4cdf","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"sticky_fingers_model\\tripo-out\\player-sticky-fingers-fdefaca2","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"sticky_fingers_model\\tripo-out\\player-sticky-fingers-fdefaca2\\model.fbx","preview":"sticky_fingers_model\\tripo-out\\player-sticky-fingers-fdefaca2\\preview.png"}

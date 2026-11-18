@@ -15,6 +15,9 @@ const HEIGHT_MAX: int = 84
 ## An id in PlayerParts.HEADS. Empty, or a head of the other gender: the
 ## first head of the player's gender.
 @export var head: String = ""
+## An id in PlayerParts.PEOPLE: a whole character of his or her own. When it
+## names one, gender, build and head are not used.
+@export var person: String = ""
 ## In inches.
 @export_range(60, 84) var height_in: int = 72
 
@@ -37,6 +40,12 @@ func body_id() -> String:
 
 func head_id() -> String:
 	return PlayerParts.head_for(gender, head)
+
+
+## The character this look is (an id in PlayerParts.PEOPLE), or "" if it is
+## put together from a body and a head.
+func person_id() -> String:
+	return person if PlayerParts.PEOPLE.has(person) else ""
 
 
 ## The last word of `display_name`, as the back of a jersey says it.

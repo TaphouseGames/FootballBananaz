@@ -1,0 +1,10 @@
+task created fe90ab1a-b2aa-4a08-bf99-a79e3a3d7ca3 (@player-sticky-fingers-rig)
+animate_rig · queued
+animate_rig · running 74% · fe90ab1a
+animate_rig · running 99% · fe90ab1a
+animate_rig · running 99% · fe90ab1a
+animate_rig · success 100% · fe90ab1a
+[32m✓[39m animate_rig · fe90ab1a-b2aa-4a08-bf99-a79e3a3d7ca3 · 25 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to sticky_fingers_rig\tripo-out\player-sticky-fingers-rig-fe90ab1a
+{"task_id":"fe90ab1a-b2aa-4a08-bf99-a79e3a3d7ca3","type":"animate_rig","status":"success","credits_consumed":25,"output_dir":"sticky_fingers_rig\\tripo-out\\player-sticky-fingers-rig-fe90ab1a","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"sticky_fingers_rig\\tripo-out\\player-sticky-fingers-rig-fe90ab1a\\model.fbx","preview":"sticky_fingers_rig\\tripo-out\\player-sticky-fingers-rig-fe90ab1a\\preview.png"}

@@ -1,0 +1,20 @@
+{
+  "task_id": "94e08d23-2996-4338-8907-eca352bda822",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "Completely show the full body of the character in T-pose. Standing upright, facing forward. Arms raise horizontally at shoulder height. Palms facing down, remove handheld objects but keep hand-worn equipment and accessories. Legs straight, feet shoulder-width apart. Keep natural body proportions and anatomy. Front view, neutral background.\nA new character: an amateur football player, a small white woman in her seventies who never drops anything, slow but unshakeable: short and slightly stooped with narrow shoulders, a soft round middle, thin legs and noticeably big, strong, knobbly hands, white-grey hair in a tight bun on top of her head, round wire glasses, deep smile lines, a calm and knowing closed-mouth smile, wearing sensible beige orthopaedic shoes. Her face is in exactly the 3D art style, level of detail and lighting of the two men in image[1]. The body is in the art style and proportions of the character in image[2]. Full body, front view, standing upright in a T-pose with arms straight out to the sides, palms down, fingers slightly apart, legs slightly apart. Stylized 3D cartoon character, an everyday person rather than an athlete, with a slightly big head, slightly oversized hands and shoes, smooth matte clay look, a detailed and expressive face, sculpted chunky hair, soft folds in the clothes, and well-defined hands, elbows and knees. The kit: a loose short-sleeved football jersey in plain near-white, pants ending just below the knee in plain mid grey, long socks in plain dark grey, each one flat colour with no logos, no numbers, no text, no stripes and no trim in another colour. Bare arms and bare hands, no helmet, no pads. Mouth closed. Matte, no gloss. Flat, even lighting. Single isolated figure on a plain flat blue-grey background, no floor shadow, no props.",
+    "template": "t_pose",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-17T22:11:15.631603Z",
+  "completed_at": "2026-11-17T22:11:50.642541Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

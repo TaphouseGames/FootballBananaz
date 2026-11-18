@@ -5,11 +5,16 @@ extends SceneTree
 ##                   and short names
 ##   heads_<gender>.png   every head of a gender close up, on the first body
 ##                   of that gender
+##   people_<team>.png   the whole characters (PlayerParts.PEOPLE) of a team
+##                   as its roster has them, each in the away and the home
+##                   kit; people_<team>_close.png their heads
 ## Needs a window (no --headless), since headless does not render.
 ##
 ## Run:  godot --path . --script res://tests/model_gallery.gd -- out=<folder>
 ## Optional user args after "--":
 ##   only=<text>      only the sheets whose name contains the text
+##   team=<name>      the people sheets of this team only (a file name in
+##                    resources/teams, without .tres)
 ##   build=<build>    the body the heads sheet puts the heads on (athletic)
 ##   describe=<path>  no pictures: prints what the model at a res:// path is
 ##                    made of (triangles, size, bones). Works headless.
@@ -23,6 +28,7 @@ const BODY_BONES: PackedStringArray = [
 
 var _out_dir: String = "user://model_gallery"
 var _only: String = ""
+var _team: String = ""
 var _heads_build: int = PlayerLook.Build.ATHLETIC
 var _cam: Camera3D
 var _view: SubViewport
@@ -35,6 +41,8 @@ func _initialize() -> void:
 			_out_dir = arg.trim_prefix("out=")
 		elif arg.begins_with("only="):
 			_only = arg.trim_prefix("only=")
+		elif arg.begins_with("team="):
+			_team = arg.trim_prefix("team=")
 		elif arg.begins_with("build="):
 			_heads_build = maxi(PlayerParts.BUILDS.find(arg.trim_prefix("build=")), 0)
 		elif arg.begins_with("describe="):
@@ -82,6 +90,30 @@ func _run() -> void:
 		for head: String in heads:
 			faces.append(_look(gender, _heads_build, head, 72))
 		await _sheet("heads_%s" % PlayerParts.GENDERS[gender], faces, true)
+	# The whole characters, team by team, as their rosters have them.
+	var teams: DirAccess = DirAccess.open("res://resources/teams")
+	for file: String in teams.get_files():
+		if not file.ends_with(".tres") or (_team != "" and file.get_basename() != _team):
+			continue
+		var team: TeamData = load("res://resources/teams/" + file) as TeamData
+		if team == null or team.roster == null:
+			continue
+		var people: Array[PlayerLook] = []
+		var faces: Array[PlayerLook] = []
+		var labels: Array[Array] = []
+		for ratings: PlayerRatings in team.roster.players:
+			if ratings.look == null or ratings.look.person_id() == "":
+				continue
+			if not ResourceLoader.exists(PlayerParts.PEOPLE[ratings.look.person]["path"]):
+				print("no model yet: ", ratings.look.person)
+				continue
+			for kit: int in 2:
+				people.append(ratings.look)
+				labels.append([ratings.display_name, ratings.number, team.team_color])
+			faces.append(ratings.look)
+		if not people.is_empty():
+			await _sheet("people_%s" % file.get_basename(), people, false, labels)
+			await _sheet("people_%s_close" % file.get_basename(), faces, true)
 	print("model gallery saved to ", ProjectSettings.globalize_path(_out_dir))
 	quit()
 
@@ -98,7 +130,7 @@ func _look(gender: int, build: int, head: String, height: int) -> PlayerLook:
 ## One picture of `looks` side by side, a row for each side they are seen
 ## from: in front, a quarter turned, the side, from behind at an angle and behind. Of the head
 ## (`close`) or of the whole body.
-func _sheet(sheet: String, looks: Array[PlayerLook], close: bool) -> void:
+func _sheet(sheet: String, looks: Array[PlayerLook], close: bool, labels: Array[Array] = []) -> void:
 	if _only != "" and not sheet.contains(_only):
 		return
 	for model: PlayerModel in _models:
@@ -117,7 +149,11 @@ func _sheet(sheet: String, looks: Array[PlayerLook], close: bool) -> void:
 	for i: int in looks.size():
 		var model: PlayerModel = PlayerModel.new()
 		_view.add_child(model)
-		model.show_look(looks[i], TEAM_COLORS[i % TEAM_COLORS.size()], 1 + i * 17, "Tester Mc%s" % NAMES[i % NAMES.size()], i % 2 == 1)
+		if labels.is_empty():
+			model.show_look(looks[i], TEAM_COLORS[i % TEAM_COLORS.size()], 1 + i * 17, "Tester Mc%s" % NAMES[i % NAMES.size()], i % 2 == 1)
+		else:
+			# In the colour of the team: away, then home.
+			model.show_look(looks[i], labels[i][2], labels[i][1], labels[i][0], i % 2 == 1)
 		# Heads are lined up for a close look, feet for the whole body.
 		model.position = Vector3((float(i) - float(looks.size() - 1) / 2.0) * spacing, -model.head_height() if close else 0.0, 0.0)
 		_models.append(model)

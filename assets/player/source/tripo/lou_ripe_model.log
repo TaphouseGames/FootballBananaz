@@ -1,0 +1,26 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 205e0b33-7d19-4285-9924-7e4c42580400 (@player-lou-ripe)
+image_to_model · queued
+image_to_model · running 5% · 205e0b33
+image_to_model · running 13% · 205e0b33
+image_to_model · running 20% · 205e0b33
+image_to_model · running 31% · 205e0b33
+image_to_model · running 47% · 205e0b33
+image_to_model · running 69% · 205e0b33
+image_to_model · running 90% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · running 99% · 205e0b33
+image_to_model · success 100% · 205e0b33
+[32m✓[39m image_to_model · 205e0b33-7d19-4285-9924-7e4c42580400 · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to lou_ripe_model\tripo-out\player-lou-ripe-205e0b33
+{"task_id":"205e0b33-7d19-4285-9924-7e4c42580400","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"lou_ripe_model\\tripo-out\\player-lou-ripe-205e0b33","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"lou_ripe_model\\tripo-out\\player-lou-ripe-205e0b33\\model.fbx","preview":"lou_ripe_model\\tripo-out\\player-lou-ripe-205e0b33\\preview.png"}

@@ -1,0 +1,25 @@
+[33m! quad=true forces FBX output (quad topology cannot be stored in GLB)[39m
+task created 7cc0ebbf-2b74-4ce0-b1fa-b5fa2be9c37c (@player-dash-plantain)
+image_to_model · queued
+image_to_model · running 6% · 7cc0ebbf
+image_to_model · running 17% · 7cc0ebbf
+image_to_model · running 26% · 7cc0ebbf
+image_to_model · running 41% · 7cc0ebbf
+image_to_model · running 63% · 7cc0ebbf
+image_to_model · running 91% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · running 99% · 7cc0ebbf
+image_to_model · success 100% · 7cc0ebbf
+[32m✓[39m image_to_model · 7cc0ebbf-2b74-4ce0-b1fa-b5fa2be9c37c · 55 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to dash_plantain_model\tripo-out\player-dash-plantain-7cc0ebbf
+{"task_id":"7cc0ebbf-2b74-4ce0-b1fa-b5fa2be9c37c","type":"image_to_model","status":"success","credits_consumed":55,"output_dir":"dash_plantain_model\\tripo-out\\player-dash-plantain-7cc0ebbf","files":["model.fbx","rendered_image.webp","preview.png"],"model_file":"dash_plantain_model\\tripo-out\\player-dash-plantain-7cc0ebbf\\model.fbx","preview":"dash_plantain_model\\tripo-out\\player-dash-plantain-7cc0ebbf\\preview.png"}

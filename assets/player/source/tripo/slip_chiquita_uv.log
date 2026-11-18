@@ -1,0 +1,8 @@
+task created 8bd9a096-fcc7-4682-9152-0bdc1c0e1258 (@player-slip-chiquita-uv)
+mesh_uv · queued
+mesh_uv · running 74% · 8bd9a096
+mesh_uv · success 100% · 8bd9a096
+[32m✓[39m mesh_uv · 8bd9a096-fcc7-4682-9152-0bdc1c0e1258 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to slip_chiquita_uv\tripo-out\player-slip-chiquita-uv-8bd9a096
+{"task_id":"8bd9a096-fcc7-4682-9152-0bdc1c0e1258","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"slip_chiquita_uv\\tripo-out\\player-slip-chiquita-uv-8bd9a096","files":["model.fbx","uv_render.webp"],"model_file":"slip_chiquita_uv\\tripo-out\\player-slip-chiquita-uv-8bd9a096\\model.fbx"}

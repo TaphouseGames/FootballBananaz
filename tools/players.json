@@ -1,0 +1,189 @@
+{
+  "_about": "The players who are whole characters of their own (tools/make_player.sh makes the raw models with Tripo, tools/prep_player.py turns them into assets/player/people/<id>.glb). `template` is the prompt for the concept picture, with `{who}` and `{refs}` from the player; `images` are the pictures given with it (image[1], image[2], from the project root). The kit is always three flat greys (jersey near-white, pants mid grey, socks dark grey): those are what the game repaints per team. `source` is the rigged model, from the project root; a player without one is skipped by prep_player.py. A player made after a face that already exists gets that face as image[1] and a concept as image[2]; the others get one concept as image[1] (Moe's for heavy people, Dash's for light ones: the body in the picture pulls a new one toward it). Moe Peel's concept was made first (template, then one image-to-image edit that gave him grey pants and dark socks) and is image[2] of the others, so that everybody wears the same kit in the same style: give a new player Moe's concept as image[2] too. `character` is who the player is, for anything made about him or her later (voice lines, commentary, a card): `summary` in one line, then `gender`, `age`, `heritage`, `build`, `look`, `personality` and `plays_like` (what the ratings say). It describes the model as it came out, which is not always what `who` asked for: keep it up to date when a player is redone.",
+  "template": "A new character: an amateur football player, {who}. {refs} Full body, front view, standing upright in a T-pose with arms straight out to the sides, palms down, fingers slightly apart, legs slightly apart. Stylized 3D cartoon character, an everyday person rather than an athlete, with a slightly big head, slightly oversized hands and shoes, smooth matte clay look, a detailed and expressive face, sculpted chunky hair, soft folds in the clothes, and well-defined hands, elbows and knees. The kit: a loose short-sleeved football jersey in plain near-white, pants ending just below the knee in plain mid grey, long socks in plain dark grey, each one flat colour with no logos, no numbers, no text, no stripes and no trim in another colour. Bare arms and bare hands, no helmet, no pads. Mouth closed. Matte, no gloss. Flat, even lighting. Single isolated figure on a plain flat blue-grey background, no floor shadow, no props.",
+  "players": {
+    "dash_plantain": {
+      "name": "Dash Plantain",
+      "character": {
+        "team": "bananaz",
+        "position": "QB",
+        "number": 7,
+        "summary": "tall, wiry white man in his early thirties, bald on top with black hair at the sides, big black handlebar moustache, white canvas sneakers",
+        "gender": "man",
+        "age": "early thirties",
+        "heritage": "white American",
+        "build": "tall, lean and wiry, chest pushed out, thin arms, long thin legs",
+        "look": "bald and smooth on top, short black hair round the sides, big black handlebar moustache with curled tips, strong jaw, heavy black eyebrows",
+        "personality": "dashing, cocky and theatrical; thinks he is the star of the show; quick and nimble but not strong",
+        "plays_like": "agile quarterback who throws well on the run (agility 85), slippery (juke 65), weak (strength 40)"
+      },
+      "who": "a white man in his early thirties, a dashing and cocky quarterback, quick and nimble but not strong: lean and wiry with narrow hips, long legs, thin arms and his chest pushed out, standing very upright, wearing old white canvas sneakers",
+      "refs": "His head and face are exactly those of the man in image[1], which shows the same head twice: bald and smooth on top with short neat black hair round the sides and back only, a big black handlebar moustache with thick curled tips, strong jaw, one eyebrow raised, a confident closed-mouth smirk. He wears exactly the same kit as the character in image[2] (white jersey, grey pants, dark grey socks up to the pants) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[2], but is a different person with a different body.",
+      "images": [
+        "assets/player/source/tripo/ref_dash_plantain.png",
+        "assets/player/source/tripo/moe_peel_concept/tripo-out/player-moe-peel-concept2-c15c0bac/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/dash_plantain_rig/tripo-out/player-dash-plantain-rig-9a206c0b/model.fbx"
+    },
+    "moe_peel": {
+      "name": "Moe Peel",
+      "character": {
+        "team": "bananaz",
+        "position": "LINE",
+        "number": 61,
+        "summary": "heavy, scowling white man in his fifties with thin sandy hair, a red nose, a short grey-blond beard and hairy forearms, brown work boots",
+        "gender": "man",
+        "age": "fifties",
+        "heritage": "white American",
+        "build": "very wide and heavy, big round belly, thick neck, thick hairy forearms, short thick legs",
+        "look": "thin sandy blond hair over a balding top, heavy sandy eyebrows pulled into a scowl, big red nose, red cheeks, short beard",
+        "personality": "grumpy, slow and immovable; complains about everything and never smiles",
+        "plays_like": "average lineman, a bit better at blocking (62) than anything else"
+      },
+      "who": "a white man in his fifties, a grumpy, slow and immovable lineman: very wide and heavy with a big round belly that pushes out his jersey, a thick neck, sloping shoulders, thick hairy forearms and short thick legs, wearing scuffed brown work boots",
+      "refs": "His head and face are exactly those of the man in image[1], which shows the same head twice: a few thin strands of sandy blond hair over a balding top with more at the sides, heavy sandy eyebrows pulled into a scowl, a big red nose, red cheeks, grey stubble and a down-turned closed mouth. The body is in the art style and proportions of the character in image[2].",
+      "images": [
+        "assets/player/source/tripo/ref_moe_peel.png",
+        "assets/stadium/source/tripo/people/p02_concept/tripo-out/crowd-p02-concept-1ce539f5/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/moe_peel_rig/tripo-out/player-moe-peel-rig-9ad17c24/model.fbx",
+      "options": {
+        "socks_from": 0.15
+      }
+    },
+    "sticky_fingers": {
+      "name": "Sticky Fingers",
+      "character": {
+        "team": "bananaz",
+        "position": "WR",
+        "number": 88,
+        "summary": "small white old lady in her seventies with a grey-white bun, round wire glasses, big knobbly hands and a calm smile, beige orthopaedic shoes",
+        "gender": "woman",
+        "age": "seventies",
+        "heritage": "white American",
+        "build": "short, slightly stooped, soft round middle, narrow shoulders, noticeably big strong hands",
+        "look": "white-grey hair in a tight bun on top, round wire glasses, deep smile lines, big ears",
+        "personality": "calm, kind and knowing; unshakeable; a grandmother who has never dropped anything in her life",
+        "plays_like": "the surest hands on the team (catching 90, security 70) but slow (speed 55)"
+      },
+      "who": "a small white woman in her seventies who never drops anything, slow but unshakeable: short and slightly stooped with narrow shoulders, a soft round middle, thin legs and noticeably big, strong, knobbly hands, white-grey hair in a tight bun on top of her head, round wire glasses, deep smile lines, a calm and knowing closed-mouth smile, wearing sensible beige orthopaedic shoes",
+      "refs": "Her face has the character and detail of the two men in image[1]. She wears exactly the same kit as the character in image[2] (white jersey, grey pants, dark grey socks up to the pants) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[2], but is a different person with a different body.",
+      "images": [
+        "assets/stadium/source/tripo/people/style_players.png",
+        "assets/player/source/tripo/moe_peel_concept/tripo-out/player-moe-peel-concept2-c15c0bac/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/sticky_fingers_rig/tripo-out/player-sticky-fingers-rig-fe90ab1a/model.fbx"
+    },
+    "big_bunch": {
+      "name": "Big Bunch",
+      "character": {
+        "team": "bananaz",
+        "position": "LINE",
+        "number": 74,
+        "summary": "huge African American man in his forties, bald, short full black beard, gentle sleepy smile, red high-top sneakers and long socks",
+        "gender": "man",
+        "age": "forties",
+        "heritage": "African American",
+        "build": "very tall and enormous: barrel chest, massive round shoulders, arms as thick as legs, solid belly",
+        "look": "shaved bald head, short full black beard, warm medium-dark brown skin, kind eyes",
+        "personality": "a gentle giant: calm, kind, soft-spoken and a little sleepy, until somebody has to be moved",
+        "plays_like": "the strongest (65) and best blocker (72) on the team, and the slowest (45)"
+      },
+      "who": "an African American man in his forties, the strongest and slowest man on the team, a gentle giant: very tall and enormous, with warm medium-dark brown skin, a shaved bald head, a short full black beard, a huge barrel chest, massive round shoulders, arms as thick as legs, a solid belly and thick legs, a calm, kind, sleepy closed-mouth smile, wearing big bright red high-top sneakers",
+      "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no blond hair, no red nose and no scowl.",
+      "images": [
+        "assets/player/source/tripo/moe_peel_concept/tripo-out/player-moe-peel-concept2-c15c0bac/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/big_bunch_rig/tripo-out/player-big-bunch-rig-1416865f/model.fbx"
+    },
+    "lou_ripe": {
+      "name": "Lou Ripe",
+      "character": {
+        "team": "bananaz",
+        "position": "LINE",
+        "number": 55,
+        "summary": "stocky Japanese American man in his late sixties, grey hair combed back, grey moustache, hard stare, navy blue sneakers",
+        "gender": "man",
+        "age": "late sixties",
+        "heritage": "Japanese American",
+        "build": "short, compact and stocky with a round belly, thick forearms, short strong legs",
+        "look": "grey hair combed back, straight grey eyebrows, grey moustache, broad lined face, light golden-tan skin",
+        "personality": "a tough old-timer who has seen it all: stubborn, gruff, few words, does not back down",
+        "plays_like": "the team's best tackler (68)"
+      },
+      "who": "a Japanese American man in his late sixties, a tough old tackler who has seen it all: short, compact and stocky, a man's flat broad chest, a thick straight waist with a small firm paunch, thick smooth hairless forearms and short strong slightly bowed legs, wearing old navy blue sneakers",
+      "refs": "His head and face are exactly those of the old man in image[1]: light golden-tan skin, narrow dark eyes under straight grey eyebrows, a broad lined face, grey hair combed back, a grey moustache and a hard closed-mouth stare. Only the head is taken from image[1], not the body. He wears exactly the same kit as the man in image[2] and has a man's body like his, only smaller and with less belly, in exactly the same hand-sculpted clay art style, lighting and background as image[2].",
+      "images": [
+        "assets/player/source/tripo/lou_ripe_concept/tripo-out/player-lou-ripe-concept4-f530943e/generated_image.png",
+        "assets/player/source/tripo/moe_peel_concept/tripo-out/player-moe-peel-concept2-c15c0bac/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/lou_ripe_rig/tripo-out/player-lou-ripe-rig-1f3bd494/model.fbx"
+    },
+    "zip_cavendish": {
+      "name": "Zip Cavendish",
+      "character": {
+        "team": "bananaz",
+        "position": "WR",
+        "number": 81,
+        "summary": "skinny African American teenage boy of sixteen with a high-top fade, big ears and a huge cheeky grin, oversized neon green running shoes",
+        "gender": "boy",
+        "age": "sixteen",
+        "heritage": "African American",
+        "build": "tall, very skinny and gangly, all elbows and knees, long thin neck",
+        "look": "tall black high-top fade, big ears, wide bright eyes, warm brown skin, smooth young face",
+        "personality": "eager, cheeky and excitable; talks fast, cannot stand still, thrilled to be here",
+        "plays_like": "by far the fastest on the team (speed 88, get open 85) and the weakest (strength 30)"
+      },
+      "who": "an African American teenage boy of sixteen, by far the fastest on the team but weak: tall, very skinny and gangly, all elbows and knees, with warm brown skin, a tall black high-top fade haircut, big ears, wide bright eager eyes, a huge cheeky closed-mouth grin, a long thin neck, stick-thin arms and long skinny legs, wearing oversized neon green running shoes",
+      "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no moustache, no bald head and no wrinkles: a smooth young face.",
+      "images": [
+        "assets/player/source/tripo/dash_plantain_concept/tripo-out/player-dash-plantain-concept3-97012b4a/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/zip_cavendish_rig/tripo-out/player-zip-cavendish-rig-3a085ca4/model.fbx"
+    },
+    "slip_chiquita": {
+      "name": "Slip Chiquita",
+      "character": {
+        "team": "bananaz",
+        "position": "RB",
+        "number": 22,
+        "summary": "small, nimble Latina woman in her twenties with a long dark brown ponytail, an orange headband and a sly smirk, orange sneakers",
+        "gender": "woman",
+        "age": "twenties",
+        "heritage": "Latina",
+        "build": "small, light and slim with quick legs",
+        "look": "long dark brown hair in a high ponytail, bright orange headband, sharp dark eyebrows with one raised, light brown skin",
+        "personality": "sly, teasing and confident; enjoys making people miss and letting them know about it",
+        "plays_like": "the hardest to tackle on the team (juke 88), quick (speed 70), loose with the ball (security 42)"
+      },
+      "who": "a Latina woman in her twenties, a slippery running back nobody can get hold of: small, light and nimble with strong quick legs, light brown skin, long dark brown hair in a high swinging ponytail, a headband in bright orange, sharp dark eyebrows, one eyebrow raised and a sly, teasing closed-mouth smirk, wearing bright orange sneakers",
+      "refs": "She wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no moustache, no bald head and no wrinkles: a smooth young face and a slim woman's figure.",
+      "images": [
+        "assets/player/source/tripo/dash_plantain_concept/tripo-out/player-dash-plantain-concept3-97012b4a/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/slip_chiquita_rig/tripo-out/player-slip-chiquita-rig-c7b7f9dd/model.fbx"
+    },
+    "bo_split": {
+      "name": "Bo Split",
+      "character": {
+        "team": "bananaz",
+        "position": "TE",
+        "number": 40,
+        "summary": "sturdy Korean American woman in her late thirties with a chin-length black bob, rectangular glasses and a firm little smile, sky blue sneakers",
+        "gender": "woman",
+        "age": "late thirties",
+        "heritage": "Korean American",
+        "build": "tall, sturdy and square-shouldered with strong arms and thick muscular legs",
+        "look": "straight black bob with a fringe, rectangular glasses, light tan skin, level no-nonsense look",
+        "personality": "dependable, practical and no-nonsense; the one who just gets on with it and keeps everybody else in line",
+        "plays_like": "does a bit of everything and nothing badly: every rating between 52 and 62"
+      },
+      "who": "a Korean American woman in her late thirties, the dependable tight end who does a bit of everything: tall, sturdy and square-shouldered with strong arms and solid legs, light tan skin, a neat chin-length straight black bob with a fringe, rectangular sports glasses held on by a strap, a level, no-nonsense look and a small firm closed-mouth smile, wearing sky blue sneakers",
+      "refs": "She wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no moustache, no bald head and no wrinkles, and a sturdy woman's figure rather than a thin one.",
+      "images": [
+        "assets/player/source/tripo/dash_plantain_concept/tripo-out/player-dash-plantain-concept3-97012b4a/generated_image.png"
+      ],
+      "source": "assets/player/source/tripo/bo_split_rig/tripo-out/player-bo-split-rig-b2503bdf/model.fbx"
+    }
+  }
+}

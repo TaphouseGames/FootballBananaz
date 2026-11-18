@@ -1,0 +1,10 @@
+task created c3c28dda-8581-44ee-987f-b21ad087e95c (@player-big-bunch-concept)
+generate_image · queued
+generate_image · running · c3c28dda
+generate_image · running · c3c28dda
+generate_image · running · c3c28dda
+generate_image · success 100% · c3c28dda
+[32m✓[39m generate_image · c3c28dda-8581-44ee-987f-b21ad087e95c · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to big_bunch_concept\tripo-out\player-big-bunch-concept-c3c28dda
+{"task_id":"c3c28dda-8581-44ee-987f-b21ad087e95c","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"big_bunch_concept\\tripo-out\\player-big-bunch-concept-c3c28dda","files":["generated_image.png","preview.png"],"preview":"big_bunch_concept\\tripo-out\\player-big-bunch-concept-c3c28dda\\preview.png"}

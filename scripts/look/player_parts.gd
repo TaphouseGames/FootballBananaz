@@ -62,6 +62,56 @@ const HEADS: Dictionary[String, Dictionary] = {
 		"size": 0.24, "neck": 0.235, "sink": 0.035, "forward": 0.008, "tilt": 8.0,
 	},
 }
+## The players who are a whole character of their own, by id: one model with
+## its own face, body and shoes, made by tools/make_player.sh and
+## tools/prep_player.py from tools/players.json. `path` is the rigged model,
+## `mask` the picture that says which of its texels are jersey (r), pants (g)
+## and socks (b): kit_person.gdshader gives those the team's colours. A
+## PlayerLook that names one (`person`) is that character whatever its gender,
+## build and head say. Where the print goes can be overridden as for BODIES
+## (front_number, back_number, back_name).
+const PEOPLE: Dictionary[String, Dictionary] = {
+	"dash_plantain": {
+		"name": "Dash Plantain",
+		"path": "res://assets/player/people/dash_plantain.glb",
+		"mask": "res://assets/player/people/dash_plantain_mask.png",
+	},
+	"moe_peel": {
+		"name": "Moe Peel",
+		"path": "res://assets/player/people/moe_peel.glb",
+		"mask": "res://assets/player/people/moe_peel_mask.png",
+	},
+	"sticky_fingers": {
+		"name": "Sticky Fingers",
+		"path": "res://assets/player/people/sticky_fingers.glb",
+		"mask": "res://assets/player/people/sticky_fingers_mask.png",
+	},
+	"big_bunch": {
+		"name": "Big Bunch",
+		"path": "res://assets/player/people/big_bunch.glb",
+		"mask": "res://assets/player/people/big_bunch_mask.png",
+	},
+	"lou_ripe": {
+		"name": "Lou Ripe",
+		"path": "res://assets/player/people/lou_ripe.glb",
+		"mask": "res://assets/player/people/lou_ripe_mask.png",
+	},
+	"zip_cavendish": {
+		"name": "Zip Cavendish",
+		"path": "res://assets/player/people/zip_cavendish.glb",
+		"mask": "res://assets/player/people/zip_cavendish_mask.png",
+	},
+	"slip_chiquita": {
+		"name": "Slip Chiquita",
+		"path": "res://assets/player/people/slip_chiquita.glb",
+		"mask": "res://assets/player/people/slip_chiquita_mask.png",
+	},
+	"bo_split": {
+		"name": "Bo Split",
+		"path": "res://assets/player/people/bo_split.glb",
+		"mask": "res://assets/player/people/bo_split_mask.png",
+	},
+}
 const HEAD_FIT: Dictionary = {"size": 0.3, "neck": 0.15, "sink": 0.035, "forward": 0.0, "flare": 0.12, "tilt": 0.0}
 
 

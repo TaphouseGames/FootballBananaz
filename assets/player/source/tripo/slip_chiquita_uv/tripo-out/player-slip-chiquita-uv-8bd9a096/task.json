@@ -1,0 +1,21 @@
+{
+  "task_id": "8bd9a096-fcc7-4682-9152-0bdc1c0e1258",
+  "type": "mesh_uv",
+  "status": "success",
+  "input": {
+    "bake": true,
+    "model_version": "default",
+    "original_model_id": "ecec7e06-cae2-42d2-a6f4-ef49789ffbb4"
+  },
+  "output_fields": [
+    "model_url",
+    "uv_render_url"
+  ],
+  "credits_consumed": 20,
+  "created_at": "2026-11-17T23:35:15.294936Z",
+  "completed_at": "2026-11-17T23:35:30.352060Z",
+  "files": [
+    "model.fbx",
+    "uv_render.webp"
+  ]
+}
