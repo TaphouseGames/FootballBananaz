@@ -601,6 +601,21 @@ func _reset_play() -> void:
 
 # --- Kickoff ---------------------------------------------------------------------
 
+## The team's two best return men by speed + juke, best first. Level on that,
+## the faster one goes first, then the one earlier in the roster.
+func kick_returners(team: Team) -> Array[Player]:
+	var order: Array[Player] = team.players.duplicate()
+	order.sort_custom(func(a: Player, b: Player) -> bool:
+		var a_sum: int = a.ratings.speed + a.ratings.juke
+		var b_sum: int = b.ratings.speed + b.ratings.juke
+		if a_sum != b_sum:
+			return a_sum > b_sum
+		if a.ratings.speed != b.ratings.speed:
+			return a.ratings.speed > b.ratings.speed
+		return team.players.find(a) < team.players.find(b))
+	return order.slice(0, 2)
+
+
 ## Lines both teams up for a kickoff to game.offense: the kicking team across
 ## its kick line, the returner deep, his teammates in two rows in front of him.
 func line_up_kickoff() -> void:
@@ -609,10 +624,8 @@ func line_up_kickoff() -> void:
 	handoff_done = true
 	var kick_dir: int = defense.attack_dir
 	los_x = tuning.yard_to_x(kick_dir, tuning.kickoff_yard)
-	# Slots 4 and 5 are the receivers (see Roster): the faster one returns it.
-	returner = offense.players[mini(4, offense.players.size() - 1)]
-	if offense.players.size() > 5 and offense.players[5].ratings.speed > returner.ratings.speed:
-		returner = offense.players[5]
+	# One of the two best return men, a coin toss from kick to kick.
+	returner = kick_returners(offense).pick_random()
 	runner = returner
 	qb = returner
 

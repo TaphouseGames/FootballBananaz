@@ -128,7 +128,7 @@ func _process(_delta: float) -> bool:
 
 
 ## A kickoff has to come down between the middle of the receiving team's end
-## zone and its 20, and go to one of its two receivers.
+## zone and its 20, and go to one of its two best return men.
 func _check_kick() -> void:
 	var pc: PlayController = _game.play_controller
 	if not pc.kickoff or pc.phase != PlayController.Phase.AIR or _kick_seen == _game.get_stat(&"kickoffs"):
@@ -138,7 +138,7 @@ func _check_kick() -> void:
 	var yard: float = (pc.ball.target_point.x - tuning.own_goal_x(pc.offense.attack_dir)) * pc.off_dir
 	if yard < tuning.kickoff_land_min - 0.01 or yard > tuning.kickoff_land_max + 0.01 or pc.ball.intended != pc.returner:
 		_bad_kicks += 1
-	if pc.returner != pc.offense.players[4] and pc.returner != pc.offense.players[5]:
+	if not pc.kick_returners(pc.offense).has(pc.returner):
 		_bad_kicks += 1
 
 
