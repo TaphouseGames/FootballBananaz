@@ -14,7 +14,7 @@
 [ext_resource type="Texture2D" uid="uid://oxdsgs5rt54a" path="res://TripoModels/unused_old_player_armored/tripo_convert_ddd51737-d3cc-4b53-b190-8893431bfd27.fbm/armored_humanoid_3d_model_roughness.jpg" id="12_vtpqf"]
 [ext_resource type="PackedScene" uid="uid://dvqgcalywigoy" path="res://TripoModels/player_head_dash_plantain/player_head_dash_plantain.fbx" id="15_ta1rs"]
 [ext_resource type="Texture2D" uid="uid://cjgnx0totofbn" path="res://TripoModels/player_head_dash_plantain/tripo_convert_483dfa60-f1b2-4db7-899a-d0b45a3fe984.fbm/stylized_male_head_3d_model_basecolor.jpg" id="16_i6ltj"]
-[ext_resource type="Texture2D" path="res://TripoModels/stylized_male_head_3d_model/tripo_convert_483dfa60-f1b2-4db7-899a-d0b45a3fe984.fbm/stylized_male_head_3d_model_normal.jpg" id="17_vtpqf"]
+[ext_resource type="Texture2D" uid="uid://8stfbkpfscq5" path="res://TripoModels/player_head_dash_plantain/tripo_convert_483dfa60-f1b2-4db7-899a-d0b45a3fe984.fbm/stylized_male_head_3d_model_normal.jpg" id="17_vtpqf"]
 [ext_resource type="Texture2D" uid="uid://cubk68qbd0nmu" path="res://TripoModels/player_head_dash_plantain/tripo_convert_483dfa60-f1b2-4db7-899a-d0b45a3fe984.fbm/stylized_male_head_3d_model_metallic.jpg" id="18_f0lfi"]
 [ext_resource type="Texture2D" uid="uid://dwmn7pjfu62yn" path="res://TripoModels/player_head_dash_plantain/tripo_convert_483dfa60-f1b2-4db7-899a-d0b45a3fe984.fbm/stylized_male_head_3d_model_roughness.jpg" id="19_cyjjk"]
 [ext_resource type="PackedScene" uid="uid://6l2ams7uggkw" path="res://TripoModels/player_body_male_big/player_body_male_big.fbx" id="20_sn3va"]

@@ -65,10 +65,16 @@ var stat_book: StatBook = StatBook.new()
 ## The season itself moves on at the final whistle. -1 in an exhibition.
 var season_round: int = -1
 
+## Shakes the person's gamepad.
+var rumble: Rumble = Rumble.new()
+
 var _hit_stop_left: float = 0.0
 ## Team the camera sits behind, and the offense it was last set from.
 var _camera_team: Team
 var _camera_offense: Team
+## Set while the turnover-on-downs banner is up: the camera stays where the play
+## ended and only goes round behind the new offense when the next play is set up.
+var hold_camera_side: bool = false
 
 @onready var field: Field = $Field
 @onready var home: Team = $HomeTeam
@@ -102,6 +108,8 @@ func _ready() -> void:
 	camera_rig.setup(tuning)
 	human.setup(self)
 	play_controller.setup(self)
+	add_child(rumble)
+	rumble.setup(self)
 	hud.setup(self)
 	audio.setup(self)
 	var hole_debug: HoleDebug = HoleDebug.new()
@@ -297,6 +305,7 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 		start_drive(defense, los_x)
 		add_stat(&"turnovers")
 		banner_text = "TURNOVER ON DOWNS"
+		hold_camera_side = true
 		return &"Turnover"
 	return next_play_state()
 
@@ -434,7 +443,7 @@ func _camera_target() -> Vector3:
 func _camera_facing() -> float:
 	if offense == null:
 		return 1.0
-	if offense != _camera_offense:
+	if offense != _camera_offense and not hold_camera_side:
 		_camera_offense = offense
 		_camera_team = offense
 	if not play_controller.ball_dead and ball.carrier != null:

@@ -75,7 +75,6 @@ juke = 65
 security = 40
 power = 45
 accuracy = 58
-agility = 85
 
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")

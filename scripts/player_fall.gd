@@ -288,10 +288,11 @@ func update(player: Player, body: Node3D, delta: float, instant: bool) -> void:
 		# The arc is exact, not eased, so take-off and landing look crisp.
 		_out_height = STAND_HEIGHT + player.air_height()
 		_dive_base = STAND_HEIGHT
-	elif player.state == Player.State.DIVING and player.jump_dive:
-		# Down from the jump on an arc, laying out as he comes.
-		_dive_base = lerpf(_dive_base, DIVE_HEIGHT, blend)
-		_out_height = _dive_base + player.air_height()
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	elif player.state == Player.State.DIVING and player.jump_dive:
+#		# Down from the jump on an arc, laying out as he comes.
+#		_dive_base = lerpf(_dive_base, DIVE_HEIGHT, blend)
+#		_out_height = _dive_base + player.air_height()
 	else:
 		_out_height = lerpf(_out_height, target_height, blend)
 	body.basis = _pressed() * Basis(_quat)

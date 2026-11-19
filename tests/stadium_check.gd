@@ -29,12 +29,40 @@ func _run() -> void:
 	print("Fans: %d.  Home fans on the home side %s, on the away side %s." % [stadium.fan_count, stadium.home_side_fans, stadium.away_side_fans])
 	if stadium.fan_count < 1500:
 		_failures.append("only %d fans in the stands" % stadium.fan_count)
-	if stadium.get_node_or_null(^"Stands") == null or stadium.get_node_or_null(^"Boards") == null:
-		_failures.append("the stands or the ad boards are missing")
-	for prop: String in ["Jumbotrons", "LightTowers", "HotDogStand", "BoothAnchor"]:
+	if stadium.get_node_or_null(^"Stands") == null or stadium.get_node_or_null(^"Boards") == null or stadium.get_node_or_null(^"Seats") == null:
+		_failures.append("the stands, the seats or the ad boards are missing")
+	# A seat for every place a fan can sit, in full and in plain.
+	var seat_count: int = 0
+	for piece: Node in stadium.get_node(^"Seats").get_children():
+		if piece.get_child_count() != 2:
+			_failures.append("%s does not hold its seats at both levels of detail" % piece.name)
+		seat_count += (piece.get_child(0) as MultiMeshInstance3D).multimesh.instance_count
+	if seat_count < stadium.fan_count:
+		_failures.append("%d seats for %d fans" % [seat_count, stadium.fan_count])
+	# The modelled pieces: a mouth on every tunnel, the outside wall and the
+	# roof all the way round but for the press box's place.
+	var tunnels: int = 0
+	var bays: int = 0
+	for run: Stadium.Run in stadium.runs:
+		bays += Stadium.CORNER_BAYS if run.arc else stadium._bays(run)
+		for slice: Array in run.slices:
+			if slice[3]:
+				tunnels += 1
+	var got: Array[int] = []
+	for ring: String in ["Tunnels", "Facade", "Roof"]:
+		var node: Node = stadium.props.get_node_or_null(NodePath(ring))
+		got.append(node.get_child_count() if node != null else 0)
+	print("Seats: %d.  Tunnel mouths: %d of %d.  Bays of facade: %d and of roof: %d, of %d." % [seat_count, got[0], tunnels, got[1], got[2], bays])
+	if got[0] != tunnels or got[1] != bays or got[2] != bays - Stadium.PRESS_BOX_BAYS:
+		_failures.append("the tunnel mouths, the facade or the roof are not all there")
+	# What a ball comes down on is what it was before the pieces were added.
+	var side: float = tuning.half_width() + tuning.wall_gap + Stadium.WALL_THICKNESS
+	if not is_equal_approx(stadium.surface_height(50.0, side - 0.1), Stadium.WALL_HEIGHT) or not is_equal_approx(stadium.surface_height(50.0, side + 0.1), Stadium.FIRST_ROW_HEIGHT) or stadium.surface_height(50.0, 0.0) != 0.0:
+		_failures.append("the heights of the wall and the first row have moved")
+	for prop: String in ["Jumbotrons", "LightTowers", "HotDogStand", "BoothAnchor", "PressBox"]:
 		if stadium.props.get_node_or_null(NodePath(prop)) == null:
 			_failures.append("no %s under Stadium/Props" % prop)
-	for file: String in ["jumbotron.glb", "light_tower.glb", "hot_dog_stand.glb", Stadium.MASCOT_FALLBACK, "crowd_people.glb", "crowd_people_atlas.png", "crowd_people_mask.png", "crowd_people_normal.png"]:
+	for file: String in ["jumbotron.glb", "light_tower.glb", "hot_dog_stand.glb", Stadium.TUNNEL_FILE, Stadium.FACADE_FILE, Stadium.ROOF_FILE, Stadium.PRESS_BOX_FILE, Stadium.MASCOT_FALLBACK, "crowd_people.glb", "crowd_people_atlas.png", "crowd_people_mask.png", "crowd_people_normal.png"]:
 		if not ResourceLoader.exists(Stadium.PROP_DIR + file):
 			_failures.append("assets/stadium/%s is missing" % file)
 

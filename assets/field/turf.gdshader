@@ -37,6 +37,25 @@ uniform float hash_offset = 3.08;
 uniform vec2 digit_half = vec2(0.7, 1.15);
 uniform float digit_stroke = 0.34;
 uniform float digit_gap = 0.42;
+// The lettering Field draws once with a real typeface (Field._bake_paint): a
+// row of the numerals 0 to 5, each filling its cell, and under it a row for
+// each end zone's name (red: the paint, green: its outline). `atlas_rows` is
+// the height of the numerals' row and of one name's row, as shares of the
+// picture. Until it is there (and when nothing is drawn, headless) the
+// numerals are the plain ones of numeral().
+uniform sampler2D paint_atlas : hint_default_black, repeat_disable, filter_linear_mipmap_anisotropic;
+uniform bool painted = false;
+uniform vec2 atlas_rows = vec2(0.46, 0.27);
+// Yards a name's row takes up in its end zone: along the goal line, and deep.
+uniform vec2 name_size = vec2(38.4, 6.0);
+// What lies round the stadium: yards from the lines to the outside of the
+// bowl (0: no stadium, and the grass just runs on), then a paved walk
+// `plaza_width` wide, then a car park `parking_width` wide, then grass.
+uniform float bowl_reach = 0.0;
+uniform float plaza_width = 9.0;
+uniform float parking_width = 34.0;
+uniform vec3 paving_color : source_color = vec3(0.46, 0.45, 0.43);
+uniform vec3 asphalt_color : source_color = vec3(0.1, 0.1, 0.11);
 
 varying vec3 world_pos;
 
@@ -94,6 +113,27 @@ float numeral(vec2 q, int digit) {
 	return max(d, corner);
 }
 
+// How much of the numeral `digit` of the drawn lettering covers `q`, which is
+// measured from the numeral's middle.
+float drawn_numeral(vec2 q, int digit) {
+	vec2 uv = q / (digit_half * 2.0) + 0.5;
+	vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
+	float ink = texture(paint_atlas, vec2((float(digit) + uv.x) / 6.0, (1.0 - uv.y) * atlas_rows.x)).r;
+	return smoothstep(0.25, 0.75, ink) * inside.x * inside.y;
+}
+
+// The name in row `row` of the drawn lettering at `uv` of its row (v down):
+// its paint and its outline.
+vec2 drawn_name(vec2 uv, float row) {
+	vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
+	return texture(paint_atlas, vec2(uv.x, atlas_rows.x + (row + uv.y) * atlas_rows.y)).rg * inside.x * inside.y;
+}
+
+// A number from 0 to 1 for the cell `cell`, the same every time.
+float chance(vec2 cell) {
+	return fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+}
+
 // The picture `tex` in the unit square of `uv`, nothing outside it.
 vec4 decal(sampler2D tex, vec2 uv) {
 	vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
@@ -137,6 +177,40 @@ void fragment() {
 	vec3 apron = grass * vec3(0.5, 0.44, 0.34) * (0.7 + 0.5 * n_mid);
 	vec3 color = mix(apron, mown, in_field);
 
+	// Round the bowl: a paved walk, then a car park with cars in most bays.
+	float rough = 0.92;
+	if (bowl_reach > 0.0) {
+		vec2 past = abs(vec2(x - mid_x, p.y)) - vec2(mid_x + end_zone_depth, half_w);
+		float outside = length(max(past, vec2(0.0))) + min(max(past.x, past.y), 0.0) - bowl_reach;
+		float aa_p = max(max(fwidth(x), fwidth(p.y)), 0.004);
+		// Slabs two yards square.
+		vec2 slab = (fract(p / 2.0 + 0.5) - 0.5) * 2.0;
+		float joint = 1.0 - smoothstep(0.03, 0.03 + aa_p, min(abs(slab.x), abs(slab.y)));
+		vec3 paving = paving_color * (0.82 + 0.3 * n_mid) * (0.94 + 0.12 * chance(floor(p / 2.0 + 0.5))) * (1.0 - 0.35 * joint);
+		// Rows of bays three yards wide, nose to nose, a lane between the rows.
+		float lane = 19.0;
+		float row = (fract(p.y / lane + 0.5) - 0.5) * lane;
+		float bay = (fract(x / 3.0) - 0.5) * 3.0;
+		float in_bays = step(abs(row), 6.0);
+		float lines = max(band(row, 0.06, aa_p), band(abs(bay) - 1.5, 0.06, aa_p)) * in_bays;
+		vec3 parking = asphalt_color * (0.8 + 0.5 * n_fine) * (0.85 + 0.3 * n_patch);
+		parking = mix(parking, vec3(0.8, 0.8, 0.76), lines * 0.85);
+		vec2 bay_id = vec2(floor(x / 3.0), floor(p.y / lane + 0.5) * 2.0 + step(0.0, row));
+		float car_d = box(vec2(bay, abs(row)), vec2(0.0, 3.2), vec2(0.72, 1.9)) - 0.28;
+		float car = (1.0 - smoothstep(-aa_p, aa_p, car_d)) * step(chance(bay_id), 0.82) * in_bays;
+		float pick = chance(bay_id + 7.3);
+		vec3 paint_job = pick < 0.25 ? vec3(0.75, 0.76, 0.78) : pick < 0.45 ? vec3(0.08, 0.08, 0.1) : pick < 0.6 ? vec3(0.6, 0.08, 0.07) : pick < 0.75 ? vec3(0.1, 0.2, 0.5) : pick < 0.88 ? vec3(0.9, 0.9, 0.88) : vec3(0.75, 0.6, 0.12);
+		// The roof and the glass: darker toward the windscreens.
+		float glass = 1.0 - smoothstep(0.0, 0.15, abs(abs(abs(row) - 3.2) - 0.75) - 0.22);
+		paint_job = mix(paint_job, vec3(0.05, 0.07, 0.1), glass * step(abs(bay), 0.78) * 0.85);
+		parking = mix(parking, paint_job, car);
+		float on_plaza = smoothstep(-aa_p, aa_p, outside) * (1.0 - smoothstep(plaza_width - aa_p, plaza_width + aa_p, outside));
+		float on_parking = smoothstep(plaza_width - aa_p, plaza_width + aa_p, outside) * (1.0 - smoothstep(plaza_width + parking_width - 1.0, plaza_width + parking_width + 1.0, outside));
+		color = mix(color, paving, on_plaza);
+		color = mix(color, parking, on_parking);
+		rough = mix(rough, 0.45, car * on_parking);
+	}
+
 	// Wear between the hash marks, where most plays start.
 	float wear = (1.0 - smoothstep(2.0, 9.0, az)) * smoothstep(0.42, 0.72, n_mid * 0.6 + n_fine * 0.4) * in_play;
 	color = mix(color, dirt_color * (0.7 + 0.5 * n_fine), wear * 0.45);
@@ -173,15 +247,33 @@ void fragment() {
 	float aa_n = max(aa_x, aa_z);
 	int tens = int(round(min(ten, field_length - ten) / 10.0));
 	float digit_x = digit_gap + digit_half.x;
-	float glyph = q.x < 0.0 ? numeral(q + vec2(digit_x, 0.0), tens) : numeral(q - vec2(digit_x, 0.0), 0);
+	vec2 q_digit = q.x < 0.0 ? q + vec2(digit_x, 0.0) : q - vec2(digit_x, 0.0);
+	int digit = q.x < 0.0 ? tens : 0;
+	float glyph = numeral(q_digit, digit);
 	// A small arrow beside the number, pointing at the nearer goal line.
 	float toward = ten < mid_x ? -1.0 : 1.0;
 	vec2 a = vec2((x - ten) * toward - (digit_gap + digit_half.x * 2.0 + 0.55), q.y - digit_half.y * 0.45);
 	float arrow = max(-0.3 - a.x, (abs(a.y) - (0.3 - a.x) * 0.55) * 0.876);
 	arrow += step(abs(ten - mid_x), 1.0) * 10.0;
-	paint = max(paint, (1.0 - smoothstep(-aa_n, aa_n, min(glyph, arrow))) * numbered);
+	float number = 1.0 - smoothstep(-aa_n, aa_n, min(glyph, arrow));
+	if (painted) {
+		number = max(drawn_numeral(q_digit, digit), 1.0 - smoothstep(-aa_n, aa_n, arrow));
+	}
+	paint = max(paint, number * numbered);
 
 	color = mix(color, paint_color * (0.78 + 0.22 * n_blade), paint * soak);
+
+	// The teams' names across their end zones, read from midfield: white with
+	// a dark edge in the team's colour.
+	if (painted) {
+		vec2 left_uv = vec2(0.5 - p.y / name_size.x, 0.5 + (x + end_zone_depth * 0.5) / name_size.y);
+		vec2 right_uv = vec2(0.5 + p.y / name_size.x, 0.5 - (x - field_length - end_zone_depth * 0.5) / name_size.y);
+		vec2 name = drawn_name(left_uv, 0.0) * in_left + drawn_name(right_uv, 1.0) * in_right;
+		color = mix(color, zone * 0.22 * (0.7 + 0.5 * n_blade), smoothstep(0.2, 0.7, name.g) * (0.6 + 0.4 * soak));
+		float letters = smoothstep(0.25, 0.75, name.r);
+		color = mix(color, paint_color * (0.78 + 0.22 * n_blade), letters * soak);
+		paint = max(paint, letters);
+	}
 
 	// The mascots go on last, over the lines they cover.
 	float mascot_v = p.y / mascot_size + 0.5;
@@ -191,7 +283,7 @@ void fragment() {
 	paint = max(paint, mascot.a);
 
 	ALBEDO = color;
-	ROUGHNESS = 0.92 - 0.12 * paint;
+	ROUGHNESS = rough - 0.12 * paint;
 	// Nearly matte: sky reflections at a shallow angle wash the grass out.
 	SPECULAR = 0.03;
 	NORMAL_MAP = texture(blade_normal, blade_uv).rgb;

@@ -48,32 +48,29 @@ extends Resource
 @export_range(0, 100) var power: int = 50
 ## How close to the target his passes land.
 @export_range(0, 100) var accuracy: int = 50
-## How well he throws without his feet set.
-@export_range(0, 100) var agility: int = 50
 
 
 ## The ratings that make a player at each position, best described first.
 const KEY_RATINGS: Dictionary[String, Array] = {
-	"QB": [&"accuracy", &"power", &"agility", &"speed"],
+	"QB": [&"accuracy", &"power", &"speed"],
 	"WR": [&"get_open", &"catching", &"speed", &"juke"],
 	"RB": [&"speed", &"juke", &"strength", &"security"],
 	"LINE": [&"blocking", &"tackling", &"strength"],
 	"TE": [&"blocking", &"catching", &"strength", &"get_open"],
 }
 ## Every rating a player card shows, in order, with the name it goes by there.
-## The last three only mean something for a quarterback.
+## The last two only mean something for a quarterback.
 const CARD_ORDER: Array[StringName] = [
 	&"speed", &"endurance", &"strength", &"blocking", &"tackling", &"coverage",
-	&"get_open", &"catching", &"juke", &"security", &"power", &"accuracy", &"agility",
+	&"get_open", &"catching", &"juke", &"security", &"power", &"accuracy",
 ]
 const CARD_LABELS: Dictionary[StringName, String] = {
 	&"speed": "SPEED", &"endurance": "ENDURANCE", &"strength": "STRENGTH",
 	&"blocking": "BLOCKING", &"tackling": "TACKLING", &"coverage": "COVERAGE",
 	&"get_open": "GET OPEN", &"catching": "CATCHING", &"juke": "JUKE",
 	&"security": "BALL SECURITY", &"power": "THROW POWER", &"accuracy": "THROW ACCURACY",
-	&"agility": "THROW ON THE RUN",
 }
-const QB_ONLY: Array[StringName] = [&"power", &"accuracy", &"agility"]
+const QB_ONLY: Array[StringName] = [&"power", &"accuracy"]
 
 
 ## His look, or for a player nobody has given one, a look made up from his

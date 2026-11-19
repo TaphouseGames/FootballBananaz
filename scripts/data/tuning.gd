@@ -121,17 +121,17 @@ extends Resource
 ## rating scales it, see endurance_drain_low). With less than this left he spends
 ## what there is, and the move is that much shorter and weaker (its time and
 ## every one of its effects); with none left the press does nothing. 0 = free.
-@export var secure_turbo_cost: float = 0.25
+@export var secure_turbo_cost: float = 0.20
 ## Share of the stamina meter each of the other moves spends (0 = free), for a
 ## player of 50 endurance (the rating scales it, see endurance_drain_low). A dive
 ## out of a jump pays for both. With less than this left he spends what there
 ## is and the move is that much weaker, down to move_min_strength of a full one
 ## on an empty meter: a lower jump, a shorter dive, a slower spin and a spin or
 ## stiff arm that takes less off the tackle.
-@export var jump_stamina_cost: float = 0.15
-@export var dive_stamina_cost: float = 0.03
-@export var spin_stamina_cost: float = 0.05
-@export var stiff_arm_stamina_cost: float = 0.05
+@export var jump_stamina_cost: float = 0.20
+@export var dive_stamina_cost: float = 0.08
+@export var spin_stamina_cost: float = 0.10
+@export var stiff_arm_stamina_cost: float = 0.10
 @export_range(0.0, 1.0) var move_min_strength: float = 0.3
 ## Seconds from the press before he can do it again.
 @export var secure_cooldown: float = 2.5
@@ -171,6 +171,10 @@ extends Resource
 ## toward it.
 @export var jump_ball_range: float = 3.5
 
+# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+# The move's code is commented out, so the jump_dive_* and ai_*jump_dive_* values
+# do nothing for now, except jump_dive_daze_time and jump_dive_get_up_time (and
+# the injury values), which a player flattened against the wall still uses.
 @export_group("Jump dive")
 ## A dive started in the air (dive pressed during a jump) goes this much faster
 ## than dive_speed.
@@ -232,11 +236,10 @@ extends Resource
 @export var throwaway_speed: float = 24.0
 @export var throwaway_past_sideline: float = 4.0
 @export var throwaway_downfield: float = 12.0
-## Throwing on the run (before the feet are set again): the pass can miss by up
-## to this many yards per yard thrown.
-@export var pass_scramble_error: float = 0.18
 ## Seconds after letting go of turbo before the QB's feet are set again. 0 = at
-## once. Only turbo unsets them: moving about without it never does.
+## once. Only turbo unsets them: moving about without it never does. For show
+## only (his stance and the acrobatic throw): a pass is no
+## less accurate without them.
 @export var pass_set_feet_time: float = 1.2
 ## Pump fake: the right bumper let go within pump_tap_time of going down, with
 ## no pass button held. The arm goes for pump_time, and he cannot do it again
@@ -386,6 +389,19 @@ extends Resource
 @export var tackle_retry_time: float = 0.6
 ## Tackle chance multiplier for a defender who is tied up by a blocker.
 @export var blocked_tackle_scale: float = 0.5
+## While the ball is live a dive takes out one man who is not the carrier and
+## no more: it keeps this share of its speed once it has flattened him.
+@export_range(0.0, 1.0) var dive_hit_speed_keep: float = 0.3
+## A man who is blocking mostly holds against a dive: it flattens him with this
+## chance, times the diver's strength rating and the blocker's blocking rating
+## (the scales below). Otherwise the diver bounces off him and is on the turf
+## for dive_stuffed_time seconds. 0 = a blocker is never taken out by a dive.
+@export var dive_blocker_chance: float = 0.25
+@export var dive_blocker_strength_scale_low: float = 0.4
+@export var dive_blocker_strength_scale_high: float = 1.6
+@export var dive_blocker_blocking_scale_low: float = 1.6
+@export var dive_blocker_blocking_scale_high: float = 0.4
+@export var dive_stuffed_time: float = 1.1
 @export var broken_tackle_stun: float = 0.75
 @export var tackle_knockdown_impulse: float = 8.0
 
@@ -419,15 +435,12 @@ extends Resource
 ## Bullet pass speed multiplier.
 @export var pass_speed_scale_low: float = 0.85
 @export var pass_speed_scale_high: float = 1.15
-## Yards a pass can miss by per yard thrown, even with the feet set.
+## Yards a pass can miss by per yard thrown.
 @export var accuracy_error_low: float = 0.08
 @export var accuracy_error_high: float = 0.0
 ## Multiplies pass_overlead_chance.
 @export var accuracy_overlead_scale_low: float = 1.5
 @export var accuracy_overlead_scale_high: float = 0.5
-## Multiplies pass_scramble_error and pass_set_feet_time.
-@export var agility_scale_low: float = 1.6
-@export var agility_scale_high: float = 0.4
 ## Tackle chance multiplier from the carrier's strength.
 @export var strength_tackle_scale_low: float = 1.1
 @export var strength_tackle_scale_high: float = 0.9
@@ -452,8 +465,8 @@ extends Resource
 ## Speed multiplier for a quarterback running with the ball tucked or past the
 ## line: he is not built like a running back.
 @export var qb_run_speed_scale: float = 0.94
-## A CPU quarterback's taste for running, from the average of his speed and
-## agility: multiplies ai_qb_keeper_chance. A pocket passer
+## A CPU quarterback's taste for running, from his speed: multiplies
+## ai_qb_keeper_chance. A pocket passer
 ## hardly ever goes; a quick one goes often. Below zero counts as never.
 @export var qb_mobility_scale_low: float = -1.0
 @export var qb_mobility_scale_high: float = 3.0
@@ -666,6 +679,15 @@ extends Resource
 @export var flash_time: float = 0.4
 @export var possession_flash: float = 0.4
 @export var fumble_flash: float = 0.55
+
+@export_group("Rumble")
+## The gamepad shakes with what happens to the person's player (see Rumble for
+## what each moment feels like). Off stops it all.
+@export var rumble_enabled: bool = true
+## Scales every rumble, 0..1, and how much of a hit comes through when the
+## person's player was not part of it (0 = none).
+@export var rumble_strength: float = 1.0
+@export var rumble_others: float = 0.2
 
 @export_group("Audio")
 ## Off silences everything (the calls still count, for the tests).
@@ -909,8 +931,6 @@ extends Resource
 @export var ai_qb_keeper_time_max: float = 0.8
 @export var ai_qb_keeper_width: float = 9.0
 @export var ai_qb_keeper_forward: float = 0.35
-## Running behind the line, he still pulls up and throws to a receiver this open.
-@export var ai_qb_run_throw_open: float = 6.0
 ## An open receiver at least this far away gets a lob to run under.
 @export var ai_qb_lob_distance: float = 22.0
 ## ...as long as he is running downfield at least this fast and no defender

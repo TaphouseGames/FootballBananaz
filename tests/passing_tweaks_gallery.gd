@@ -1,6 +1,6 @@
 extends SceneTree
-## Screenshots of the passing tweaks: the ring at the quarterback's feet (set,
-## not set, and the pop as they come set), the pump fake, and the three
+## Screenshots of the passing tweaks: the quarterback's feet (set, not set, and
+## the stamp as they come set), the pump fake, and the three
 ## acrobatic throws on the run (spin, leap, fade).
 ## Needs a window (no --headless), since headless does not render.
 ##
@@ -45,7 +45,7 @@ func _run() -> void:
 	await _shots("2_feet_not_set")
 	while _qb.feet_set < 1.0:
 		await physics_frame
-	# A few frames in, so the sparks are up off the ring.
+	# A few frames in, so the dust is up.
 	await _frames(8)
 	await _shots("3_feet_planted")
 	await _frames(30)

@@ -89,8 +89,9 @@ var ai_speed_scale: float = 1.0
 var turbo: float = 1.0
 var turbo_locked: bool = false
 var turbo_active: bool = false
-## 0 while sprinting on turbo, back to 1 shortly after. A quarterback throws
-## accurately only with his feet set.
+## 0 while sprinting on turbo, back to 1 shortly after. For show only (a
+## quarterback's stance and the acrobatic throw on the run):
+## it does not change how well he throws.
 var feet_set: float = 1.0
 ## How long his feet take to set again since they last came unset.
 var _feet_set_time: float = 0.0
@@ -106,9 +107,8 @@ var flair_side: float = 1.0
 var flair_power: float = 1.0
 var _flair_from: float = 0.0
 var _flair_sweep: float = 0.0
-## The ring at a quarterback's feet that shows whether they are set. Made the
-## first time he has the ball in the pocket.
-var feet_fx: FeetSetFx
+## Whether his feet were set last tick, to stamp into his stance as they come set.
+var _feet_were_set: bool = true
 
 ## Set each tick by the AI while this player is trying to block.
 var is_blocking: bool = false
@@ -165,14 +165,18 @@ var tackle_cooldown: float = 0.0
 ## Above 0 during a dive and for a moment after landing: the dive still reaches
 ## for a pass.
 var dive_reach_timer: float = 0.0
+## This dive has already flattened a man: it knocks nobody else over (see
+## PlayController._dive_into).
+var dive_spent: bool = false
 ## Set when a dive lands; counts down once he is back on his feet and is
 ## running. While above 0 he picks up speed more slowly.
 var dive_get_up_timer: float = 0.0
-## The current dive was started in the air, from a jump.
-var jump_dive: bool = false
-## Height of the feet when a jump dive began, and how long it lasts in all.
-var dive_start_height: float = 0.0
-var dive_duration: float = 0.0
+# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+### The current dive was started in the air, from a jump.
+#var jump_dive: bool = false
+### Height of the feet when a jump dive began, and how long it lasts in all.
+#var dive_start_height: float = 0.0
+#var dive_duration: float = 0.0
 ## Above 0 while he lies dazed after landing a jump dive.
 var dazed_timer: float = 0.0
 ## He was flattened against the wall on this tick: how fast he went into it
@@ -282,9 +286,11 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	jump_cooldown = 0.0
 	tackle_cooldown = 0.0
 	dive_reach_timer = 0.0
+	dive_spent = false
 	dive_get_up_timer = 0.0
-	jump_dive = false
-	dive_start_height = 0.0
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	jump_dive = false
+#	dive_start_height = 0.0
 	dazed_timer = 0.0
 	catch_timer = 0.0
 	ball_grab_cooldown = 0.0
@@ -609,9 +615,10 @@ func heal() -> void:
 ## Height of the feet above the turf during a jump, and on the way down from
 ## one in a jump dive.
 func air_height() -> float:
-	if state == State.DIVING and jump_dive and dive_duration > 0.0:
-		var fallen: float = clampf(1.0 - state_timer / dive_duration, 0.0, 1.0)
-		return dive_start_height * (1.0 - fallen * fallen)
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	if state == State.DIVING and jump_dive and dive_duration > 0.0:
+#		var fallen: float = clampf(1.0 - state_timer / dive_duration, 0.0, 1.0)
+#		return dive_start_height * (1.0 - fallen * fallen)
 	if state != State.JUMPING:
 		return 0.0
 	var t: float = clampf(1.0 - state_timer / tuning.jump_time, 0.0, 1.0)
@@ -653,38 +660,41 @@ func start_dive(dir: Vector3, speed: float = -1.0, free: bool = false) -> void:
 		return
 	dive_strength = 1.0 if free else move_strength(tuning.dive_stamina_cost)
 	state = State.DIVING
-	jump_dive = false
+	dive_spent = false
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	jump_dive = false
 	state_timer = tuning.dive_time
 	dive_reach_timer = tuning.dive_time + tuning.dive_catch_grace
 	facing = dir
 	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed) * dive_strength
 
 
-## How long a jump dive started right now would stay in the air: longer from
-## higher up in his own jump, however high that goes.
-func jump_dive_time() -> float:
-	var share: float = clampf(air_height() / maxf(jump_height(), 0.01), 0.0, 1.0)
-	return tuning.dive_time + tuning.jump_dive_extra_time * share
+# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+### How long a jump dive started right now would stay in the air: longer from
+### higher up in his own jump, however high that goes.
+#func jump_dive_time() -> float:
+#	var share: float = clampf(air_height() / maxf(jump_height(), 0.01), 0.0, 1.0)
+#	return tuning.dive_time + tuning.jump_dive_extra_time * share
 
 
-## A dive out of a jump: faster and further than one off the ground, and he
-## lands dazed. `speed` below 0 means the full jump-dive speed.
-func start_jump_dive(dir: Vector3, speed: float = -1.0) -> bool:
-	if state != State.JUMPING or frozen:
-		return false
-	dive_duration = jump_dive_time()
-	dive_start_height = air_height()
-	# On top of what the jump cost.
-	dive_strength = move_strength(tuning.dive_stamina_cost)
-	state = State.DIVING
-	jump_dive = true
-	state_timer = dive_duration
-	dive_reach_timer = dive_duration + tuning.dive_catch_grace
-	jump_cooldown = tuning.jump_cooldown
-	turbo_active = false
-	facing = dir
-	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed * tuning.jump_dive_speed_scale) * dive_strength
-	return true
+### A dive out of a jump: faster and further than one off the ground, and he
+### lands dazed. `speed` below 0 means the full jump-dive speed.
+#func start_jump_dive(dir: Vector3, speed: float = -1.0) -> bool:
+#	if state != State.JUMPING or frozen:
+#		return false
+#	dive_duration = jump_dive_time()
+#	dive_start_height = air_height()
+#	# On top of what the jump cost.
+#	dive_strength = move_strength(tuning.dive_stamina_cost)
+#	state = State.DIVING
+#	jump_dive = true
+#	state_timer = dive_duration
+#	dive_reach_timer = dive_duration + tuning.dive_catch_grace
+#	jump_cooldown = tuning.jump_cooldown
+#	turbo_active = false
+#	facing = dir
+#	velocity = dir * (speed if speed >= 0.0 else tuning.dive_speed * tuning.jump_dive_speed_scale) * dive_strength
+#	return true
 
 
 ## Where he will be `time` seconds from now if he keeps doing what he is doing.
@@ -816,7 +826,8 @@ func knock_down(impulse: Vector3, duration: float, kind: PlayerFall.Kind = Playe
 	state = State.DOWN
 	state_timer = duration
 	dive_reach_timer = 0.0
-	jump_dive = false
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	jump_dive = false
 	dazed_timer = 0.0
 	velocity = impulse
 	velocity.y = 0.0
@@ -859,19 +870,21 @@ func integrate(delta: float) -> void:
 			state_timer -= delta
 			if state_timer <= 0.0:
 				state = State.DOWN
-				if jump_dive:
-					# Came down from a height at speed: he is seeing stars.
-					jump_dive = false
-					_injury_pending = true
-					velocity *= tuning.jump_dive_landing_speed_scale
-					state_timer = tuning.jump_dive_daze_time
-					dazed_timer = state_timer
-					dive_get_up_timer = tuning.jump_dive_get_up_time
-					fall.start_dive_landing(state_timer, true)
-				else:
-					state_timer = tuning.dive_recover_time
-					dive_get_up_timer = tuning.dive_get_up_time
-					fall.start_dive_landing(state_timer)
+				# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+				# (The three lines below this block were its `else:` branch.)
+#				if jump_dive:
+#					# Came down from a height at speed: he is seeing stars.
+#					jump_dive = false
+#					_injury_pending = true
+#					velocity *= tuning.jump_dive_landing_speed_scale
+#					state_timer = tuning.jump_dive_daze_time
+#					dazed_timer = state_timer
+#					dive_get_up_timer = tuning.jump_dive_get_up_time
+#					fall.start_dive_landing(state_timer, true)
+#				else:
+				state_timer = tuning.dive_recover_time
+				dive_get_up_timer = tuning.dive_get_up_time
+				fall.start_dive_landing(state_timer)
 		State.SPINNING:
 			state_timer -= delta
 			if state_timer <= 0.0:
@@ -944,11 +957,11 @@ func _move_normal(delta: float) -> void:
 			turbo_locked = false
 
 	# A quarterback's feet come unset only when he uses turbo (tucks the ball and
-	# runs), and take a while to set again, less for a more agile one. Moving
-	# about without turbo never unsets them.
+	# runs), and take a while to set again. Moving about without turbo never
+	# unsets them.
 	if turbo_active or is_tucked():
 		feet_set = 0.0
-		_feet_set_time = tuning.pass_set_feet_time * PlayerRatings.blend(ratings.agility, tuning.agility_scale_low, tuning.agility_scale_high)
+		_feet_set_time = tuning.pass_set_feet_time
 	elif _feet_set_time <= 0.0:
 		feet_set = 1.0
 	else:
@@ -1085,7 +1098,8 @@ func splat(normal: Vector3, speed: float) -> void:
 	dive_get_up_timer = tuning.jump_dive_get_up_time
 	state = State.DOWN
 	state_timer = tuning.wall_splat_stick_time + down
-	jump_dive = false
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	jump_dive = false
 	dive_reach_timer = 0.0
 	turbo_active = false
 	velocity = Vector3.ZERO
@@ -1118,7 +1132,7 @@ func _update_visual(delta: float, instant: bool) -> void:
 	if animator != null:
 		animator.update(delta, instant)
 	_update_daze(delta, instant)
-	_update_feet_fx(delta, instant)
+	_update_feet_plant(instant)
 
 
 ## A throw on the run, toward `to` (flat): he throws it spinning right round,
@@ -1151,25 +1165,24 @@ func start_flair(to: Vector3, power: float) -> void:
 
 
 ## His feet have just come set under him: he stamps down into his stance, with
-## a flash, dust at his heels and a click. Visual and sound only.
+## dust at his heels. Visual only.
 func feet_planted() -> void:
-	flash(Color(0.6, 1.0, 0.6), 0.3)
 	if animator != null:
 		animator.plant()
 	if play != null:
 		play.on_feet_planted(self)
 
 
-## The ring at a quarterback's feet while he can throw: open and orange while
-## his feet are not set, closed and green once they are. Visual only.
-func _update_feet_fx(delta: float, instant: bool) -> void:
-	var shown: bool = not instant and play != null and play.shows_feet(self)
-	if feet_fx == null:
-		if not shown:
-			return
-		feet_fx = FeetSetFx.new()
-		add_child(feet_fx)
-	feet_fx.update(self, shown, delta)
+## A quarterback who can throw stamps into his stance the moment his feet come
+## set. Visual only.
+func _update_feet_plant(instant: bool) -> void:
+	if instant or play == null or not play.plants_feet(self):
+		_feet_were_set = true
+		return
+	var is_set: bool = feet_set >= 1.0
+	if is_set and not _feet_were_set:
+		feet_planted()
+	_feet_were_set = is_set
 
 
 ## Stars round the head for as long as he is dazed. Visual only.

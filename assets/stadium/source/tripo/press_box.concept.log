@@ -1,0 +1,10 @@
+task created 477ef719-1d57-40da-8592-35934af62c52 (@assets-stadium-source-tripo-jumb)
+generate_image · queued
+generate_image · running · 477ef719
+generate_image · running · 477ef719
+generate_image · running · 477ef719
+generate_image · success 100% · 477ef719
+[32m✓[39m generate_image · 477ef719-1d57-40da-8592-35934af62c52 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to assets\stadium\source\tripo\press_box\concept\tripo-out\assets-stadium-source-tripo-jumb-477ef719
+{"task_id":"477ef719-1d57-40da-8592-35934af62c52","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"assets\\stadium\\source\\tripo\\press_box\\concept\\tripo-out\\assets-stadium-source-tripo-jumb-477ef719","files":["generated_image.png","preview.png"],"preview":"assets\\stadium\\source\\tripo\\press_box\\concept\\tripo-out\\assets-stadium-source-tripo-jumb-477ef719\\preview.png"}

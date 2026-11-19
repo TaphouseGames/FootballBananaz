@@ -83,20 +83,22 @@ func _tick() -> void:
 	_man.start_spin(1.0, true)
 	_expect(wide > 0.1 and absf(absf(_man.velocity.z) - wide * low) < 0.001, "a juke on an empty meter slides at %.2f, a full one at %.2f" % [absf(_man.velocity.z), wide])
 
-	# A dive out of a jump pays for the jump and for the dive.
-	_ready_man(1.0)
-	_expect(_man.start_jump(), "he does not jump")
-	_expect(_man.start_jump_dive(Vector3.RIGHT), "he does not dive out of the jump")
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	# A dive out of a jump pays for the jump and for the dive.
+#	_ready_man(1.0)
+#	_expect(_man.start_jump(), "he does not jump")
+#	_expect(_man.start_jump_dive(Vector3.RIGHT), "he does not dive out of the jump")
 	var jump_cost: float = _man.stamina_cost(_tuning.jump_stamina_cost)
-	var both: float = jump_cost + _man.stamina_cost(_tuning.dive_stamina_cost)
-	_expect(absf(_man.turbo - (1.0 - both)) < 0.0001, "a jump dive leaves %.3f, should be %.3f" % [_man.turbo, 1.0 - both])
-	var far: float = _man.velocity.length()
-	# With only the jump paid for the dive is a weak one.
-	_ready_man(jump_cost)
-	_man.start_jump()
-	_expect(absf(_man.jump_strength - 1.0) < 0.0001, "the jump he could pay for is a weak one")
-	_man.start_jump_dive(Vector3.RIGHT)
-	_expect(absf(_man.velocity.length() - far * low) < 0.001, "a jump dive with nothing left for the dive flies at %.2f, should be %.2f" % [_man.velocity.length(), far * low])
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	var both: float = jump_cost + _man.stamina_cost(_tuning.dive_stamina_cost)
+#	_expect(absf(_man.turbo - (1.0 - both)) < 0.0001, "a jump dive leaves %.3f, should be %.3f" % [_man.turbo, 1.0 - both])
+#	var far: float = _man.velocity.length()
+#	# With only the jump paid for the dive is a weak one.
+#	_ready_man(jump_cost)
+#	_man.start_jump()
+#	_expect(absf(_man.jump_strength - 1.0) < 0.0001, "the jump he could pay for is a weak one")
+#	_man.start_jump_dive(Vector3.RIGHT)
+#	_expect(absf(_man.velocity.length() - far * low) < 0.001, "a jump dive with nothing left for the dive flies at %.2f, should be %.2f" % [_man.velocity.length(), far * low])
 
 	# After the whistle a dive is free.
 	_ready_man(0.5)

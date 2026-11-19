@@ -10,6 +10,7 @@ func enter() -> void:
 
 func exit() -> void:
 	game.hud.hide_banner()
+	game.hold_camera_side = false
 
 
 func physics_update(delta: float) -> void:

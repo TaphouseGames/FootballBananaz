@@ -243,11 +243,12 @@ func update_live() -> void:
 				_switch_to_nearest()
 			return
 
-	# In the air from a jump the action is a jump dive. Not for a quarterback who
-	# can still throw: his action button is a pass button up there too.
-	if player.state == Player.State.JUMPING and not is_passer and Input.is_action_just_pressed(&"action"):
-		pc.do_jump_dive(player, _jump_dive_aim(player, move, moving, carrier))
-		return
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	# In the air from a jump the action is a jump dive. Not for a quarterback who
+#	# can still throw: his action button is a pass button up there too.
+#	if player.state == Player.State.JUMPING and not is_passer and Input.is_action_just_pressed(&"action"):
+#		pc.do_jump_dive(player, _jump_dive_aim(player, move, moving, carrier))
+#		return
 	if not player.can_act():
 		return
 	# With four men out the jump button is the fourth pass button for as long
@@ -330,22 +331,23 @@ func _carrier_moves(player: Player, move: Vector3, moving: bool) -> void:
 		pc.do_dive(player, move.normalized() if moving else player.facing)
 
 
-## Where a jump dive goes: along the stick if it is held, otherwise the same
-## choices as a dive off the ground (the pass, the loose ball, the carrier),
-## each from a little further off.
-func _jump_dive_aim(player: Player, move: Vector3, moving: bool, carrier: Player) -> Vector3:
-	var free: Vector3 = move.normalized() if moving else player.facing
-	if player.has_ball or moving:
-		return free
-	var at_ball: Vector3 = pc.ball_dive_direction(player, pc.jump_dive_ball_range())
-	if at_ball != Vector3.ZERO:
-		return at_ball
-	if pc.phase == PlayController.Phase.LOOSE:
-		var at_loose: Vector3 = pc.loose_dive_direction(player)
-		return at_loose if at_loose != Vector3.ZERO else free
-	if is_defending() and carrier != null and carrier.team != team:
-		return _dive_direction(player, move, moving, carrier, tuning.jump_dive_speed_scale)
-	return free
+# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+### Where a jump dive goes: along the stick if it is held, otherwise the same
+### choices as a dive off the ground (the pass, the loose ball, the carrier),
+### each from a little further off.
+#func _jump_dive_aim(player: Player, move: Vector3, moving: bool, carrier: Player) -> Vector3:
+#	var free: Vector3 = move.normalized() if moving else player.facing
+#	if player.has_ball or moving:
+#		return free
+#	var at_ball: Vector3 = pc.ball_dive_direction(player, pc.jump_dive_ball_range())
+#	if at_ball != Vector3.ZERO:
+#		return at_ball
+#	if pc.phase == PlayController.Phase.LOOSE:
+#		var at_loose: Vector3 = pc.loose_dive_direction(player)
+#		return at_loose if at_loose != Vector3.ZERO else free
+#	if is_defending() and carrier != null and carrier.team != team:
+#		return _dive_direction(player, move, moving, carrier, tuning.jump_dive_speed_scale)
+#	return free
 
 
 ## After the whistle: free movement and cheap shots.

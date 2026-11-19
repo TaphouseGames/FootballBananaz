@@ -1,0 +1,10 @@
+task created 5b1babbe-104f-49b5-84c4-36179f62de91 (@assets-stadium-source-tripo-jumb-2)
+generate_image · queued
+generate_image · running · 5b1babbe
+generate_image · running · 5b1babbe
+generate_image · running · 5b1babbe
+generate_image · success 100% · 5b1babbe
+[32m✓[39m generate_image · 5b1babbe-104f-49b5-84c4-36179f62de91 · 5 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to assets\stadium\source\tripo\facade_bay\concept\tripo-out\assets-stadium-source-tripo-jumb-2-5b1babbe
+{"task_id":"5b1babbe-104f-49b5-84c4-36179f62de91","type":"generate_image","status":"success","credits_consumed":5,"output_dir":"assets\\stadium\\source\\tripo\\facade_bay\\concept\\tripo-out\\assets-stadium-source-tripo-jumb-2-5b1babbe","files":["generated_image.png","preview.png"],"preview":"assets\\stadium\\source\\tripo\\facade_bay\\concept\\tripo-out\\assets-stadium-source-tripo-jumb-2-5b1babbe\\preview.png"}

@@ -2,8 +2,9 @@ class_name Stadium
 extends Node3D
 ## The bowl round the field: a wall, tiered stands with aisles, a crowd in the
 ## teams' colours, and the dressing (ad boards, jumbotrons, light towers, hot
-## dog stand). Built from Tuning by Field.setup(), so it follows the
-## field's size, and it takes no part in the game: nothing here collides.
+## dog stand, tunnel mouths, facade, roof, press box). Built from Tuning by
+## Field.setup(), so it follows the field's size, and it takes no part in the
+## game: nothing here collides.
 ##
 ## The outline is a rectangle with rounded corners, made of eight runs (four
 ## straights, four quarter circles); every row is the same outline pushed
@@ -127,7 +128,45 @@ const BAY_SEATS: int = 13
 const CONCOURSE_DEPTH: float = 4.0
 const BACK_WALL_HEIGHT: float = 2.6
 const BACK_WALL_THICKNESS: float = 0.6
-const ARC_STEPS: int = 8
+const ARC_STEPS: int = 12
+## What the stands, the seats, the rails and the ad boards are drawn with.
+const STANDS_SHADER: Shader = preload("res://assets/stadium/stands.gdshader")
+## What a surface is made of. It goes into the alpha of its vertices' colour
+## (1 - 0.2 a step), where the shader reads it.
+enum Finish { CONCRETE, PAD, METAL, PLASTIC, BOARD }
+## The rails: how thick a tube is, how high the one on the wall and the one in
+## front of the walkway stand, and the yards between their posts.
+const RAIL_RADIUS: float = 0.035
+const WALL_RAIL_HEIGHT: float = 0.42
+const WALKWAY_RAIL_HEIGHT: float = 0.6
+const RAIL_POST_GAP: float = 2.4
+## The wall's cap reaches this far past its faces, and its kick plate is this high.
+const CAP_OVERHANG: float = 0.04
+const KICK_HEIGHT: float = 0.2
+## The frame round an ad board: how wide its bars are and how far they stand
+## off the board.
+const BOARD_FRAME: float = 0.08
+const BOARD_FRAME_DEPTH: float = 0.05
+## The modelled pieces (tools/make_stadium_part.sh, tools/prep_prop.py): the
+## mouth of a tunnel, one bay of the outside wall, one bay of the roof over
+## the walkway and the press box. Without a file the piece is left out (a
+## tunnel is then a plain block).
+const TUNNEL_FILE: String = "tunnel.glb"
+const FACADE_FILE: String = "facade_bay.glb"
+const ROOF_FILE: String = "roof_bay.glb"
+const PRESS_BOX_FILE: String = "press_box.glb"
+const FACADE_SHADER: Shader = preload("res://assets/stadium/facade.gdshader")
+## How far the facade stands out from the back wall, how far the roof reaches
+## in over the walkway and how high it stands on it, and the bays either has
+## round a corner.
+const FACADE_DEPTH: float = 1.6
+const ROOF_DEPTH: float = 4.4
+const ROOF_HEIGHT: float = 4.6
+const CORNER_BAYS: int = 4
+## The share of the tunnel model's height that is the rail on its roof.
+const TUNNEL_RAIL_SHARE: float = 0.07
+## The press box is as wide as this many bays of the home stand.
+const PRESS_BOX_BAYS: int = 2
 ## Tunnel mouths in the long stands: the rows they take up and half their width.
 const TUNNEL_ROWS: Vector2i = Vector2i(4, 9)
 const TUNNEL_HALF_WIDTH: float = 1.6
@@ -139,6 +178,10 @@ const WALL_COLOR: Color = Color(0.09, 0.11, 0.19)
 const WALL_CAP_COLOR: Color = Color(0.42, 0.43, 0.46)
 const BACK_WALL_COLOR: Color = Color(0.15, 0.16, 0.2)
 const TUNNEL_COLOR: Color = Color(0.02, 0.02, 0.03)
+const RAIL_COLOR: Color = Color(0.62, 0.64, 0.68)
+const KICK_COLOR: Color = Color(0.05, 0.05, 0.06)
+const FRAME_COLOR: Color = Color(0.16, 0.17, 0.2)
+const NOSING_COLOR: Color = Color(0.85, 0.7, 0.18)
 const BOARD_TEXT_COLOR: Color = Color(0.86, 0.84, 0.76)
 const BOARD_COLORS: Array[Color] = [
 	Color(0.36, 0.12, 0.12), Color(0.12, 0.26, 0.36), Color(0.14, 0.3, 0.18),
@@ -212,6 +255,17 @@ class Run:
 		if not arc:
 			return start + dir * s + normal * d
 		return centre + outward(s) * (CORNER_RADIUS + d)
+
+	## The way the run goes at `s`.
+	func along(s: float) -> Vector3:
+		if not arc:
+			return dir
+		var angle: float = from_angle + s
+		return Vector3(-sin(angle), 0.0, cos(angle))
+
+	## Yards for one unit of `s`, `d` yards out.
+	func reach(d: float) -> float:
+		return CORNER_RADIUS + d if arc else 1.0
 
 
 ## The parts of the fans of one gender. Any head goes on any torso and any
@@ -309,6 +363,8 @@ var _flash_labels: Array[Label3D] = []
 var _half_x: float = 0.0
 var _half_z: float = 0.0
 var _font: Font
+## The one material of everything built here in code (see STANDS_SHADER).
+var _stands: ShaderMaterial
 var _clock: float = 0.0
 ## The picture of the signs, once it has been drawn (never when headless).
 var sign_atlas: Texture2D
@@ -343,6 +399,10 @@ func setup(p_tuning: Tuning, home: Team, away: Team, left_is_home: bool) -> void
 	var font: SystemFont = SystemFont.new()
 	font.font_names = FONT_NAMES
 	_font = font
+	_stands = ShaderMaterial.new()
+	_stands.shader = STANDS_SHADER
+	_stands.set_shader_parameter(&"mottle", Field.noise_texture(FastNoiseLite.TYPE_SIMPLEX_SMOOTH, 0.02, 4, false))
+	_stands.set_shader_parameter(&"grain", Field.noise_texture(FastNoiseLite.TYPE_SIMPLEX, 0.12, 3, false))
 
 	_lay_out(left_is_home)
 	_build_shell()
@@ -626,13 +686,16 @@ func _build_shell() -> void:
 	var back: float = depth()
 	for run: Run in runs:
 		var seat_color: Color = SEAT_GREY.lerp(_home_color.lerp(_away_color, 1.0 - run.home_chance), 0.3).darkened(0.25)
+		var band_color: Color = _home_color.lerp(_away_color, 1.0 - run.home_chance).darkened(0.1)
 		for slice: Array in run.slices:
 			var s0: float = slice[0]
 			var s1: float = slice[1]
 			var aisle: bool = slice[2]
-			# The wall: the face to the field, the cap, the face to the stands.
-			_strip(st, run, s0, s1, -WALL_THICKNESS, 0.0, -WALL_THICKNESS, WALL_HEIGHT, WALL_COLOR, -1.0)
-			_strip(st, run, s0, s1, -WALL_THICKNESS, WALL_HEIGHT, 0.0, WALL_HEIGHT, WALL_CAP_COLOR, 0.0)
+			# The wall: the padded face to the field with a kick plate at its
+			# foot, the cap, the face to the stands.
+			_strip(st, run, s0, s1, -WALL_THICKNESS, 0.0, -WALL_THICKNESS, WALL_HEIGHT, WALL_COLOR, -1.0, Finish.PAD)
+			_slab(st, run, s0, s1, -WALL_THICKNESS - 0.03, -WALL_THICKNESS, 0.0, KICK_HEIGHT, KICK_COLOR, Finish.PLASTIC)
+			_slab(st, run, s0, s1, -WALL_THICKNESS - CAP_OVERHANG, CAP_OVERHANG, WALL_HEIGHT - 0.1, WALL_HEIGHT + 0.03, WALL_CAP_COLOR, Finish.PLASTIC, true)
 			_strip(st, run, s0, s1, 0.0, FIRST_ROW_HEIGHT, 0.0, WALL_HEIGHT, WALL_COLOR, 1.0)
 			for row: int in count:
 				var d0: float = float(row) * ROW_DEPTH
@@ -650,6 +713,9 @@ func _build_shell() -> void:
 					_strip(st, run, s0, s1, d0, h - ROW_RISE, d0, half_h, STEP_COLOR.darkened(0.3), -1.0)
 					_strip(st, run, s0, s1, d0, half_h, half_d, half_h, STEP_COLOR, 0.0)
 					_strip(st, run, s0, s1, half_d, half_h, half_d, h, STEP_COLOR.darkened(0.3), -1.0)
+					# A painted edge on both steps.
+					_strip(st, run, s0, s1, d0, half_h + 0.012, d0 + 0.09, half_h + 0.012, NOSING_COLOR, 0.0, Finish.PLASTIC, false)
+					_strip(st, run, s0, s1, half_d, h + 0.012, half_d + 0.09, h + 0.012, NOSING_COLOR, 0.0, Finish.PLASTIC, false)
 					# The sides of the rows next to the lower step.
 					_side(st, run, s0, d0, half_d, half_h, h, CONCRETE.darkened(0.2), 1.0)
 					_side(st, run, s1, d0, half_d, half_h, h, CONCRETE.darkened(0.2), -1.0)
@@ -662,20 +728,35 @@ func _build_shell() -> void:
 			_strip(st, run, s0, s1, d_top, top - ROW_RISE, d_top, top, CONCRETE.darkened(0.2), -1.0)
 			_strip(st, run, s0, s1, d_top, top, back, top, CONCRETE.lightened(0.06), 0.0)
 			_strip(st, run, s0, s1, back, top, back, wall_top, BACK_WALL_COLOR, -1.0)
-			_strip(st, run, s0, s1, back, wall_top, back + BACK_WALL_THICKNESS, wall_top, WALL_CAP_COLOR, 0.0)
+			_strip(st, run, s0, s1, back, wall_top, back + BACK_WALL_THICKNESS, wall_top, WALL_CAP_COLOR, 0.0, Finish.CONCRETE, false)
 			_strip(st, run, s0, s1, back + BACK_WALL_THICKNESS, 0.0, back + BACK_WALL_THICKNESS, wall_top, BACK_WALL_COLOR.darkened(0.3), 1.0)
-			if slice[3]:
+			# A band in the colour of this part's fans along the back wall, and
+			# a pilaster behind every aisle.
+			_slab(st, run, s0, s1, back - 0.06, back, wall_top - 0.95, wall_top - 0.4, band_color, Finish.PLASTIC, true)
+			if aisle and not run.arc:
+				var mid: float = (s0 + s1) * 0.5
+				_slab(st, run, mid - 0.35, mid + 0.35, back - 0.2, back, top, wall_top, BACK_WALL_COLOR.lightened(0.12), Finish.CONCRETE, false, true)
+				# A handrail up the middle of the steps, in short flights.
+				for row: int in range(1, count - 1, 3):
+					var foot: Vector3 = run.point(mid, float(row) * ROW_DEPTH + 0.3) + Vector3(0.0, FIRST_ROW_HEIGHT + float(row) * ROW_RISE, 0.0)
+					var head: Vector3 = run.point(mid, float(row + 1) * ROW_DEPTH + 0.9) + Vector3(0.0, FIRST_ROW_HEIGHT + float(row + 1) * ROW_RISE, 0.0)
+					var up: Vector3 = Vector3(0.0, 0.55, 0.0)
+					_tube(st, foot - up * 0.6, foot + up, RAIL_RADIUS, RAIL_COLOR)
+					_tube(st, head - up * 0.2, head + up, RAIL_RADIUS, RAIL_COLOR)
+					_tube(st, foot + up, head + up, RAIL_RADIUS, RAIL_COLOR)
+			elif not aisle:
+				# A rail between the top row and the walkway, open at the aisles.
+				_rail(st, run, s0, s1, d_top + 0.2, top, top + WALKWAY_RAIL_HEIGHT, RAIL_POST_GAP)
+			if slice[3] and not ResourceLoader.exists(PROP_DIR + TUNNEL_FILE):
 				_tunnel(st, run, (s0 + s1) * 0.5)
+		# A rail on the wall, all the way round.
+		_rail(st, run, 0.0, run.span(), -WALL_THICKNESS * 0.5, WALL_HEIGHT, WALL_HEIGHT + WALL_RAIL_HEIGHT, RAIL_POST_GAP)
 
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.vertex_color_is_srgb = true
-	material.roughness = 1.0
-	material.metallic_specular = 0.0
+	st.generate_tangents()
 	var shell: MeshInstance3D = MeshInstance3D.new()
 	shell.name = "Stands"
 	shell.mesh = st.commit()
-	shell.material_override = material
+	shell.material_override = _stands
 	shell.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(shell)
 
@@ -706,76 +787,226 @@ func _seat_spots(run: Run, row: int) -> PackedVector2Array:
 	return spots
 
 
-## A seat at every place a fan can sit, taken or not: the part he sits on and
-## the back it hangs from, which stands on the floor of the row. One mesh.
+## A seat at every place a fan can sit, taken or not: a moulded shell on a
+## leg, in the colour of that part of the crowd. One mesh, drawn once per seat
+## (a MultiMesh for each piece of the stands); beyond crowd_lod_far a piece
+## shows plain boxes instead.
 func _build_seats() -> void:
-	var st: SurfaceTool = SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var half: float = SEAT_WIDTH * 0.5
-	for run: Run in runs:
+	var seats: Node3D = Node3D.new()
+	seats.name = "Seats"
+	add_child(seats)
+	var shapes: Array[Mesh] = [_seat_mesh(true), _seat_mesh(false)]
+	var far: float = maxf(tuning.crowd_lod_far, 0.0)
+	for index: int in runs.size():
+		var run: Run = runs[index]
 		var color: Color = SEAT_GREY.lerp(_home_color.lerp(_away_color, 1.0 - run.home_chance), 0.55)
+		# Where the seats of each piece of the run stand.
+		var pieces: Dictionary = {}
 		for row: int in rows():
 			var d: float = (float(row) + SEAT_AT) * ROW_DEPTH
 			var floor_y: float = FIRST_ROW_HEIGHT + float(row) * ROW_RISE
-			# Under the fan's thighs, which hang a little below where he sits.
-			var top: float = floor_y + SEAT_HEIGHT - SEAT_SINK
 			for spot: Vector2 in _seat_spots(run, row):
 				var out: Vector3 = run.outward(spot.y)
-				var along: Vector3 = Vector3(-out.z, 0.0, out.x)
-				var at: Vector3 = run.point(spot.y, d)
-				_box(st, at, along, out, half, -SEAT_FRONT, SEAT_BACK, top - SEAT_THICKNESS, top, color, true)
-				_box(st, at, along, out, half, SEAT_BACK, SEAT_BACK + SEAT_REST_THICKNESS, floor_y, floor_y + SEAT_REST_HEIGHT, color.darkened(0.15), false)
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.vertex_color_is_srgb = true
-	material.roughness = 1.0
-	material.metallic_specular = 0.0
-	var seats: MeshInstance3D = MeshInstance3D.new()
-	seats.name = "Seats"
-	seats.mesh = st.commit()
-	seats.material_override = material
-	seats.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(seats)
+				var piece: int = int(spot.x)
+				if run.arc:
+					piece = mini(int(spot.y / (PI * 0.5) * float(ARC_CHUNKS)), ARC_CHUNKS - 1)
+				if not pieces.has(piece):
+					pieces[piece] = []
+				# The seat's own +Z is its back.
+				(pieces[piece] as Array).append(Transform3D(Basis(Vector3(out.z, 0.0, -out.x), Vector3.UP, out), run.point(spot.y, d) + Vector3(0.0, floor_y, 0.0)))
+		for piece: int in pieces:
+			var places: Array = pieces[piece]
+			var centre: Vector3 = Vector3.ZERO
+			for place: Transform3D in places:
+				centre += place.origin
+			centre /= float(places.size())
+			# The ranges are measured from here.
+			var holder: Node3D = Node3D.new()
+			holder.name = "Seats%d_%d" % [index, piece]
+			holder.position = centre
+			seats.add_child(holder)
+			for level: int in shapes.size():
+				var multimesh: MultiMesh = MultiMesh.new()
+				multimesh.transform_format = MultiMesh.TRANSFORM_3D
+				multimesh.use_colors = true
+				multimesh.mesh = shapes[level]
+				multimesh.instance_count = places.size()
+				for i: int in places.size():
+					var place: Transform3D = places[i]
+					place.origin -= centre
+					multimesh.set_instance_transform(i, place)
+					multimesh.set_instance_color(i, color)
+				var instance: MultiMeshInstance3D = MultiMeshInstance3D.new()
+				instance.name = "Near" if level == 0 else "Far"
+				instance.multimesh = multimesh
+				instance.material_override = _stands
+				instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				# A straight swap with an overlap, as for the fans (_add_chunk).
+				instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+				if level == 0:
+					instance.visibility_range_end = far + LOD_BLEND
+				else:
+					instance.visibility_range_begin = far
+				holder.add_child(instance)
+
+
+## One seat, standing on the floor of its row where the fan sits, its back
+## toward +Z, in white (the MultiMesh gives it its colour). `moulded`: a
+## curved shell on a leg, else the two boxes that stand for it from far off.
+func _seat_mesh(moulded: bool) -> Mesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half: float = SEAT_WIDTH * 0.5
+	# Under the fan's thighs, which hang a little below where he sits.
+	var top: float = SEAT_HEIGHT - SEAT_SINK
+	if not moulded:
+		_box(st, Vector3.ZERO, Vector3.RIGHT, Vector3.BACK, half, -SEAT_FRONT, SEAT_BACK, top - SEAT_THICKNESS, top, Color.WHITE, true)
+		_box(st, Vector3.ZERO, Vector3.RIGHT, Vector3.BACK, half, SEAT_BACK, SEAT_BACK + SEAT_REST_THICKNESS, 0.0, SEAT_REST_HEIGHT, Color.WHITE.darkened(0.15), false)
+		st.generate_tangents()
+		return st.commit()
+	# The shell from the side (z, y): a lip, the pan, the bend, the back. That
+	# is the side the fan touches; the other is `thick` behind it.
+	var line: PackedVector2Array = [
+		Vector2(-SEAT_FRONT, top - 0.035), Vector2(-SEAT_FRONT + 0.035, top), Vector2(SEAT_BACK - 0.11, top - 0.012),
+		Vector2(SEAT_BACK - 0.035, top + 0.03), Vector2(SEAT_BACK, top + 0.11),
+		Vector2(SEAT_BACK + 0.035, SEAT_REST_HEIGHT - 0.07), Vector2(SEAT_BACK + 0.03, SEAT_REST_HEIGHT)]
+	# The back is narrower toward its top.
+	var widths: PackedFloat32Array = [1.0, 1.0, 1.0, 1.0, 1.0, 0.97, 0.86]
+	var thick: float = 0.04
+	var last: int = line.size() - 1
+	var inner: Array = []
+	var outer: Array = []
+	var normals: Array[Vector3] = []
+	var ways: Array[Vector3] = []
+	for i: int in line.size():
+		var way: Vector2 = (line[mini(i + 1, last)] - line[maxi(i - 1, 0)]).normalized()
+		var normal: Vector3 = Vector3(0.0, way.x, -way.y)
+		normals.append(normal)
+		ways.append(Vector3(0.0, way.y, way.x))
+		var pair: Array[Vector3] = []
+		var behind: Array[Vector3] = []
+		for side: float in [-1.0, 1.0]:
+			var point: Vector3 = Vector3(side * half * widths[i], line[i].y, line[i].x)
+			pair.append(point)
+			behind.append(point - normal * thick)
+		inner.append(pair)
+		outer.append(behind)
+	var shade: Color = Color.WHITE.darkened(0.25)
+	for i: int in last:
+		_soft_quad(st, [inner[i][0], inner[i][1], inner[i + 1][1], inner[i + 1][0]], [normals[i], normals[i], normals[i + 1], normals[i + 1]], Color.WHITE, Finish.PLASTIC)
+		_soft_quad(st, [outer[i][0], outer[i][1], outer[i + 1][1], outer[i + 1][0]], [-normals[i], -normals[i], -normals[i + 1], -normals[i + 1]], shade, Finish.PLASTIC)
+		for side: int in 2:
+			_quad(st, inner[i][side], inner[i + 1][side], outer[i + 1][side], outer[i][side], Vector3.LEFT if side == 0 else Vector3.RIGHT, shade, Finish.PLASTIC)
+	_quad(st, inner[0][0], inner[0][1], outer[0][1], outer[0][0], -ways[0], shade, Finish.PLASTIC)
+	_quad(st, inner[last][0], inner[last][1], outer[last][1], outer[last][0], ways[last], Color.WHITE, Finish.PLASTIC)
+	# The leg it stands on.
+	_box(st, Vector3.ZERO, Vector3.RIGHT, Vector3.BACK, 0.04, SEAT_BACK - 0.13, SEAT_BACK - 0.04, 0.0, top - thick, Color(0.3, 0.3, 0.32), false, Finish.METAL)
+	st.generate_tangents()
+	return st.commit()
 
 
 ## A box standing at `at`: `half` wide to either side along `along`, from d0
 ## to d1 along `out` (away from the field) and from y0 to y1. `under`: with
 ## its underside, for one that hangs in the air.
-func _box(st: SurfaceTool, at: Vector3, along: Vector3, out: Vector3, half: float, d0: float, d1: float, y0: float, y1: float, color: Color, under: bool) -> void:
+func _box(st: SurfaceTool, at: Vector3, along: Vector3, out: Vector3, half: float, d0: float, d1: float, y0: float, y1: float, color: Color, under: bool, finish: int = Finish.PLASTIC) -> void:
 	var corners: Array[Vector3] = []
 	for y: float in [y0, y1]:
 		for d: float in [d0, d1]:
 			for side: float in [-half, half]:
 				corners.append(at + along * side + out * d + Vector3(0.0, y, 0.0))
 	# 0-3 the bottom (front left, front right, back left, back right), 4-7 the top.
-	_quad(st, corners[4], corners[5], corners[7], corners[6], Vector3.UP, color)
-	_quad(st, corners[0], corners[1], corners[5], corners[4], -out, color.darkened(0.2))
-	_quad(st, corners[2], corners[3], corners[7], corners[6], out, color.darkened(0.3))
-	_quad(st, corners[0], corners[2], corners[6], corners[4], -along, color.darkened(0.25))
-	_quad(st, corners[1], corners[3], corners[7], corners[5], along, color.darkened(0.25))
+	_quad(st, corners[4], corners[5], corners[7], corners[6], Vector3.UP, color, finish)
+	_quad(st, corners[0], corners[1], corners[5], corners[4], -out, color.darkened(0.2), finish)
+	_quad(st, corners[2], corners[3], corners[7], corners[6], out, color.darkened(0.3), finish)
+	_quad(st, corners[0], corners[2], corners[6], corners[4], -along, color.darkened(0.25), finish)
+	_quad(st, corners[1], corners[3], corners[7], corners[5], along, color.darkened(0.25), finish)
 	if under:
-		_quad(st, corners[0], corners[1], corners[3], corners[2], Vector3.DOWN, color.darkened(0.4))
+		_quad(st, corners[0], corners[1], corners[3], corners[2], Vector3.DOWN, color.darkened(0.4), finish)
 
 
 ## A strip along a slice of a run, between (d0, y0) and (d1, y1) in the run's
 ## cross-section. `facing`: 0 for a floor (normal up), -1 for a face turned to
-## the field, +1 for one turned away from it.
-func _strip(st: SurfaceTool, run: Run, s0: float, s1: float, d0: float, y0: float, d1: float, y1: float, color: Color, facing: float) -> void:
+## the field, +1 for one turned away from it. `shaded`: darker toward its foot
+## (an upright face) or toward its back (a floor), where it meets the next
+## surface.
+func _strip(st: SurfaceTool, run: Run, s0: float, s1: float, d0: float, y0: float, d1: float, y1: float, color: Color, facing: float, finish: int = Finish.CONCRETE, shaded: bool = true) -> void:
 	var up0: Vector3 = Vector3(0.0, y0, 0.0)
 	var up1: Vector3 = Vector3(0.0, y1, 0.0)
 	var mid: float = (s0 + s1) * 0.5
 	var normal: Vector3 = Vector3.UP if facing == 0.0 else run.outward(mid) * facing
-	_quad(st, run.point(s0, d0) + up0, run.point(s1, d0) + up0, run.point(s1, d1) + up1, run.point(s0, d1) + up1, normal, color)
+	# Yards along the run, and yards up (or back, on a floor).
+	var reach: float = run.reach((d0 + d1) * 0.5)
+	var v0: float = d0 if facing == 0.0 else y0
+	var v1: float = d1 if facing == 0.0 else y1
+	var uvs: PackedVector2Array = [Vector2(s0 * reach, v0), Vector2(s1 * reach, v0), Vector2(s1 * reach, v1), Vector2(s0 * reach, v1)]
+	var corner: PackedFloat32Array = [0.0, 0.0, 1.0, 1.0] if facing == 0.0 else [1.0, 1.0, 0.0, 0.0]
+	if not shaded:
+		corner = [0.0, 0.0, 0.0, 0.0]
+	_quad(st, run.point(s0, d0) + up0, run.point(s1, d0) + up0, run.point(s1, d1) + up1, run.point(s0, d1) + up1, normal, color, finish, uvs, corner)
 
 
 ## An upright face across a run at `s`, from d0 to d1 and y0 to y1, turned
 ## along the run (`toward` +1) or back along it (-1).
-func _side(st: SurfaceTool, run: Run, s: float, d0: float, d1: float, y0: float, y1: float, color: Color, toward: float) -> void:
+func _side(st: SurfaceTool, run: Run, s: float, d0: float, d1: float, y0: float, y1: float, color: Color, toward: float, finish: int = Finish.CONCRETE) -> void:
 	var a: Vector3 = run.point(s, d0)
 	var b: Vector3 = run.point(s, d1)
 	var up0: Vector3 = Vector3(0.0, y0, 0.0)
 	var up1: Vector3 = Vector3(0.0, y1, 0.0)
-	_quad(st, a + up0, b + up0, b + up1, a + up1, run.dir * toward, color)
+	_quad(st, a + up0, b + up0, b + up1, a + up1, run.along(s) * toward, color, finish)
+
+
+## A solid bar along a slice of a run: from d0 (its face to the field) to d1
+## and from y0 to y1. `under`: with its underside. `ends`: with its two ends,
+## for one that does not carry on into the next slice.
+func _slab(st: SurfaceTool, run: Run, s0: float, s1: float, d0: float, d1: float, y0: float, y1: float, color: Color, finish: int, under: bool = false, ends: bool = false) -> void:
+	_strip(st, run, s0, s1, d0, y0, d0, y1, color.darkened(0.12), -1.0, finish, false)
+	_strip(st, run, s0, s1, d1, y0, d1, y1, color.darkened(0.25), 1.0, finish, false)
+	_strip(st, run, s0, s1, d0, y1, d1, y1, color, 0.0, finish, false)
+	if under:
+		var low: Vector3 = Vector3(0.0, y0, 0.0)
+		_quad(st, run.point(s0, d0) + low, run.point(s1, d0) + low, run.point(s1, d1) + low, run.point(s0, d1) + low, Vector3.DOWN, color.darkened(0.4), finish)
+	if ends:
+		_side(st, run, s0, d0, d1, y0, y1, color.darkened(0.2), -1.0, finish)
+		_side(st, run, s1, d0, d1, y0, y1, color.darkened(0.2), 1.0, finish)
+
+
+## A round bar from `a` to `b`, six-sided and smooth, without ends.
+func _tube(st: SurfaceTool, a: Vector3, b: Vector3, radius: float, color: Color, finish: int = Finish.METAL) -> void:
+	var axis: Vector3 = (b - a).normalized()
+	var side: Vector3 = axis.cross(Vector3.UP)
+	if side.length() < 0.01:
+		side = axis.cross(Vector3.RIGHT)
+	side = side.normalized()
+	var other: Vector3 = axis.cross(side)
+	var length: float = a.distance_to(b)
+	var girth: float = radius * TAU / 6.0
+	for i: int in 6:
+		var n0: Vector3 = side * cos(float(i) * TAU / 6.0) + other * sin(float(i) * TAU / 6.0)
+		var n1: Vector3 = side * cos(float(i + 1) * TAU / 6.0) + other * sin(float(i + 1) * TAU / 6.0)
+		var uvs: PackedVector2Array = [Vector2(float(i) * girth, 0.0), Vector2(float(i + 1) * girth, 0.0), Vector2(float(i + 1) * girth, length), Vector2(float(i) * girth, length)]
+		_soft_quad(st, [a + n0 * radius, a + n1 * radius, b + n1 * radius, b + n0 * radius], [n0, n1, n1, n0], color, finish, uvs)
+
+
+## A rail along a run from s0 to s1, `d` yards out: posts from y0 to y1 about
+## every `gap` yards, a bar along their tops and a thinner one half way up.
+func _rail(st: SurfaceTool, run: Run, s0: float, s1: float, d: float, y0: float, y1: float, gap: float) -> void:
+	var posts: int = maxi(roundi((s1 - s0) * run.reach(d) / gap), 1)
+	# Round a corner the bars are cut finer than the posts stand, to follow it.
+	var cuts: int = 1
+	if run.arc:
+		cuts = maxi(ceili(float(ARC_STEPS) * (s1 - s0) / (PI * 0.5) / float(posts)), 1)
+	var step: float = (s1 - s0) / float(posts)
+	for post: int in posts + 1:
+		var s: float = s0 + step * float(post)
+		var foot: Vector3 = run.point(s, d)
+		_tube(st, foot + Vector3(0.0, y0, 0.0), foot + Vector3(0.0, y1, 0.0), RAIL_RADIUS, RAIL_COLOR)
+		if post == posts:
+			break
+		for cut: int in cuts:
+			var from: Vector3 = run.point(s + step * float(cut) / float(cuts), d)
+			var to: Vector3 = run.point(s + step * float(cut + 1) / float(cuts), d)
+			_tube(st, from + Vector3(0.0, y1, 0.0), to + Vector3(0.0, y1, 0.0), RAIL_RADIUS, RAIL_COLOR)
+			_tube(st, from + Vector3(0.0, (y0 + y1) * 0.5, 0.0), to + Vector3(0.0, (y0 + y1) * 0.5, 0.0), RAIL_RADIUS * 0.7, RAIL_COLOR)
 
 
 ## A tunnel mouth: a block let into the rows with a dark opening to the field.
@@ -787,23 +1018,40 @@ func _tunnel(st: SurfaceTool, run: Run, at: float) -> void:
 	var floor_y: float = FIRST_ROW_HEIGHT + float(TUNNEL_ROWS.x - 1) * ROW_RISE
 	var top_y: float = FIRST_ROW_HEIGHT + float(TUNNEL_ROWS.y) * ROW_RISE + 0.35
 	_strip(st, run, s0, s1, d0, floor_y, d0, top_y, CONCRETE.darkened(0.25), -1.0)
-	_strip(st, run, s0 + 0.25, s1 - 0.25, d0 - 0.01, floor_y, d0 - 0.01, top_y - 0.3, TUNNEL_COLOR, -1.0)
-	_strip(st, run, s0, s1, d0, top_y, d1, top_y, CONCRETE, 0.0)
+	_strip(st, run, s0 + 0.25, s1 - 0.25, d0 - 0.01, floor_y, d0 - 0.01, top_y - 0.3, TUNNEL_COLOR, -1.0, Finish.CONCRETE, false)
+	_strip(st, run, s0, s1, d0, top_y, d1, top_y, CONCRETE, 0.0, Finish.CONCRETE, false)
 	_side(st, run, s0, d0, d1, floor_y, top_y, CONCRETE.darkened(0.2), -1.0)
 	_side(st, run, s1, d0, d1, floor_y, top_y, CONCRETE.darkened(0.2), 1.0)
 
 
 ## Two triangles for the corners a, b, c, d (in order round the quad), wound so
-## that the side `normal` points out of is the front.
-func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
-	var corners: Array[Vector3] = [a, b, c, a, c, d]
+## that the side `normal` points out of is the front. `uvs` and `corner` (how
+## deep in a corner each is, 0..1) are per corner; without `uvs` the quad is
+## laid out by its own size.
+func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color, finish: int = Finish.CONCRETE, uvs: PackedVector2Array = PackedVector2Array(), corner: PackedFloat32Array = PackedFloat32Array()) -> void:
+	_soft_quad(st, [a, b, c, d], [normal, normal, normal, normal], color, finish, uvs, corner)
+
+
+## The same with a normal of its own at each corner, for a rounded surface.
+func _soft_quad(st: SurfaceTool, points: Array, normals: Array, color: Color, finish: int, uvs: PackedVector2Array = PackedVector2Array(), corner: PackedFloat32Array = PackedFloat32Array()) -> void:
+	var a: Vector3 = points[0]
+	var b: Vector3 = points[1]
+	var c: Vector3 = points[2]
+	var facing: Vector3 = (normals[0] as Vector3) + (normals[1] as Vector3) + (normals[2] as Vector3) + (normals[3] as Vector3)
+	var order: PackedInt32Array = [0, 1, 2, 0, 2, 3]
 	# Godot's front faces are clockwise.
-	if (b - a).cross(c - a).dot(normal) > 0.0:
-		corners = [a, c, b, a, d, c]
-	for corner: Vector3 in corners:
-		st.set_color(color)
-		st.set_normal(normal)
-		st.add_vertex(corner)
+	if (b - a).cross(c - a).dot(facing) > 0.0:
+		order = [0, 2, 1, 0, 3, 2]
+	if uvs.is_empty():
+		var wide: float = a.distance_to(b)
+		uvs = [Vector2.ZERO, Vector2(wide, 0.0), Vector2(wide, b.distance_to(c)), Vector2(0.0, a.distance_to(points[3]))]
+	var tint: Color = Color(color.r, color.g, color.b, 1.0 - float(finish) * 0.2)
+	for i: int in order:
+		st.set_color(tint)
+		st.set_normal(normals[i])
+		st.set_uv(uvs[i])
+		st.set_uv2(Vector2(corner[i] if not corner.is_empty() else 0.0, 0.0))
+		st.add_vertex(points[i])
 
 
 # --- Ad boards -----------------------------------------------------------------------
@@ -824,7 +1072,15 @@ func _build_boards() -> void:
 			var s0: float = float(i) * room + BOARD_GAP * 0.5
 			var s1: float = float(i + 1) * room - BOARD_GAP * 0.5
 			var out: float = -WALL_THICKNESS - 0.03
-			_strip(st, run, s0, s1, out, 0.2, out, WALL_HEIGHT - 0.15, BOARD_COLORS[next % BOARD_COLORS.size()], -1.0)
+			var low: float = KICK_HEIGHT
+			var high: float = WALL_HEIGHT - 0.15
+			_strip(st, run, s0, s1, out, low, out, high, BOARD_COLORS[next % BOARD_COLORS.size()], -1.0, Finish.BOARD, false)
+			# The frame round it.
+			var front: float = out - BOARD_FRAME_DEPTH
+			_slab(st, run, s0, s1, front, out, low, low + BOARD_FRAME, FRAME_COLOR, Finish.METAL, false, true)
+			_slab(st, run, s0, s1, front, out, high - BOARD_FRAME, high, FRAME_COLOR, Finish.METAL, true, true)
+			_slab(st, run, s0, s0 + BOARD_FRAME, front, out, low + BOARD_FRAME, high - BOARD_FRAME, FRAME_COLOR, Finish.METAL, false, true)
+			_slab(st, run, s1 - BOARD_FRAME, s1, front, out, low + BOARD_FRAME, high - BOARD_FRAME, FRAME_COLOR, Finish.METAL, false, true)
 			var text: String = BOARD_TEXTS[next % BOARD_TEXTS.size()]
 			var label: Label3D = _label(text, 96, BOARD_TEXT_COLOR)
 			# As big as fits the board, in height and in width.
@@ -834,15 +1090,11 @@ func _build_boards() -> void:
 			label.basis = _facing_field(run, (s0 + s1) * 0.5)
 			boards.add_child(label)
 			next += 1
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.vertex_color_is_srgb = true
-	material.roughness = 1.0
-	material.metallic_specular = 0.0
+	st.generate_tangents()
 	var panels: MeshInstance3D = MeshInstance3D.new()
 	panels.name = "Panels"
 	panels.mesh = st.commit()
-	panels.material_override = material
+	panels.material_override = _stands
 	panels.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	boards.add_child(panels)
 
@@ -1507,6 +1759,45 @@ func _build_props() -> void:
 	stand.transform = Transform3D(_facing_field(home_stand, stand_at), home_stand.point(stand_at, depth() - CONCOURSE_DEPTH * 0.45) + Vector3(0.0, top, 0.0))
 	props.add_child(stand)
 
+	# A mouth on every tunnel: let into the rows, its roof level with the row
+	# behind it.
+	if ResourceLoader.exists(PROP_DIR + TUNNEL_FILE):
+		var tunnels: Node3D = Node3D.new()
+		tunnels.name = "Tunnels"
+		props.add_child(tunnels)
+		var d0: float = float(TUNNEL_ROWS.x) * ROW_DEPTH
+		var d1: float = float(TUNNEL_ROWS.y) * ROW_DEPTH
+		var floor_y: float = FIRST_ROW_HEIGHT + float(TUNNEL_ROWS.x - 1) * ROW_RISE
+		var block: float = FIRST_ROW_HEIGHT + float(TUNNEL_ROWS.y) * ROW_RISE + 0.1 - floor_y
+		for index: int in runs.size():
+			var run: Run = runs[index]
+			for slice: Array in run.slices:
+				if not slice[3]:
+					continue
+				var at: float = (float(slice[0]) + float(slice[1])) * 0.5
+				var mouth: Node3D = _fitted("Tunnel%d_%d" % [index, tunnels.get_child_count()], TUNNEL_FILE, Vector3(TUNNEL_HALF_WIDTH * 2.0, block / (1.0 - TUNNEL_RAIL_SHARE), d1 - d0))
+				mouth.transform = Transform3D(_facing_field(run, at), run.point(at, (d0 + d1) * 0.5) + Vector3(0.0, floor_y, 0.0))
+				tunnels.add_child(mouth)
+
+	# The press box stands on the walkway at the top of the home stand, at
+	# midfield, in a gap in the roof.
+	var gap: Vector2 = Vector2.ZERO
+	if ResourceLoader.exists(PROP_DIR + PRESS_BOX_FILE):
+		var wide: float = home_stand.length / float(_bays(home_stand)) * float(PRESS_BOX_BAYS)
+		var box: Node3D = _prop("PressBox", PRESS_BOX_FILE, 1.0, Vector3.ONE, Color.BLACK)
+		var size: Vector3 = box.get_meta(&"size")
+		var grow: float = wide / maxf(size.x, 0.001)
+		box.set_meta(&"size", size * grow)
+		var mid: float = home_stand.length * 0.5
+		box.transform = Transform3D(_facing_field(home_stand, mid).scaled(Vector3.ONE * grow), home_stand.point(mid, depth() - size.z * grow * 0.5) + Vector3(0.0, top, 0.0))
+		props.add_child(box)
+		gap = Vector2(mid - wide * 0.5, mid + wide * 0.5)
+
+	# The outside wall, bay by bay, each with a banner in the colour of the
+	# fans behind it; and the roof over the walkway.
+	_build_ring("Facade", FACADE_FILE, 1.0, back, 0.0, Vector3(0.0, top + BACK_WALL_HEIGHT, FACADE_DEPTH), true, Vector2.ZERO)
+	_build_ring("Roof", ROOF_FILE, -1.0, depth(), top, Vector3(0.0, ROOF_HEIGHT, ROOF_DEPTH), false, gap)
+
 	# Where the commentary booth would go: top of the home stand, at midfield.
 	booth_anchor = Marker3D.new()
 	booth_anchor.name = "BoothAnchor"
@@ -1564,6 +1855,165 @@ func _prop(node_name: String, file: String, height: float, fallback: Vector3, co
 	holder.add_child(instance)
 	holder.set_meta(&"size", fallback)
 	return holder
+
+
+## A model from assets/stadium stretched to exactly `size` (wide, high, deep),
+## standing on its origin with the middle of its footprint there, facing +Z.
+func _fitted(node_name: String, file: String, size: Vector3) -> Node3D:
+	var holder: Node3D = Node3D.new()
+	holder.name = node_name
+	var model: Node3D = (load(PROP_DIR + file) as PackedScene).instantiate() as Node3D
+	var bounds: AABB = _bounds(model, Transform3D.IDENTITY)
+	var scale_by: Vector3 = size / Vector3(maxf(bounds.size.x, 0.001), maxf(bounds.size.y, 0.001), maxf(bounds.size.z, 0.001))
+	var centre: Vector3 = bounds.get_center()
+	model.transform = Transform3D(Basis.from_scale(scale_by), Vector3(-centre.x, -bounds.position.y, -centre.z) * scale_by)
+	_no_shadows(model)
+	holder.add_child(model)
+	holder.set_meta(&"size", size)
+	return holder
+
+
+## How many bays (stretches of seats between two aisles) a straight has.
+func _bays(run: Run) -> int:
+	var bays: int = 0
+	for slice: Array in run.slices:
+		if not slice[2]:
+			bays += 1
+	return maxi(bays, 1)
+
+
+## Every mesh under `node` with the transform that leads to it: [mesh, xform].
+func _meshes(node: Node, xform: Transform3D, found: Array) -> void:
+	var here: Transform3D = xform
+	if node is Node3D:
+		here = xform * (node as Node3D).transform
+	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
+		found.append([(node as MeshInstance3D).mesh, here])
+	for child: Node in node.get_children():
+		_meshes(child, here, found)
+
+
+## One model repeated all the way round the bowl, a bay at a time: as wide as
+## a bay of each straight, and bent round the corners, CORNER_BAYS to each.
+## Its back stands `d_back` yards out from the wall at the height `y0`, and it
+## reaches `size.z` further out (`face` +1, its front turned away from the
+## field) or back in (`face` -1, its front turned to the field); `size.y` is
+## its height. `tinted`: its white parts take the colour of the fans of that
+## part of the bowl. No bay stands in `gap` (from, to) of the home stand.
+func _build_ring(node_name: String, file: String, face: float, d_back: float, y0: float, size: Vector3, tinted: bool, gap: Vector2) -> void:
+	if not ResourceLoader.exists(PROP_DIR + file):
+		return
+	var model: Node3D = (load(PROP_DIR + file) as PackedScene).instantiate() as Node3D
+	var found: Array = []
+	_meshes(model, Transform3D.IDENTITY, found)
+	var bounds: AABB = _bounds(model, Transform3D.IDENTITY)
+	model.free()
+	if found.is_empty():
+		return
+	var ring: Node3D = Node3D.new()
+	ring.name = node_name
+	props.add_child(ring)
+	# Into a box one unit wide and deep about its middle, and one high from 0.
+	var unit: Transform3D = Transform3D(Basis.from_scale(Vector3.ONE / Vector3(maxf(bounds.size.x, 0.001), maxf(bounds.size.y, 0.001), maxf(bounds.size.z, 0.001))), Vector3.ZERO)
+	unit = unit * Transform3D(Basis.IDENTITY, -Vector3(bounds.get_center().x, bounds.position.y, bounds.get_center().z))
+	var materials: Dictionary = {}
+	# The bays of a corner, bent once and turned to each of the four.
+	var bent: Array = []
+	for bay: int in CORNER_BAYS:
+		var pieces: Array = []
+		for entry: Array in found:
+			pieces.append(_bent(entry[0], unit * (entry[1] as Transform3D), face, CORNER_RADIUS + d_back, size, PI * 0.5 * float(bay) / float(CORNER_BAYS), PI * 0.5 * float(bay + 1) / float(CORNER_BAYS)))
+		bent.append(pieces)
+	for index: int in runs.size():
+		var run: Run = runs[index]
+		var tint: Color = _home_color.lerp(_away_color, 1.0 - run.home_chance)
+		var bays: int = CORNER_BAYS if run.arc else _bays(run)
+		for bay: int in bays:
+			if not run.arc and index == 6 and (float(bay) + 0.5) * run.length / float(bays) > gap.x and (float(bay) + 0.5) * run.length / float(bays) < gap.y:
+				continue
+			var holder: Node3D = Node3D.new()
+			holder.name = "%s%d_%d" % [node_name, index, bay]
+			var meshes: Array = []
+			if run.arc:
+				holder.transform = Transform3D(Basis(Vector3.UP, -run.from_angle), run.centre + Vector3(0.0, y0, 0.0))
+				for mesh: Mesh in bent[bay]:
+					meshes.append([mesh, Transform3D.IDENTITY])
+			else:
+				var wide: float = run.length / float(bays)
+				var mid: float = (float(bay) + 0.5) * wide
+				var basis: Basis = Basis(run.dir * -face, Vector3.UP, run.normal * face)
+				holder.transform = Transform3D(basis, run.point(mid, d_back + face * size.z * 0.5) + Vector3(0.0, y0, 0.0))
+				var fit: Transform3D = Transform3D(Basis.from_scale(Vector3(wide, size.y, size.z)), Vector3.ZERO) * unit
+				for entry: Array in found:
+					meshes.append([entry[0], fit * (entry[1] as Transform3D)])
+			for entry: Array in meshes:
+				var instance: MeshInstance3D = MeshInstance3D.new()
+				instance.mesh = entry[0]
+				instance.transform = entry[1]
+				instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				if tinted:
+					for surface: int in instance.mesh.get_surface_count():
+						instance.set_surface_override_material(surface, _tinted(instance.mesh.surface_get_material(surface), materials))
+					instance.set_instance_shader_parameter(&"tint", tint)
+				holder.add_child(instance)
+			ring.add_child(holder)
+
+
+## `mesh` (brought into the unit box by `xform`) as one bay of a corner: bent
+## about the corner's middle from the angle `from` to `to`, its back at
+## `radius`, `size.z` deep and `size.y` high. See _build_ring for `face`.
+func _bent(mesh: Mesh, xform: Transform3D, face: float, radius: float, size: Vector3, from: float, to: float) -> Mesh:
+	var out: ArrayMesh = ArrayMesh.new()
+	var normal_xform: Basis = xform.basis.inverse().transposed()
+	for surface: int in mesh.get_surface_count():
+		var arrays: Array = mesh.surface_get_arrays(surface)
+		var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL] if arrays[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+		var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT] if arrays[Mesh.ARRAY_TANGENT] != null else PackedFloat32Array()
+		for i: int in points.size():
+			var p: Vector3 = xform * points[i]
+			var angle: float = (from + to) * 0.5 - face * p.x * (to - from)
+			var away: Vector3 = Vector3(cos(angle), 0.0, sin(angle))
+			# The model's own +X and +Z, where this point ends up.
+			var x_axis: Vector3 = Vector3(-sin(angle), 0.0, cos(angle)) * -face
+			var z_axis: Vector3 = away * face
+			points[i] = away * (radius + face * (p.z + 0.5) * size.z) + Vector3(0.0, p.y * size.y, 0.0)
+			if i < normals.size():
+				var n: Vector3 = (normal_xform * normals[i]) / Vector3(radius * (to - from), size.y, size.z)
+				normals[i] = (x_axis * n.x + Vector3.UP * n.y + z_axis * n.z).normalized()
+			if i * 4 + 3 < tangents.size():
+				var t: Vector3 = xform.basis * Vector3(tangents[i * 4], tangents[i * 4 + 1], tangents[i * 4 + 2]) * Vector3(radius * (to - from), size.y, size.z)
+				t = (x_axis * t.x + Vector3.UP * t.y + z_axis * t.z).normalized()
+				tangents[i * 4] = t.x
+				tangents[i * 4 + 1] = t.y
+				tangents[i * 4 + 2] = t.z
+		arrays[Mesh.ARRAY_VERTEX] = points
+		if not normals.is_empty():
+			arrays[Mesh.ARRAY_NORMAL] = normals
+		if not tangents.is_empty():
+			arrays[Mesh.ARRAY_TANGENT] = tangents
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		out.surface_set_material(surface, mesh.surface_get_material(surface))
+	return out
+
+
+## A material that shows `source`'s pictures and dyes what is white in them
+## with each instance's own `tint` (see FACADE_SHADER); one per source, kept
+## in `made`.
+func _tinted(source: Material, made: Dictionary) -> Material:
+	if made.has(source):
+		return made[source]
+	var material: ShaderMaterial = ShaderMaterial.new()
+	material.shader = FACADE_SHADER
+	var plain: BaseMaterial3D = source as BaseMaterial3D
+	if plain != null:
+		material.set_shader_parameter(&"albedo_tex", plain.albedo_texture)
+		material.set_shader_parameter(&"normal_tex", plain.normal_texture)
+		if plain.roughness_texture != null:
+			material.set_shader_parameter(&"orm_tex", plain.roughness_texture)
+			material.set_shader_parameter(&"has_orm", true)
+	made[source] = material
+	return material
 
 
 ## Bounds of every mesh under `node`, in the space `xform` leads to.

@@ -194,8 +194,8 @@ func _tick() -> void:
 				_mark = _ticks
 			elif _ticks > 12 and qb.feet_set >= 1.0:
 				var took: float = float(_ticks - _mark) * TICK
-				var want: float = tuning.pass_set_feet_time * PlayerRatings.blend(qb.ratings.agility, tuning.agility_scale_low, tuning.agility_scale_high)
-				print("%-26s set after %.2f s (agility %d: %.2f s)" % [CASE_NAMES[_case], took, qb.ratings.agility, want])
+				var want: float = tuning.pass_set_feet_time
+				print("%-26s set after %.2f s" % [CASE_NAMES[_case], took])
 				_expect(absf(took - want) <= 0.06, "set after %.2f s, not %.2f" % [took, want])
 				_next()
 		Case.FEET_ON_THE_MOVE:
@@ -218,7 +218,7 @@ func _tick() -> void:
 			elif _ticks == 14:
 				_pc.throw_ball(_receiver, 0.5)
 				_expect(_gained(&"passes") == 1, "he could not throw")
-				_expect(_gained(&"scramble_throws") == 1 and _gained(&"flair_throws") == 1, "not a throw on the run")
+				_expect(_gained(&"flair_throws") == 1, "not a throw on the run")
 				_expect(qb.flair != Player.Flair.NONE and qb.flair_timer > 0.0, "no acrobatics")
 				print("%-26s %s" % [CASE_NAMES[_case], Player.Flair.keys()[qb.flair]])
 			elif _ticks == 60:
@@ -272,7 +272,7 @@ func _next() -> void:
 	_receiver.position = qb.position + Vector3(_dir * 20.0, 0.0, 0.0)
 	_ticks = 0
 	_mark = -1
-	for key: StringName in [&"pump_fakes", &"pump_fake_bites", &"passes", &"under_passes", &"hit_throws", &"bad_hit_throws", &"sacks", &"line_tips", &"scramble_throws", &"flair_throws"]:
+	for key: StringName in [&"pump_fakes", &"pump_fake_bites", &"passes", &"under_passes", &"hit_throws", &"bad_hit_throws", &"sacks", &"line_tips", &"flair_throws"]:
 		_before[key] = _game.get_stat(key)
 	var line: PlayerLine = _game.stat_book.players[qb]
 	_att_before = line.pass_att

@@ -1,0 +1,8 @@
+task created 394a5344-1c04-4530-9154-eb6e67ed1d0c (@uv-4)
+mesh_uv · queued
+mesh_uv · running 36% · 394a5344
+mesh_uv · success 100% · 394a5344
+[32m✓[39m mesh_uv · 394a5344-1c04-4530-9154-eb6e67ed1d0c · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to assets\stadium\source\tripo\press_box\uv\tripo-out\uv-4-394a5344
+{"task_id":"394a5344-1c04-4530-9154-eb6e67ed1d0c","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"assets\\stadium\\source\\tripo\\press_box\\uv\\tripo-out\\uv-4-394a5344","files":["model.glb","uv_render.webp"],"model_file":"assets\\stadium\\source\\tripo\\press_box\\uv\\tripo-out\\uv-4-394a5344\\model.glb"}

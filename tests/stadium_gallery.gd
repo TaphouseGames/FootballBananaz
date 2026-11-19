@@ -66,6 +66,12 @@ func _run() -> void:
 	await _shoot("seats_side", Vector3(49.7, 2.9, -22.6 - out), Vector3(45.0, 2.2, -23.6 - out))
 	await _shoot("signs_close", Vector3(60.0, 7.5, -12.0 - out), Vector3(62.0, 7.0, -34.0 - out))
 	await _shoot("aisle_close", Vector3(55.0, 9.0, 8.0 + out), Vector3(62.0, 6.0, 32.0 + out))
+	# The modelled pieces: a tunnel mouth, the roof from the walkway, the press
+	# box, and the outside wall with what lies round the bowl.
+	await _shoot("tunnel", Vector3(47.0, 6.5, -20.0 - out), Vector3(43.0, 5.0, -30.0 - out))
+	await _shoot("roof", Vector3(30.0, 13.5, -36.0 - out), Vector3(60.0, 14.0, -48.0 - out))
+	await _shoot("press_box", Vector3(50.0, 12.0, -8.0 - out), Vector3(50.0, 16.0, -48.0 - out))
+	await _shoot("facade", Vector3(20.0, 9.0, -95.0 - out), Vector3(50.0, 8.0, -50.0 - out))
 	await _shoot("corner", Vector3(92.0, 5.0, 4.0 + out), Vector3(111.0, 2.0, 21.0 + out))
 	# The wall, right on the lines: along a sideline and at an end.
 	await _shoot("wall_sideline", Vector3(40.0, 1.8, 15.0 + out), Vector3(60.0, 1.0, 20.5 + out))

@@ -1,0 +1,19 @@
+{
+  "task_id": "21426fe2-260b-482e-b966-a6ccaf2fe0dd",
+  "type": "image_to_image",
+  "status": "success",
+  "input": {
+    "prompt": "A new object from the same stadium as the floodlight tower in image[1]: the mouth of a spectator tunnel that sticks out of a grandstand. One plain rectangular block of weathered concrete, taller than wide and twice as deep as wide, with a flat roof. In its front face one big rectangular doorway with a pitch black inside, framed by a thick riveted grey steel portal, a small blank steel plate over the door and two small round lamps beside it. A grey steel pipe railing runs round the edge of the flat roof. Perfectly left-right symmetrical. Seen from the front and a little from above and from the side, so that the roof and one side wall show. Whole object in frame, single isolated object on a plain grey background, in exactly the stylized hand-painted game prop style, weathered concrete and grey riveted steel colours and lighting of image[1]. No people, no text, no logos.",
+    "model_version": "seedream_v5"
+  },
+  "output_fields": [
+    "generated_image_url"
+  ],
+  "credits_consumed": 5,
+  "created_at": "2026-11-19T00:28:31.708662Z",
+  "completed_at": "2026-11-19T00:29:03.463909Z",
+  "files": [
+    "generated_image.png",
+    "preview.png"
+  ]
+}

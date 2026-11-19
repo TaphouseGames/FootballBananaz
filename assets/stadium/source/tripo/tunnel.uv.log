@@ -1,0 +1,8 @@
+task created 0501a399-b0c5-4e11-b2fc-e7bdb5829422 (@uv)
+mesh_uv · queued
+mesh_uv · running 99% · 0501a399
+mesh_uv · success 100% · 0501a399
+[32m✓[39m mesh_uv · 0501a399-b0c5-4e11-b2fc-e7bdb5829422 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to assets\stadium\source\tripo\tunnel\uv\tripo-out\uv-0501a399
+{"task_id":"0501a399-b0c5-4e11-b2fc-e7bdb5829422","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"assets\\stadium\\source\\tripo\\tunnel\\uv\\tripo-out\\uv-0501a399","files":["model.glb","uv_render.webp"],"model_file":"assets\\stadium\\source\\tripo\\tunnel\\uv\\tripo-out\\uv-0501a399\\model.glb"}

@@ -1,0 +1,8 @@
+task created cb96bce2-e706-4311-980f-38299950e86e (@uv-2)
+mesh_uv · queued
+mesh_uv · running 25% · cb96bce2
+mesh_uv · success 100% · cb96bce2
+[32m✓[39m mesh_uv · cb96bce2-e706-4311-980f-38299950e86e · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to assets\stadium\source\tripo\facade_bay\uv\tripo-out\uv-2-cb96bce2
+{"task_id":"cb96bce2-e706-4311-980f-38299950e86e","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"assets\\stadium\\source\\tripo\\facade_bay\\uv\\tripo-out\\uv-2-cb96bce2","files":["model.glb","uv_render.webp"],"model_file":"assets\\stadium\\source\\tripo\\facade_bay\\uv\\tripo-out\\uv-2-cb96bce2\\model.glb"}

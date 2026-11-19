@@ -1,0 +1,8 @@
+task created f34572a5-486e-4ded-922b-44410dbc5237 (@uv-3)
+mesh_uv · queued
+mesh_uv · running 99% · f34572a5
+mesh_uv · success 100% · f34572a5
+[32m✓[39m mesh_uv · f34572a5-486e-4ded-922b-44410dbc5237 · 20 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to assets\stadium\source\tripo\roof_bay\uv\tripo-out\uv-3-f34572a5
+{"task_id":"f34572a5-486e-4ded-922b-44410dbc5237","type":"mesh_uv","status":"success","credits_consumed":20,"output_dir":"assets\\stadium\\source\\tripo\\roof_bay\\uv\\tripo-out\\uv-3-f34572a5","files":["model.glb","uv_render.webp"],"model_file":"assets\\stadium\\source\\tripo\\roof_bay\\uv\\tripo-out\\uv-3-f34572a5\\model.glb"}

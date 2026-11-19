@@ -52,7 +52,6 @@ func _tick() -> void:
 		tuning.ai_qb_min_time = 1.0e9
 		tuning.accuracy_error_low = 0.0
 		tuning.accuracy_error_high = 0.0
-		tuning.pass_scramble_error = 0.0
 		tuning.pass_overlead_chance = 0.0
 		tuning.pass_lead_error = 0.0
 		tuning.pass_under_error = 0.0

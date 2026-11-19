@@ -1,71 +1,21 @@
-[gd_resource type="Resource" script_class="Roster" format=3 uid="uid://dvc1v2otafide"]
+[gd_resource type="Resource" script_class="Roster" format=3]
 
-[ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
-[ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
-[ext_resource type="Script" uid="uid://ntulcvmygfjd" path="res://scripts/data/player_look.gd" id="3_look"]
+[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" path="res://scripts/data/player_look.gd" id="3_look"]
 
 [sub_resource type="Resource" id="look_jet_huckle"]
 script = ExtResource("3_look")
-gender = 0
 build = 0
 person = "jet_huckle"
 height_in = 60
 
-[sub_resource type="Resource" id="look_pip_bramble"]
-script = ExtResource("3_look")
-gender = 1
-build = 0
-person = "pip_bramble"
-height_in = 61
-
-[sub_resource type="Resource" id="look_tad_thorn"]
-script = ExtResource("3_look")
-gender = 0
-build = 0
-person = "tad_thorn"
-height_in = 64
-
-[sub_resource type="Resource" id="look_sol_briar"]
-script = ExtResource("3_look")
-gender = 0
-build = 0
-person = "sol_briar"
-height_in = 74
-
-[sub_resource type="Resource" id="look_ray_acai"]
-script = ExtResource("3_look")
-gender = 0
-build = 1
-person = "ray_acai"
-height_in = 69
-
-[sub_resource type="Resource" id="look_cole_currant"]
-script = ExtResource("3_look")
-gender = 0
-build = 2
-person = "cole_currant"
-height_in = 68
-
-[sub_resource type="Resource" id="look_flash_elder"]
-script = ExtResource("3_look")
-gender = 1
-build = 0
-person = "flash_elder"
-height_in = 62
-
-[sub_resource type="Resource" id="look_boyd_mulberry"]
-script = ExtResource("3_look")
-gender = 1
-build = 1
-person = "boyd_mulberry"
-height_in = 71
-
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Jet Huckle"
-look = SubResource("look_jet_huckle")
 position = "QB"
 number = 1
+look = SubResource("look_jet_huckle")
 speed = 94
 endurance = 85
 strength = 40
@@ -75,14 +25,20 @@ coverage = 12
 catching = 35
 juke = 84
 power = 35
-accuracy = 68
-agility = 96
+accuracy = 85
+
+[sub_resource type="Resource" id="look_pip_bramble"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "pip_bramble"
+height_in = 61
 
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")
 display_name = "Pip Bramble"
-look = SubResource("look_pip_bramble")
 number = 60
+look = SubResource("look_pip_bramble")
 speed = 42
 strength = 38
 blocking = 58
@@ -90,11 +46,17 @@ tackling = 35
 coverage = 18
 get_open = 25
 
+[sub_resource type="Resource" id="look_tad_thorn"]
+script = ExtResource("3_look")
+build = 0
+person = "tad_thorn"
+height_in = 64
+
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Tad Thorn"
-look = SubResource("look_tad_thorn")
 number = 67
+look = SubResource("look_tad_thorn")
 speed = 42
 strength = 40
 blocking = 60
@@ -102,11 +64,17 @@ tackling = 32
 coverage = 18
 get_open = 20
 
+[sub_resource type="Resource" id="look_sol_briar"]
+script = ExtResource("3_look")
+build = 0
+person = "sol_briar"
+height_in = 74
+
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Sol Briar"
-look = SubResource("look_sol_briar")
 number = 71
+look = SubResource("look_sol_briar")
 speed = 44
 strength = 36
 blocking = 55
@@ -114,12 +82,17 @@ tackling = 37
 coverage = 18
 get_open = 25
 
+[sub_resource type="Resource" id="look_ray_acai"]
+script = ExtResource("3_look")
+person = "ray_acai"
+height_in = 69
+
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Ray Acai"
-look = SubResource("look_ray_acai")
 position = "WR"
 number = 11
+look = SubResource("look_ray_acai")
 speed = 62
 endurance = 55
 strength = 40
@@ -129,12 +102,18 @@ coverage = 15
 get_open = 58
 catching = 60
 
+[sub_resource type="Resource" id="look_cole_currant"]
+script = ExtResource("3_look")
+build = 2
+person = "cole_currant"
+height_in = 68
+
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Cole Currant"
-look = SubResource("look_cole_currant")
 position = "WR"
 number = 19
+look = SubResource("look_cole_currant")
 speed = 58
 endurance = 55
 strength = 45
@@ -145,12 +124,19 @@ get_open = 55
 catching = 62
 juke = 45
 
+[sub_resource type="Resource" id="look_flash_elder"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "flash_elder"
+height_in = 62
+
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Flash Elder"
-look = SubResource("look_flash_elder")
 position = "RB"
 number = 28
+look = SubResource("look_flash_elder")
 speed = 83
 endurance = 55
 strength = 35
@@ -158,25 +144,32 @@ blocking = 35
 tackling = 25
 coverage = 12
 get_open = 65
-catching = 85
+catching = 87
 juke = 45
 security = 32
+
+[sub_resource type="Resource" id="look_boyd_mulberry"]
+script = ExtResource("3_look")
+gender = 1
+person = "boyd_mulberry"
+height_in = 71
 
 [sub_resource type="Resource" id="player_7"]
 script = ExtResource("1_ratings")
 display_name = "Boyd Mulberry"
-look = SubResource("look_boyd_mulberry")
 position = "TE"
 number = 46
-speed = 66
-endurance = 62
-strength = 52
-blocking = 52
+look = SubResource("look_boyd_mulberry")
+speed = 67
+endurance = 64
+strength = 56
+blocking = 58
+tackling = 52
 coverage = 58
 get_open = 66
-catching = 64
+catching = 83
 juke = 55
-security = 52
+security = 62
 
 [resource]
 script = ExtResource("2_roster")

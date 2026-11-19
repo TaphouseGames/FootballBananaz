@@ -1,0 +1,24 @@
+[1m── Plan ──────────────────────────[22m
+input: ./assets/stadium/source/tripo/roof_bay/concept/tripo-out/assets-stadium-source-tripo-jumb-4-fdd4d0e3/generated_image.png
+model: P2-20260801[2m — explicit --model[22m
+steps:
+  1. image-to-model  [2mPOST /v3/generation/image-to-model[22m — generate a 3D model from one image
+[2m     face_limit=12000 pbr=true texture_quality="detailed" model="P2-20260801"[22m
+deliverables: GLB
+cost impact:
+  · estimated generation cost: 120 credits (official list price)
+  · texture_quality detailed: higher price tier
+[1m──────────────────────────────────[22m
+model: P2-20260801 (explicit --model)
+task created 1f46d3e6-618f-47f1-8433-5d6c96b8295a (@generated-image-3)
+image_to_model · queued
+image_to_model · running 5% · 1f46d3e6
+image_to_model · running 16% · 1f46d3e6
+image_to_model · running 24% · 1f46d3e6
+image_to_model · running 38% · 1f46d3e6
+image_to_model · running 58% · 1f46d3e6
+image_to_model · success 100% · 1f46d3e6
+[32m✓[39m image_to_model · 1f46d3e6-618f-47f1-8433-5d6c96b8295a · 120 credits
+downloading artifacts…
+[32m✓[39m artifacts saved to assets\stadium\source\tripo\roof_bay\model\tripo-out\generated-image-3-1f46d3e6
+{"task_id":"1f46d3e6-618f-47f1-8433-5d6c96b8295a","type":"image_to_model","status":"success","credits_consumed":120,"output_dir":"assets\\stadium\\source\\tripo\\roof_bay\\model\\tripo-out\\generated-image-3-1f46d3e6","files":["model.glb","rendered_image.webp","preview.png"],"model_file":"assets\\stadium\\source\\tripo\\roof_bay\\model\\tripo-out\\generated-image-3-1f46d3e6\\model.glb","preview":"assets\\stadium\\source\\tripo\\roof_bay\\model\\tripo-out\\generated-image-3-1f46d3e6\\preview.png"}

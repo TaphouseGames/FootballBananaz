@@ -15,7 +15,7 @@
         "build": "tall, lean and wiry, chest pushed out, thin arms, long thin legs",
         "look": "bald and smooth on top, short black hair round the sides, big black handlebar moustache with curled tips, strong jaw, heavy black eyebrows",
         "personality": "dashing, cocky and theatrical; thinks he is the star of the show; quick and nimble but not strong",
-        "plays_like": "agile quarterback who throws well on the run (agility 85), slippery (juke 65), weak (strength 40)"
+        "plays_like": "agile quarterback, slippery (juke 65), weak (strength 40)"
       },
       "who": "a white man in his early thirties, a dashing and cocky quarterback, quick and nimble but not strong: lean and wiry with narrow hips, long legs, thin arms and his chest pushed out, standing very upright, wearing old white canvas sneakers",
       "refs": "His head and face are exactly those of the man in image[1], which shows the same head twice: bald and smooth on top with short neat black hair round the sides and back only, a big black handlebar moustache with thick curled tips, strong jaw, one eyebrow raised, a confident closed-mouth smirk. He wears exactly the same kit as the character in image[2] (white jersey, grey pants, dark grey socks up to the pants) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[2], but is a different person with a different body.",
@@ -198,7 +198,7 @@
         "build": "very big and heavy: broad shoulders, a large round belly, massive thick arms and thick legs",
         "look": "long wavy black hair pulled into a knot on top with the rest falling behind his shoulders, thick black eyebrows, broad nose, clean-shaven round face, warm brown skin",
         "personality": "calm, sure of himself and unhurried; plants his feet, never runs and trusts his arm completely",
-        "plays_like": "a cannon arm (power 92, accuracy 75) on a statue (speed 38, agility 30); strong (70) and hard to strip (security 65)"
+        "plays_like": "a cannon arm (power 92, accuracy 75) on a statue (speed 38); strong (70) and hard to strip (security 65)"
       },
       "who": "a Samoan American man in his forties, a quarterback with a cannon for an arm who never moves his feet: very tall and big, heavy and broad with a thick waist, wide shoulders, huge thick arms and tree-trunk legs, warm brown skin, long wavy black hair tied in a knot on top of his head, thick black eyebrows, a broad nose, a clean-shaven round face and a calm, sure closed-mouth smile, wearing mustard yellow high-top sneakers",
       "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no bald head and no beard: long hair in a top knot and a clean-shaven face.",
@@ -377,7 +377,7 @@
         "build": "medium height, full bust and soft middle, sturdy arms and strong thick legs",
         "look": "big stiff golden blonde bouffant swept up high with flicked ends at the neck, thin arched eyebrows, bright blue eyes with long lashes, small nose, rosy cheeks, fair skin",
         "personality": "a poised, proper Southern lady; gracious, a little superior, and quietly in charge of everybody",
-        "plays_like": "a steady, balanced quarterback: accurate (68) with a decent arm (power 66), mobile enough (agility 62, speed 60), nothing flashy"
+        "plays_like": "a steady, balanced quarterback: accurate (68) with a decent arm (power 66), mobile enough (speed 60), nothing flashy"
       },
       "who": "a white woman in her early fifties, a poised and proper Southern lady who plays quarterback: medium height with an ordinary soft middle-aged figure, rounded hips and slim arms, fair skin, a big stiff golden blonde bouffant hairdo swept up high off her forehead, thin arched eyebrows, bright blue eyes, a small pointed nose, pink cheeks and a gracious, slightly superior closed-mouth smile, wearing peach pink sneakers",
       "refs": "She wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no glasses, no black bob and no fringe: big blonde hair, and a softer, less muscular figure.",
@@ -574,7 +574,7 @@
         "build": "tall and burly, barrel chest, big solid belly, very thick hairy arms, heavy slow legs",
         "look": "short thick curly black hair, heavy black eyebrows, a strong curved nose, a short black beard along a square jaw, ears that stick out, olive-brown skin",
         "personality": "proud, loud and sure of himself; believes any problem can be solved by throwing harder",
-        "plays_like": "a cannon arm (power 97) with fair aim (accuracy 72) on a statue: speed 30, agility 25, juke 20"
+        "plays_like": "a cannon arm (power 97) with fair aim (accuracy 72) on a statue: speed 30, juke 20"
       },
       "who": "a Lebanese American man in his mid forties, a slow, burly quarterback with a cannon of an arm: tall and barrel-chested with very thick upper arms and forearms, a solid belly and heavy slow legs, olive skin, short thick curly black hair, heavy black eyebrows, a strong curved nose, a square jaw dark with stubble and a proud, confident closed-mouth smile, wearing bright red sneakers",
       "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no grey hair, no beard, no scowl and no old face: black hair and a proud younger face.",
@@ -777,7 +777,7 @@
         "build": "small and scrawny: thin arms, knobbly knees, skinny legs",
         "look": "a messy spiky mop of straw blond hair, lots of freckles, big ears that stick out, big blue eyes, a snub nose, fair skin",
         "personality": "a cheeky rascal; fearless, always up to something, runs because it is more fun than throwing",
-        "plays_like": "nobody can catch him (speed 94, agility 96, juke 84), accurate enough (68), but a weak arm (power 35) and little strength (40)"
+        "plays_like": "nobody can catch him (speed 94, juke 84), accurate enough (68), but a weak arm (power 35) and little strength (40)"
       },
       "who": "a white boy of twelve, a tiny quarterback nobody can catch: small and scrawny with thin arms, knobbly knees and skinny legs, fair sunburnt skin, a messy mop of straw blond hair sticking out in all directions, lots of freckles, ears that stick out, bright blue eyes, a snub nose and a mischievous closed-mouth grin, wearing bright blue sneakers",
       "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no high-top fade, no dark skin and no teenager's height: a smaller, younger white boy with blond hair.",
@@ -967,7 +967,7 @@
         "build": "medium height and stout: a barrel chest, a big firm pot belly, thick arms and thick short legs",
         "look": "neat side-parted grey hair, bushy grey eyebrows drawn down, a huge grey walrus moustache joined to bushy mutton-chop side whiskers, a shaved chin, a red nose, heavy jowls, pink skin",
         "personality": "stodgy, old-fashioned and permanently disapproving; things were better in his day",
-        "plays_like": "a quarterback who defends: coverage 90, tackling 85; a modest arm (power 58, accuracy 55) and slow (speed 38, agility 25)"
+        "plays_like": "a quarterback who defends: coverage 90, tackling 85; a modest arm (power 58, accuracy 55) and slow (speed 38)"
       },
       "who": "a white man in his mid sixties, a stodgy, old-fashioned quarterback who cannot throw but stops everything: medium height, stout and slow with a barrel chest, a firm pot belly and thick legs, pink skin, neatly side-parted grey hair, big bushy grey mutton-chop side whiskers with a shaved chin, heavy jowls, bushy grey eyebrows and a stern, disapproving closed mouth, wearing bright red sneakers",
       "refs": "He wears exactly the same kit as the character in image[1] (plain white short-sleeved jersey, plain mid grey shorts, dark charcoal grey socks) and is made in exactly the same hand-sculpted clay art style, surface texture, level of detail, lighting and background as image[1], but is a completely different person: a different face, skin colour, hair, age and body, with no beard on the chin, no red nose, no thin sandy hair and no hairy arms: neat grey hair and big side whiskers.",

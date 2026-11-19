@@ -513,6 +513,7 @@ func _check_hole_burst() -> void:
 	if runner == human.controlled:
 		game.audio.play(&"spin", 0.5, 1.4)
 		game.impact(tuning.shove_shake * 0.5, 0.0)
+		game.rumble.play(&"hole")
 
 
 ## A defensive play-frame point with its depth squeezed so that a play whose
@@ -697,6 +698,7 @@ func kick_off() -> void:
 	throw_time = 0.0
 	game.add_stat(&"kickoffs")
 	game.audio.play(&"kick")
+	game.rumble.play(&"kick")
 	game.audio.excite(0.45)
 	_update_markers()
 
@@ -972,6 +974,7 @@ func snap() -> void:
 	game.audio.say(&"qb_hut")
 	game.audio.play(&"snap")
 	game.audio.play(&"pads_clash", 0.6)
+	game.rumble.play_team(&"snap", offense)
 	touchdown_quip = &""
 	if not kickoff and not game.conversion:
 		if heave:
@@ -1203,6 +1206,7 @@ func _think_and_move(delta: float) -> void:
 			# A jump dive has just come down, or somebody has hit the wall.
 			game.add_stat(&"dazes")
 			game.audio.dazed(player)
+			game.rumble.play_mine(&"daze", player)
 			game.field.fx.daze_impact(player.position, player.facing, player.velocity.length())
 		if player.wall_hit > 0.0:
 			_splat_on_wall(player)
@@ -1221,6 +1225,7 @@ func _splat_on_wall(player: Player) -> void:
 	var out: Vector3 = Stadium.wall_normal(tuning, player.position.x, player.position.z)
 	game.field.fx.daze_impact(player.position - out * 0.6, out, player.wall_hit * 0.5)
 	game.impact(tuning.shove_shake * (1.0 if mine else 0.4), 0.5 if mine else 0.0)
+	game.rumble.play_mine(&"wall", player, null, hard)
 	# Everybody enjoys it but his own fans.
 	if not player.bystander:
 		game.audio.crowd_react(player.team.opponent, 0.35 + 0.25 * hard)
@@ -1480,9 +1485,9 @@ func in_the_grasp() -> bool:
 			and off_play != null and not off_play.is_run and not faking()
 
 
-## Whether `player` gets the ring at his feet that shows if they are set: the
+## Whether `player` stamps into his stance as his feet come set: the
 ## quarterback, for as long as he has the ball to throw.
-func shows_feet(player: Player) -> bool:
+func plants_feet(player: Player) -> bool:
 	return player == qb and not ball_dead and phase == Phase.POCKET and ball.carrier == qb and off_play != null \
 			and not off_play.is_run and not faking() and (player.state == Player.State.NORMAL or player.state == Player.State.JUMPING)
 
@@ -1490,9 +1495,12 @@ func shows_feet(player: Player) -> bool:
 ## The quarterback's feet have just come set (see Player.feet_planted).
 func on_feet_planted(player: Player) -> void:
 	game.field.fx.dust_puff(player.position, Vector3.ZERO, 1.0)
-	if player == human.controlled:
-		# A soft chime of its own, so it is not taken for the play clock's tick.
-		game.audio.play(&"ui_feet_set", 0.7)
+
+
+## A body knocked down has just hit the turf, `impact` hard (0..1; see
+## PlayerFall.impact).
+func on_body_landed(player: Player, impact: float) -> void:
+	game.rumble.play_mine(&"land", player, null, impact)
 
 
 ## Pump fake: the arm goes as if he were throwing to the receiver he is looking
@@ -1736,12 +1744,9 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 		elif placement == Placement.UNDER:
 			# Taking something off it can take off too much.
 			point += shift * randf() * tuning.pass_under_error
-	# Every pass sprays a little, more the further it has to travel; a throw on
-	# the run sprays a lot more.
+	# Every pass sprays a little, more the further it has to travel. Whether his
+	# feet are set makes no difference to it.
 	var error: float = PlayerRatings.blend(arm.accuracy, tuning.accuracy_error_low, tuning.accuracy_error_high)
-	if qb.feet_set < 1.0:
-		error += tuning.pass_scramble_error * PlayerRatings.blend(arm.agility, tuning.agility_scale_low, tuning.agility_scale_high) * (1.0 - qb.feet_set)
-		game.add_stat(&"scramble_throws")
 	if bad:
 		# The arm was hit, or he never got his body into it.
 		var intended: Vector3 = point - qb.position
@@ -1758,7 +1763,8 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	point.x = clampf(point.x, -back, tuning.field_length + back)
 	point.z = clampf(point.z, -limit_z, limit_z)
 	# On the run it is thrown with a flourish, and the game takes a breath for
-	# the person's own quarterback. (In the air he is busy enough already.)
+	# the person's own quarterback. (In the air he is busy enough already.) For
+	# show only: the pass itself is the same one.
 	if qb.feet_set < 1.0 and not hit and qb.state == Player.State.NORMAL:
 		var wild: float = 1.0 - qb.feet_set
 		qb.start_flair(point - qb.position, wild)
@@ -1768,6 +1774,7 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 			game.impact(0.15 * wild, tuning.flair_stop_scale * wild)
 			game.camera_rig.punch(tuning.flair_camera_punch * wild)
 			game.audio.play(&"spin", 0.7, 1.2)
+			game.rumble.play(&"flair", wild)
 	ball.throw_to(qb, target, point, speed, tuning)
 	ball.wobbly = bad
 	hit_throw = bad
@@ -1792,6 +1799,8 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	pass_intended = target
 	game.add_stat(&"passes")
 	game.audio.play(&"throw", 0.45, lerpf(0.9, 1.15, power))
+	# A lob is a flick of the wrist, a bullet the whole arm.
+	game.rumble.play_mine(&"throw", qb, null, lerpf(0.4, 1.0, power))
 	if hit:
 		_flatten_passer()
 	human.on_throw(target)
@@ -1812,6 +1821,7 @@ func _flatten_passer() -> void:
 	if hitter != null:
 		game.audio.hit(hitter, qb, false)
 	game.impact(tuning.tackle_shake * 0.7, 0.6)
+	game.rumble.play_mine(&"qb_hit", qb, hitter)
 	game.audio.play(&"crowd_gasp", 0.6)
 	game.field.fx.blood_burst(qb.position, dir, tuning.blood_drops_knockdown, false)
 
@@ -1889,6 +1899,7 @@ func _resolve_pass_arrival() -> void:
 		phase = Phase.RUN
 		game.add_stat(&"kick_returns")
 		game.audio.play(&"catch")
+		game.rumble.play_team(&"catch", returner.team)
 		human.on_carrier_changed(returner)
 		return
 	if thrown_away:
@@ -2012,6 +2023,7 @@ func _complete_pass(receiver: Player) -> void:
 	elif (ball.target_point.x - los_x) * off_dir >= tuning.audio_deep_throw_yards:
 		game.audio.remark(&"announcer_throw", AudioDirector.REMARK_THROW)
 	game.audio.play(&"catch")
+	game.rumble.play_team(&"catch", receiver.team)
 	game.audio.crowd_react(receiver.team, 0.35)
 	_add_placement_stat("completions")
 	human.on_carrier_changed(receiver)
@@ -2035,6 +2047,7 @@ func _tip_pass(toucher: Player, velocity: Vector3) -> void:
 		return
 	toucher.jolt(-_away_from(toucher), 0.3)
 	game.audio.play(&"ball_bounce", 0.8)
+	game.rumble.play_mine(&"tip", toucher)
 	for player: Player in players:
 		player.brain.on_tip()
 
@@ -2249,6 +2262,8 @@ func _intercept(defender: Player) -> void:
 	game.add_stat(&"interceptions")
 	game.audio.play(&"catch")
 	game.audio.play(&"crowd_gasp", 0.8)
+	# Felt on both sides: taken away or given away.
+	game.rumble.play(&"interception")
 	game.audio.shout(&"announcer_interception")
 	game.audio.quip(&"color_interception", AudioDirector.QUIP_INTERCEPTION)
 	game.audio.crowd_react(defender.team, 0.9)
@@ -2283,24 +2298,25 @@ func do_dive(player: Player, dir: Vector3, speed: float = -1.0) -> void:
 	game.audio.action(player, &"dive")
 
 
-## A dive out of a jump: only for a player who is in the air.
-func do_jump_dive(player: Player, dir: Vector3) -> void:
-	if _thinking:
-		_queued_actions.append(do_jump_dive.bind(player, dir))
-		return
-	if player.state != Player.State.JUMPING:
-		return
-	var top: float = tuning.dive_speed * tuning.jump_dive_speed_scale
-	if not player.start_jump_dive(dir, _ball_dive_speed(player, dir, jump_dive_ball_range(), player.jump_dive_time(), top)):
-		return
-	game.stat_book.add_dive(player.team)
-	game.add_stat(&"jump_dives")
-	game.audio.action(player, &"jump_dive")
+# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+### A dive out of a jump: only for a player who is in the air.
+#func do_jump_dive(player: Player, dir: Vector3) -> void:
+#	if _thinking:
+#		_queued_actions.append(do_jump_dive.bind(player, dir))
+#		return
+#	if player.state != Player.State.JUMPING:
+#		return
+#	var top: float = tuning.dive_speed * tuning.jump_dive_speed_scale
+#	if not player.start_jump_dive(dir, _ball_dive_speed(player, dir, jump_dive_ball_range(), player.jump_dive_time(), top)):
+#		return
+#	game.stat_book.add_dive(player.team)
+#	game.add_stat(&"jump_dives")
+#	game.audio.action(player, &"jump_dive")
 
 
-## How far off a pass may come down for a jump dive to be aimed at it.
-func jump_dive_ball_range() -> float:
-	return tuning.dive_ball_range * tuning.jump_dive_speed_scale
+### How far off a pass may come down for a jump dive to be aimed at it.
+#func jump_dive_ball_range() -> float:
+#	return tuning.dive_ball_range * tuning.jump_dive_speed_scale
 
 
 func do_jump(player: Player) -> void:
@@ -2411,6 +2427,7 @@ func do_shove(player: Player, dir: Vector3) -> void:
 		return
 	player.start_shove(dir)
 	game.audio.action(player, &"shove")
+	game.rumble.play_mine(&"shove", player)
 	for opponent: Player in player.team.opponent.players:
 		if opponent.is_down():
 			continue
@@ -2573,7 +2590,12 @@ func _check_hit(attacker: Player, victim: Player, offset: Vector3, dist: float) 
 			if attacker.brain.takeout_target == victim:
 				attacker.brain.takeout_target = null
 				game.add_stat(&"air_hits" if attacker.brain.hit_man else &"takeouts")
-			_knock_over(attacker, victim, offset.normalized() if dist > 0.01 else attacker.facing)
+			var dir: Vector3 = offset.normalized() if dist > 0.01 else attacker.facing
+			if ball_dead:
+				# A late hit goes through as many as are in its way.
+				_knock_over(attacker, victim, dir)
+			else:
+				_dive_into(attacker, victim, dir)
 	elif is_carrier and attacker.state == Player.State.NORMAL and dist <= tuning.tackle_radius:
 		_attempt_tackle(attacker, victim, false)
 
@@ -2603,8 +2625,9 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 	var chance: float = tuning.tackle_base_chance
 	if big_hit:
 		chance += tuning.dive_tackle_bonus
-	if tackler.state == Player.State.DIVING and tackler.jump_dive:
-		chance += tuning.jump_dive_tackle_bonus
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	if tackler.state == Player.State.DIVING and tackler.jump_dive:
+#		chance += tuning.jump_dive_tackle_bonus
 	chance *= PlayerRatings.blend(skills.strength, tuning.strength_tackle_scale_low, tuning.strength_tackle_scale_high)
 	chance *= PlayerRatings.blend(tackler.ratings.tackling, tuning.tackling_scale_low, tuning.tackling_scale_high)
 	if tackler.block_slow_timer > 0.0:
@@ -2643,6 +2666,7 @@ func _attempt_tackle(tackler: Player, carrier: Player, big_hit: bool) -> void:
 		game.add_stat(&"drags")
 		game.audio.play(&"tackle", 0.7)
 		game.impact(tuning.shove_shake * 0.6, 0.4)
+		game.rumble.play_for(&"drag", carrier, tackler)
 	else:
 		_finish_tackle(carrier, dir, kind, tackler, big_hit)
 
@@ -2719,6 +2743,9 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 		game.audio.remark(&"announcer_tackle", AudioDirector.REMARK_TACKLE)
 		game.audio.quip(&"color_tackle", AudioDirector.QUIP_TACKLE)
 	game.impact(tuning.tackle_shake, 1.0)
+	# A sack is felt a little more than a tackle.
+	var sacked: bool = phase == Phase.POCKET and carrier == qb
+	game.rumble.play_for(&"big_hit" if big else &"tackle", carrier, tackled_by, 1.15 if sacked else 1.0)
 	game.field.fx.blood_burst(carrier.position, dir, tuning.blood_drops_tackle, true)
 	if _try_fumble(carrier, dir, kind, carried, secured):
 		return
@@ -2782,6 +2809,7 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 	# For the tests: which team lost it.
 	game.add_stat(StringName("fumbles_lost_" + carrier.team.short_name.to_lower()))
 	game.audio.play(&"crowd_gasp")
+	game.rumble.play(&"fumble", 1.0 if game.rumble.involves(carrier, fumble_forcer) else 0.5)
 	game.hud.show_banner("FUMBLE!")
 	for player: Player in players:
 		# Anyone in the middle of a dive or a shove (the tackler, mostly) has his
@@ -2868,6 +2896,7 @@ func _grab_loose_ball(player: Player) -> void:
 	game.hud.hide_banner()
 	game.add_stat(&"fumble_recoveries")
 	game.audio.play(&"catch")
+	game.rumble.play_team(&"catch", player.team)
 	game.audio.crowd_react(player.team, 0.85 if player.team != fumbler.team else 0.5)
 	if diving:
 		game.add_stat(&"fumbles_fallen_on")
@@ -2889,6 +2918,9 @@ func _break_tackle(tackler: Player, carrier: Player, dir: Vector3, move: StringN
 	game.audio.play(&"body_fall", 0.6)
 	game.audio.crowd_react(carrier.team, 0.3)
 	game.impact(tuning.shove_shake * 0.6, 0.4)
+	# Running a man over is the hardest of them.
+	var trucked: bool = move == &"truck"
+	game.rumble.play_for(&"broken_tackle", carrier, tackler, 1.4 if trucked else 1.0)
 	@warning_ignore("integer_division")
 	game.field.fx.blood_burst(tackler.position, -dir, tuning.blood_drops_knockdown / 2, false)
 
@@ -2897,7 +2929,10 @@ func _break_tackle(tackler: Player, carrier: Player, dir: Vector3, move: StringN
 ## and keeps running, or finally goes down.
 func _update_drag() -> void:
 	var carrier: Player = ball.carrier
-	if ball_dead or carrier == null or carrier.state != Player.State.DRAGGING or carrier.state_timer > 0.0:
+	if ball_dead or carrier == null or carrier.state != Player.State.DRAGGING:
+		return
+	if carrier.state_timer > 0.0:
+		game.rumble.hold_drag(carrier, carrier.drag_partner)
 		return
 	var tackler: Player = carrier.drag_partner
 	var dir: Vector3 = carrier.facing
@@ -2910,6 +2945,38 @@ func _update_drag() -> void:
 		_break_tackle(tackler, carrier, dir)
 	else:
 		_finish_tackle(carrier, dir, PlayerFall.Kind.WRAP)
+
+
+## A dive during the play has reached a man who is not the carrier. It takes
+## out one man and no more, and a man who is blocking mostly holds: the diver's
+## strength against his blocking rating, and the diver bounces off if he loses.
+func _dive_into(attacker: Player, victim: Player, dir: Vector3) -> void:
+	if attacker.dive_spent:
+		return
+	if victim.is_blocking and victim.state == Player.State.NORMAL:
+		var chance: float = tuning.dive_blocker_chance
+		chance *= PlayerRatings.blend(attacker.ratings.strength, tuning.dive_blocker_strength_scale_low, tuning.dive_blocker_strength_scale_high)
+		chance *= PlayerRatings.blend(victim.ratings.blocking, tuning.dive_blocker_blocking_scale_low, tuning.dive_blocker_blocking_scale_high)
+		if randf() >= chance:
+			_stuff_dive(attacker, victim, dir)
+			return
+	_knock_over(attacker, victim, dir)
+	attacker.dive_spent = true
+	attacker.velocity *= tuning.dive_hit_speed_keep
+
+
+## The blocker held: the diver bounces off him and eats turf, and the blocker
+## goes on blocking.
+func _stuff_dive(diver: Player, blocker: Player, dir: Vector3) -> void:
+	diver.knock_down(-dir * 3.0, tuning.dive_stuffed_time, PlayerFall.Kind.BOUNCE_OFF)
+	diver.dive_get_up_timer = tuning.dive_get_up_time
+	blocker.jolt(dir, 0.8)
+	game.add_stat(&"dive_stuffs")
+	game.audio.play(&"pads_clash", 0.6)
+	game.audio.play(&"body_fall", 0.6)
+	if diver == human.controlled or blocker == human.controlled:
+		game.impact(tuning.shove_shake * 0.6, 0.4)
+	game.rumble.play_mine(&"stuffed", diver, blocker)
 
 
 func _knock_over(attacker: Player, victim: Player, dir: Vector3) -> void:
@@ -2933,6 +3000,7 @@ func _knock_over(attacker: Player, victim: Player, dir: Vector3) -> void:
 	# CPU-on-CPU scuffles just rattle the camera a little.
 	if attacker == human.controlled or victim == human.controlled:
 		game.impact(tuning.shove_shake, 0.5)
+		game.rumble.play(&"knockdown")
 	else:
 		game.impact(tuning.shove_shake * 0.3, 0.0)
 
@@ -2983,6 +3051,7 @@ func _check_block(blocker: Player, rusher: Player, push_dir: Vector3, delta: flo
 		game.audio.quip(&"color_lawn_chair", AudioDirector.QUIP_LAWN_CHAIR * 0.5)
 		game.audio.play(&"big_hit", 0.6)
 		game.audio.play(&"body_fall", 0.6)
+		game.rumble.play_mine(&"pancake", blocker, rusher)
 		return
 	if rusher.block_engaged_time >= rusher.block_shed_time:
 		blocker.knock_down(-push_dir * 4.0, tuning.block_beaten_time, PlayerFall.Kind.PANCAKE)

@@ -83,6 +83,38 @@ const MODE_PUMP: int = 22
 const MODE_FLAIR: int = 23
 ## How long the stamp lasts that a quarterback sets his feet with.
 const PLANT_TIME: float = 0.26
+## How far a quarterback with his feet set stands turned from the way he looks:
+## side-on, his front shoulder downfield. Negative is to his right.
+const HOLD_TURN: float = -62.0
+## A pass, from the tick the ball leaves: how long the motion lasts, and when
+## the arm gets to the release and to the end of the follow through, in seconds.
+const THROW_TIME: float = 0.5
+const THROW_RELEASE: float = 0.07
+const THROW_SWING_TO: float = 0.27
+## How long the small motion of a toss to the back lasts.
+const TOSS_TIME: float = 0.32
+## The pass itself, measured off Mixamo's "Quarterback Pass": each bone with
+## the arm up by his ear, at the release, halfway down, and at the end of the
+## follow through. Forward is where the pass goes. He has stepped onto his
+## front (left) foot, the arm comes over the top and ends across his body by
+## the other hip, the back heel coming up behind.
+const THROW_KEY_RELEASE: float = 1.0
+const THROW_KEYS: Array[Array] = [
+	[B.HIPS, Vector3(-8.0, -24.0, -7.0), Vector3(2.0, -6.0, -5.0), Vector3(10.0, 2.0, -7.0), Vector3(18.0, 7.0, -8.0)],
+	[B.SPINE, Vector3(-1.0, 4.0, -9.0), Vector3(6.0, 15.0, -15.0), Vector3(9.0, 19.0, -14.0), Vector3(11.0, 21.0, -9.0)],
+	[B.CHEST, Vector3(-1.0, 4.0, -9.0), Vector3(6.0, 15.0, -15.0), Vector3(9.0, 19.0, -14.0), Vector3(11.0, 21.0, -9.0)],
+	[B.HEAD, Vector3(0.0, 18.0, 28.0), Vector3(2.0, -22.0, 35.0), Vector3(-5.0, -43.0, 33.0), Vector3(-24.0, -51.0, 14.0)],
+	[B.ARM_L, Vector3(18.0, -27.0, -31.0), Vector3(12.0, -36.0, -50.0), Vector3(9.0, -33.0, -57.0), Vector3(10.0, -41.0, -65.0)],
+	[B.FORE_L, Vector3(0.0, -92.0, 0.0), Vector3(0.0, -68.0, 0.0), Vector3(0.0, -35.0, 0.0), Vector3(0.0, -28.0, 0.0)],
+	[B.ARM_R, Vector3(-83.0, 31.0, -6.0), Vector3(-45.0, 5.0, -18.0), Vector3(-50.0, -74.0, -78.0), Vector3(-105.0, -74.0, -154.0)],
+	[B.FORE_R, Vector3(0.0, -130.0, 0.0), Vector3(0.0, -71.0, 0.0), Vector3(0.0, -34.0, 0.0), Vector3(0.0, -34.0, 0.0)],
+	[B.THIGH_L, Vector3(-50.0, -13.0, 5.0), Vector3(-57.0, -14.0, -2.0), Vector3(-59.0, -16.0, -3.0), Vector3(-64.0, -17.0, -5.0)],
+	[B.SHIN_L, Vector3(63.0, 0.0, 0.0), Vector3(56.0, 0.0, 0.0), Vector3(52.0, 0.0, 0.0), Vector3(52.0, 0.0, 0.0)],
+	[B.FOOT_L, Vector3(-5.0, -2.0, -11.0), Vector3(-3.0, -12.0, -5.0), Vector3(-5.0, -16.0, -4.0), Vector3(-8.0, -19.0, -4.0)],
+	[B.THIGH_R, Vector3(19.0, 10.0, 9.0), Vector3(12.0, 29.0, -9.0), Vector3(5.0, 28.0, -10.0), Vector3(-2.0, 23.0, -5.0)],
+	[B.SHIN_R, Vector3(77.0, 0.0, 0.0), Vector3(68.0, 0.0, 0.0), Vector3(61.0, 0.0, 0.0), Vector3(55.0, 0.0, 0.0)],
+	[B.FOOT_R, Vector3(-20.0, 45.0, -50.0), Vector3(-45.0, 60.0, -30.0), Vector3(-31.0, 50.0, -34.0), Vector3(-26.0, 27.0, -29.0)],
+]
 const MODE_BLOCK_READY: int = 6
 const MODE_BLOCK_HOLD: int = 8
 const MODE_BLOCK_FIGHT: int = 9
@@ -151,7 +183,13 @@ var _plant_timer: float = 0.0
 var _kick_timer: float = 0.0
 var _kick_side: float = 1.0
 var _was_thrower: bool = false
+## The throwing motion being played is a toss to the back, not a pass.
+var _toss: bool = false
 var _ball_hand: int = B.HAND_L
+## His other hand is on the ball he holds in `_ball_hand` (a quarterback with
+## his feet set). `_support_now` is the eased value.
+var _support: bool = false
+var _support_now: float = 0.0
 ## Above 0 while both hands follow the ball (a pass coming in, or one just
 ## caught): how strongly, and the world position they go to.
 var _hands_weight: float = 0.0
@@ -424,6 +462,7 @@ func update(delta: float, instant: bool) -> void:
 	_hands_weight = 0.0
 	_off_hand_weight = 0.0
 	_grip = false
+	_support = false
 	_tuck = false
 	_hip_l = 0.0
 	_hip_r = 0.0
@@ -477,6 +516,10 @@ func update(delta: float, instant: bool) -> void:
 		_reach_hands()
 	if _hip_l > 0.0 or _hip_r > 0.0:
 		_hands_to_hips()
+	# The off hand comes off the ball quicker than a pose eases, as he throws.
+	_support_now = 1.0 if instant and _support else move_toward(_support_now, 1.0 if _support else 0.0, delta / 0.1)
+	if _support_now > 0.0 and _hands_weight <= 0.0:
+		_support_ball()
 	# A hand takes hold, and lets go for a swim or a rip, quicker than a pose eases.
 	_grab_l_now = move_toward(_grab_l_now, _grab_l, delta / 0.09)
 	_grab_r_now = move_toward(_grab_r_now, _grab_r, delta / 0.09)
@@ -759,6 +802,21 @@ func _reach_hands() -> void:
 	_reach_arm(B.ARM_R, B.FORE_R, B.HAND_R, _palm_r, target - Vector3(apart, 0.0, 0.0), _off_hand_weight if carries_left else _hands_weight)
 
 
+## Puts the palm of the off hand on the far side of the ball from the hand that
+## holds it. Runs after the pose has been written to the skeleton.
+func _support_ball() -> void:
+	if _bone[B.ARM_L] < 0 or _bone[B.ARM_R] < 0:
+		return
+	var to_skeleton: Transform3D = skeleton.global_transform.affine_inverse()
+	var ball: Vector3 = to_skeleton * _palm_world()
+	var across: Vector3 = (skeleton.get_bone_global_pose(_bone[B.ARM_L]).origin - skeleton.get_bone_global_pose(_bone[B.ARM_R]).origin).normalized()
+	var apart: float = HANDS_APART * to_skeleton.basis.get_scale().x
+	if _ball_hand == B.HAND_R:
+		_reach_arm(B.ARM_L, B.FORE_L, B.HAND_L, _palm_l, ball + across * apart, _support_now)
+	else:
+		_reach_arm(B.ARM_R, B.FORE_R, B.HAND_R, _palm_r, ball - across * apart, _support_now)
+
+
 ## Two-bone reach for one arm: bends the elbow until the palm is the right
 ## distance from the shoulder, then swings the whole arm onto the line to the
 ## target. Which way the elbow points is left to the pose underneath.
@@ -835,6 +893,7 @@ func _reset_dynamics() -> void:
 	_grab_l_now = 0.0
 	_grab_r_now = 0.0
 	_grab_with = null
+	_support_now = 0.0
 	_fight_now = 0.0
 	_move = MOVE_NONE
 	_move_timer = 0.0
@@ -1004,7 +1063,8 @@ func _build_pose(delta: float) -> void:
 	# The throw is noticed here, on the tick the ball leaves the hand.
 	var is_thrower: bool = ball.state == Ball.State.FLIGHT and ball.thrower == player
 	if is_thrower and not _was_thrower:
-		_throw_timer = 0.32
+		_throw_timer = THROW_TIME
+		_toss = false
 	_was_thrower = is_thrower
 
 	if pc.ball_dead and pc.result == PlayController.Result.TOUCHDOWN and pc.final_team != null:
@@ -1035,7 +1095,10 @@ func _build_pose(delta: float) -> void:
 		_flair_throw()
 	elif _throw_timer > 0.0:
 		_mode = 3
-		_throw_follow_through()
+		if _toss:
+			_toss_follow_through()
+		else:
+			_throw_pass()
 	elif player == pc.runner and pc.selling_run():
 		_mode = 5
 		_fake_carry()
@@ -1273,26 +1336,51 @@ func _ready_for_handoff(pc: PlayController, ball: Ball) -> void:
 	_turn_toward(ball.global_position, w)
 
 
-## Quarterback in the pocket: ball up by the ear, front hand out for balance.
+## How much he is standing his ground (1) and not on the move (0).
+func _planted() -> float:
+	return 1.0 - smoothstep(0.5, 2.2, Vector2(player.velocity.x, player.velocity.z).length())
+
+
+## Quarterback in the pocket with his feet set, measured off Mixamo's
+## "Quarterback Pass": side-on with his front shoulder downfield and his head
+## turned to look there, both hands on the ball in front of his chest, on a
+## wide base with the knees bent. On the move the legs go on running the way
+## he is going and only his trunk is turned.
 func _qb_cocked() -> void:
+	var still: float = _planted()
 	_ball_hand = B.HAND_R
 	_grip = true
-	_pose[B.SPINE].x = 2.0
-	_pose[B.CHEST] = Vector3(0.0, -22.0, 0.0)
-	_pose[B.HEAD] = Vector3(-4.0, 20.0, 0.0)
-	_pose[B.ARM_R] = Vector3(-95.0, 18.0, 8.0)
-	_pose[B.FORE_R] = Vector3(0.0, -105.0, 0.0)
-	# Wrist bent so the fingers come over the top of the ball.
-	_pose[B.HAND_R] = Vector3(0.0, 0.0, -20.0)
-	_pose[B.ARM_L] = Vector3(-55.0, 0.0, -62.0)
-	_pose[B.FORE_L] = Vector3(0.0, -70.0, 0.0)
-	# Feet set: a wide base with the knees bent, stamped into as they come set.
-	var stamp: float = sin(clampf(1.0 - _plant_timer / PLANT_TIME, 0.0, 1.0) * PI) if _plant_timer > 0.0 else 0.0
+	_support = true
+	var trunk: float = HOLD_TURN * (1.0 - still) * 0.5
+	_pose[B.HIPS].y += HOLD_TURN * still
+	_pose[B.SPINE] = Vector3(4.0, trunk, -2.0)
+	_pose[B.CHEST] = Vector3(4.0, trunk, -2.0)
+	_pose[B.NECK] = Vector3(0.0, -HOLD_TURN * 0.35, 0.0)
+	_pose[B.HEAD] = Vector3(5.0, -HOLD_TURN * 0.65, -4.0)
+	_pose[B.ARM_R] = Vector3(30.0, -12.0, -55.0)
+	_pose[B.FORE_R] = Vector3(0.0, -120.0, 0.0)
+	# The off hand is put on the ball itself (see `_support_ball`).
+	_pose[B.ARM_L] = Vector3(30.0, -42.0, -48.0)
+	_pose[B.FORE_L] = Vector3(0.0, -112.0, 0.0)
+	# On the move: the stride he has, a little lower and wider.
 	for thigh: int in [B.THIGH_L, B.THIGH_R]:
-		_pose[thigh].x -= 10.0 + 22.0 * stamp
+		_pose[thigh].x -= 10.0
 		_pose[thigh].z += 9.0
 	for shin: int in [B.SHIN_L, B.SHIN_R]:
-		_pose[shin].x += 18.0 + 40.0 * stamp
+		_pose[shin].x += 18.0
+	# Standing: feet well apart along the line to his target, soles flat.
+	_pose[B.THIGH_L] = _pose[B.THIGH_L].lerp(Vector3(-27.0, 4.0, 22.0), still)
+	_pose[B.SHIN_L] = _pose[B.SHIN_L].lerp(Vector3(54.0, 0.0, 0.0), still)
+	_pose[B.FOOT_L] = _pose[B.FOOT_L].lerp(Vector3(-24.0, 2.0, -20.0), still)
+	_pose[B.THIGH_R] = _pose[B.THIGH_R].lerp(Vector3(-14.0, 6.0, 26.0), still)
+	_pose[B.SHIN_R] = _pose[B.SHIN_R].lerp(Vector3(64.0, 0.0, 0.0), still)
+	_pose[B.FOOT_R] = _pose[B.FOOT_R].lerp(Vector3(-38.0, 8.0, -22.0), still)
+	# Stamped into as his feet come set.
+	var stamp: float = sin(clampf(1.0 - _plant_timer / PLANT_TIME, 0.0, 1.0) * PI) if _plant_timer > 0.0 else 0.0
+	for thigh: int in [B.THIGH_L, B.THIGH_R]:
+		_pose[thigh].x -= 22.0 * stamp
+	for shin: int in [B.SHIN_L, B.SHIN_R]:
+		_pose[shin].x += 40.0 * stamp
 	_pose[B.SPINE].x += 7.0 * stamp
 
 
@@ -1312,16 +1400,10 @@ func _pump_fake() -> void:
 	_stash()
 	_ball_hand = B.HAND_R
 	_grip = true
-	_pose[B.SPINE] = Vector3(16.0, 0.0, 0.0)
-	_pose[B.CHEST] = Vector3(8.0, 26.0, 0.0)
-	_pose[B.HEAD] = Vector3(-4.0, -6.0, 0.0)
-	_pose[B.ARM_R] = Vector3(-70.0, 0.0, -50.0)
-	_pose[B.FORE_R] = Vector3(0.0, -30.0, 0.0)
-	_pose[B.HAND_R] = Vector3(0.0, 0.0, -20.0)
-	_pose[B.ARM_L] = Vector3(10.0, 0.0, -66.0)
-	_pose[B.FORE_L] = Vector3(0.0, -80.0, 0.0)
-	for leg: int in [B.THIGH_L, B.THIGH_R, B.SHIN_L, B.SHIN_R, B.FOOT_L, B.FOOT_R, B.HIPS]:
-		_pose[leg] = _scratch[leg]
+	# The same release as a real pass, off the feet he is standing on.
+	_support = false
+	_throw_key(THROW_KEY_RELEASE)
+	_keep_legs(1.0)
 	_blend_from_stash(out)
 
 
@@ -1433,10 +1515,48 @@ func spike() -> void:
 
 ## Plays the throwing motion for a toss to the running back.
 func toss() -> void:
-	_throw_timer = 0.32
+	_throw_timer = TOSS_TIME
+	_toss = true
 
 
-func _throw_follow_through() -> void:
+## A pass, after the ball has left (it leaves on the press): the arm is up at
+## the release at once, comes down across his body, and he stands up out of it
+## at the end. On the move he throws off the legs he is running on.
+func _throw_pass() -> void:
+	var t: float = THROW_TIME - _throw_timer
+	_rate = 48.0
+	_stash()
+	_throw_key(minf(t / THROW_RELEASE, 1.0) + 2.0 * smoothstep(THROW_RELEASE, THROW_SWING_TO, t))
+	_keep_legs(1.0 - _planted())
+	_blend_from_stash(1.0 - smoothstep(THROW_TIME - 0.14, THROW_TIME, t))
+
+
+## Writes the pass at `at`, counted in the keys of `THROW_KEYS`: 0 the arm up,
+## 1 the release, 3 the end of the follow through.
+func _throw_key(at: float) -> void:
+	at = clampf(at, 0.0, 3.0)
+	var key: int = mini(int(at), 2)
+	var between: float = at - float(key)
+	for row: Array in THROW_KEYS:
+		var from: Vector3 = row[1 + key]
+		var to: Vector3 = row[2 + key]
+		_pose[row[0]] = from.lerp(to, between)
+
+
+## Gives the hips and legs back to the stashed pose by `share`, and has the
+## trunk make the turn the hips then do not, so his shoulders end up the same.
+func _keep_legs(share: float) -> void:
+	if share <= 0.0:
+		return
+	var turn: float = _pose[B.HIPS].y
+	for i: int in [B.HIPS, B.THIGH_L, B.THIGH_R, B.SHIN_L, B.SHIN_R, B.FOOT_L, B.FOOT_R]:
+		_pose[i] = _pose[i].lerp(_scratch[i], share)
+	var owed: float = (turn - _pose[B.HIPS].y) * 0.5
+	_pose[B.SPINE].y += owed
+	_pose[B.CHEST].y += owed
+
+
+func _toss_follow_through() -> void:
 	_rate = 26.0
 	_pose[B.SPINE].x = 20.0
 	_pose[B.CHEST] = Vector3(10.0, 30.0, 0.0)
@@ -1768,14 +1888,15 @@ func _dive() -> void:
 	_pose[B.SHIN_R] = Vector3(8.0, 0.0, 0.0)
 	_pose[B.FOOT_L] = Vector3(40.0, 0.0, 0.0)
 	_pose[B.FOOT_R] = Vector3(40.0, 0.0, 0.0)
-	if player.jump_dive:
-		# Out of a jump: flat out, legs straight behind him.
-		_pose[B.SPINE] = Vector3(-14.0, 0.0, 0.0)
-		_pose[B.HEAD] = Vector3(-45.0, 0.0, 0.0)
-		_pose[B.THIGH_L] = Vector3(20.0, 0.0, 10.0)
-		_pose[B.THIGH_R] = Vector3(14.0, 0.0, 10.0)
-		_pose[B.SHIN_L] = Vector3(6.0, 0.0, 0.0)
-		_pose[B.SHIN_R] = Vector3(2.0, 0.0, 0.0)
+	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#	if player.jump_dive:
+#		# Out of a jump: flat out, legs straight behind him.
+#		_pose[B.SPINE] = Vector3(-14.0, 0.0, 0.0)
+#		_pose[B.HEAD] = Vector3(-45.0, 0.0, 0.0)
+#		_pose[B.THIGH_L] = Vector3(20.0, 0.0, 10.0)
+#		_pose[B.THIGH_R] = Vector3(14.0, 0.0, 10.0)
+#		_pose[B.SHIN_L] = Vector3(6.0, 0.0, 0.0)
+#		_pose[B.SHIN_R] = Vector3(2.0, 0.0, 0.0)
 	_turn_to_ball(0.6)
 	if player.has_ball:
 		_pose[B.ARM_L] = Vector3(-150.0, -20.0, -80.0)
@@ -1792,6 +1913,8 @@ func _down() -> void:
 	_flop_damping = lerpf(lerpf(5.0, 13.0, fall.settle), 15.0, fall.rise)
 	if fall.impact > 0.0:
 		_splat(fall.impact)
+		if player.play != null:
+			player.play.on_body_landed(player, fall.impact)
 		fall.impact = 0.0
 
 	_tumble(fall)

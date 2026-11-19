@@ -25,7 +25,7 @@ const CONTROLS: Array[Array] = [
 		["Hold (LB)", "Lead him"],
 		["Hold (RB)", "Underthrow"],
 		["Tap (RB)", "Pump fake: some defenders bite on it"],
-		["Hold RT", "Tuck and run, let go to throw again. The ring at his feet turns green once they are set: before that the throw is wild"],
+		["Hold RT", "Tuck and run, let go to throw again"],
 		["Wrapped up", "A pass button gets the ball away as he goes down, mostly short and off target"],
 		["LT", "Throw it away, into the stands"],
 		["(Y)", "Jump. With four men out: throw to the fourth"],
@@ -36,19 +36,22 @@ const CONTROLS: Array[Array] = [
 		["(X)", "Dive, down where you land. On a kick return in your own end zone: touchback"],
 		["(A)", "Lower the shoulder: a short burst of speed with fewer fumbles, and the strong run over weaker tacklers and shake them off. Recharges slowly"],
 		["(Y)", "Jump"],
-		["(X) in the air", "Jump dive: faster and further, but you get up injured"],
+		# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#		["(X) in the air", "Jump dive: faster and further, but you get up injured"],
 	]],
 	["DEFENSE", [
 		["(B)", "Switch defender. Before the snap: pick another one"],
 		["(X)", "Dive at the carrier, at a pass or on a loose ball"],
 		["(Y) (A)", "Jump"],
-		["(X) in the air", "Jump dive: faster and further, but you land dazed and get up injured"],
+		# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#		["(X) in the air", "Jump dive: faster and further, but you land dazed and get up injured"],
 	]],
 	["OFFENSE WITHOUT THE BALL", [
 		["(X)", "Shove. With a pass in the air: dive at it"],
 		["(B)", "Switch to the teammate nearest the ball"],
 		["(Y) (A)", "Jump"],
-		["(X) in the air", "Jump dive: faster and further, but you land dazed and get up injured"],
+		# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
+#		["(X) in the air", "Jump dive: faster and further, but you land dazed and get up injured"],
 	]],
 	["AFTER THE WHISTLE", [
 		["(X)", "Late hit"],

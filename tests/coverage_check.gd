@@ -22,7 +22,7 @@ const FRONT: float = 0.6
 const QUIET: Dictionary[String, float] = {
 	"cpu_skill": 0.0, "ai_qb_min_time": 1.0e9, "ai_qb_keeper_chance": 0.0,
 	"ai_cover_bust_chance": 0.0, "ai_blown_coverage_chance": 0.0, "ai_takeout_chance": 0.0,
-	"accuracy_error_low": 0.0, "accuracy_error_high": 0.0, "pass_scramble_error": 0.0,
+	"accuracy_error_low": 0.0, "accuracy_error_high": 0.0,
 	"pass_overlead_chance": 0.0, "pass_under_error": 0.0,
 	"ai_undercut_chance": 0.0, "ai_air_hit_chance": 0.0, "ai_cover_off_chance": 0.0,
 	"ai_cover_trail_chance": 0.0, "ai_cover_leverage": 0.0,
