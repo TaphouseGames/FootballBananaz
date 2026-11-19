@@ -67,6 +67,8 @@ var season_round: int = -1
 
 ## Shakes the person's gamepad.
 var rumble: Rumble = Rumble.new()
+## Draws a play on the turf before the snap (LT and the stick).
+var play_art: PlayArt
 
 var _hit_stop_left: float = 0.0
 ## Team the camera sits behind, and the offense it was last set from.
@@ -115,6 +117,9 @@ func _ready() -> void:
 	var hole_debug: HoleDebug = HoleDebug.new()
 	hole_debug.setup(self)
 	add_child(hole_debug)
+	play_art = PlayArt.new()
+	play_art.setup(self)
+	add_child(play_art)
 
 	clock = tuning.game_length * 0.5
 	opening_receiver = home if randf() < 0.5 else away

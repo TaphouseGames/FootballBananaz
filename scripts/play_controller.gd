@@ -174,6 +174,10 @@ var _thinking: bool = false
 var _queued_actions: Array[Callable] = []
 ## Motion before the snap: who may be sent, and what the defense does about it.
 var motion: PreSnapMotion
+## The offense as the defense lined up on it: the men who can be covered, and
+## the order man coverage hands them out in (see DefenseAligner.man_order).
+var _seen_players: Array[Player] = []
+var _cover_order: PackedInt32Array = PackedInt32Array()
 
 @onready var state_machine: StateMachine = $StateMachine
 
@@ -246,15 +250,15 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 	# The defense lines up on what it sees: where the offense stands, not what
 	# its play is going to be. See DefenseAligner.
 	var seen: Array[Vector2] = []
-	var seen_players: Array[Player] = []
+	_seen_players.clear()
 	for player: Player in offense.players:
 		if player == qb:
 			continue
 		var spot: Vector2 = Vector2((player.position.x - los_x) * off_dir, player.position.z * off_dir)
 		seen.append(spot)
 		if absf(spot.y) >= DefenseAligner.LINE_WIDTH or spot.x <= DefenseAligner.LINE_DEPTH:
-			seen_players.append(player)
-	var cover_order: PackedInt32Array = DefenseAligner.read(seen).man_order()
+			_seen_players.append(player)
+	_cover_order = DefenseAligner.read(seen).man_order()
 	var spots: PackedVector2Array = defense_spots(seen)
 	var room: float = _def_room()
 	var deepest: float = _def_deepest()
@@ -264,9 +268,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 		var slot: int = mini(i, p_def.assignments.size() - 1)
 		var assignment: DefenseAssignment = p_def.assignments[slot]
 		var start: Vector3 = to_world(spots[slot])
-		var target: Player = null
-		if assignment.job == DefenseAssignment.Job.MAN and not cover_order.is_empty():
-			target = seen_players[cover_order[mini(DefenseAligner.man_index(assignment, def_flip), cover_order.size() - 1)]]
+		var target: Player = man_target_of(assignment, def_flip)
 		player.reset_for_play(start, -face_off)
 		# Rushers with a hand in the dirt are linemen; a blitzer from further back
 		# comes at full speed.
@@ -310,6 +312,19 @@ func defense_spots(seen: Array[Vector2]) -> PackedVector2Array:
 	return DefenseAligner.read(seen).starts(def_play, -1.0 if def_flipped else 1.0, depths)
 
 
+## The man a MAN assignment covers in the formation the offense lined up in
+## (null for any other job). `flip` of -1 is a play run mirrored.
+func man_target_of(assignment: DefenseAssignment, flip: float) -> Player:
+	if assignment.job != DefenseAssignment.Job.MAN or _cover_order.is_empty():
+		return null
+	return _seen_players[_cover_order[mini(DefenseAligner.man_index(assignment, flip), _cover_order.size() - 1)]]
+
+
+## Where on the field the zone of `assignment` is, as a part of `play`.
+func zone_world(play: DefensePlay, assignment: DefenseAssignment, flip: float) -> Vector3:
+	return to_world(_def_point(assignment.zone_center, _def_deepest(play), _def_room()), flip)
+
+
 ## Close to the goal line the play as drawn would put its deep men and zones
 ## past the back of the end zone, and is squeezed up to fit (_def_point): the
 ## yards there are for it, and how deep it is drawn.
@@ -317,9 +332,12 @@ func _def_room() -> float:
 	return (tuning.goal_x(offense.attack_dir) - los_x) * off_dir + tuning.end_zone_depth - tuning.def_back_margin
 
 
-func _def_deepest() -> float:
+## How deep `play` is drawn (the play that was called when it is left out).
+func _def_deepest(play: DefensePlay = null) -> float:
+	if play == null:
+		play = def_play
 	var deepest: float = 0.0
-	for assignment: DefenseAssignment in def_play.assignments:
+	for assignment: DefenseAssignment in play.assignments:
 		deepest = maxf(deepest, assignment.start.x)
 		if assignment.job == DefenseAssignment.Job.ZONE:
 			deepest = maxf(deepest, assignment.zone_center.x)
