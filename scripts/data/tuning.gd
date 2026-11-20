@@ -499,8 +499,8 @@ extends Resource
 @export var shake_off_chance_high: float = 0.35
 
 ## Chance that a tackle knocks the ball loose.
-@export var fumble_chance_low: float = 0.17
-@export var fumble_chance_high: float = 0.03
+@export var fumble_chance_low: float = 0.153
+@export var fumble_chance_high: float = 0.027
 
 @export_group("Fumbles")
 ## Multiplies the fumble chance on a dive or shove tackle.

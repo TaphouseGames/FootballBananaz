@@ -31,7 +31,7 @@ const DEEP_YARDS: float = 40.0
 const RUN_BREAK_CHANCE: float = 0.33
 const RUN_SHORT_MAX: float = 9.0
 const RUN_BREAK_YARDS: float = 40.0
-const FUMBLE_CHANCE: float = 0.07
+const FUMBLE_CHANCE: float = 0.063
 ## A turnover is run back all the way this often.
 const RETURN_TD_CHANCE: float = 0.45
 const TRY_CHANCE: float = 0.44
