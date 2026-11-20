@@ -419,7 +419,7 @@ prompt `[shouting] ...`, one take, levelled to the `qb_cadence` files (RMS
   then (`Tuning.qb_silly_chance`, `qb_silly_open_chance`). A CPU quarterback
   holds the snap for one, up to `cpu_silly_hold_max` seconds, so keep them
   under four seconds.
-- `qb_motion_<n>`: said as the quarterback sends a receiver in motion ((Y)
+- `qb_motion_<n>`: said as the quarterback sends a receiver in motion ((LB) or (RB)
   before the snap, `AudioDirector.qb_motion`), with his leg kick. Half of them
   serious, half silly, one picked at random. Short: the man is already on his
   way, and a jet motion is snapped within a second or two.

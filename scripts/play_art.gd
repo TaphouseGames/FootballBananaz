@@ -111,6 +111,9 @@ func _draw_offense(pc: PlayController, play: OffensePlay) -> void:
 		var player: Player = players[i]
 		var as_drawn: OffenseAssignment = play.assignments[mini(i, play.assignments.size() - 1)]
 		var assignment: OffenseAssignment = as_drawn
+		# A hot route given at the line is the route he runs.
+		if play == pc.off_play and pc.hot_routes.has(player):
+			assignment = pc.hot_routes[player]
 		var path: PackedVector3Array = PackedVector3Array([_flat(player.position)])
 		if called and play == pc.off_play and player == motion.man:
 			# The man in motion: the job the snap would give him now.
@@ -148,7 +151,8 @@ func _draw_offense(pc: PlayController, play: OffensePlay) -> void:
 			_arrow_head(from, tip, color)
 		else:
 			_end_bar(from, tip, color, width)
-	if not called:
+	# Not the called play's once its man has a hot route: it is off then.
+	if not called and (play != pc.off_play or motion.available()):
 		_draw_motion(pc, play, flip)
 
 
@@ -164,7 +168,7 @@ func _motion_job(play: OffensePlay, drawn: OffenseAssignment, motion: PreSnapMot
 	return play.motion_assignment if play.motion_assignment != null else drawn
 
 
-## The motion (Y) would send a receiver on: a dashed line along his way.
+## The motion (LB) or (RB) would send a receiver on: a dashed line along his way.
 func _draw_motion(pc: PlayController, play: OffensePlay, flip: float) -> void:
 	var path: PackedVector2Array = MotionRules.path(play)
 	var index: int = MotionRules.pick(play)

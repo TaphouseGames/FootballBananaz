@@ -862,7 +862,7 @@ extends Resource
 @export_range(0.0, 1.0) var qb_silly_open_chance: float = 0.15
 ## Longest a CPU quarterback holds the snap to finish a silly line.
 @export var cpu_silly_hold_max: float = 4.0
-## Motion before the snap (Y). A short motion, a return and one into the
+## Motion before the snap (LB) or (RB). A short motion, a return and one into the
 ## backfield are jogged at this share of his speed; across is run, a jet sprinted.
 @export_range(0.3, 1.0) var motion_jog_scale: float = 0.8
 ## Seconds before the man covering him sets off after him.

@@ -1,5 +1,5 @@
 extends SceneTree
-## Headless check of motion before the snap (Y):
+## Headless check of motion before the snap (LB):
 ##   pick      who may move: only a receiver off the line, the one nearest the
 ##             ball, nobody in a formation that has none
 ##   rules     every play's motion keeps to MotionRules, as drawn and flipped
@@ -12,7 +12,7 @@ extends SceneTree
 ##             ball is snapped while he is on his way
 ##   jet       Gun Dive snapped while the jet man runs goes to him; snapped
 ##             after he has set it goes to the back
-##   button    (Y) sends him once, does nothing on a play without a motion,
+##   button    (LB) sends him once, does nothing on a play without a motion,
 ##             and the play clock snaps the ball with him on his way
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/presnap_motion_check.gd
@@ -40,7 +40,7 @@ var _team: Team
 var _detail: bool = false
 var _failures: PackedStringArray = PackedStringArray()
 var _sync_done: bool = false
-## The (Y) part runs over real ticks: its steps, each a wait in ticks and then a call.
+## The (LB) part runs over real ticks: its steps, each a wait in ticks and then a call.
 var _steps: Array[Array] = []
 var _wait: int = 0
 var _counts: Dictionary[String, int] = {}
@@ -331,7 +331,7 @@ func _check_jet() -> void:
 	print("jet: checked")
 
 
-# --- (Y) -----------------------------------------------------------------------
+# --- (LB) -----------------------------------------------------------------------
 
 func _plan_button() -> void:
 	var with_motion: OffensePlay = _play("gun stick")
@@ -346,12 +346,12 @@ func _plan_button() -> void:
 		Input.action_press(&"motion")])
 	_steps.append([2, func() -> void:
 		Input.action_release(&"motion")
-		_expect(_pc.motion.state == PreSnapMotion.State.MOVING, "button: (Y) did not send him")
-		_expect(_game.stats.get(&"motions", 0) == _counts["before"] + 1, "button: (Y) was not counted once")])
+		_expect(_pc.motion.state == PreSnapMotion.State.MOVING, "button: (LB) did not send him")
+		_expect(_game.stats.get(&"motions", 0) == _counts["before"] + 1, "button: (LB) was not counted once")])
 	_steps.append([2, func() -> void: Input.action_press(&"motion")])
 	_steps.append([2, func() -> void:
 		Input.action_release(&"motion")
-		_expect(_game.stats.get(&"motions", 0) == _counts["before"] + 1, "button: a second (Y) sent him again")])
+		_expect(_game.stats.get(&"motions", 0) == _counts["before"] + 1, "button: a second (LB) sent him again")])
 	# A play without one.
 	_steps.append([20, _pre_snap.bind(without, defense)])
 	_steps.append([2, func() -> void:
@@ -359,7 +359,7 @@ func _plan_button() -> void:
 		Input.action_press(&"motion")])
 	_steps.append([2, func() -> void:
 		Input.action_release(&"motion")
-		_expect(_pc.motion.state == PreSnapMotion.State.NONE, "button: (Y) did something on a play without a motion")])
+		_expect(_pc.motion.state == PreSnapMotion.State.NONE, "button: (LB) did something on a play without a motion")])
 	# The play clock runs out with him on his way.
 	_steps.append([20, func() -> void:
 		_game.tuning.play_clock = 0.6

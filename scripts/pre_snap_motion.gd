@@ -102,6 +102,18 @@ func available() -> bool:
 	return state == State.READY
 
 
+## The motion is off for this play (its man was given a hot route). Only
+## before it is called.
+func cancel() -> void:
+	if state == State.READY:
+		reset()
+
+
+## He has been sent: on his way, or set where the motion ends.
+func called() -> bool:
+	return state == State.MOVING or state == State.SET
+
+
 func is_jet() -> bool:
 	return man != null and pc.off_play.motion == OffensePlay.Motion.JET
 
@@ -287,7 +299,7 @@ func _move_man(delta: float) -> void:
 	var runs: bool = jet or play.motion == OffensePlay.Motion.ACROSS
 	man.ai_speed_scale = 1.0 if runs else tuning.motion_jog_scale
 	man.wants_turbo = jet
-	_steer(man, target, last)
+	steer(man, target, last)
 	man.integrate(delta)
 
 
@@ -444,7 +456,7 @@ func _move_followers(delta: float) -> void:
 		defender.frozen = false
 		defender.ai_speed_scale = 1.0
 		defender.wants_turbo = jet
-		_steer(defender, spot, true)
+		steer(defender, spot, true)
 		defender.integrate(delta)
 
 
@@ -460,14 +472,14 @@ func _move_shifts(delta: float) -> void:
 		defender.frozen = false
 		defender.ai_speed_scale = tuning.motion_zone_walk_scale
 		defender.wants_turbo = false
-		_steer(defender, _shifts[defender], true)
+		steer(defender, _shifts[defender], true)
 		defender.integrate(delta)
 
 
 # --- Helpers -------------------------------------------------------------------
 
 ## Toward `point`, easing off close to it when he is to stop there.
-func _steer(player: Player, point: Vector3, stop: bool) -> void:
+static func steer(player: Player, point: Vector3, stop: bool) -> void:
 	var to: Vector3 = point - player.position
 	to.y = 0.0
 	var dist: float = to.length()
@@ -479,6 +491,13 @@ func _steer(player: Player, point: Vector3, stop: bool) -> void:
 
 ## On his spot, still, set again.
 func _stop(player: Player, spot: Vector3, face: Vector3) -> void:
+	plant(player, spot, face)
+	if not _settled.has(player):
+		_settled.append(player)
+
+
+## Puts a man who was walking before the snap on `spot`, frozen again.
+static func plant(player: Player, spot: Vector3, face: Vector3) -> void:
 	player.position = Vector3(spot.x, 0.0, spot.z)
 	player.velocity = Vector3.ZERO
 	player.move_input = Vector3.ZERO
@@ -486,8 +505,6 @@ func _stop(player: Player, spot: Vector3, face: Vector3) -> void:
 	player.ai_speed_scale = 1.0
 	player.facing = face
 	player.frozen = true
-	if not _settled.has(player):
-		_settled.append(player)
 
 
 func _flip() -> float:

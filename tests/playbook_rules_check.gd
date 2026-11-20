@@ -93,7 +93,7 @@ func _check_routes(plays: Array[OffensePlay]) -> void:
 				_expect(not assignment.route.is_empty(), "%s: %s has nowhere to run" % [play.play_name, assignment.label])
 
 
-## A play's motion (Y) keeps to the rules of MotionRules: only a receiver off
+## A play's motion (LB) or (RB) keeps to the rules of MotionRules: only a receiver off
 ## the line moves, he never moves toward it and ends off it, and what he does
 ## afterwards starts from where the motion puts him. Within a formation the
 ## same man moves in every play, and no kind of motion is only ever a run or

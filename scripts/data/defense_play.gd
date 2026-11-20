@@ -33,3 +33,13 @@ func fit(category: OffensePlay.Category) -> float:
 			return deep_fit
 	return short_fit
 @export var assignments: Array[DefenseAssignment] = []
+
+
+## The quick audible against a play of `kind` from the tab of `called`: the play
+## that fits it best and is not the called one. Null: the tab has no other play.
+static func quick_pick(plays: Array[DefensePlay], called: DefensePlay, kind: OffensePlay.Category) -> DefensePlay:
+	var best: DefensePlay = null
+	for play: DefensePlay in plays:
+		if play != called and play.group == called.group and (best == null or play.fit(kind) > best.fit(kind)):
+			best = play
+	return best

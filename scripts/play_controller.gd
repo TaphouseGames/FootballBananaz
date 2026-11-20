@@ -174,6 +174,13 @@ var _thinking: bool = false
 var _queued_actions: Array[Callable] = []
 ## Motion before the snap: who may be sent, and what the defense does about it.
 var motion: PreSnapMotion
+## An audible: the walk from the old line-up to the new one.
+var shift: PreSnapShift
+## Receivers given another route at the line (see hot_route), and their new job.
+var hot_routes: Dictionary[Player, OffenseAssignment] = {}
+## The person is picking a receiver for a hot route: every man who can be
+## thrown to shows his pass button, on a run play too.
+var hot_picking: bool = false
 ## The offense as the defense lined up on it: the men who can be covered, and
 ## the order man coverage hands them out in (see DefenseAligner.man_order).
 var _seen_players: Array[Player] = []
@@ -188,6 +195,7 @@ func setup(p_game: Game) -> void:
 	ball = game.ball
 	human = game.human
 	motion = PreSnapMotion.new(self)
+	shift = PreSnapShift.new(self)
 	_gather_players()
 	state_machine.setup(self)
 
@@ -289,6 +297,59 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 	game.field.set_markers(los_x, game.first_down_x, not game.goal_to_go)
 	motion.prepare()
 	human.on_line_up()
+	_update_markers()
+
+
+## An audible: the play is changed at the line. Both teams are lined up for
+## the new one and walk to it from where they stand (see PreSnapShift). Not
+## once a man is in motion or the ball is live.
+func audible(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool, p_def_flipped: bool) -> bool:
+	if not ball_dead or kickoff or motion.called():
+		return false
+	var from: Dictionary[Player, Vector3] = {}
+	for team: Team in [offense, defense]:
+		for player: Player in team.players:
+			from[player] = player.position
+	var mine: Player = human.controlled
+	line_up(p_off, p_def, p_flipped, p_def_flipped)
+	# The defender the person had picked is still theirs.
+	if mine != null and mine.team == defense:
+		human.set_controlled(mine)
+	shift.start(from)
+	game.add_stat(&"audibles")
+	game.rumble.play_team(&"audible", human.team)
+	_update_markers()
+	return true
+
+
+## A hot route: `player` runs `kind` in place of the route the play draws for
+## him (`side`: the way a slant breaks, in the play's frame). Only for a man who
+## was going out on a route anyway, so who can be thrown to and on which button
+## stays as it was. If he is the man who could have been sent in motion, there
+## is no motion on this play any more.
+func hot_route(player: Player, kind: OffenseAssignment.Hot, side: float) -> bool:
+	if not ball_dead or kickoff or player == null or player.team != offense or motion.called():
+		return false
+	var drawn: OffenseAssignment = player.brain.off_assign
+	if drawn == null or drawn.job != OffenseAssignment.Job.ROUTE:
+		return false
+	var hot: OffenseAssignment = OffenseAssignment.hot_route(drawn, kind, side)
+	var flip: float = -1.0 if off_flipped else 1.0
+	var route: PackedVector3Array = PackedVector3Array()
+	for waypoint: Vector2 in hot.route:
+		route.append(to_world(hot.start + waypoint, flip))
+	player.brain.assign_offense(hot, player.brain.start_point, route)
+	hot_routes[player] = hot
+	if player == motion.man:
+		motion.cancel()
+	game.add_stat(&"hot_routes")
+	game.rumble.play_team(&"audible", offense)
+	return true
+
+
+## The person starts or stops picking a receiver for a hot route.
+func set_hot_picking(on: bool) -> void:
+	hot_picking = on
 	_update_markers()
 
 
@@ -610,6 +671,10 @@ func _reset_play() -> void:
 	runner = null
 	if motion != null:
 		motion.reset()
+	if shift != null:
+		shift.reset()
+	hot_routes.clear()
+	hot_picking = false
 	eligible.clear()
 	ball_breakers.clear()
 	ball_coverer = null
@@ -988,6 +1053,8 @@ func _roll_play_action() -> void:
 
 
 func snap() -> void:
+	shift.finish()
+	hot_picking = false
 	if not kickoff:
 		# A man sent in motion gets the job that goes with where he is by now.
 		if motion.settle():
@@ -3219,7 +3286,7 @@ func nearest_opponent_distance(player: Player) -> float:
 
 
 func _update_markers() -> void:
-	var show: bool = human.is_active() and human.controlled == qb and qb != null and not off_play.is_run
+	var show: bool = human.is_active() and human.controlled == qb and qb != null and (not off_play.is_run or hot_picking)
 	show = show and (ball_dead and result == Result.NONE or can_pass())
 	for player: Player in players:
 		var slot: int = eligible.find(player) if show else -1

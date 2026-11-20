@@ -12,6 +12,14 @@ enum Group { I_FORM, SINGLEBACK, HEAVY, GUN_SPREAD, GUN_TRIPS, GOAL_LINE }
 
 ## The tabs' titles, in Group order.
 const GROUP_NAMES: PackedStringArray = ["I-FORM", "SINGLEBACK", "HEAVY", "GUN SPREAD", "GUN TRIPS", "GOAL LINE"]
+## Formations an audible at the line can go between: under centre, shotgun, and
+## the goal line with the two it is nearest to. The same eight men are on the
+## field in all of them; a family keeps the walk to the new spots short.
+const FAMILIES: Array[Array] = [
+	[Group.I_FORM, Group.SINGLEBACK, Group.HEAVY],
+	[Group.GUN_SPREAD, Group.GUN_TRIPS],
+	[Group.GOAL_LINE, Group.HEAVY, Group.I_FORM],
+]
 
 @export var play_name: String = "Play"
 @export var description: String = ""
@@ -45,7 +53,7 @@ const GROUP_NAMES: PackedStringArray = ["I-FORM", "SINGLEBACK", "HEAVY", "GUN SP
 @export var assignments: Array[OffenseAssignment] = []
 
 ## Motion before the snap: one receiver (MotionRules.pick says which) may be
-## sent on his way with (Y). See PreSnapMotion.
+## sent on his way with (LB) or (RB). See PreSnapMotion.
 ## ZIP: a short way in toward the formation, on his own side.
 ## ACROSS: behind the line to the other side of the formation.
 ## JET: across at full speed in front of a shotgun quarterback, to be snapped
@@ -70,6 +78,29 @@ enum Motion { NONE, ZIP, ACROSS, JET, ORBIT, RETURN }
 ## Run play: snapped while he runs, the ball goes to the motion man (a jet
 ## sweep) and the drawn runner leads the way for him.
 @export var motion_handoff: bool = false
+
+
+## The formations an audible can go to from `from`: itself first, then the
+## others of every family it is in, in Group order.
+static func audible_groups(from: Group) -> Array[int]:
+	var groups: Array[int] = [from]
+	for group: int in GROUP_NAMES.size():
+		if groups.has(group):
+			continue
+		for family: Array in FAMILIES:
+			if family.has(from) and family.has(group):
+				groups.append(group)
+				break
+	return groups
+
+
+## The quick audible to a play of `kind` from the formation of `called`: the
+## first one in playbook order that is not the called play. Null: there is none.
+static func quick_pick(plays: Array[OffensePlay], called: OffensePlay, kind: Category) -> OffensePlay:
+	for play: OffensePlay in plays:
+		if play != called and play.group == called.group and play.category == kind and not play.heave_only:
+			return play
+	return null
 
 
 ## How many yards past the line the deepest route of the play is drawn.

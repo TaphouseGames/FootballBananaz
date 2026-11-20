@@ -31,6 +31,8 @@ var _tab_selected_style: StyleBoxFlat
 
 var _intro_card: IntroCard
 var _halftime_card: HalftimeCard
+var _audible: AudibleMenu
+var _hot_routes: HotRouteMenu
 
 @onready var scoreboard: Scoreboard = $Scoreboard
 ## The play clock and the play-select timer: the number in the scoreboard's box.
@@ -240,6 +242,54 @@ func set_countdown(seconds_left: float, warn: bool) -> void:
 
 func hide_countdown() -> void:
 	countdown.visible = false
+
+
+## The audible menu at the line (see AudibleMenu), made the first time it is
+## asked for.
+func show_audible(title: String, more: bool, plays: Array[Resource], cursor: int, flipped: bool) -> void:
+	if _audible == null:
+		_audible = AudibleMenu.new()
+		add_child(_audible)
+		# Under the pause menu.
+		move_child(_audible, pause_menu.get_index())
+	_audible.visible = true
+	_audible.show_plays(title, more, plays, cursor, flipped)
+
+
+func set_audible_cursor(index: int) -> void:
+	if _audible != null:
+		_audible.set_cursor(index)
+
+
+func set_audible_flipped(flipped: bool) -> void:
+	if _audible != null:
+		_audible.set_flipped(flipped)
+
+
+func hide_audible() -> void:
+	if _audible != null:
+		_audible.visible = false
+
+
+## The hot-route panel (see HotRouteMenu), made the first time it is asked
+## for. `receiver` names the picked man, or is empty while one is being picked.
+func show_hot_routes(receiver: String) -> void:
+	if _hot_routes == null:
+		_hot_routes = HotRouteMenu.new()
+		add_child(_hot_routes)
+		# Under the pause menu.
+		move_child(_hot_routes, pause_menu.get_index())
+	_hot_routes.visible = true
+	_hot_routes.show_for(receiver)
+
+
+func hide_hot_routes() -> void:
+	if _hot_routes != null:
+		_hot_routes.visible = false
+
+
+func audible_shown() -> bool:
+	return _audible != null and _audible.visible
 
 
 func hide_play_select() -> void:

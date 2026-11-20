@@ -879,7 +879,7 @@ func qb_call() -> void:
 	say(sound, true)
 
 
-## The quarterback sends a receiver in motion (Y): a line of its own, serious
+## The quarterback sends a receiver in motion (LB) or (RB): a line of its own, serious
 ## or silly, and a plain shout while there are none.
 func qb_motion() -> void:
 	if has_sound(QB_MOTION):

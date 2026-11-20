@@ -92,7 +92,7 @@ func _draw_offense() -> void:
 	_draw_motion()
 
 
-## The motion (Y) sends a receiver on: a dashed line from his spot along the
+## The motion (LB) or (RB) sends a receiver on: a dashed line from his spot along the
 ## way he goes, with a ring where he ends up. A return motion ends where it
 ## began, so it is only the line out to where he turns, with a bar across.
 func _draw_motion() -> void:

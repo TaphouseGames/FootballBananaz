@@ -61,7 +61,14 @@ const CONTROLS: Array[Array] = [
 		["(A)", "Confirm, then (A) again to snap. Both are on a clock"],
 		["(X)", "Flip the play"],
 		["(LB) (RB)", "Other page"],
-		["(B)", "Before the snap on offense: the quarterback shouts"],
+	]],
+	["AT THE LINE", [
+		["(X)", "Audible: another play. (LB) (RB): other formations, (X) flips, (A) calls it"],
+		["Right stick", "Quick audible: down a run, left a short pass, up a deep one, right flips the play"],
+		["(Y)", "Offense: hot route. A receiver's button, then left stick: streak, curl, slants; right stick: post, drag, outs. LT cancels"],
+		["(LB) (RB)", "Offense: send a receiver in motion"],
+		["(B)", "Offense: the quarterback shouts"],
+		["LT + stick", "Draw a play on the field: up the real one, any other way a fake"],
 	]],
 ]
 const CONTROLS_LEFT: int = 3

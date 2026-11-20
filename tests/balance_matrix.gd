@@ -14,7 +14,7 @@ extends SceneTree
 ##                 upfield for every yard across (default 9/0.35)
 ##   scout         leave the defense's memory of earlier plays on (off by default,
 ##                 so every snap is defended as if seen for the first time)
-##   motion        send the motion man (Y) on every play that has one, and snap
+##   motion        send the motion man (LB) on every play that has one, and snap
 ##                 once he has set (a jet: as he gets to the quarterback)
 ##   snaps=<n>     snaps per cell (default 120 for matrix, 40 for spam)
 ##   off=<text>    only offensive plays whose name contains the text
@@ -52,7 +52,7 @@ var _detail: bool = false
 var _spam_times: PackedFloat64Array = PackedFloat64Array([0.8, 1.4, 2.0, 2.6])
 var _overrides: Dictionary[String, float] = {}
 var _scout: bool = false
-## Every play that has a motion (Y) is run with its man sent.
+## Every play that has a motion (LB) is run with its man sent.
 var _motion: bool = false
 ## Spam probe: how the fixed throw is placed (normal, lead, under, or cpu to let
 ## the CPU quarterback choose).
