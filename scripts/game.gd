@@ -140,6 +140,8 @@ func _exit_tree() -> void:
 func _physics_process(delta: float) -> void:
 	# A change of sides in the middle of a play (interception, lost fumble) swings
 	# the camera round; between plays it cuts.
+	if not autoplay and Input.is_action_just_pressed(&"camera_view"):
+		camera_rig.toggle_view()
 	camera_rig.follow(_camera_target(), _camera_facing(), delta, not play_controller.ball_dead)
 
 
@@ -430,7 +432,8 @@ func _in_own_end_zone(team: Team, x: float) -> bool:
 
 
 ## The camera follows the ball, except on a kickoff: there it waits behind the
-## returner while the kick is in the air.
+## returner while the kick is in the air. Before the snap the close view stands
+## behind the quarterback.
 func _camera_target() -> Vector3:
 	var pc: PlayController = play_controller
 	if pc.kickoff and pc.returner != null and ball.carrier == null and pc.result == PlayController.Result.NONE:
@@ -438,6 +441,10 @@ func _camera_target() -> Vector3:
 	# After a score it stays on the scorer, wherever the spiked ball bounces to.
 	if pc.ball_dead and pc.scorer != null:
 		return Vector3(pc.scorer.position.x, 0.0, pc.scorer.position.z)
+	# The close view starts behind the quarterback: with the ball on the line he
+	# would stand under the camera's lower edge.
+	if CameraRig.view == CameraRig.View.CLOSE and pc.ball_dead and pc.result == PlayController.Result.NONE and not pc.kickoff and pc.qb != null:
+		return Vector3(pc.qb.position.x, 0.0, pc.qb.position.z)
 	return ball.flat_position()
 
 

@@ -1368,6 +1368,15 @@ extends Resource
 @export var camera_look_ahead: float = 9.0
 ## How much of the player's sideways position the camera follows (0..1).
 @export var camera_z_follow: float = 0.85
+## The close view (Select switches to it and back): lower and nearer, more
+## behind the ball carrier than above him, and straight behind him sideways.
+@export var camera_close_height: float = 8.75
+@export var camera_close_distance: float = 16.25
+@export var camera_close_fov: float = 58.0
+@export var camera_close_look_ahead: float = 7.5
+@export var camera_close_z_follow: float = 1.0
+## Seconds the camera takes to glide from one view to the other.
+@export var camera_view_time: float = 0.35
 ## Seconds the camera takes to circle round behind the other team when the ball
 ## changes sides in the middle of a play.
 @export var camera_swing_time: float = 0.8

@@ -19,6 +19,7 @@ const CONTROLS: Array[Array] = [
 		["Stick / D-pad", "Move"],
 		["RT", "Turbo"],
 		["Start", "Pause"],
+		["Select", "Camera: wide, or close behind the ball"],
 	]],
 	["PASSING", [
 		["(A) (X) (B)", "Throw to that receiver: tap to lob, hold longer to throw harder"],

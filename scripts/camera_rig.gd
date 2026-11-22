@@ -1,8 +1,15 @@
 class_name CameraRig
 extends Node3D
 ## Behind-the-player camera. The rig sits on the followed spot and is turned so
-## the camera child ends up behind it, looking down the field. Shake is
+## the camera child ends up behind it, looking down the field, in one of two
+## views (see View). Shake is
 ## trauma-based and runs in real time so it still plays during hit-stop.
+
+## The two views Select switches between: high and far back, or low and near
+## behind the ball carrier. The game starts in the close one; the choice is
+## kept from one game to the next.
+enum View { WIDE, CLOSE }
+static var view: View = View.CLOSE
 
 var tuning: Tuning
 var trauma: float = 0.0
@@ -24,19 +31,40 @@ var _home: Transform3D
 var _shot: bool = false
 var _shot_eye: Vector3
 var _shot_aim: Vector3
+## How far the camera is into the close view (0 = wide, 1 = close), and the
+## field of view and sideways follow that go with it.
+var _blend: float = 0.0
+var _fov: float = 50.0
+var _z_follow: float = 1.0
 
 @onready var camera: Camera3D = $Camera3D
 
 
 func setup(p_tuning: Tuning) -> void:
 	tuning = p_tuning
-	camera.fov = tuning.camera_fov
-	# In rig space the camera sits at +Z and looks toward -Z.
-	var eye: Vector3 = Vector3(0.0, tuning.camera_height, tuning.camera_distance)
-	var aim: Vector3 = Vector3(0.0, 0.0, -tuning.camera_look_ahead)
-	_home = Transform3D(Basis.looking_at(aim - eye, Vector3.UP), eye)
-	camera.transform = _home
+	_set_blend(float(view))
+	camera.fov = _fov
 	camera.make_current()
+
+
+## Switches to the other view; the camera glides there (see follow).
+func toggle_view() -> void:
+	view = View.CLOSE if view == View.WIDE else View.WIDE
+
+
+## Puts the camera's place on the rig, its field of view and its sideways
+## follow this far between the wide view (0) and the close one (1).
+func _set_blend(value: float) -> void:
+	_blend = value
+	var t: float = smoothstep(0.0, 1.0, _blend)
+	# In rig space the camera sits at +Z and looks toward -Z.
+	var eye: Vector3 = Vector3(0.0, lerpf(tuning.camera_height, tuning.camera_close_height, t), lerpf(tuning.camera_distance, tuning.camera_close_distance, t))
+	var aim: Vector3 = Vector3(0.0, 0.0, -lerpf(tuning.camera_look_ahead, tuning.camera_close_look_ahead, t))
+	_home = Transform3D(Basis.looking_at(aim - eye, Vector3.UP), eye)
+	_fov = lerpf(tuning.camera_fov, tuning.camera_close_fov, t)
+	_z_follow = lerpf(tuning.camera_z_follow, tuning.camera_close_z_follow, t)
+	if not _shot:
+		camera.transform = _home
 
 
 ## A shot of its own (the pregame intro): the camera stands at `eye` in the
@@ -56,13 +84,14 @@ func end_shot() -> void:
 	if not _shot:
 		return
 	_shot = false
-	camera.transform = _home
+	_set_blend(float(view))
 	camera.reset_physics_interpolation()
 
 
 func snap_to(target: Vector3, p_facing: float) -> void:
 	facing = p_facing
 	_swing_t = 1.0
+	_set_blend(float(view))
 	rotation.y = _yaw_for(facing)
 	position = _goal(target)
 	if _shot:
@@ -77,6 +106,8 @@ func snap_to(target: Vector3, p_facing: float) -> void:
 func follow(target: Vector3, p_facing: float, delta: float, swing: bool = false) -> void:
 	if _shot:
 		return
+	if _blend != float(view):
+		_set_blend(move_toward(_blend, float(view), delta / maxf(tuning.camera_view_time, 0.01)))
 	if p_facing != facing:
 		if not swing:
 			snap_to(target, p_facing)
@@ -133,8 +164,9 @@ func _process(delta: float) -> void:
 	if _punch > 0.0 or _punch_now > 0.001:
 		_punch_now = lerpf(_punch_now, _punch, 1.0 - exp(-30.0 * real_delta))
 		_punch = maxf(_punch - PUNCH_DECAY * real_delta, 0.0)
-		camera.fov = tuning.camera_fov - _punch_now
+	# A shot of its own keeps the wide view's lens.
+	camera.fov = (tuning.camera_fov if _shot else _fov) - _punch_now
 
 
 func _goal(target: Vector3) -> Vector3:
-	return Vector3(target.x, 0.0, target.z * tuning.camera_z_follow)
+	return Vector3(target.x, 0.0, target.z * _z_follow)
