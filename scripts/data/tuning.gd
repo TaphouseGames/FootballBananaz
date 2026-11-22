@@ -332,7 +332,10 @@ extends Resource
 ## Defenders closer than this to the receiver reduce the catch chance.
 @export var cover_radius: float = 3.0
 ## Chance removed by one defender standing right on the receiver.
-@export var cover_penalty: float = 0.65
+@export var cover_penalty: float = 0.95
+## How fast that penalty falls away with distance: 1 = evenly out to
+## cover_radius, more = a man right on him costs far more than one a step off.
+@export var cover_penalty_curve: float = 1.5
 ## Share of that penalty a receiver takes off by shielding the ball: he is
 ## standing still or coming back to it, and the defender is behind him.
 @export var cover_shield: float = 0.4
@@ -973,13 +976,13 @@ extends Resource
 ## Seconds ahead of the receiver a coverage defender aims.
 @export var ai_cover_lead: float = 0.15
 ## Yards a coverage defender stays on the deep side of his receiver.
-@export var ai_cover_cushion: float = 1.2
+@export var ai_cover_cushion: float = 1.8
 ## Technique, rolled per man defender per play (see PlayController._roll_technique).
 ## Chance that he plays off: `off_cushion` yards deep of his man at the line,
 ## down to ai_cover_cushion once the man is `off_depth` yards downfield. When
 ## the man pulls up short the cushion closes at `off_close` yards a second.
 @export var ai_cover_off_chance: float = 0.3
-@export var ai_cover_off_cushion: float = 4.5
+@export var ai_cover_off_cushion: float = 5.0
 @export var ai_cover_off_depth: float = 10.0
 @export var ai_cover_off_close: float = 3.0
 ## Chance that he trails instead: `trail_cushion` yards on the quarterback's
@@ -999,7 +1002,10 @@ extends Resource
 @export var ai_cover_beaten_gap: float = 4.0
 ## Chance that a coverage defender bites on a sharp cut by his receiver, before
 ## the ratings of the two are applied.
-@export var ai_cover_bust_chance: float = 0.2
+@export var ai_cover_bust_chance: float = 0.32
+## A receiver on his route jukes at a cut (PlayerAnimator.route_juke) when a
+## defender is within this many yards of him. Visual only.
+@export var ai_route_juke_range: float = 6.0
 ## Seconds he chases the wrong way, and his speed multiplier while he does.
 @export var ai_cover_bust_time: float = 1.0
 @export var ai_cover_bust_speed: float = 0.6

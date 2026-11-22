@@ -16,6 +16,8 @@ const KICKOFF_WALL_SHIFT: float = 0.7
 ## A route has cut once its heading is further than this (as a dot product, about
 ## 25 degrees) from the leg the receiver is on.
 const ROUTE_CUT_DOT: float = 0.9
+## Yards short of a cut in his route at which a receiver starts to sell it.
+const ROUTE_JUKE_LEAD: float = 2.2
 
 var player: Player
 var tuning: Tuning
@@ -142,6 +144,8 @@ var _keep_ball: bool = false
 var _bust_timer: float = 0.0
 var _bust_cooldown: float = 0.0
 var _bust_ghost: Vector3 = Vector3.ZERO
+## The point of his route whose cut this receiver has already juked at.
+var _juke_index: int = -1
 ## A receiver whose route is over: how long he has waited, when he next looks
 ## for space, and the spot he is working toward.
 var _wait_time: float = 0.0
@@ -1026,6 +1030,7 @@ func _run_route(pc: PlayController) -> void:
 		return
 	if route_index < route.size():
 		var target: Vector3 = route[route_index]
+		_juke_at_cut(pc, target)
 		if _flat_distance(player.position, target) < 0.9:
 			route_index += 1
 		player.move_input = _direction_to(target)
@@ -1040,6 +1045,35 @@ func _run_route(pc: PlayController) -> void:
 			return
 	if _is_receiver(pc):
 		_work_open(pc)
+
+
+## Coming up to a point of his route where it turns, with a defender near
+## enough to be fooled by it: he sells the cut (PlayerAnimator.route_juke). Once
+## per cut, and only for show: whether the defender falls for it is his own
+## roll (see _cover_spot).
+func _juke_at_cut(pc: PlayController, target: Vector3) -> void:
+	if _juke_index == route_index or player.animator == null or player.has_ball or not _is_receiver(pc):
+		return
+	if pc.phase != PlayController.Phase.POCKET or _flat_distance(player.position, target) > ROUTE_JUKE_LEAD:
+		return
+	var from: Vector3 = Vector3(player.velocity.x, 0.0, player.velocity.z)
+	if from.length() < tuning.run_speed * 0.5:
+		return
+	from = from.normalized()
+	var to: Vector3 = route_exit_dir
+	if route_index + 1 < route.size():
+		to = route[route_index + 1] - target
+		to.y = 0.0
+		to = to.normalized()
+	elif off_assign.settle:
+		return
+	if to == Vector3.ZERO or to.dot(from) >= ROUTE_CUT_DOT:
+		return
+	_juke_index = route_index
+	if _open_at_spot(player, player.position, 0.0) > tuning.ai_route_juke_range:
+		return
+	# +1 when the cut takes him to his own right.
+	player.animator.route_juke(-to.dot(Vector3.UP.cross(from)))
 
 
 ## The CPU is still running him through the waypoints of his route.
@@ -1817,12 +1851,31 @@ func _cover_spot(pc: PlayController, target: Player) -> Vector3:
 			_bust_timer = tuning.ai_cover_bust_time
 			_bust_ghost = target.position
 			pc.game.add_stat(&"coverage_busts")
+			_show_fake_out(pc, target)
 	if _bust_timer > 0.0:
 		# Fooled: he keeps chasing the receiver he thought he saw.
 		_bust_timer -= _delta
 		_bust_ghost += _read_velocity * _delta
 		return _bust_ghost
 	return target.position + _read(target) * tuning.ai_cover_lead
+
+
+## He has bitten on `target`'s cut: he lunges the way he thought the man was
+## going, and a person whose receiver it is feels his man go.
+func _show_fake_out(pc: PlayController, target: Player) -> void:
+	var wrong: Vector3 = _read_velocity - target.velocity
+	wrong.y = 0.0
+	pc.game.rumble.play_mine(&"fake_out", target)
+	if player.animator == null:
+		return
+	var right: Vector3 = -Vector3.UP.cross(Vector3(player.facing.x, 0.0, player.facing.z))
+	var side: float = wrong.dot(right)
+	if absf(side) < 0.5:
+		# The man stopped or took off straight ahead: either foot will do.
+		side = 1.0 if randf() < 0.5 else -1.0
+	player.animator.faked_out(side)
+	if wrong.length_squared() > 0.01:
+		player.jolt(wrong.normalized(), 0.35)
 
 
 ## The receiver's velocity as this defender has read it so far.
@@ -2203,6 +2256,7 @@ func _reset() -> void:
 	_keep_ball = false
 	_bust_timer = 0.0
 	_bust_cooldown = 0.0
+	_juke_index = -1
 	_wait_time = 0.0
 	_open_timer = 0.0
 	_open_delay = -1.0

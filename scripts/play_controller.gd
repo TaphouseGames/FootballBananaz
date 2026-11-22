@@ -2090,7 +2090,7 @@ func catch_chance(receiver: Player, point: Vector3) -> float:
 			if dist < tuning.dive_crowd_radius:
 				crowd += 1
 		elif dist < tuning.cover_radius:
-			var penalty: float = (1.0 - dist / tuning.cover_radius) * tuning.cover_penalty
+			var penalty: float = pow(1.0 - dist / tuning.cover_radius, tuning.cover_penalty_curve) * tuning.cover_penalty
 			# A defender on the far side of the receiver has to play through him.
 			var behind: float = maxf(offset.normalized().dot(incoming), 0.0) if dist > 0.01 else 0.0
 			penalty *= 1.0 - tuning.cover_shield * behind * facing_ball

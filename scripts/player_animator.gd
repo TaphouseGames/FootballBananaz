@@ -72,6 +72,10 @@ const SULK_TRUDGE: int = 4
 const SPIKE_TIME: float = 0.4
 ## How long the quarterback's leg kick lasts when he sends a man in motion.
 const MOTION_KICK_TIME: float = 0.7
+## Seconds a receiver's juke at a cut in his route takes, and seconds a defender
+## who fell for it takes to lunge the wrong way and gather himself.
+const ROUTE_JUKE_TIME: float = 0.42
+const FAKED_OUT_TIME: float = 0.75
 ## Hands on hips, elbows out. The pose gets the elbows about right and the palms
 ## are then put on the hips: this far out to the side, up and forward of the
 ## hips bone, in skeleton units.
@@ -182,6 +186,12 @@ var _plant_timer: float = 0.0
 ## What is left of the leg kick, and the side it goes to (+1 his right).
 var _kick_timer: float = 0.0
 var _kick_side: float = 1.0
+## Above 0 while he jukes at a cut in his route, and the side he cuts to (+1 his
+## right); the same for a defender who has been faked out and the side he lunges to.
+var _juke_timer: float = 0.0
+var _juke_side: float = 1.0
+var _faked_timer: float = 0.0
+var _faked_side: float = 1.0
 var _was_thrower: bool = false
 ## The throwing motion being played is a toss to the back, not a pass.
 var _toss: bool = false
@@ -453,6 +463,8 @@ func update(delta: float, instant: bool) -> void:
 	_spike_timer = maxf(_spike_timer - delta, 0.0)
 	_plant_timer = maxf(_plant_timer - delta, 0.0)
 	_kick_timer = maxf(_kick_timer - delta, 0.0)
+	_juke_timer = maxf(_juke_timer - delta, 0.0)
+	_faked_timer = maxf(_faked_timer - delta, 0.0)
 	_ground = 1.0
 	_rate = 14.0
 	_cycle_rate = 0.0
@@ -1059,6 +1071,8 @@ func _build_pose(delta: float) -> void:
 	if pc == null:
 		return
 	var waving: bool = false
+	# Nothing else for his arms to do: a juke or a fake-out can show.
+	var plain: bool = false
 
 	# The throw is noticed here, on the tick the ball leaves the hand.
 	var is_thrower: bool = ball.state == Ball.State.FLIGHT and ball.thrower == player
@@ -1122,13 +1136,20 @@ func _build_pose(delta: float) -> void:
 			_block_fight(delta, partner)
 	elif ball.carrier != null and ball.carrier.team != player.team:
 		_close_in(ball.carrier)
+		plain = true
 	else:
 		waving = player.calling_for_ball
+		plain = true
 	# The arms go up and come down over a moment; anything else he has to do
 	# with them drops the wave at once.
 	_wave = move_toward(_wave, 1.0, delta * 5.0) if waving else (move_toward(_wave, 0.0, delta * 5.0) if _mode == 0 else 0.0)
 	if _wave > 0.0 and _mode == 0:
 		_call_for_ball(pc)
+	if plain and _mode == 0 and _wave <= 0.0 and not pc.ball_dead:
+		if _faked_timer > 0.0:
+			_faked_out()
+		elif _juke_timer > 0.0:
+			_route_juke()
 	if not _turned:
 		_turn_to_ball(1.0)
 
@@ -1506,6 +1527,66 @@ func _motion_kick() -> void:
 	if _kick_side < 0.0:
 		_mirror()
 	_blend_from_stash(weight)
+
+
+## A receiver sells a cut in his route: `side` is the way he is about to go
+## (+1 his right, -1 his left).
+func route_juke(side: float) -> void:
+	_juke_timer = ROUTE_JUKE_TIME
+	_juke_side = 1.0 if side >= 0.0 else -1.0
+
+
+## Head and shoulders go the wrong way and he sinks over the foot on that side,
+## then everything snaps round into the cut. Laid over his run: the legs keep
+## their stride.
+func _route_juke() -> void:
+	var t: float = 1.0 - _juke_timer / ROUTE_JUKE_TIME
+	var weight: float = smoothstep(0.0, 0.2, t) * (1.0 - smoothstep(0.8, 1.0, t))
+	# -1 selling the fake, +1 leaning into the way he really goes.
+	var way: float = lerpf(-1.0, 1.0, smoothstep(0.4, 0.7, t)) * _juke_side
+	var sink: float = 1.0 - smoothstep(0.45, 0.85, t)
+	_rate = 30.0
+	_pose[B.HIPS].z += 8.0 * way * weight
+	_pose[B.SPINE] += Vector3(8.0 * sink, 0.0, 14.0 * way) * weight
+	_pose[B.CHEST] += Vector3(0.0, 26.0 * way, 6.0 * way) * weight
+	_pose[B.HEAD] += Vector3(0.0, 34.0 * way, 0.0) * weight
+	_pose[B.THIGH_L].x -= 14.0 * sink * weight
+	_pose[B.THIGH_R].x -= 14.0 * sink * weight
+	_pose[B.SHIN_L].x += 30.0 * sink * weight
+	_pose[B.SHIN_R].x += 30.0 * sink * weight
+	# The arm on the side of the fake comes out wide with it.
+	var out: int = B.ARM_L if way < 0.0 else B.ARM_R
+	_pose[out] = _pose[out].lerp(Vector3(-10.0, 0.0, -38.0), weight * 0.8)
+
+
+## A coverage defender has bitten on a receiver's cut: he lunges to `side` (+1
+## his right, -1 his left), the way his man is not going.
+func faked_out(side: float) -> void:
+	_faked_timer = FAKED_OUT_TIME
+	_faked_side = 1.0 if side >= 0.0 else -1.0
+
+
+## His weight goes over the wrong foot, arms out wide and wheeling to stay up,
+## and his head comes round the other way to find where the man went.
+func _faked_out() -> void:
+	var t: float = 1.0 - _faked_timer / FAKED_OUT_TIME
+	var weight: float = smoothstep(0.0, 0.14, t) * (1.0 - smoothstep(0.7, 1.0, t))
+	var d: float = _faked_side
+	var look: float = lerpf(18.0, -48.0, smoothstep(0.25, 0.5, t)) * d
+	var wheel: float = sin(t * TAU * 2.0)
+	_rate = 28.0
+	_pose[B.HIPS].z += 8.0 * d * weight
+	_pose[B.SPINE] += Vector3(16.0, 0.0, 24.0 * d) * weight
+	_pose[B.CHEST] += Vector3(6.0, 12.0 * d, 10.0 * d) * weight
+	_pose[B.HEAD] += Vector3(-8.0, look, -14.0 * d) * weight
+	_pose[B.THIGH_L].x -= 16.0 * weight
+	_pose[B.THIGH_R].x -= 16.0 * weight
+	_pose[B.SHIN_L].x += 34.0 * weight
+	_pose[B.SHIN_R].x += 34.0 * weight
+	_pose[B.ARM_L] = _pose[B.ARM_L].lerp(Vector3(-25.0 + 40.0 * wheel, 0.0, -14.0), weight)
+	_pose[B.ARM_R] = _pose[B.ARM_R].lerp(Vector3(-25.0 - 40.0 * wheel, 0.0, -14.0), weight)
+	_pose[B.FORE_L] = _pose[B.FORE_L].lerp(Vector3(0.0, -24.0, 0.0), weight)
+	_pose[B.FORE_R] = _pose[B.FORE_R].lerp(Vector3(0.0, -24.0, 0.0), weight)
 
 
 ## Plays the arm coming down as the scorer spikes the ball.

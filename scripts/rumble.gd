@@ -32,6 +32,7 @@ const PRESETS: Dictionary[StringName, Array] = {
 	&"flair": [[0.5, 0.3, 0.15, 0.0]],
 	&"catch": [[0.4, 0.25, 0.1, 0.0]],
 	&"tip": [[0.3, 0.0, 0.06, 0.0]],
+	&"fake_out": [[0.3, 0.0, 0.07, 0.0]],
 	&"interception": [[0.5, 0.6, 0.25, 0.0]],
 	&"fumble": [[0.7, 0.7, 0.3, 0.0]],
 	# The run.

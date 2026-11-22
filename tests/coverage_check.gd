@@ -6,6 +6,8 @@ extends SceneTree
 ##              a receiver he knocks down does not catch it
 ##   technique  playing off, he is further from his man on a short route than a
 ##              tight defender is, and no further once they are deep
+##   juke       a defender who bites on his receiver's cut is left behind for a
+##              moment: further from his man just after it than one who does not
 ## The test is the quarterback: it throws to the first wideout once he is a set
 ## distance downfield. Every case is run with the feature on and off.
 ##
@@ -17,6 +19,10 @@ const SPEED: float = 16.0
 const MAX_PLAY_TIME: float = 8.0
 ## PlayController.in_front() from which a defender counts as in front of his man.
 const FRONT: float = 0.6
+## Yards behind his man the defender plays in the front runs.
+const FRONT_CUSHION: float = 1.2
+## Seconds after the snap the gap is measured in the juke runs.
+const JUKE_GAP_TIME: float = 1.6
 ## Everything that would have a defender somewhere else than his coverage, or
 ## the quarterback doing something of his own.
 const QUIET: Dictionary[String, float] = {
@@ -36,11 +42,12 @@ var _defaults: Dictionary[String, Variant] = {}
 ## Each run: an offensive play, the settings on top of QUIET, how far downfield
 ## the wideout is when the ball is thrown (negative = never) or how long after
 ## the snap (`time`), how it is placed, and how far downfield he is when the gap
-## to his man is measured.
+## to his man is measured (or how long after the snap, `gap_time`).
 var _runs: Array[Dictionary] = [
-	# Thrown once the curl has stopped him, with his man on his deep side.
-	{"name": "front off", "play": "curl flat", "set": {}, "throw": -1.0, "time": 2.4, "under": false, "gap_at": -1.0},
-	{"name": "front on", "play": "curl flat", "set": {"ai_undercut_chance": 1.0}, "throw": -1.0, "time": 2.4, "under": false, "gap_at": -1.0},
+	# Thrown once the curl has stopped him, with his man on his deep side: close
+	# enough behind him (FRONT_CUSHION) to have the time to get round.
+	{"name": "front off", "play": "curl flat", "set": {"ai_cover_cushion": FRONT_CUSHION}, "throw": -1.0, "time": 2.4, "under": false, "gap_at": -1.0},
+	{"name": "front on", "play": "curl flat", "set": {"ai_undercut_chance": 1.0, "ai_cover_cushion": FRONT_CUSHION}, "throw": -1.0, "time": 2.4, "under": false, "gap_at": -1.0},
 	# With no reach for the ball the defender never has a play on it himself.
 	{"name": "hit off", "play": "quick slants", "set": {"defender_catch_radius": 0.05}, "throw": 3.0, "under": false, "gap_at": -1.0},
 	{"name": "hit on", "play": "quick slants", "set": {"defender_catch_radius": 0.05, "ai_air_hit_chance": 1.0}, "throw": 3.0, "under": false, "gap_at": -1.0},
@@ -48,6 +55,9 @@ var _runs: Array[Dictionary] = [
 	{"name": "off short", "play": "curl flat", "set": {"ai_cover_off_chance": 1.0}, "throw": -1.0, "under": false, "gap_at": 4.0},
 	{"name": "tight deep", "play": "gun verts", "set": {}, "throw": -1.0, "under": false, "gap_at": 16.0},
 	{"name": "off deep", "play": "gun verts", "set": {"ai_cover_off_chance": 1.0}, "throw": -1.0, "under": false, "gap_at": 16.0},
+	# Every sharp cut fools him, or none does; measured a moment after the slant breaks.
+	{"name": "juke off", "play": "quick slants", "set": {}, "throw": -1.0, "under": false, "gap_at": -1.0, "gap_time": JUKE_GAP_TIME},
+	{"name": "juke on", "play": "quick slants", "set": {"ai_cover_bust_chance": 5.0, "ai_cover_bust_min_time": 0.0}, "throw": -1.0, "under": false, "gap_at": -1.0, "gap_time": JUKE_GAP_TIME},
 ]
 var _run: int = -1
 var _left: int = 0
@@ -85,7 +95,8 @@ func _tick() -> void:
 		_pc = _game.play_controller
 		for key: String in QUIET:
 			_defaults[key] = _game.tuning.get(key)
-		_defaults["defender_catch_radius"] = _game.tuning.defender_catch_radius
+		for key: String in ["defender_catch_radius", "ai_cover_cushion", "ai_cover_bust_min_time"]:
+			_defaults[key] = _game.tuning.get(key)
 		_next_run()
 		return
 	if _run >= _runs.size():
@@ -97,7 +108,8 @@ func _tick() -> void:
 	var result: Dictionary = _results[run["name"]]
 	var downfield: float = (_receiver.position.x - _pc.los_x) * _pc.off_dir
 	var gap_at: float = run["gap_at"]
-	if gap_at >= 0.0 and not _measured and downfield >= gap_at:
+	var gap_time: float = run.get("gap_time", -1.0)
+	if not _measured and ((gap_at >= 0.0 and downfield >= gap_at) or (gap_time >= 0.0 and _pc.live_time >= gap_time)):
 		_measured = true
 		var man: Player = _man_on(_receiver)
 		if man != null and not man.is_down() and not _receiver.is_down():
@@ -185,7 +197,7 @@ func _next_run() -> void:
 ## What the run came to, from the counters PlayController keeps.
 func _close_run() -> void:
 	var result: Dictionary = _results[_runs[_run]["name"]]
-	for key: StringName in [&"undercut_tries", &"air_hit_tries", &"air_hits", &"completions", &"passes"]:
+	for key: StringName in [&"undercut_tries", &"air_hit_tries", &"air_hits", &"completions", &"passes", &"coverage_busts"]:
 		result[String(key)] = _game.get_stat(key)
 
 
@@ -220,6 +232,13 @@ func _judge() -> void:
 		print("technique: gap to his man 4 yd downfield %.1f yd playing off, %.1f tight; 16 yd downfield %.1f and %.1f" % [off_short, tight_short, off_deep, tight_deep])
 		_expect(off_short >= tight_short + 1.0, "technique: playing off is not a yard looser on a short route")
 		_expect(absf(off_deep - tight_deep) <= 1.0, "technique: playing off is still a yard different 16 yards downfield")
+
+		var juke_off: Dictionary = _results["juke off"]
+		var juke_on: Dictionary = _results["juke on"]
+		print("juke: gap to his man %.1f s after the snap %.1f yd when he bites on the cut, %.1f when he does not (%d bites in %d plays, %d with the chance at zero)" % [JUKE_GAP_TIME, _gap(juke_on), _gap(juke_off), int(juke_on["coverage_busts"]), _plays, int(juke_off["coverage_busts"])])
+		_expect(int(juke_off["coverage_busts"]) == 0, "juke: defenders bit on a cut with the chance at zero")
+		_expect(int(juke_on["coverage_busts"]) * 2 >= _plays, "juke: fewer bites than one every other play with the chance at its highest")
+		_expect(_gap(juke_on) >= _gap(juke_off) + 0.5, "juke: a defender who bites is not half a yard further from his man")
 	for failure: String in _failures:
 		print("FAIL: " + failure)
 	print("coverage_check %s" % ("PASSED" if _failures.is_empty() else "FAILED"))

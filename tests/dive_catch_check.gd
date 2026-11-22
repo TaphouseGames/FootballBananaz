@@ -62,7 +62,7 @@ func _tick() -> void:
 
 	var standing_open: float = _chance([])
 	var standing_one: float = _chance([2.5])
-	var old_one: float = tuning.catch_base_chance - (1.0 - 2.5 / tuning.cover_radius) * tuning.cover_penalty
+	var old_one: float = tuning.catch_base_chance - pow(1.0 - 2.5 / tuning.cover_radius, tuning.cover_penalty_curve) * tuning.cover_penalty
 	print("on his feet   open %.2f   one defender at 2.5 yd %.2f (was %.2f)" % [standing_open, standing_one, old_one])
 	_expect(is_equal_approx(standing_open, tuning.catch_base_chance), "an open catch on his feet changed")
 	_expect(absf(standing_one - old_one) < 0.001, "a covered catch on his feet changed")
