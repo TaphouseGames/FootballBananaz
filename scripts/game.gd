@@ -142,6 +142,7 @@ func _physics_process(delta: float) -> void:
 	# the camera round; between plays it cuts.
 	if not autoplay and Input.is_action_just_pressed(&"camera_view"):
 		camera_rig.toggle_view()
+	camera_rig.keep_in_view(_camera_must_see())
 	camera_rig.follow(_camera_target(), _camera_facing(), delta, not play_controller.ball_dead)
 
 
@@ -446,6 +447,24 @@ func _camera_target() -> Vector3:
 	if CameraRig.view == CameraRig.View.CLOSE and pc.ball_dead and pc.result == PlayController.Result.NONE and not pc.kickoff and pc.qb != null:
 		return Vector3(pc.qb.position.x, 0.0, pc.qb.position.z)
 	return ball.flat_position()
+
+
+## Who has to be in the picture: the person's quarterback and the receivers he
+## can throw to, from the line-up until the ball leaves his hands, however far
+## to one side he rolls out. Nobody on a run play once it is snapped, on a kickoff
+## or when the CPU has the ball.
+func _camera_must_see() -> Array[Vector3]:
+	var pc: PlayController = play_controller
+	var spots: Array[Vector3] = []
+	if pc.qb == null or pc.kickoff or not pc.qb.team.is_human:
+		return spots
+	var before_snap: bool = pc.ball_dead and pc.result == PlayController.Result.NONE
+	var in_pocket: bool = not pc.ball_dead and pc.phase == PlayController.Phase.POCKET and ball.carrier == pc.qb and not pc.off_play.is_run
+	if before_snap or in_pocket:
+		spots.append(pc.qb.position + Vector3.UP)
+		for receiver: Player in pc.eligible:
+			spots.append(receiver.position + Vector3.UP)
+	return spots
 
 
 ## The camera sits behind the team with the ball, looking the way it attacks, so

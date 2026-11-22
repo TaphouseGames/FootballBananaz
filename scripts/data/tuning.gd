@@ -1377,6 +1377,14 @@ extends Resource
 @export var camera_close_z_follow: float = 1.0
 ## Seconds the camera takes to glide from one view to the other.
 @export var camera_view_time: float = 0.35
+## While the person's quarterback can throw, the camera backs away (and moves
+## sideways) until he and every receiver he can throw to are in the picture:
+## how fast it goes there and comes back (higher = quicker), the most yards it
+## backs away, and the share of the picture, from the middle out, they have to
+## be in.
+@export var camera_fit_speed: float = 1.5
+@export var camera_fit_max: float = 35.0
+@export_range(0.5, 1.0) var camera_fit_margin: float = 0.86
 ## Seconds the camera takes to circle round behind the other team when the ball
 ## changes sides in the middle of a play.
 @export var camera_swing_time: float = 0.8

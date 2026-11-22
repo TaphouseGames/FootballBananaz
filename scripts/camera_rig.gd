@@ -36,6 +36,12 @@ var _shot_aim: Vector3
 var _blend: float = 0.0
 var _fov: float = 50.0
 var _z_follow: float = 1.0
+## How far the camera is off its place in the view so that everybody it was
+## asked to keep in the picture fits (see keep_in_view): x is yards to its
+## right, y yards back along its line of sight. Where it is now and where it
+## is going.
+var _pull: Vector2 = Vector2.ZERO
+var _pull_goal: Vector2 = Vector2.ZERO
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -63,8 +69,64 @@ func _set_blend(value: float) -> void:
 	_home = Transform3D(Basis.looking_at(aim - eye, Vector3.UP), eye)
 	_fov = lerpf(tuning.camera_fov, tuning.camera_close_fov, t)
 	_z_follow = lerpf(tuning.camera_z_follow, tuning.camera_close_z_follow, t)
+	_place()
+
+
+## The camera on the rig: its place in the view, moved by the pull.
+func _place() -> void:
 	if not _shot:
-		camera.transform = _home
+		camera.transform = _home.translated_local(Vector3(_pull.x, 0.0, _pull.y))
+
+
+## Asks for these spots on the field to be in the picture: the camera backs
+## away, slowly, as little as it takes (and no more than camera_fit_max),
+## moving sideways to get them all in from nearer, and comes back when they fit
+## again or none are given. Call it every physics tick, before follow.
+func keep_in_view(spots: Array[Vector3]) -> void:
+	_pull_goal = Vector2.ZERO
+	if spots.is_empty():
+		return
+	var size: Vector2 = get_viewport().get_visible_rect().size
+	var up: float = tan(deg_to_rad(_fov) * 0.5) * tuning.camera_fit_margin
+	var across: float = up * size.x / maxf(size.y, 1.0)
+	var to_camera: Transform3D = (global_transform * _home).affine_inverse()
+	var seen: Array[Vector3] = []
+	# Backing away by e adds e to how far off a spot is (-z); it fits once that
+	# is its distance from the middle over the slope of the picture's edge.
+	var back: float = 0.0
+	for spot: Vector3 in spots:
+		var at: Vector3 = to_camera * spot
+		seen.append(at)
+		back = maxf(back, absf(at.y) / up + at.z)
+	# Sideways the camera may stand anywhere between the spot furthest left and
+	# the one furthest right, each less the half picture at its distance: the
+	# least way back at which there is such a place.
+	var room: Vector2 = _room(seen, back, across)
+	if room.x > room.y:
+		var far: float = maxf(tuning.camera_fit_max, back)
+		for step: int in 16:
+			var mid: float = (back + far) * 0.5
+			var at_mid: Vector2 = _room(seen, mid, across)
+			if at_mid.x > at_mid.y:
+				back = mid
+			else:
+				far = mid
+		back = far
+		room = _room(seen, back, across)
+	var aside: float = (room.x + room.y) * 0.5 if room.x > room.y else clampf(0.0, room.x, room.y)
+	_pull_goal = Vector2(aside, minf(back, tuning.camera_fit_max))
+
+
+## Where the camera may stand sideways (x = leftmost, y = rightmost) to have
+## all of `seen` (spots in the camera's own space) in the picture from `back`
+## yards further away. No such place when x > y.
+func _room(seen: Array[Vector3], back: float, across: float) -> Vector2:
+	var room: Vector2 = Vector2(-INF, INF)
+	for at: Vector3 in seen:
+		var half: float = maxf(back - at.z, 0.0) * across
+		room.x = maxf(room.x, at.x - half)
+		room.y = minf(room.y, at.x + half)
+	return room
 
 
 ## A shot of its own (the pregame intro): the camera stands at `eye` in the
@@ -91,6 +153,7 @@ func end_shot() -> void:
 func snap_to(target: Vector3, p_facing: float) -> void:
 	facing = p_facing
 	_swing_t = 1.0
+	_pull = Vector2.ZERO
 	_set_blend(float(view))
 	rotation.y = _yaw_for(facing)
 	position = _goal(target)
@@ -108,6 +171,9 @@ func follow(target: Vector3, p_facing: float, delta: float, swing: bool = false)
 		return
 	if _blend != float(view):
 		_set_blend(move_toward(_blend, float(view), delta / maxf(tuning.camera_view_time, 0.01)))
+	if not _pull.is_equal_approx(_pull_goal):
+		_pull = _pull.lerp(_pull_goal, 1.0 - exp(-tuning.camera_fit_speed * delta))
+		_place()
 	if p_facing != facing:
 		if not swing:
 			snap_to(target, p_facing)
