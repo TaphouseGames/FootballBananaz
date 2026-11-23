@@ -384,6 +384,41 @@ extends Resource
 @export var toss_speed: float = 13.0
 @export var toss_height: float = 0.12
 
+## Laterals: the carrier pitches the ball to the nearest teammate on his feet
+## within `lateral_range` yards who is level with him or behind him (up to
+## `lateral_forward_slack` yards ahead still counts as level). He cannot pitch
+## again for `lateral_cooldown` seconds after the ball gets there.
+@export var lateral_range: float = 14.0
+@export var lateral_forward_slack: float = 0.25
+@export var lateral_cooldown: float = 0.15
+## Chance the pitch goes wrong and is a fumble: the base, more with a tackler
+## hanging on him, more for every defender within `lateral_pressure_radius`
+## yards of the teammate or of the ball's way to him, and more the further
+## past `lateral_safe_range` it has to go (`lateral_long_fumble_add` at the
+## full range).
+@export var lateral_fumble_chance: float = 0.03
+@export var lateral_grasp_fumble_add: float = 0.3
+@export var lateral_pressure_radius: float = 2.5
+@export var lateral_pressure_fumble_add: float = 0.15
+@export var lateral_safe_range: float = 7.0
+@export var lateral_long_fumble_add: float = 0.15
+## The pitch man: a teammate who follows the carrier this many yards behind
+## and to the side, ready for it. A quarterback has to have run with the ball
+## for `lateral_trail_tuck_time` seconds behind the line before he gets one.
+@export var lateral_trail_back: float = 3.5
+@export var lateral_trail_side: float = 4.5
+@export var lateral_trail_tuck_time: float = 0.3
+## A CPU carrier pitches with a tackler `ai_lateral_lead` seconds away and a
+## pitch man who has `ai_lateral_open` yards to himself, with this chance for
+## each tackler (the second for the sharper team), and with
+## `ai_lateral_grasp_chance` once he is wrapped up. With the clock run out and
+## points needed he always does.
+@export var ai_lateral_lead: float = 0.25
+@export var ai_lateral_open: float = 5.0
+@export var ai_lateral_chance: float = 0.08
+@export var ai_edge_lateral_chance: float = 0.3
+@export var ai_lateral_grasp_chance: float = 0.1
+
 @export_group("Tackling")
 @export var tackle_radius: float = 1.1
 @export var dive_tackle_radius: float = 1.5

@@ -92,6 +92,10 @@ var live_time: float = 0.0
 var throw_time: float = 0.0
 var handoff_done: bool = false
 var handoff_time: float = 0.0
+## Teammates of the carrier who follow him to take a lateral, nearest first.
+var pitch_men: Array[Player] = []
+## Nobody can lateral before this (live_time): the last pitch is on its way.
+var _lateral_ready: float = 0.0
 ## Flea flicker: 0 = the quarterback still has to give it to the back, 1 = the
 ## back has it, 2 = over (pitched back, kept by the back, or never given). And
 ## when (live_time) the pitch back is in the quarterback's hands.
@@ -650,6 +654,8 @@ func _reset_play() -> void:
 	_party_angles.clear()
 	live_time = 0.0
 	handoff_done = false
+	pitch_men.clear()
+	_lateral_ready = 0.0
 	_flick_stage = 0
 	_flick_ready = 0.0
 	qb_tuck_time = 0.0
@@ -1098,6 +1104,7 @@ func simulate(delta: float) -> void:
 	_try_handoff()
 	_try_flea_flicker()
 	human.update_live()
+	_pick_pitch_men()
 	_think_and_move(delta)
 	_check_hole_burst()
 	if phase == Phase.POCKET and ball.carrier == qb and qb.is_tucked():
@@ -1397,6 +1404,144 @@ func _hand_over(from: Player, to: Player) -> float:
 	game.add_stat(&"tosses")
 	game.audio.play(&"throw", 0.3, 0.85)
 	return time
+
+
+# --- Laterals --------------------------------------------------------------------
+
+## Who `carrier` would pitch the ball to: his nearest teammate on his feet and
+## free of a block who is level with him or behind him, or null. Never forward.
+func lateral_target(carrier: Player) -> Player:
+	var dir: float = float(carrier.team.attack_dir)
+	var best: Player = null
+	var best_dist: float = tuning.lateral_range
+	for mate: Player in carrier.team.players:
+		if mate == carrier or mate.bystander or not mate.can_act() or mate.block_partner != null:
+			continue
+		if (mate.position.x - carrier.position.x) * dir > tuning.lateral_forward_slack:
+			continue
+		var dist: float = _flat_distance(mate.position, carrier.position)
+		if dist <= best_dist:
+			best_dist = dist
+			best = mate
+	return best
+
+
+## `carrier` has the ball in his hands and is in a state to pitch it: on his
+## feet, also with a tackler hanging on him.
+func can_lateral(carrier: Player) -> bool:
+	if ball_dead or carrier == null or ball.carrier != carrier or carrier.bystander or carrier.catch_timer > 0.0:
+		return false
+	if live_time < _lateral_ready or (carrier == qb and faking()):
+		return false
+	return carrier.can_act() or carrier.state == Player.State.DRAGGING
+
+
+## Chance that a pitch from `carrier` to `target` is a fumble instead (see
+## Tuning.lateral_fumble_chance).
+func lateral_risk(carrier: Player, target: Player) -> float:
+	var chance: float = tuning.lateral_fumble_chance
+	if carrier.state == Player.State.DRAGGING:
+		chance += tuning.lateral_grasp_fumble_add
+	var gap: float = _flat_distance(carrier.position, target.position)
+	if gap > tuning.lateral_safe_range:
+		chance += tuning.lateral_long_fumble_add * clampf(inverse_lerp(tuning.lateral_safe_range, tuning.lateral_range, gap), 0.0, 1.0)
+	# The tacklers on the carrier himself are why he pitches it: only the ones
+	# further along the ball's way, or at the man it is going to, count.
+	var from: Vector2 = Vector2(carrier.position.x, carrier.position.z)
+	var to: Vector2 = Vector2(target.position.x, target.position.z)
+	from = from.lerp(to, 0.35)
+	for opponent: Player in carrier.team.opponent.players:
+		if opponent.is_down() or opponent == carrier.drag_partner:
+			continue
+		var at: Vector2 = Vector2(opponent.position.x, opponent.position.z)
+		if at.distance_to(Geometry2D.get_closest_point_to_segment(at, from, to)) < tuning.lateral_pressure_radius:
+			chance += tuning.lateral_pressure_fumble_add
+	return clampf(chance * RubberBand.bad(carrier.team, game), 0.0, 1.0)
+
+
+## `carrier` pitches the ball to lateral_target(). False if he cannot, or has
+## nobody to pitch it to. It can go wrong (lateral_risk): then it is a fumble.
+## From behind the line the play is a run from here on.
+func do_lateral(carrier: Player) -> bool:
+	if not can_lateral(carrier):
+		return false
+	var target: Player = lateral_target(carrier)
+	if target == null:
+		return false
+	if _thinking:
+		_queued_actions.append(do_lateral.bind(carrier))
+		return true
+	var risk: float = lateral_risk(carrier, target)
+	game.add_stat(&"laterals")
+	if game.last_gasp(carrier.team):
+		game.add_stat(&"last_gasp_laterals")
+	# For the tests: a pitch must never go forward.
+	if (target.position.x - carrier.position.x) * float(carrier.team.attack_dir) > tuning.lateral_forward_slack:
+		game.add_stat(&"forward_laterals")
+	carrier.release_drag()
+	if phase == Phase.POCKET:
+		phase = Phase.RUN
+		handoff_done = true
+		handoff_time = live_time
+		_flick_stage = 2
+	if randf() < risk:
+		# Behind him, over his head or at his feet: it is on the turf.
+		var out: Vector3 = target.position - carrier.position
+		out.y = 0.0
+		out = out.normalized().rotated(Vector3.UP, randf_range(-0.5, 0.5)) * tuning.toss_speed * randf_range(0.5, 0.9)
+		out += Vector3(carrier.velocity.x, 0.0, carrier.velocity.z) * tuning.fumble_carry_share
+		out.y = randf_range(2.0, 4.0)
+		if carrier.animator != null:
+			carrier.animator.toss()
+		game.audio.play(&"throw", 0.3, 0.85)
+		ball.fumble(out)
+		game.add_stat(&"lateral_fumbles")
+		_ball_out(carrier, null)
+		carrier.ball_grab_cooldown = tuning.fumble_retry_time
+		return true
+	_lateral_ready = live_time + _hand_over(carrier, target) + tuning.lateral_cooldown
+	game.rumble.play_mine(&"lateral", carrier, target)
+	human.on_carrier_changed(target)
+	return true
+
+
+## Picks the carrier's pitch men: the nearest teammates behind him who are not
+## in a block. One of them, or three with the clock run out and points needed.
+## For a quarterback still behind the line only once he has tucked the ball
+## and run, and only a back: his receivers stay on their routes.
+func _pick_pitch_men() -> void:
+	var before: Array[Player] = pitch_men.duplicate()
+	pitch_men.clear()
+	var carrier: Player = ball.carrier
+	if ball_dead or carrier == null or carrier.bystander:
+		return
+	var backs_only: bool = false
+	if phase == Phase.POCKET:
+		if carrier != qb or off_play == null or off_play.is_run or faking() or qb_tuck_time < tuning.lateral_trail_tuck_time:
+			return
+		backs_only = true
+	elif phase != Phase.RUN:
+		return
+	var dir: float = float(carrier.team.attack_dir)
+	var found: Array[Player] = []
+	var scores: Dictionary[Player, float] = {}
+	for mate: Player in carrier.team.players:
+		if mate == carrier or mate.bystander or not mate.can_act() or mate.block_partner != null:
+			continue
+		if backs_only and mate.ratings.position != "RB":
+			continue
+		if (mate.position.x - carrier.position.x) * dir > 1.0:
+			continue
+		var dist: float = _flat_distance(mate.position, carrier.position)
+		if dist > tuning.lateral_range:
+			continue
+		# The men already following him keep the job over one a step nearer.
+		scores[mate] = dist - (3.0 if before.has(mate) else 0.0)
+		found.append(mate)
+	found.sort_custom(func(a: Player, b: Player) -> bool: return scores[a] < scores[b])
+	var count: int = 3 if game.last_gasp(carrier.team) else 1
+	for i: int in mini(count, found.size()):
+		pitch_men.append(found[i])
 
 
 ## Flea flicker: the quarterback gives the ball to the back, who holds it for a
@@ -2890,12 +3035,20 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 	pop += Vector3(carried.x, 0.0, carried.z) * tuning.fumble_carry_share
 	pop.y = randf_range(tuning.fumble_pop_up_min, tuning.fumble_pop_up_max) * lift
 	ball.fumble(pop)
+	_ball_out(carrier, tackled_by)
+	return true
+
+
+## The ball has just left `carrier`'s hands for the turf (Ball.fumble): the
+## noise, the banner and everybody finding out. `forcer` knocked it out of
+## him, or null when he lost it by himself.
+func _ball_out(carrier: Player, forcer: Player) -> void:
 	carrier.flash(Color(1.0, 0.1, 0.1), tuning.fumble_flash)
 	game.audio.shout(&"announcer_fumble")
 	game.audio.quip(&"color_fumble", AudioDirector.QUIP_FUMBLE)
 	game.audio.quip(&"color_confused", AudioDirector.QUIP_CONFUSED)
 	fumbler = carrier
-	fumble_forcer = tackled_by
+	fumble_forcer = forcer
 	fumble_recoverer = null
 	fumble_x = carrier.position.x
 	tackled_by = null
@@ -2915,7 +3068,6 @@ func _try_fumble(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, carried: 
 		player.ball_grab_cooldown = 0.0 if player.can_act() else tuning.fumble_retry_time * 1.5
 		player.brain.on_fumble(self)
 	human.on_fumble()
-	return true
 
 
 ## Whether `player` knows the ball is out. The person's own player always does.

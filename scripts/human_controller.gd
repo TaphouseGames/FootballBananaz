@@ -195,6 +195,16 @@ func update_live() -> void:
 	elif player.has_ball and not is_passer and Input.is_action_just_pressed(&"secure_ball"):
 		pc.do_secure(player)
 
+	# A lateral to the nearest teammate level with him or behind him: for any
+	# carrier, also with a tackler on his back. A quarterback who can still
+	# throw has to tuck the ball first (turbo): untucked, the same trigger
+	# throws it away.
+	if player.has_ball and not is_passer and Input.is_action_just_pressed(&"lateral"):
+		if pc.do_lateral(player):
+			_pass_slot = -1
+			_fake_armed = false
+			return
+
 	# In the pocket the pass buttons win: they share A, X, B and (with four men
 	# out) Y with other actions.
 	# The pass leaves on release: the longer the hold, the harder and flatter the

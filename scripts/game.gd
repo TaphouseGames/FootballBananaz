@@ -193,6 +193,15 @@ func is_time_up() -> bool:
 	return clock <= 0.0
 
 
+## The clock has run out with the ball still live, and `team` has nothing to
+## lose by keeping it alive: any score counts before the half, and at the end
+## of the game the team that is behind needs one.
+func last_gasp(team: Team) -> bool:
+	if conversion or overtime or not is_time_up():
+		return false
+	return half < 2 or team.score < team.opponent.score
+
+
 func award_touchdown(team: Team) -> void:
 	team.score += tuning.touchdown_points
 	stat_book.note_score()

@@ -112,6 +112,10 @@ var _secure_power: bool = false
 ## The chaser the carrier last thought of pulling away from, and what he chose.
 var _chase_target: Player
 var _chase_on: bool = false
+## The tackler he last decided about pitching the ball away from, and whether
+## he has decided about it for the tackler hanging on him now.
+var _lateral_tackler: Player
+var _grasp_lateral_decided: bool = false
 ## The CPU quarterback rolls once per play for keeping the ball by design:
 ## the time he goes (negative = he does not).
 var _keeper_rolled: bool = false
@@ -200,8 +204,10 @@ func think(pc: PlayController, delta: float) -> void:
 	# With a tackler on his back a carrier gets both arms round the ball if he
 	# still can. (He does no other thinking then: see can_act below.)
 	if player.state == Player.State.DRAGGING:
-		if not _throws_from_grasp(pc):
+		if not _throws_from_grasp(pc) and not _laterals_from_grasp(pc):
 			pc.do_secure(player)
+	else:
+		_grasp_lateral_decided = false
 	player.is_blocking = false
 	player.calling_for_ball = false
 	player.ai_speed_scale = 1.0
@@ -224,6 +230,11 @@ func think(pc: PlayController, delta: float) -> void:
 
 	if pc.kickoff and pc.phase == PlayController.Phase.AIR:
 		_think_kickoff(pc)
+		return
+
+	var pitch_slot: int = pc.pitch_men.find(player)
+	if pitch_slot >= 0 and pc.ball.carrier != null and pc.ball.carrier != player:
+		_trail(pc, pc.ball.carrier, pitch_slot)
 		return
 
 	match pc.phase:
@@ -1279,6 +1290,8 @@ func _carry(pc: PlayController) -> void:
 	if _dive_for_the_line(pc, nearest):
 		pc.do_dive(player, forward)
 		return
+	if _laterals(pc, nearest_opponent, nearest):
+		return
 	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
 #	if _leap_for_the_line(pc, nearest):
 #		return
@@ -1291,6 +1304,83 @@ func _carry(pc: PlayController) -> void:
 		_decision_timer = 0.5
 		_move_lead = -1.0
 		_carrier_move(pc, nearest_opponent)
+
+
+## True on the tick this carrier pitches the ball to a teammate instead of
+## taking the tackle that is about to arrive. With the clock run out and points
+## needed (Game.last_gasp) he does whenever the teammate has more room than he
+## has. Otherwise only now and then: past the line or on a scramble, with a
+## safe pitch to a man in the clear, decided once for each tackler; and never
+## when a yard or two is what he needs, or when his team is ahead late.
+func _laterals(pc: PlayController, opponent: Player, dist: float) -> bool:
+	if not pc.can_lateral(player):
+		return false
+	var to: Vector3 = opponent.position - player.position
+	to.y = 0.0
+	to /= maxf(dist, 0.01)
+	var closing: float = (player.velocity - opponent.velocity).dot(to)
+	# Seconds until the tackler is within reach.
+	var contact: float = (dist - tuning.tackle_radius) / maxf(closing, 0.5)
+	if contact > tuning.ai_lateral_lead:
+		return false
+	var target: Player = pc.lateral_target(player)
+	if target == null:
+		return false
+	var room: float = pc.nearest_opponent_distance(target)
+	if pc.game.last_gasp(player.team):
+		return room > dist and pc.do_lateral(player)
+	if _lateral_tackler == opponent:
+		return false
+	_lateral_tackler = opponent
+	var past_line: bool = player.team != pc.offense or pc.kickoff or _scrambling or (player.position.x - pc.los_x) * pc.off_dir > 0.0
+	if not past_line or _short_yardage(pc) or _protects_lead(pc):
+		return false
+	if room < tuning.ai_lateral_open or _flat_distance(target.position, player.position) > tuning.lateral_safe_range:
+		return false
+	# Somebody near the ball's way to him: not worth it.
+	if pc.lateral_risk(player, target) > tuning.lateral_fumble_chance * RubberBand.bad(player.team, pc.game) + 0.001:
+		return false
+	if randf() >= _sharp(tuning.ai_lateral_chance, tuning.ai_edge_lateral_chance):
+		return false
+	return pc.do_lateral(player)
+
+
+## Wrapped up: with the clock run out and points needed he gets the ball away
+## to anybody he can. Otherwise once a tackle, now and then, and not a
+## quarterback in the pocket: the sack costs him less than the fumble would.
+func _laterals_from_grasp(pc: PlayController) -> bool:
+	if not player.has_ball or not pc.can_lateral(player):
+		return false
+	if not pc.game.last_gasp(player.team):
+		if _grasp_lateral_decided:
+			return false
+		_grasp_lateral_decided = true
+		if pc.phase != PlayController.Phase.RUN or _protects_lead(pc) or randf() >= tuning.ai_lateral_grasp_chance:
+			return false
+	return pc.do_lateral(player)
+
+
+## His team is ahead in the second half: the ball is worth more than the yards.
+func _protects_lead(pc: PlayController) -> bool:
+	return pc.game.half >= 2 and player.team.score > player.team.opponent.score
+
+
+## The carrier's pitch man (`slot` 0 is the nearest of them): he follows a few
+## yards behind him and out to the side he is on already, where a lateral can
+## find him.
+func _trail(_pc: PlayController, carrier: Player, slot: int) -> void:
+	var dir: float = float(player.team.attack_dir)
+	var side: float = signf(player.position.z - carrier.position.z)
+	if side == 0.0:
+		side = -signf(carrier.position.z) if carrier.position.z != 0.0 else 1.0
+	var back: float = tuning.lateral_trail_back * (1.0 + 0.6 * float(slot))
+	var width: float = tuning.lateral_trail_side * (1.0 + 0.5 * float(slot))
+	var spot: Vector3 = carrier.position + Vector3(carrier.velocity.x, 0.0, carrier.velocity.z) * 0.3
+	spot += Vector3(-dir * back, 0.0, side * width)
+	var edge: float = tuning.half_width() - 2.0
+	spot.z = clampf(spot.z, -edge, edge)
+	_seek(spot)
+	player.wants_turbo = _flat_distance(player.position, spot) > 2.0
 
 
 ## A chaser at his back or his side who is gaining on him: the burst of speed
@@ -1453,7 +1543,8 @@ func _dive_for_the_line(pc: PlayController, nearest: float) -> bool:
 	var to_goal: float = (goal_x - player.position.x) * dir
 	if to_goal > 0.0 and to_goal <= tuning.ai_dive_reach and nearest < tuning.ai_dive_goal_pressure:
 		return true
-	if player.team != pc.offense or pc.game.goal_to_go:
+	# With the clock run out the marker is worth nothing: only a score is.
+	if player.team != pc.offense or pc.game.goal_to_go or pc.game.last_gasp(player.team):
 		return false
 	var to_marker: float = (pc.game.first_down_x - player.position.x) * dir
 	return to_marker > 0.0 and to_marker <= tuning.ai_dive_reach and nearest < tuning.ai_dive_marker_pressure
@@ -2237,6 +2328,8 @@ func _reset() -> void:
 	_secure_power = false
 	_chase_target = null
 	_chase_on = false
+	_lateral_tackler = null
+	_grasp_lateral_decided = false
 	_keeper_rolled = false
 	_keeper_time = -1.0
 	_late_hit_used = false

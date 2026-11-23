@@ -29,6 +29,7 @@ const CONTROLS: Array[Array] = [
 		["Hold RT", "Tuck and run, let go to throw again"],
 		["Wrapped up", "A pass button gets the ball away as he goes down, mostly short and off target"],
 		["LT", "Throw it away, into the stands"],
+		["RT + LT", "Lateral to the nearest teammate level with or behind you"],
 		["(Y)", "Jump. With four men out: throw to the fourth"],
 	]],
 	["RUNNING WITH THE BALL", [
@@ -37,6 +38,7 @@ const CONTROLS: Array[Array] = [
 		["(X)", "Dive, down where you land. On a kick return in your own end zone: touchback"],
 		["(A)", "Lower the shoulder: a short burst of speed with fewer fumbles, and the strong run over weaker tacklers and shake them off. Recharges slowly"],
 		["(Y)", "Jump"],
+		["LT", "Lateral: pitch it to the nearest teammate level with or behind you. Risky in a crowd"],
 		# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
 #		["(X) in the air", "Jump dive: faster and further, but you get up injured"],
 	]],
