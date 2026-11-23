@@ -27,6 +27,7 @@ func enter() -> void:
 	# Show both teams at the new spot while the menu is up.
 	pc.line_up(game.offense_playbook.plays[0], game.defense_playbook.plays[0])
 	game.hud.hide_banner()
+	game.coach_plays.clear()
 	if not game.human.is_active():
 		return
 	_human_on_offense = game.human.team == game.offense
@@ -43,6 +44,7 @@ func enter() -> void:
 		_groups[COACH_GROUP].assign(game.play_caller.coach_defense(game.defense_playbook.plays, game))
 		for play: DefensePlay in game.defense_playbook.plays:
 			_groups[_tab_of(play)].append(play)
+	game.coach_plays.assign(_groups[COACH_GROUP])
 	# The coach's tab, or the first of the book with nothing on that.
 	_group = COACH_GROUP
 	while _groups[_group].is_empty() and _group < _groups.size() - 1:

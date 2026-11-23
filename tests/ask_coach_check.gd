@@ -3,13 +3,17 @@ extends SceneTree
 ## themselves (PlayCaller.coach_offense and coach_defense) in a number of
 ## situations: nine different plays, goal line plays at the goal line only (and
 ## no deep pass there), the
-## deepest throws on the last play, runs to kill the clock. Then the screen: it
+## deepest throws on the last play, runs to kill the clock; and the four plays
+## the audible menu takes from each list (PlayCaller.audible_offense and
+## audible_defense): one or two runs whatever the list holds. Then the screen: it
 ## opens on the coach's nine, on offense and on defense, and (RB) goes on to the
 ## first tab of the book.
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/ask_coach_check.gd
 
 const NAMES: Array[String] = ["run", "short", "deep"]
+## Audible menus drawn from each list.
+const MENUS: int = 200
 ## Ticks to wait for the play-select screen (it comes up behind a fade) and for
 ## a press to be taken.
 const OPEN_TICKS: int = 240
@@ -167,7 +171,37 @@ func _offense(label: String) -> Array[OffensePlay]:
 		_expect(plays.count(play) == 1, "%s: %s is on the offense's list %d times" % [label, play.play_name, plays.count(play)])
 	_expect(plays.size() == HUD.PAGE_SIZE, "%s: %d plays on the offense's list" % [label, plays.size()])
 	print("%s\n    offense: %s" % [label, ", ".join(names)])
+	_check_menus(label, plays)
 	return plays
+
+
+## The audible menu's four from the coach's `advised`, drawn many times with
+## different plays called: four different plays, one or two runs with a run on
+## stick down, never the called play.
+func _check_menus(label: String, advised: Array[OffensePlay]) -> void:
+	var book: Array[OffensePlay] = _game.offense_playbook.plays
+	var bad: PackedStringArray = PackedStringArray()
+	var off_list: int = 0
+	for i: int in MENUS:
+		# Every other time a play of the list is the one that is on.
+		var called: OffensePlay = advised[i % advised.size()] if i % 2 == 0 else book[i % book.size()]
+		var four: Array[OffensePlay] = _game.play_caller.audible_offense(advised, book, _game, called)
+		var runs: int = 0
+		var twice: bool = false
+		for play: OffensePlay in four:
+			runs += int(play.category == OffensePlay.Category.RUN)
+			twice = twice or four.count(play) > 1
+			off_list += int(not advised.has(play))
+		if four.size() != PlayCaller.AUDIBLE_PLAYS:
+			bad.append("%d plays" % four.size())
+		elif twice or four.has(called):
+			bad.append("a play twice or the called one")
+		elif runs < 1 or runs > PlayCaller.AUDIBLE_MAX_RUNS:
+			bad.append("%d runs" % runs)
+		elif four[four.size() - 1].category != OffensePlay.Category.RUN:
+			bad.append("no run on stick down")
+	_expect(bad.is_empty(), "%s: %d of %d audible menus are wrong (%s)" % [label, bad.size(), MENUS, bad[0] if not bad.is_empty() else ""])
+	print("    audible menus: %.1f of 4 plays from outside the coach's list" % (float(off_list) / float(MENUS)))
 
 
 func _defense() -> Array[DefensePlay]:
@@ -178,6 +212,12 @@ func _defense() -> Array[DefensePlay]:
 		_expect(plays.count(play) == 1, "%s is on the defense's list %d times" % [play.play_name, plays.count(play)])
 	_expect(plays.size() == HUD.PAGE_SIZE, "%d plays on the defense's list" % plays.size())
 	print("    defense: %s" % ", ".join(names))
+	for i: int in plays.size():
+		var four: Array[DefensePlay] = _game.play_caller.audible_defense(plays, plays[i])
+		var ok: bool = four.size() == PlayCaller.AUDIBLE_PLAYS and not four.has(plays[i])
+		for play: DefensePlay in four:
+			ok = ok and four.count(play) == 1 and plays.has(play)
+		_expect(ok, "the defense's audible menu with %s called is wrong" % plays[i].play_name)
 	return plays
 
 

@@ -45,6 +45,9 @@ func _tick() -> void:
 			_finish()
 			return
 		_game.tuning.audio_enabled = false
+		# Nor does the CPU change its play at the line.
+		_game.tuning.ai_audible_chance = 0.0
+		_game.tuning.ai_hot_route_chance = 0.0
 		# Nobody snaps the ball while the test looks at the drawing.
 		_game.tuning.play_clock = 0.0
 		_game.tuning.cpu_snap_delay_min = 60.0

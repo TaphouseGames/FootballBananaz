@@ -11,6 +11,8 @@ extends RefCounted
 const ARRIVE: float = 0.15
 ## A man moved less than this is put on his spot at once.
 const SHIFT_MIN: float = 0.3
+## Times round the men caught walking at the snap to get them out of each other.
+const PART_ROUNDS: int = 4
 
 var pc: PlayController
 var tuning: Tuning
@@ -71,7 +73,40 @@ func tick(delta: float) -> void:
 
 ## The snap: whoever is still walking plays from where he is.
 func finish() -> void:
-	for player: Player in _walkers:
+	var caught: Array[Player] = _walkers.keys()
+	for player: Player in caught:
 		player.ai_speed_scale = 1.0
 		player.move_input = Vector3.ZERO
 	reset()
+	_part(caught)
+
+
+## Men on their way pass through each other, as nothing is simulated before
+## the snap. Two of them caught in the same place when the ball is snapped are
+## moved apart, so the play does not start with one inside the other.
+func _part(caught: Array[Player]) -> void:
+	if caught.is_empty():
+		return
+	for round: int in PART_ROUNDS:
+		var moved: bool = false
+		for walker: Player in caught:
+			for other: Player in pc.players:
+				if other == walker:
+					continue
+				var room: float = pc._body_distance(walker, other)
+				var apart: Vector3 = walker.position - other.position
+				apart.y = 0.0
+				var dist: float = apart.length()
+				if room <= 0.0 or dist >= room:
+					continue
+				# One on top of the other: across the field, the lower index first.
+				var away: Vector3 = apart / dist if dist > 0.01 else Vector3(0.0, 0.0, 1.0)
+				var push: float = room - dist
+				if caught.has(other):
+					walker.position += away * push * 0.5
+					other.position -= away * push * 0.5
+				else:
+					walker.position += away * push
+				moved = true
+		if not moved:
+			return

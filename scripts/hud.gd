@@ -260,25 +260,16 @@ func hide_countdown() -> void:
 
 
 ## The audible menu at the line (see AudibleMenu), made the first time it is
-## asked for.
-func show_audible(title: String, more: bool, plays: Array[Resource], cursor: int, flipped: bool) -> void:
+## asked for: `plays` on up, left, right and down of the stick, drawn mirrored
+## or not, and the play that is `called` now.
+func show_audible(plays: Array[Resource], flipped: bool, called: Resource) -> void:
 	if _audible == null:
 		_audible = AudibleMenu.new()
 		add_child(_audible)
 		# Under the pause menu.
 		move_child(_audible, pause_menu.get_index())
 	_audible.visible = true
-	_audible.show_plays(title, more, plays, cursor, flipped)
-
-
-func set_audible_cursor(index: int) -> void:
-	if _audible != null:
-		_audible.set_cursor(index)
-
-
-func set_audible_flipped(flipped: bool) -> void:
-	if _audible != null:
-		_audible.set_flipped(flipped)
+	_audible.show_plays(plays, flipped, called)
 
 
 func hide_audible() -> void:

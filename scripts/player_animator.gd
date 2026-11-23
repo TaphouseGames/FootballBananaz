@@ -72,6 +72,9 @@ const SULK_TRUDGE: int = 4
 const SPIKE_TIME: float = 0.4
 ## How long the quarterback's leg kick lasts when he sends a man in motion.
 const MOTION_KICK_TIME: float = 0.7
+## How long the quarterback's signals last when he changes the play at the line
+## or gives a receiver a hot route.
+const AUDIBLE_CALL_TIME: float = 1.0
 ## Seconds a receiver's juke at a cut in his route takes, and seconds a defender
 ## who fell for it takes to lunge the wrong way and gather himself.
 const ROUTE_JUKE_TIME: float = 0.42
@@ -186,6 +189,10 @@ var _plant_timer: float = 0.0
 ## What is left of the leg kick, and the side it goes to (+1 his right).
 var _kick_timer: float = 0.0
 var _kick_side: float = 1.0
+## What is left of the quarterback's signals at the line, and what they are: 0
+## an audible, +1 or -1 a hot route for a man on his right or his left.
+var _call_timer: float = 0.0
+var _call_side: float = 0.0
 ## Above 0 while he jukes at a cut in his route, and the side he cuts to (+1 his
 ## right); the same for a defender who has been faked out and the side he lunges to.
 var _juke_timer: float = 0.0
@@ -463,6 +470,7 @@ func update(delta: float, instant: bool) -> void:
 	_spike_timer = maxf(_spike_timer - delta, 0.0)
 	_plant_timer = maxf(_plant_timer - delta, 0.0)
 	_kick_timer = maxf(_kick_timer - delta, 0.0)
+	_call_timer = maxf(_call_timer - delta, 0.0)
 	_juke_timer = maxf(_juke_timer - delta, 0.0)
 	_faked_timer = maxf(_faked_timer - delta, 0.0)
 	_ground = 1.0
@@ -486,6 +494,9 @@ func update(delta: float, instant: bool) -> void:
 	_watch_ball(delta)
 	_turned = false
 	_build_pose(delta)
+	# Over his stance, or over his walk to a new spot.
+	if _call_timer > 0.0:
+		_audible_call()
 	if not _turned:
 		_twist_side = 0.0
 	_update_flop(delta)
@@ -1526,6 +1537,54 @@ func _motion_kick() -> void:
 	_pose[B.FORE_L] = Vector3(0.0, -30.0, 0.0)
 	if _kick_side < 0.0:
 		_mirror()
+	_blend_from_stash(weight)
+
+
+## The quarterback changes the play at the line (`side` 0) or gives a receiver
+## on his right (+1) or his left (-1) a hot route: he makes sure nobody misses it.
+func audible_call(side: float) -> void:
+	_call_timer = AUDIBLE_CALL_TIME
+	_call_side = signf(side)
+
+
+## An audible: up out of his stance, both hands hammering the sides of his
+## helmet while his hips swing from side to side and his head shakes "no".
+## A hot route: one hand slaps the top of his helmet and the other jabs again
+## and again at the receiver, the whole of him leaning that way. His legs stay
+## as they were, so it goes over a stance and over a walk alike.
+func _audible_call() -> void:
+	var t: float = 1.0 - _call_timer / AUDIBLE_CALL_TIME
+	var weight: float = smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.8, 1.0, t))
+	var beat: float = sin(t * TAU * 5.0)
+	var sway: float = sin(t * TAU * 2.5)
+	_rate = 30.0
+	_stash()
+	if _call_side == 0.0:
+		_pose[B.HIPS] = Vector3(0.0, 0.0, 14.0 * sway)
+		_pose[B.SPINE] = Vector3(-4.0, 0.0, -9.0 * sway)
+		_pose[B.CHEST] = Vector3(-6.0, 0.0, -7.0 * sway)
+		_pose[B.HEAD] = Vector3(-6.0, 26.0 * beat, 0.0)
+		# Elbows out wide, fists to the ear holes and off again.
+		_pose[B.ARM_L] = Vector3(-112.0 + 10.0 * beat, 0.0, -34.0)
+		_pose[B.FORE_L] = Vector3(0.0, -118.0 - 16.0 * beat, 0.0)
+		_pose[B.ARM_R] = Vector3(-112.0 - 10.0 * beat, 0.0, -34.0)
+		_pose[B.FORE_R] = Vector3(0.0, -118.0 + 16.0 * beat, 0.0)
+	else:
+		# Built for a man on his right; mirrored for one on his left.
+		var jab: float = 0.5 + 0.5 * beat
+		_pose[B.HIPS] = Vector3(0.0, 0.0, -8.0)
+		_pose[B.SPINE] = Vector3(-2.0, -14.0, -10.0)
+		_pose[B.CHEST] = Vector3(-4.0, -18.0, -8.0)
+		_pose[B.HEAD] = Vector3(-4.0, -34.0, 0.0)
+		# The right arm out at him, stabbing; the left hand patting his helmet.
+		_pose[B.ARM_R] = Vector3(-78.0, 0.0, -8.0 - 10.0 * jab)
+		_pose[B.FORE_R] = Vector3(0.0, -64.0 * (1.0 - jab), 0.0)
+		_pose[B.ARM_L] = Vector3(-150.0, 0.0, -30.0)
+		_pose[B.FORE_L] = Vector3(0.0, -96.0 - 22.0 * beat, 0.0)
+		if _call_side < 0.0:
+			_mirror()
+	for i: int in [B.THIGH_L, B.THIGH_R, B.SHIN_L, B.SHIN_R, B.FOOT_L, B.FOOT_R]:
+		_pose[i] = _scratch[i]
 	_blend_from_stash(weight)
 
 

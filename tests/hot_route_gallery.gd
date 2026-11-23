@@ -51,6 +51,9 @@ func _run() -> void:
 	tuning.cpu_snap_delay_min = 1.0e9
 	tuning.cpu_snap_delay_max = 1.0e9
 	tuning.ai_motion_chance = 0.0
+	# Nor does the CPU change its play at the line.
+	tuning.ai_audible_chance = 0.0
+	tuning.ai_hot_route_chance = 0.0
 	tuning.audio_enabled = false
 	_game.clock = 1.0e6
 

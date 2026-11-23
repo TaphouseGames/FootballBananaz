@@ -10,9 +10,11 @@ extends GameState
 ## screen cannot tell the real one from a fake.
 ##
 ## And the play can be changed at the line, for as long as nobody is in motion:
-##  - (X) opens the audible menu: the plays of the called formation, and with
-##    (LB) and (RB) the formations of its family (OffensePlay.audible_groups;
-##    on defense, the other tabs). (A) calls one, (X) mirrors it, (B) closes.
+##  - (X) opens the audible menu (AudibleMenu): four plays, one on each way of
+##    the left stick, and pushing it that way calls the play. They are picked at
+##    random from the plays the coach advised for the down (Game.coach_plays),
+##    once for the line-up, and one or two of an offense's are runs
+##    (PlayCaller.audible_offense). (B) or (X) again closes.
 ##  - the right stick is a quick audible to another play of the same formation:
 ##    down a run, left a short pass, up a deep one (on defense: the play that
 ##    fits that best), right the called play mirrored.
@@ -24,6 +26,10 @@ extends GameState
 ##    rest, the trigger leaves (HotRouteMenu shows all of it).
 ## A new formation is walked to (PreSnapShift), and the offense cannot snap or
 ## send a man in motion until it is set again. The play clock runs all the while.
+##
+## A CPU side changes its play too, now and then, when what it sees across the
+## ball asks for it (_cpu_offense_read, _cpu_defense_read). It sees what the
+## person sees: the kind of defense, the offense's formation, not the play.
 
 ## LINE: at the line. MENU: the audible menu is open. HOT: a hot route is
 ## being given.
@@ -31,6 +37,12 @@ enum Mode { LINE, MENU, HOT }
 
 ## The stick is pushed a way from this far out.
 const REVEAL_STICK: float = 0.5
+## The longest a CPU offense that is set waits past its snap time for the
+## defense to get to its spots, in seconds.
+const CPU_SET_WAIT: float = 2.5
+## The ways of the left stick that call the plays of the audible menu, in the
+## order of AudibleMenu.WAYS.
+const MENU_ACTIONS: Array[StringName] = [&"move_up", &"move_left", &"move_right", &"move_down"]
 
 ## Other plays of the called play's formation, in the order left, right, down.
 var _fakes: Array[Resource] = []
@@ -41,19 +53,21 @@ var _last_call: float = 0.0
 ## When a CPU offense sends its man in motion, in time_in_state (negative = it
 ## does not, or it has).
 var _cpu_motion_at: float = -1.0
+## When a CPU offense and a CPU defense look across the ball for a reason to
+## change the play, in time_in_state (negative: they have, or the person runs
+## that side).
+var _cpu_offense_read_at: float = -1.0
+var _cpu_defense_read_at: float = -1.0
 ## The hint under the banner right now (the jet motion's snap cue, the shift,
 ## the hot route's buttons), or nothing.
 var _hint: String = ""
 ## The state of the motion the banner was last written for.
 var _banner_motion: PreSnapMotion.State = PreSnapMotion.State.NONE
 var _mode: Mode = Mode.LINE
-## The audible menu: the formations (or tabs) it can go to with the called one
-## first, the open one, its plays, the cursor and whether the play is mirrored.
-var _menu_groups: Array[int] = []
-var _menu_group: int = 0
+## The plays of the audible menu, in the order of MENU_ACTIONS. Picked the
+## first time it is opened and kept for the line-up, so opening it again is no
+## way to be dealt other plays.
 var _menu_plays: Array[Resource] = []
-var _menu_cursor: int = 0
-var _menu_flipped: bool = false
 ## The receiver a hot route is being given to, once he is picked.
 var _hot_man: Player
 ## The left trigger was pressed while a hot route is being given: until it is
@@ -71,12 +85,18 @@ func enter() -> void:
 	_hint = ""
 	_mode = Mode.LINE
 	_hot_man = null
+	_menu_plays.clear()
 	_pick_fakes()
 	# A CPU quarterback gets a silly line out before he snaps.
 	var silly: float = game.audio.qb_open()
 	_cpu_delay = maxf(_cpu_delay, minf(silly, game.tuning.cpu_silly_hold_max))
+	var read_at: float = game.tuning.pre_snap_delay + game.tuning.ai_audible_time
+	var person_on_defense: bool = game.human.is_active() and not _human_snaps
+	_cpu_offense_read_at = -1.0 if _human_snaps else read_at
+	_cpu_defense_read_at = -1.0 if person_on_defense else read_at
 	if not _human_snaps and pc.motion.available() and randf() < game.tuning.ai_motion_chance:
-		_cpu_motion_at = game.tuning.ai_motion_time
+		# After the look across the ball: a man in motion rules out an audible.
+		_cpu_motion_at = maxf(game.tuning.ai_motion_time, read_at + 0.1)
 		if pc.motion.is_jet():
 			# A jet is snapped while he runs: he is sent late enough for that.
 			_cpu_motion_at = maxf(_cpu_motion_at, _cpu_delay - 0.6)
@@ -195,12 +215,16 @@ func physics_update(delta: float) -> void:
 			_close()
 			snap_now = not shifting
 	else:
+		_cpu_offense_read()
 		if person and pc.shift.active(game.defense):
 			hint = "SHIFTING..."
-		if _cpu_motion_at >= 0.0 and time_in_state >= _cpu_motion_at and not pc.shift.active(game.offense):
+		# Not before the look across the ball, and not while a defender walks
+		# to a new spot: the motion would stop him where he is.
+		if _cpu_motion_at >= 0.0 and time_in_state >= _cpu_motion_at and _cpu_offense_read_at < 0.0 and not pc.shift.active():
 			_cpu_motion_at = -1.0
 			pc.motion.call_motion()
 		snap_now = _cpu_snaps()
+	_cpu_defense_read()
 	if person:
 		if hint != _hint:
 			_hint = hint
@@ -213,7 +237,11 @@ func physics_update(delta: float) -> void:
 ## A CPU offense snaps on its timer. With a man in motion it waits until he is
 ## set, and a jet man it snaps to as he gets to the quarterback.
 func _cpu_snaps() -> bool:
-	if _cpu_motion_at >= 0.0:
+	# Not before it has looked the defense over, nor on its way to new spots.
+	if _cpu_motion_at >= 0.0 or _cpu_offense_read_at >= 0.0 or pc.shift.active(game.offense):
+		return false
+	# An audible has the defense walking too: it gets a moment to be set.
+	if pc.shift.active() and time_in_state < _cpu_delay + CPU_SET_WAIT:
 		return false
 	var motion: PreSnapMotion = pc.motion
 	match motion.state:
@@ -222,6 +250,108 @@ func _cpu_snaps() -> bool:
 		PreSnapMotion.State.SET:
 			return time_in_state >= _cpu_delay and motion.time - motion.set_time >= game.tuning.ai_motion_set_time
 	return time_in_state >= _cpu_delay
+
+
+# --- The CPU at the line -------------------------------------------------------
+
+## A CPU offense looks the defense over, once: an audible or a hot route when
+## the look asks for one, and then only now and then.
+func _cpu_offense_read() -> void:
+	# Whoever is still walking to a spot: the snap waits for this look, so this
+	# look waits for nobody.
+	if _cpu_offense_read_at < 0.0 or time_in_state < _cpu_offense_read_at:
+		return
+	_cpu_offense_read_at = -1.0
+	if pc.motion.called() or pc.off_play.heave_only:
+		return
+	var tuning: Tuning = game.tuning
+	var changed: bool = false
+	# A blitz is answered with a quick route first; anything else with a play.
+	if pc.def_play.group == DefensePlay.Group.BLITZ:
+		changed = _cpu_hot_route() or _cpu_audible()
+	else:
+		changed = _cpu_audible() or _cpu_hot_route()
+	if not changed:
+		return
+	game.audio.qb_call()
+	# Time for the signals to be seen and the men to be set. There is no
+	# motion on top of it.
+	_cpu_delay = maxf(_cpu_delay, time_in_state + tuning.ai_audible_set_time)
+	_cpu_motion_at = -1.0
+
+
+## The CPU offense's audible: a play of another kind when the defense is in the
+## kind of defense that stops the called one best.
+func _cpu_audible() -> bool:
+	var pick: OffensePlay = game.play_caller.cpu_audible_offense(game.offense_playbook.plays, game.defense_playbook.plays, game, pc.off_play, pc.def_play)
+	if pick == null or randf() >= game.tuning.ai_audible_chance:
+		return false
+	if not pc.audible(pick, pc.def_play, pc.off_flipped, pc.def_flipped, game.offense):
+		return false
+	game.add_stat(&"cpu_audibles")
+	return true
+
+
+## The CPU offense's hot route, on a pass play: against a blitz the receiver
+## with the deepest route runs a slant or a drag instead, to be thrown to
+## before the rush is home; against a zone, with not far to go, he sits down
+## in it on a curl. Not the man who may be sent in motion.
+func _cpu_hot_route() -> bool:
+	var tuning: Tuning = game.tuning
+	var play: OffensePlay = pc.off_play
+	if play.is_run or play.flea_flicker:
+		return false
+	var kind: OffenseAssignment.Hot = OffenseAssignment.Hot.SLANT
+	match pc.def_play.group:
+		DefensePlay.Group.BLITZ:
+			kind = OffenseAssignment.Hot.SLANT if randf() < 0.5 else OffenseAssignment.Hot.DRAG
+		DefensePlay.Group.ZONE:
+			if absf(game.first_down_x - game.los_x) > tuning.ai_hot_route_curl_to_go:
+				return false
+			kind = OffenseAssignment.Hot.CURL
+		_:
+			return false
+	var man: Player = null
+	var deepest: float = tuning.ai_hot_route_depth
+	for player: Player in pc.eligible:
+		var drawn: OffenseAssignment = player.brain.off_assign
+		if drawn == null or drawn.job != OffenseAssignment.Job.ROUTE or drawn.block_time > 0.0 or player == pc.motion.man:
+			continue
+		var depth: float = 0.0
+		for waypoint: Vector2 in drawn.route:
+			depth = maxf(depth, waypoint.x)
+		if depth >= deepest:
+			deepest = depth
+			man = player
+	if man == null or randf() >= tuning.ai_hot_route_chance:
+		return false
+	# A slant breaks toward the ball.
+	var inside: float = -signf(man.brain.off_assign.start.y) if absf(man.brain.off_assign.start.y) > 0.5 else 1.0
+	if not pc.hot_route(man, kind, inside):
+		return false
+	game.add_stat(&"cpu_hot_routes")
+	return true
+
+
+## A CPU defense looks the offense's formation over: at the line, and again
+## when the person changes the play. An audible when one of the coach's plays
+## holds up better against what comes out of that formation, and then only now
+## and then.
+func _cpu_defense_read() -> void:
+	if _cpu_defense_read_at < 0.0 or time_in_state < _cpu_defense_read_at:
+		return
+	_cpu_defense_read_at = -1.0
+	if pc.motion.called():
+		return
+	var pick: DefensePlay = game.play_caller.cpu_audible_defense(game.defense_playbook.plays, game.offense_playbook.plays, game, pc.def_play, pc.off_play.group)
+	if pick == null or randf() >= game.tuning.ai_audible_chance:
+		return
+	var flipped: bool = DefenseAligner.cpu_flip(pick, pc.off_play, pc.off_flipped)
+	if pc.audible(pc.off_play, pick, pc.off_flipped, flipped, game.defense):
+		game.add_stat(&"cpu_audibles")
+		# The person's menu and hot routes are shut while anybody walks.
+		if _mode != Mode.LINE:
+			_close()
 
 
 # --- Audibles ------------------------------------------------------------------
@@ -280,9 +410,9 @@ func _call(play: Resource, flipped: bool) -> void:
 		var def_flipped: bool = pc.def_flipped
 		if pc.def_play.strength_side != 0:
 			def_flipped = DefenseAligner.cpu_flip(pc.def_play, off_play, flipped)
-		done = pc.audible(off_play, pc.def_play, flipped, def_flipped)
+		done = pc.audible(off_play, pc.def_play, flipped, def_flipped, game.offense)
 	else:
-		done = pc.audible(pc.off_play, play as DefensePlay, pc.off_flipped, flipped)
+		done = pc.audible(pc.off_play, play as DefensePlay, pc.off_flipped, flipped, game.defense)
 	if not done:
 		return
 	_close()
@@ -293,6 +423,8 @@ func _call(play: Resource, flipped: bool) -> void:
 		# The quarterback shouts it down the line.
 		_last_call = time_in_state
 		game.audio.qb_call()
+		# A CPU defense has a new formation to look at.
+		_cpu_defense_read_at = time_in_state + game.tuning.ai_audible_time
 
 
 ## Back to the line: the menu shut, no receiver being picked.
@@ -314,51 +446,39 @@ func _close() -> void:
 # --- The audible menu ------------------------------------------------------------
 
 func _open_menu() -> void:
-	_menu_groups.clear()
-	if _human_snaps:
-		for group: int in OffensePlay.audible_groups(pc.off_play.group):
-			if not _plays_of(group).is_empty():
-				_menu_groups.append(group)
-	else:
-		# The called tab first, then the others in their order.
-		_menu_groups.append(pc.def_play.group)
-		for group: int in DefensePlay.GROUP_NAMES.size():
-			if group != pc.def_play.group and not _plays_of(group).is_empty():
-				_menu_groups.append(group)
-	if _menu_groups.is_empty():
+	if _menu_plays.is_empty():
+		_pick_menu()
+	if _menu_plays.is_empty():
 		return
 	_mode = Mode.MENU
-	_menu_group = 0
-	_menu_flipped = _called_flipped()
 	game.play_art.clear()
 	# The banner's line of buttons would run under the menu.
 	game.hud.hide_banner()
-	_show_menu()
+	game.hud.show_audible(_menu_plays, _called_flipped(), _called())
 	game.audio.play(&"ui_page")
 
 
-## The plays of formation (or tab) `group`, in playbook order.
-func _plays_of(group: int) -> Array[Resource]:
-	var plays: Array[Resource] = []
+## The menu's plays for this line-up: from the plays the coach advised on the
+## play-select screen, or, with none kept for this side, from his advice now.
+func _pick_menu() -> void:
+	var caller: PlayCaller = game.play_caller
 	if _human_snaps:
-		for play: OffensePlay in game.offense_playbook.plays:
-			if play.group == group:
-				plays.append(play)
+		var book: Array[OffensePlay] = game.offense_playbook.plays
+		var advised: Array[OffensePlay] = []
+		for play: Resource in game.coach_plays:
+			if play is OffensePlay:
+				advised.append(play as OffensePlay)
+		if advised.is_empty():
+			advised = caller.coach_offense(book, game)
+		_menu_plays.assign(caller.audible_offense(advised, book, game, pc.off_play))
 	else:
-		for play: DefensePlay in game.defense_playbook.plays:
-			if play.group == group:
-				plays.append(play)
-	return plays
-
-
-## Puts the open formation's plays on screen, the cursor on the called play
-## when it is one of them.
-func _show_menu() -> void:
-	var group: int = _menu_groups[_menu_group]
-	_menu_plays = _plays_of(group)
-	_menu_cursor = maxi(_menu_plays.find(_called()), 0)
-	var names: PackedStringArray = OffensePlay.GROUP_NAMES if _human_snaps else DefensePlay.GROUP_NAMES
-	game.hud.show_audible(names[group], _menu_groups.size() > 1, _menu_plays, _menu_cursor, _menu_flipped)
+		var advised: Array[DefensePlay] = []
+		for play: Resource in game.coach_plays:
+			if play is DefensePlay:
+				advised.append(play as DefensePlay)
+		if advised.is_empty():
+			advised = caller.coach_defense(game.defense_playbook.plays, game)
+		_menu_plays.assign(caller.audible_defense(advised, pc.def_play))
 
 
 func _update_menu() -> void:
@@ -366,46 +486,20 @@ func _update_menu() -> void:
 	if not _can_change():
 		_close()
 		return
-	if Input.is_action_just_pressed(&"back"):
+	if Input.is_action_just_pressed(&"back") or Input.is_action_just_pressed(&"audible"):
 		_close()
 		game.audio.play(&"ui_move")
 		return
-	# The bumpers go to the next formation (or tab).
-	var turn: int = int(Input.is_action_just_pressed(&"page_next")) - int(Input.is_action_just_pressed(&"page_prev"))
-	if turn != 0 and _menu_groups.size() > 1:
-		_menu_group = posmod(_menu_group + turn, _menu_groups.size())
-		_show_menu()
-		game.audio.play(&"ui_page")
-	# The stick moves through the plays: up and down the list, left and right
-	# to the same row of the column beside it (or that column's last play).
-	var moved: int = _menu_cursor
-	var step: int = int(Input.is_action_just_pressed(&"move_down")) - int(Input.is_action_just_pressed(&"move_up"))
-	var across: int = int(Input.is_action_just_pressed(&"move_right")) - int(Input.is_action_just_pressed(&"move_left"))
-	if step != 0:
-		moved = posmod(_menu_cursor + step, _menu_plays.size())
-	elif across != 0:
-		var rows: int = AudibleMenu.COLUMN_ROWS
-		@warning_ignore("integer_division")
-		var column: int = _menu_cursor / rows + across
-		@warning_ignore("integer_division")
-		if column >= 0 and column <= (_menu_plays.size() - 1) / rows:
-			moved = mini(column * rows + _menu_cursor % rows, _menu_plays.size() - 1)
-	if moved != _menu_cursor:
-		_menu_cursor = moved
-		game.hud.set_audible_cursor(_menu_cursor)
-		game.audio.play(&"ui_move")
-	if Input.is_action_just_pressed(&"flip_play"):
-		_menu_flipped = not _menu_flipped
-		game.hud.set_audible_flipped(_menu_flipped)
-		game.audio.play(&"ui_flip")
-	if Input.is_action_just_pressed(&"confirm"):
-		var pick: Resource = _menu_plays[_menu_cursor]
-		if pick == _called() and _menu_flipped == _called_flipped():
+	for slot: int in mini(MENU_ACTIONS.size(), _menu_plays.size()):
+		if not Input.is_action_just_pressed(MENU_ACTIONS[slot]):
+			continue
+		if _menu_plays[slot] == _called():
 			# The play that is on already: nothing to change.
 			_close()
 			game.audio.play(&"ui_move")
 		else:
-			_call(pick, _menu_flipped)
+			_call(_menu_plays[slot], _called_flipped())
+		return
 
 
 # --- Hot routes ------------------------------------------------------------------

@@ -1,40 +1,58 @@
 class_name AudibleMenu
 extends PanelContainer
-## The audible menu at the line of scrimmage: a title bar with the formation
-## (on defense, the tab) between the bumpers that change it, its plays as rows with the highlighted one lit, and
-## beside them that play's drawing over the buttons. The field stays in view.
-## PreSnapState drives it.
+## The audible menu at the line of scrimmage: four plays, one on each way the
+## left stick can be pushed, each in a small box with its name and its drawing
+## beside the arrow that calls it: up on top, left and right side by side, down
+## below. It sits in the bottom left corner of the screen, narrow enough to fit
+## beside the scoreboard, so the players stay in view. PreSnapState drives it.
 
-## Plays in a column before a second one is started.
-const COLUMN_ROWS: int = 6
-## How far in from the left edge of the screen and up from the bottom it sits.
+## How far in from the left edge of the screen and up from the bottom the
+## panels at the line sit that are too wide to go beside the scoreboard
+## (HotRouteMenu), and how far this one does.
 const CORNER: Vector2 = Vector2(24.0, 124.0)
-const ROW_SIZE: Vector2 = Vector2(196.0, 28.0)
-const SIDE_WIDTH: float = 176.0
-const DIAGRAM_HEIGHT: float = 118.0
+const MENU_CORNER: Vector2 = Vector2(10.0, 10.0)
+## One play's box, and the drawing in it.
+const BOX_WIDTH: float = 128.0
+const DIAGRAM_HEIGHT: float = 54.0
+const ARROW_SIZE: float = 10.0
+## How much of a box is left to see when its play is the one that is on.
+const CALLED_ALPHA: float = 0.4
 const BACK_COLOR: Color = Color(0.04, 0.07, 0.11, 0.88)
 const EDGE_COLOR: Color = Color(0.62, 0.7, 0.78, 0.9)
 const TITLE_COLOR: Color = Color(0.1, 0.16, 0.24, 0.98)
 const ROW_COLOR: Color = Color(0.13, 0.19, 0.27, 0.92)
 const ROW_ALT_COLOR: Color = Color(0.1, 0.15, 0.22, 0.92)
+const SCREEN_COLOR: Color = Color(0.05, 0.12, 0.09, 0.95)
 const LIT_COLOR: Color = Color(0.96, 0.62, 0.1)
-const LIT_TEXT: Color = Color(0.08, 0.06, 0.02)
 const TEXT_COLOR: Color = Color(0.9, 0.93, 0.96)
-const DIM_COLOR: Color = Color(0.62, 0.68, 0.74)
-## The buttons under the drawing: label, colour (HumanController.PAD_COLORS
-## order is A, X, B, Y) and what it does.
-const ACTIONS: Array[Array] = [["A", 0, "Call play"], ["X", 1, "Flip play"], ["B", 2, "Close"]]
+const KEY_COLOR: Color = Color(0.3, 0.33, 0.38)
+## The ways of the stick in the order of the plays: up, left, right, down.
+const WAYS: Array[Vector2] = [Vector2.UP, Vector2.LEFT, Vector2.RIGHT, Vector2.DOWN]
 
-var _title: Label
-var _arrows: Array[Label] = []
-var _flip_tag: Label
-var _columns: HBoxContainer
-var _diagram: PlayDiagram
-var _plays: Array[Resource] = []
-var _rows: Array[PanelContainer] = []
-var _row_names: Array[Label] = []
-var _row_styles: Array[StyleBoxFlat] = []
-var _lit_style: StyleBoxFlat
+var _boxes: Array[PanelContainer] = []
+var _names: Array[Label] = []
+var _diagrams: Array[PlayDiagram] = []
+
+
+## A small arrowhead pointing the way the stick is pushed.
+class Arrow extends Control:
+	var way: Vector2 = Vector2.UP
+
+	func _init(p_way: Vector2) -> void:
+		way = p_way
+		custom_minimum_size = Vector2(AudibleMenu.ARROW_SIZE, AudibleMenu.ARROW_SIZE)
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var middle: Vector2 = size * 0.5
+		var reach: float = minf(size.x, size.y) * 0.5
+		var across: Vector2 = Vector2(-way.y, way.x)
+		draw_colored_polygon(PackedVector2Array([
+			middle + way * reach,
+			middle - way * reach * 0.7 + across * reach,
+			middle - way * reach * 0.7 - across * reach,
+		]), AudibleMenu.LIT_COLOR)
 
 
 func _init() -> void:
@@ -46,13 +64,11 @@ func _init() -> void:
 	frame.set_border_width_all(1)
 	frame.set_content_margin_all(1.0)
 	add_theme_stylebox_override(&"panel", frame)
-	_lit_style = box(LIT_COLOR, 3)
 
 	var stack: VBoxContainer = VBoxContainer.new()
 	stack.add_theme_constant_override(&"separation", 0)
 	add_child(stack)
 
-	# The title bar: < FORMATION >, and whether the play is mirrored.
 	var bar: PanelContainer = PanelContainer.new()
 	var bar_style: StyleBoxFlat = box(TITLE_COLOR, 0)
 	bar_style.border_color = EDGE_COLOR
@@ -65,135 +81,94 @@ func _init() -> void:
 	stack.add_child(bar)
 	var bar_row: HBoxContainer = HBoxContainer.new()
 	bar.add_child(bar_row)
-	for arrow: String in ["LB", "RB"]:
-		var label: Label = text_label(15, LIT_COLOR)
-		label.text = arrow
-		_arrows.append(label)
-	bar_row.add_child(_arrows[0])
-	_title = text_label(18, Color.WHITE)
-	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	bar_row.add_child(_title)
-	bar_row.add_child(_arrows[1])
+	bar_row.add_theme_constant_override(&"separation", 6)
+	# The stick the arrows are of.
+	bar_row.add_child(badge("LS", KEY_COLOR))
+	var title: Label = text_label(17, Color.WHITE)
+	title.text = "AUDIBLE"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar_row.add_child(title)
+	# How to leave, in the bar: under the plays it would cost a row of field.
+	bar_row.add_child(badge("B", HumanController.PAD_COLORS[2]))
+	var close: Label = text_label(14, TEXT_COLOR)
+	close.text = "Close"
+	bar_row.add_child(close)
 
 	var margin: MarginContainer = MarginContainer.new()
 	for side: StringName in [&"margin_left", &"margin_right", &"margin_top", &"margin_bottom"]:
-		margin.add_theme_constant_override(side, 8)
+		margin.add_theme_constant_override(side, 6)
 	stack.add_child(margin)
-	var body: HBoxContainer = HBoxContainer.new()
-	body.add_theme_constant_override(&"separation", 8)
-	margin.add_child(body)
-	_columns = HBoxContainer.new()
-	_columns.add_theme_constant_override(&"separation", 4)
-	body.add_child(_columns)
+	var rows: VBoxContainer = VBoxContainer.new()
+	rows.add_theme_constant_override(&"separation", 4)
+	margin.add_child(rows)
+	# Up by itself, left and right beside each other, down by itself.
+	var top: CenterContainer = CenterContainer.new()
+	top.add_child(_make_box(WAYS[0]))
+	rows.add_child(top)
+	var middle: HBoxContainer = HBoxContainer.new()
+	middle.add_theme_constant_override(&"separation", 4)
+	middle.add_child(_make_box(WAYS[1]))
+	middle.add_child(_make_box(WAYS[2]))
+	rows.add_child(middle)
+	var bottom: CenterContainer = CenterContainer.new()
+	bottom.add_child(_make_box(WAYS[3]))
+	rows.add_child(bottom)
 
-	# Beside the plays: the highlighted one drawn, and the buttons.
-	var side_column: VBoxContainer = VBoxContainer.new()
-	side_column.custom_minimum_size = Vector2(SIDE_WIDTH, 0.0)
-	side_column.add_theme_constant_override(&"separation", 4)
-	body.add_child(side_column)
+
+## One play's box: the arrow and the play's name over its drawing.
+func _make_box(way: Vector2) -> Control:
+	var frame: PanelContainer = PanelContainer.new()
+	frame.custom_minimum_size = Vector2(BOX_WIDTH, 0.0)
+	var style: StyleBoxFlat = box(ROW_COLOR, 4)
+	style.set_content_margin_all(3.0)
+	frame.add_theme_stylebox_override(&"panel", style)
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override(&"separation", 1)
+	frame.add_child(column)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override(&"separation", 5)
+	column.add_child(head)
+	head.add_child(Arrow.new(way))
+	var name_label: Label = text_label(13, TEXT_COLOR)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.clip_text = true
+	head.add_child(name_label)
 	var screen: PanelContainer = PanelContainer.new()
-	var screen_style: StyleBoxFlat = box(Color(0.05, 0.12, 0.09, 0.95), 3)
-	screen_style.set_content_margin_all(3.0)
+	var screen_style: StyleBoxFlat = box(SCREEN_COLOR, 3)
+	screen_style.set_content_margin_all(2.0)
 	screen.add_theme_stylebox_override(&"panel", screen_style)
-	side_column.add_child(screen)
-	_diagram = PlayDiagram.new()
-	_diagram.custom_minimum_size = Vector2(0.0, DIAGRAM_HEIGHT)
-	screen.add_child(_diagram)
-	_flip_tag = text_label(13, LIT_COLOR)
-	_flip_tag.text = "FLIPPED"
-	_flip_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_flip_tag.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	_flip_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen.add_child(_flip_tag)
-	for action: Array in ACTIONS:
-		var line: PanelContainer = PanelContainer.new()
-		var line_style: StyleBoxFlat = box(ROW_ALT_COLOR, 3)
-		line_style.content_margin_left = 6.0
-		line_style.content_margin_right = 6.0
-		line_style.content_margin_top = 2.0
-		line_style.content_margin_bottom = 2.0
-		line.add_theme_stylebox_override(&"panel", line_style)
-		var row: HBoxContainer = HBoxContainer.new()
-		row.add_theme_constant_override(&"separation", 8)
-		line.add_child(row)
-		row.add_child(badge(action[0], HumanController.PAD_COLORS[action[1]]))
-		var what: Label = text_label(15, TEXT_COLOR)
-		what.text = action[2]
-		row.add_child(what)
-		side_column.add_child(line)
+	column.add_child(screen)
+	var diagram: PlayDiagram = PlayDiagram.new()
+	diagram.custom_minimum_size = Vector2(0.0, DIAGRAM_HEIGHT)
+	screen.add_child(diagram)
+	_boxes.append(frame)
+	_names.append(name_label)
+	_diagrams.append(diagram)
+	return frame
 
 
-## `plays`: the OffensePlay or DefensePlay resources of the open formation.
-## `title` names it; `more` says there are others to the left and right.
-func show_plays(title: String, more: bool, plays: Array[Resource], cursor: int, flipped: bool) -> void:
-	_title.text = title
-	for arrow: Label in _arrows:
-		# Kept in place when there is nowhere to go, so the title stays centred.
-		arrow.modulate.a = 1.0 if more else 0.0
-	_plays.assign(plays)
-	for old: Node in _columns.get_children():
-		_columns.remove_child(old)
-		old.queue_free()
-	_rows.clear()
-	_row_names.clear()
-	_row_styles.clear()
-	var column: VBoxContainer = null
-	for i: int in plays.size():
-		if i % COLUMN_ROWS == 0:
-			column = VBoxContainer.new()
-			column.add_theme_constant_override(&"separation", 2)
-			_columns.add_child(column)
-		var row: PanelContainer = PanelContainer.new()
-		row.custom_minimum_size = ROW_SIZE
-		var style: StyleBoxFlat = box(ROW_COLOR if i % 2 == 0 else ROW_ALT_COLOR, 3)
-		var name_label: Label = text_label(16, TEXT_COLOR)
-		name_label.text = _name_of(plays[i])
-		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		name_label.clip_text = true
-		var inset: MarginContainer = MarginContainer.new()
-		inset.add_theme_constant_override(&"margin_left", 10)
-		inset.add_theme_constant_override(&"margin_right", 6)
-		inset.add_child(name_label)
-		row.add_child(inset)
-		column.add_child(row)
-		_rows.append(row)
-		_row_names.append(name_label)
-		_row_styles.append(style)
-	# In the bottom left corner, over the hint line, and as big as this
-	# formation's plays need: not left as wide as the last one.
+## `plays`: the OffensePlay or DefensePlay resources on up, left, right and
+## down. `flipped`: drawn mirrored, as the play they are called in place of is.
+## `called` is that play: its own box, when it has one, is dimmed.
+func show_plays(plays: Array[Resource], flipped: bool, called: Resource) -> void:
+	for i: int in _boxes.size():
+		var play: Resource = plays[i] if i < plays.size() else null
+		_boxes[i].visible = play != null
+		if play == null:
+			continue
+		_boxes[i].modulate.a = CALLED_ALPHA if play == called else 1.0
+		if play is OffensePlay:
+			_names[i].text = (play as OffensePlay).play_name
+			_diagrams[i].show_offense(play as OffensePlay)
+		else:
+			_names[i].text = (play as DefensePlay).play_name
+			_diagrams[i].show_defense(play as DefensePlay)
+		_diagrams[i].set_flipped(flipped)
 	var needed: Vector2 = get_combined_minimum_size()
-	offset_left = CORNER.x
-	offset_right = CORNER.x + needed.x
-	offset_bottom = -CORNER.y
-	offset_top = -CORNER.y - needed.y
-	set_flipped(flipped)
-	set_cursor(cursor)
-
-
-func set_cursor(index: int) -> void:
-	for i: int in _rows.size():
-		var selected: bool = i == index
-		_rows[i].add_theme_stylebox_override(&"panel", _lit_style if selected else _row_styles[i])
-		_row_names[i].add_theme_color_override(&"font_color", LIT_TEXT if selected else TEXT_COLOR)
-		_row_names[i].add_theme_constant_override(&"outline_size", 0 if selected else 4)
-	if index < 0 or index >= _plays.size():
-		return
-	if _plays[index] is OffensePlay:
-		_diagram.show_offense(_plays[index] as OffensePlay)
-	else:
-		_diagram.show_defense(_plays[index] as DefensePlay)
-
-
-func set_flipped(flipped: bool) -> void:
-	_diagram.set_flipped(flipped)
-	_flip_tag.visible = flipped
-
-
-func _name_of(play: Resource) -> String:
-	if play is OffensePlay:
-		return (play as OffensePlay).play_name
-	return (play as DefensePlay).play_name
+	offset_left = MENU_CORNER.x
+	offset_right = MENU_CORNER.x + needed.x
+	offset_bottom = -MENU_CORNER.y
+	offset_top = -MENU_CORNER.y - needed.y
 
 
 ## A gamepad button: its letter on a disc of its colour.

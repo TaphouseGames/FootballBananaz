@@ -1,10 +1,10 @@
 extends SceneTree
 ## Headless check of changing the play at the line, with the person on offense
 ## and then on defense:
-##   menu      (X) opens it, (A) on the called play closes it without a snap,
-##             another play of the formation is called with nobody moving
-##   family    (LB) and (RB) only reach the formations of the called one's
-##             family; a play of another one is walked to, the snap waits for
+##   menu      (X) opens it with four of the coach's plays, one or two of
+##             them runs and one of those on stick down; (B) and (X) close it;
+##             opened again it has the same four; the left stick calls one
+##   walk      a play of another formation is walked to, the snap waits for
 ##             it, and everybody ends on the new spots
 ##   quick     the right stick: down a run, left a short pass, up a deep one,
 ##             right the called play mirrored
@@ -13,7 +13,8 @@ extends SceneTree
 ##             stays as it was
 ##   motion    the bumpers send the motion man, (Y) does not; after that, and
 ##             after the snap, the play cannot be changed
-##   defense   the menu and the quick audible on defense; the defender the
+##   defense   the menu (four of the coach's defenses) and the quick audible
+##             on defense; the defender the
 ##             person had picked stays theirs; no hot routes
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/audible_check.gd
@@ -69,6 +70,9 @@ func _tick() -> void:
 		_game.tuning.cpu_snap_delay_min = 600.0
 		_game.tuning.cpu_snap_delay_max = 600.0
 		_game.tuning.ai_motion_chance = 0.0
+		# Nor does the CPU change its play at the line.
+		_game.tuning.ai_audible_chance = 0.0
+		_game.tuning.ai_hot_route_chance = 0.0
 		_check_rules()
 		_plan_offense()
 		_plan_defense()
@@ -87,11 +91,6 @@ func _tick() -> void:
 # --- The rules, without the field -------------------------------------------------
 
 func _check_rules() -> void:
-	var g: Dictionary = OffensePlay.Group
-	_expect(OffensePlay.audible_groups(g.I_FORM) == [g.I_FORM, g.SINGLEBACK, g.HEAVY, g.GOAL_LINE], "family: I-Form reaches %s" % [OffensePlay.audible_groups(g.I_FORM)])
-	_expect(OffensePlay.audible_groups(g.SINGLEBACK) == [g.SINGLEBACK, g.I_FORM, g.HEAVY], "family: Singleback reaches %s" % [OffensePlay.audible_groups(g.SINGLEBACK)])
-	_expect(OffensePlay.audible_groups(g.GUN_SPREAD) == [g.GUN_SPREAD, g.GUN_TRIPS], "family: Gun Spread reaches %s" % [OffensePlay.audible_groups(g.GUN_SPREAD)])
-	_expect(OffensePlay.audible_groups(g.GOAL_LINE) == [g.GOAL_LINE, g.I_FORM, g.HEAVY], "family: Goal Line reaches %s" % [OffensePlay.audible_groups(g.GOAL_LINE)])
 	_expect(_buttons(&"motion") == [9, 10], "motion: it is on buttons %s, not the bumpers" % [_buttons(&"motion")])
 	_expect(_buttons(&"hot_route") == [3], "hot: it is on buttons %s, not (Y)" % [_buttons(&"hot_route")])
 	_expect(_buttons(&"audible") == [2], "menu: it is on buttons %s, not (X)" % [_buttons(&"audible")])
@@ -109,70 +108,79 @@ func _buttons(action: StringName) -> Array[int]:
 # --- Offense ---------------------------------------------------------------------
 
 func _plan_offense() -> void:
-	_steps.append([45, _pre_snap.bind(true, OffensePlay.Group.I_FORM)])
+	# The coach advised plays of other formations only: every audible is a walk.
+	_steps.append([45, func() -> void:
+		_pre_snap(true, OffensePlay.Group.I_FORM, null, _advice_away_from(OffensePlay.Group.I_FORM))])
 
-	# The menu, and a play of the same formation.
+	# The menu: four plays, and out again with nothing changed.
+	_steps.append([0, func() -> void:
+		_kept["play"] = _pc.off_play
+		_kept["flipped"] = _pc.off_flipped])
 	_tap(&"audible")
 	_steps.append([0, func() -> void:
 		_expect(_mode() == MENU and _game.hud.audible_shown(), "menu: (X) did not open it")
-		_expect(_state.get("_menu_groups") == OffensePlay.audible_groups(_pc.off_play.group), "family: the menu goes to %s" % [_state.get("_menu_groups")])])
+		var four: Array = _four()
+		var runs: int = 0
+		_expect(four.size() == PlayCaller.AUDIBLE_PLAYS, "menu: %d plays on it" % four.size())
+		for play: OffensePlay in four:
+			_expect(four.count(play) == 1, "menu: %s is on it %d times" % [play.play_name, four.count(play)])
+			_expect(play != _pc.off_play, "menu: the called play is on it")
+			_expect(_game.coach_plays.has(play), "menu: %s is not one of the coach's plays" % play.play_name)
+			if play.category == OffensePlay.Category.RUN:
+				runs += 1
+		_expect(runs >= 1 and runs <= PlayCaller.AUDIBLE_MAX_RUNS, "menu: %d runs on it" % runs)
+		_expect(not four.is_empty() and (four[four.size() - 1] as OffensePlay).category == OffensePlay.Category.RUN, "menu: stick down is not a run")
+		_kept["four"] = four.duplicate()])
 	_tap(&"confirm")
 	_steps.append([0, func() -> void:
 		_expect(_in_pre_snap(), "menu: (A) in the menu snapped the ball")
-		_expect(_mode() == LINE and not _game.hud.audible_shown(), "menu: (A) on the called play did not close it")
-		_kept["play"] = _pc.off_play
-		_kept["spots"] = _spots(_game.offense)
-		_kept["eligible"] = _pc.eligible.duplicate()])
-	_tap(&"audible")
-	_tap(&"move_down")
-	_tap(&"confirm")
+		_expect(_mode() == MENU, "menu: (A) closed it")])
+	_tap(&"back")
 	_steps.append([0, func() -> void:
-		var was: OffensePlay = _kept["play"]
-		_expect(_in_pre_snap(), "menu: calling a play snapped the ball")
-		_expect(_pc.off_play != was, "menu: the play was not changed")
-		_expect(_pc.off_play.group == was.group, "menu: one step down left the formation")
-		_expect(not _pc.shift.active(), "menu: a play of the same formation has somebody walking")
-		_expect(_spots(_game.offense) == _kept["spots"], "menu: a play of the same formation moved somebody")
-		_expect(not _game.hud.audible_shown(), "menu: still open after the call")
-		_expect(_game.stats.get(&"audibles", 0) == 1, "menu: %d audibles counted, not 1" % _game.stats.get(&"audibles", 0))])
+		_expect(_mode() == LINE and not _game.hud.audible_shown(), "menu: (B) did not close it")
+		_expect(_pc.off_play == _kept["play"], "menu: (B) changed the play")])
+	_tap(&"audible")
+	_steps.append([0, func() -> void:
+		_expect(_mode() == MENU, "menu: (X) did not open it a second time")
+		_expect(_four() == _kept["four"], "menu: opened again it has other plays")])
+	_tap(&"audible")
+	_steps.append([0, func() -> void:
+		_expect(_mode() == LINE and not _game.hud.audible_shown(), "menu: (X) did not close it")
+		_expect(_game.stats.get(&"audibles", 0) == 0, "menu: %d audibles counted with none called" % _game.stats.get(&"audibles", 0))])
 
-	# Left and right go between the columns of plays, not to another formation.
+	# The stick calls a play, here of another formation: it is walked to.
 	_tap(&"audible")
-	_steps.append([0, func() -> void:
-		_kept["cursor"] = _state.get("_menu_cursor")
-		_kept["group"] = _state.get("_menu_group")])
-	_tap(&"move_right")
-	_steps.append([0, func() -> void:
-		var was: int = _kept["cursor"]
-		var count: int = (_state.get("_menu_plays") as Array).size()
-		var rows: int = AudibleMenu.COLUMN_ROWS
-		@warning_ignore("integer_division")
-		var want: int = mini(was + rows, count - 1) if was / rows < (count - 1) / rows else was
-		_expect(_state.get("_menu_cursor") == want, "menu: right moved the cursor from %d to %d of %d, not to %d" % [was, _state.get("_menu_cursor"), count, want])
-		_expect(_state.get("_menu_group") == _kept["group"], "menu: right changed the formation")
-		_kept["cursor"] = want])
 	_tap(&"move_left")
 	_steps.append([0, func() -> void:
-		# The same row of the column to the left, when there is one.
-		var was: int = _kept["cursor"]
-		var rows: int = AudibleMenu.COLUMN_ROWS
-		var want: int = was - rows if was >= rows else was
-		_expect(_state.get("_menu_cursor") == want, "menu: left moved the cursor from %d to %d, not to %d" % [was, _state.get("_menu_cursor"), want])])
-	_tap(&"back")
-	# Another formation of the family.
-	_tap(&"audible")
-	_tap(&"page_next")
+		var want: OffensePlay = (_kept["four"] as Array)[1]
+		_expect(_in_pre_snap(), "walk: calling a play snapped the ball")
+		_expect(_pc.off_play == want, "walk: stick left called %s, not %s" % [_pc.off_play.play_name, want.play_name])
+		_expect(_pc.off_flipped == _kept["flipped"], "walk: the audible mirrored the play")
+		_expect(_mode() == LINE and not _game.hud.audible_shown(), "walk: the menu is still open after the call")
+		_expect(_game.stats.get(&"audibles", 0) == 1, "walk: %d audibles counted, not 1" % _game.stats.get(&"audibles", 0))
+		_expect(_pc.shift.active(_game.offense), "walk: nobody walks to the new formation")])
 	_tap(&"confirm")
-	_steps.append([0, func() -> void:
-		_expect(_pc.off_play.group == OffensePlay.audible_groups(OffensePlay.Group.I_FORM)[1], "family: (RB) did not go to the next formation of the family")
-		_expect(_pc.shift.active(_game.offense), "family: nobody walks to the new formation")])
-	_tap(&"confirm")
-	_steps.append([0, func() -> void: _expect(_in_pre_snap(), "family: the ball was snapped while they walked")])
+	_steps.append([0, func() -> void: _expect(_in_pre_snap(), "walk: the ball was snapped while they walked")])
 	_tap(&"audible")
-	_steps.append([WALK, func() -> void: _expect(_mode() == LINE, "family: the menu opened while they walked")])
+	_steps.append([WALK, func() -> void: _expect(_mode() == LINE, "walk: the menu opened while they walked")])
 	_steps.append([0, func() -> void:
-		_expect(not _pc.shift.active(), "family: still walking after %d ticks" % WALK)
-		_expect(_on_spots(), "family: somebody is not on his new spot")])
+		_expect(not _pc.shift.active(), "walk: still walking after %d ticks" % WALK)
+		_expect(_on_spots(), "walk: somebody is not on his new spot")])
+
+	# The same four afterwards. The play that is on now only closes the menu.
+	_tap(&"audible")
+	_steps.append([0, func() -> void:
+		_expect(_mode() == MENU and _four() == _kept["four"], "menu: after an audible it has other plays")])
+	_tap(&"move_left")
+	_steps.append([0, func() -> void:
+		_expect(_mode() == LINE, "menu: the stick toward the called play did not close it")
+		_expect(_game.stats.get(&"audibles", 0) == 1, "menu: the called play was called again")])
+	_tap(&"audible")
+	_tap(&"move_down")
+	_steps.append([WALK, func() -> void:
+		var want: OffensePlay = (_kept["four"] as Array)[3]
+		_expect(_pc.off_play == want and want.category == OffensePlay.Category.RUN, "menu: stick down did not call the run")])
+	_steps.append([0, func() -> void: _expect(not _pc.shift.active() and _on_spots(), "menu: not set after the run was called")])
 
 	# Quick audibles.
 	for way: Array in [[&"quick_down", OffensePlay.Category.RUN], [&"quick_left", OffensePlay.Category.SHORT], [&"quick_up", OffensePlay.Category.DEEP]]:
@@ -366,15 +374,20 @@ func _plan_defense() -> void:
 	_steps.append([0, func() -> void: _expect(_mode() == LINE, "defense: (Y) opened the hot routes")])
 	_tap(&"audible")
 	_steps.append([0, func() -> void:
-		var groups: Array = _state.get("_menu_groups")
+		var four: Array = _four()
 		_expect(_mode() == MENU, "defense: (X) did not open the menu")
-		_expect(not groups.is_empty() and groups[0] == _pc.def_play.group, "defense: the menu does not open on the called tab")])
-	_tap(&"move_down")
-	_tap(&"confirm")
+		_expect(four.size() == PlayCaller.AUDIBLE_PLAYS, "defense: %d plays on the menu" % four.size())
+		for play: Resource in four:
+			_expect(play is DefensePlay and four.count(play) == 1, "defense: %s is on the menu %d times or no defense" % [play.get(&"play_name"), four.count(play)])
+			_expect(play != _pc.def_play, "defense: the called play is on the menu")
+			_expect(_game.coach_plays.has(play), "defense: %s is not one of the coach's plays" % play.get(&"play_name"))
+		_kept["four"] = four.duplicate()])
+	_tap(&"move_up")
 	_steps.append([WALK, func() -> void:
-		var was: DefensePlay = _kept["play"]
+		var want: DefensePlay = (_kept["four"] as Array)[0]
 		_expect(_in_pre_snap(), "defense: calling a play snapped the ball")
-		_expect(_pc.def_play != was and _pc.def_play.group == was.group, "defense: the menu did not call another play of the tab")
+		_expect(_pc.def_play == want, "defense: stick up called %s, not %s" % [_pc.def_play.play_name, want.play_name])
+		_expect(_mode() == LINE and not _game.hud.audible_shown(), "defense: the menu is still open after the call")
 		_expect(_game.human.controlled == _kept["mine"], "defense: the person's defender was taken away")
 		_expect(_game.stats.get(&"audibles", 0) == _kept["audibles"] + 1, "defense: the audible was not counted once")])
 	_steps.append([0, func() -> void:
@@ -385,14 +398,8 @@ func _plan_defense() -> void:
 		var was: DefensePlay = _kept["play"]
 		var want: DefensePlay = DefensePlay.quick_pick(_game.defense_playbook.plays, was, OffensePlay.Category.RUN)
 		_expect(want != null and _pc.def_play == want, "defense: stick down did not call the tab's best play against the run")])
-	# Another tab.
-	_tap(&"audible")
-	_tap(&"page_next")
-	_tap(&"confirm")
-	_steps.append([WALK, func() -> void:
-		_expect(_pc.def_play.group != (_kept["play"] as DefensePlay).group, "defense: (RB) did not go to another tab")])
 	_steps.append([0, func() -> void:
-		_expect(not _pc.shift.active() and _on_spots(), "defense: not set after the change of tab")
+		_expect(not _pc.shift.active() and _on_spots(), "defense: not set after the quick audible")
 		print("defense: checked")])
 
 
@@ -404,12 +411,41 @@ func _tap(action: StringName) -> void:
 	_steps.append([2, func() -> void: Input.action_release(action)])
 
 
-func _pre_snap(on_offense: bool, group: OffensePlay.Group, play: OffensePlay = null) -> void:
+## The plays of the audible menu, in the order up, left, right, down.
+func _four() -> Array:
+	return _state.get("_menu_plays") as Array
+
+
+## Nine plays for the coach to have advised, none of formation `group`: two
+## runs and seven passes.
+func _advice_away_from(group: OffensePlay.Group) -> Array:
+	var runs: Array = []
+	var passes: Array = []
+	for play: OffensePlay in _game.offense_playbook.plays:
+		if play.group == group or play.goal_line or play.heave_only:
+			continue
+		if play.category == OffensePlay.Category.RUN:
+			if runs.size() < 2:
+				runs.append(play)
+		elif passes.size() < 7:
+			passes.append(play)
+	return runs + passes
+
+
+## `advised`: the plays the coach advised for the down (Game.coach_plays), or
+## none for his advice as it would be.
+func _pre_snap(on_offense: bool, group: OffensePlay.Group, play: OffensePlay = null, advised: Array = []) -> void:
 	_release()
 	if not _pc.ball_dead:
 		_pc.end_play(PlayController.Result.TACKLED, _pc.ball.flat_position().x)
 	var with_ball: Team = _team if on_offense else _team.opponent
 	_game.start_drive(with_ball, _game.tuning.yard_to_x(with_ball.attack_dir, 30.0))
+	if advised.is_empty():
+		if on_offense:
+			advised = _game.play_caller.coach_offense(_game.offense_playbook.plays, _game)
+		else:
+			advised = _game.play_caller.coach_defense(_game.defense_playbook.plays, _game)
+	_game.coach_plays.assign(advised)
 	if play == null:
 		for candidate: OffensePlay in _game.offense_playbook.plays:
 			# A pass with a back in it, where there is one: both are needed.

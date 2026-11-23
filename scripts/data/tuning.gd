@@ -915,6 +915,28 @@ extends Resource
 @export_range(0.0, 1.0) var ai_motion_chance: float = 0.35
 @export var ai_motion_time: float = 0.4
 @export var ai_motion_set_time: float = 0.25
+## A CPU side looks across the ball this long after the teams are set. When
+## what it sees asks for another play (PlayCaller.cpu_audible_offense and
+## cpu_audible_defense) it calls an audible this often. The other play has to
+## fit what it sees better by this much (0..1): an offense's against the kind
+## of defense it is looking at, a defense's against the offense's formation.
+## A formation says far less about the play than a defense does, and with the
+## defense's margin any lower a CPU defense would have a reason on most downs.
+@export var ai_audible_time: float = 0.1
+@export_range(0.0, 1.0) var ai_audible_chance: float = 0.3
+@export_range(0.0, 1.0) var ai_audible_margin: float = 0.06
+@export_range(0.0, 1.0) var ai_audible_defense_margin: float = 0.25
+## How long a CPU offense takes over an audible or a hot route before it snaps:
+## the quarterback's signal has to be seen, and the men have to be set.
+@export var ai_audible_set_time: float = 1.0
+## How often a CPU quarterback gives a receiver a hot route when the defense
+## shows a look that asks for one (PreSnapState._cpu_hot_route), and how deep
+## a route has to be drawn to be worth cutting short, in yards.
+@export_range(0.0, 1.0) var ai_hot_route_chance: float = 0.3
+@export var ai_hot_route_depth: float = 10.0
+## A hot route to sit down in a zone is only called with this many yards or
+## fewer to go.
+@export var ai_hot_route_curl_to_go: float = 8.0
 ## A jet sweep: the man takes the ball at a sprint and runs `hole_burst_speed`
 ## times as fast for this long, which is what gets him to the edge.
 @export var jet_sweep_burst_time: float = 1.5

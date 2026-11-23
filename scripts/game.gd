@@ -57,6 +57,11 @@ var banner_text: String = ""
 var stats: Dictionary[StringName, int] = {}
 ## Calls the plays for whichever side the CPU runs.
 var play_caller: PlayCaller = PlayCaller.new()
+## The plays the coach advised the person on the play-select screen for the
+## down being played (PlayCaller.coach_offense or coach_defense). The audible
+## menu at the line takes its plays from them. Written by PlaySelectState for
+## every down; empty with nobody playing.
+var coach_plays: Array[Resource] = []
 ## What each defense has seen the other offense do.
 var scout: Scout = Scout.new()
 ## The box score: each team's and each player's numbers (see the pause menu).

@@ -63,7 +63,8 @@ var _homing: Array[Player] = []
 var _settled: Array[Player] = []
 ## The one follower has left his lane for the depth he plays at.
 var _stepping_up: bool = false
-## Seconds the quarterback's leg kick still has to run.
+## Seconds the quarterback's leg kick, or his signals for an audible or a hot
+## route, still have to run. He is set, and a set man is not simulated.
 var _kick_left: float = 0.0
 
 
@@ -200,6 +201,12 @@ func call_motion() -> bool:
 	pc.game.audio.qb_motion()
 	pc.game.add_stat(&"motions")
 	return true
+
+
+## The quarterback has `seconds` of signals to make from his stance (see
+## PlayerAnimator.audible_call): he is kept moving for that long.
+func animate_qb(seconds: float) -> void:
+	_kick_left = maxf(_kick_left, seconds)
 
 
 ## One tick before the snap.

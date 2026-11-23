@@ -66,7 +66,7 @@ const CONTROLS: Array[Array] = [
 		["(LB) (RB)", "Other page"],
 	]],
 	["AT THE LINE", [
-		["(X)", "Audible: another play. (LB) (RB): other formations, (X) flips, (A) calls it"],
+		["(X)", "Audible: four plays the coach likes. Push the left stick toward one to call it, (B) closes"],
 		["Right stick", "Quick audible: down a run, left a short pass, up a deep one, right flips the play"],
 		["(Y)", "Offense: hot route. A receiver's button, then left stick: streak, curl, slants; right stick: post, drag, outs. LT cancels"],
 		["(LB) (RB)", "Offense: send a receiver in motion"],

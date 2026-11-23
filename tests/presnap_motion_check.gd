@@ -69,6 +69,9 @@ func _tick() -> void:
 			_finish()
 			return
 		_game.tuning.audio_enabled = false
+		# Nor does the CPU change its play at the line.
+		_game.tuning.ai_audible_chance = 0.0
+		_game.tuning.ai_hot_route_chance = 0.0
 		_check_pick()
 		_check_rules()
 		_check_reactions()

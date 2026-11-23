@@ -314,22 +314,33 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 
 ## An audible: the play is changed at the line. Both teams are lined up for
 ## the new one and walk to it from where they stand (see PreSnapShift). Not
-## once a man is in motion or the ball is live.
-func audible(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool, p_def_flipped: bool) -> bool:
+## once a man is in motion or the ball is live. `by` is the team that called
+## it (null: the person's).
+func audible(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool, p_def_flipped: bool, by: Team = null) -> bool:
 	if not ball_dead or kickoff or motion.called():
 		return false
+	if by == null:
+		by = human.team
 	var from: Dictionary[Player, Vector3] = {}
 	for team: Team in [offense, defense]:
 		for player: Player in team.players:
 			from[player] = player.position
 	var mine: Player = human.controlled
+	# The defense changing its play does not take the offense's hot routes away.
+	var hot: Dictionary[Player, OffenseAssignment] = {}
+	if p_off == off_play and p_flipped == off_flipped:
+		hot = hot_routes.duplicate()
 	line_up(p_off, p_def, p_flipped, p_def_flipped)
+	for player: Player in hot:
+		_give_hot(player, hot[player])
 	# The defender the person had picked is still theirs.
 	if mine != null and mine.team == defense:
 		human.set_controlled(mine)
 	shift.start(from)
+	if by == offense:
+		_qb_signals(0.0)
 	game.add_stat(&"audibles")
-	game.rumble.play_team(&"audible", human.team)
+	game.rumble.play_team(&"audible", by)
 	_update_markers()
 	return true
 
@@ -345,7 +356,17 @@ func hot_route(player: Player, kind: OffenseAssignment.Hot, side: float) -> bool
 	var drawn: OffenseAssignment = player.brain.off_assign
 	if drawn == null or drawn.job != OffenseAssignment.Job.ROUTE:
 		return false
-	var hot: OffenseAssignment = OffenseAssignment.hot_route(drawn, kind, side)
+	_give_hot(player, OffenseAssignment.hot_route(drawn, kind, side))
+	# The quarterback points at him: his right is toward +z going toward +x.
+	if qb != null:
+		_qb_signals(1.0 if (player.position.z - qb.position.z) * off_dir >= 0.0 else -1.0)
+	game.add_stat(&"hot_routes")
+	game.rumble.play_team(&"audible", offense)
+	return true
+
+
+## `player` runs `hot` in place of the route the play draws for him.
+func _give_hot(player: Player, hot: OffenseAssignment) -> void:
 	var flip: float = -1.0 if off_flipped else 1.0
 	var route: PackedVector3Array = PackedVector3Array()
 	for waypoint: Vector2 in hot.route:
@@ -354,9 +375,17 @@ func hot_route(player: Player, kind: OffenseAssignment.Hot, side: float) -> bool
 	hot_routes[player] = hot
 	if player == motion.man:
 		motion.cancel()
-	game.add_stat(&"hot_routes")
-	game.rumble.play_team(&"audible", offense)
-	return true
+
+
+## The quarterback makes his signals for an audible (`side` 0) or for a hot
+## route to a man on his right (+1) or his left (-1). See
+## PlayerAnimator.audible_call.
+func _qb_signals(side: float) -> void:
+	if qb == null or qb.animator == null:
+		return
+	qb.animator.audible_call(side)
+	# A little longer than the signals, so he is back in his stance at the end.
+	motion.animate_qb(PlayerAnimator.AUDIBLE_CALL_TIME + 0.3)
 
 
 ## The person starts or stops picking a receiver for a hot route.

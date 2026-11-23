@@ -50,6 +50,9 @@ func _process(_delta: float) -> bool:
 	if _game == null or not _game.is_node_ready():
 		return false
 	_audio = _game.audio
+	# The CPU keeps its play at the line: its shouts and waits are counted here.
+	_game.tuning.ai_audible_chance = 0.0
+	_game.tuning.ai_hot_route_chance = 0.0
 	_frames += 1
 	if _frames > STUCK_FRAMES:
 		_failures.append("only %d line-ups on offense and %d on defense came up" % [_offense_line_ups, _defense_line_ups])

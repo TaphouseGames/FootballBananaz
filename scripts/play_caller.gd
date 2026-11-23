@@ -28,6 +28,10 @@ const SHOT_ORDINARY: float = 0.2
 const SHOT_NEEDED: float = 3.0
 ## Points behind in the second half that make every down a down for a shot.
 const SHOT_DEFICIT: float = 12.0
+## Plays on the audible menu (one for each way of the stick), and how many of
+## an offense's may be runs. One always is.
+const AUDIBLE_PLAYS: int = 4
+const AUDIBLE_MAX_RUNS: int = 2
 
 ## Per offensive team: how often it has called each category lately, and the
 ## yards it made with it. Both decay by MEMORY every play.
@@ -156,6 +160,147 @@ func coach_defense(plays: Array[DefensePlay], game: Game, count: int = HUD.PAGE_
 			spare.append(plays[i])
 	picks.append_array(spare)
 	return picks.slice(0, count)
+
+
+## The plays of an offense's audible menu: `count` of the coach's `advised`
+## plays picked at random, none of them `called`, and one or two of them runs.
+## What `advised` is short of (a run when the clock asks for throws, passes
+## when it asks for runs) comes from the book. In the menu's order: up, left,
+## right, down, with a run on down.
+func audible_offense(advised: Array[OffensePlay], plays: Array[OffensePlay], game: Game, called: OffensePlay, count: int = AUDIBLE_PLAYS) -> Array[OffensePlay]:
+	var runs: Array[OffensePlay] = []
+	var passes: Array[OffensePlay] = []
+	for play: OffensePlay in advised:
+		if play == called or runs.has(play) or passes.has(play):
+			continue
+		if play.category == OffensePlay.Category.RUN:
+			runs.append(play)
+		else:
+			passes.append(play)
+	runs.shuffle()
+	passes.shuffle()
+	# A second run only when the coach advises two.
+	var run_count: int = clampi(randi_range(1, AUDIBLE_MAX_RUNS), 1, maxi(runs.size(), 1))
+	run_count = mini(run_count, count)
+	_top_up(runs, run_count, true, plays, game, called, passes)
+	_top_up(passes, count - run_count, false, plays, game, called, runs)
+	var picks: Array[OffensePlay] = passes.slice(0, count - run_count)
+	picks.append_array(runs.slice(1, run_count))
+	picks.shuffle()
+	if not runs.is_empty():
+		picks.append(runs[0])
+	return picks
+
+
+## The plays of a defense's audible menu: `count` of the coach's `advised`
+## plays picked at random, none of them `called`.
+func audible_defense(advised: Array[DefensePlay], called: DefensePlay, count: int = AUDIBLE_PLAYS) -> Array[DefensePlay]:
+	var picks: Array[DefensePlay] = []
+	for play: DefensePlay in advised:
+		if play != called and not picks.has(play):
+			picks.append(play)
+	picks.shuffle()
+	return picks.slice(0, count)
+
+
+## What an offense can see of a defense before the snap is the kind of defense
+## it is in (its tab), not the play: how well the plays of tab `group` hold up
+## on average against a run, a short and a deep pass.
+static func look_fit(plays: Array[DefensePlay], group: DefensePlay.Group) -> PackedFloat32Array:
+	var fit: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
+	var count: float = 0.0
+	for play: DefensePlay in plays:
+		if play.group != group:
+			continue
+		count += 1.0
+		for i: int in CATEGORIES:
+			fit[i] += play.fit(i as OffensePlay.Category)
+	for i: int in CATEGORIES:
+		fit[i] = fit[i] / count if count > 0.0 else 0.5
+	return fit
+
+
+## What a defense can see of an offense before the snap is its formation, not
+## the play: the share of the plays out of formation `group` that are runs,
+## short and deep passes.
+static func formation_mix(plays: Array[OffensePlay], group: OffensePlay.Group) -> PackedFloat32Array:
+	var mix: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
+	var count: float = 0.0
+	for play: OffensePlay in plays:
+		if play.group == group and not play.heave_only:
+			mix[play.category] += 1.0
+			count += 1.0
+	for i: int in CATEGORIES:
+		mix[i] = mix[i] / count if count > 0.0 else 1.0 / float(CATEGORIES)
+	return mix
+
+
+## The play a CPU offense would rather run now that it sees the defense, or
+## null to stay with `called`. It changes when the defense is in the kind of
+## defense (`look`'s tab) that holds up best against the kind of play called,
+## and the coach has a play of a kind that does better against it by
+## Tuning.ai_audible_margin. So what it goes to still fits the down.
+func cpu_audible_offense(plays: Array[OffensePlay], defenses: Array[DefensePlay], game: Game, called: OffensePlay, look: DefensePlay) -> OffensePlay:
+	var fit: PackedFloat32Array = look_fit(defenses, look.group)
+	var mine: float = fit[called.category]
+	if mine < maxf(fit[0], maxf(fit[1], fit[2])) - 0.001:
+		return null
+	var best: Array[OffensePlay] = []
+	var best_fit: float = mine - game.tuning.ai_audible_margin
+	for play: OffensePlay in coach_offense(plays, game):
+		if play == called or play.category == called.category:
+			continue
+		var against: float = fit[play.category]
+		if against < best_fit - 0.001:
+			best_fit = against
+			best.clear()
+		if against <= best_fit + 0.001:
+			best.append(play)
+	return best.pick_random() if not best.is_empty() else null
+
+
+## The play a CPU defense would rather be in now that it sees the offense's
+## formation, or null to stay with `called`: the one of the coach's plays that
+## holds up best against what comes out of that formation, when that is better
+## than `called` by Tuning.ai_audible_defense_margin.
+func cpu_audible_defense(plays: Array[DefensePlay], offenses: Array[OffensePlay], game: Game, called: DefensePlay, formation: OffensePlay.Group) -> DefensePlay:
+	var mix: PackedFloat32Array = formation_mix(offenses, formation)
+	var best: DefensePlay = null
+	var best_fit: float = _mix_fit(called, mix) + game.tuning.ai_audible_defense_margin
+	for play: DefensePlay in coach_defense(plays, game):
+		var against: float = _mix_fit(play, mix)
+		if play != called and against >= best_fit:
+			best = play
+			best_fit = against
+	return best
+
+
+## How well `play` holds up against run, short and deep in the shares of `mix`.
+func _mix_fit(play: DefensePlay, mix: PackedFloat32Array) -> float:
+	var fit: float = 0.0
+	for i: int in CATEGORIES:
+		fit += mix[i] * play.fit(i as OffensePlay.Category)
+	return fit
+
+
+## Brings `picked` up to `count` runs (`run`) or passes with plays of the book,
+## drawn by what each is worth calling now. Not `called`, not one of `others`,
+## no goal line play away from the goal line.
+func _top_up(picked: Array[OffensePlay], count: int, run: bool, plays: Array[OffensePlay], game: Game, called: OffensePlay, others: Array[OffensePlay]) -> void:
+	if picked.size() >= count:
+		return
+	var weights: PackedFloat32Array = _offense_weights(plays, game)
+	for i: int in plays.size():
+		var play: OffensePlay = plays[i]
+		if (play.category == OffensePlay.Category.RUN) != run or play == called or others.has(play) or _goal_line_scale(play.goal_line, game) < 1.0:
+			weights[i] = 0.0
+	while picked.size() < count:
+		for i: int in plays.size():
+			if picked.has(plays[i]):
+				weights[i] = 0.0
+		if _sum(weights) <= 0.0:
+			return
+		picked.append(plays[_weighted(weights)])
 
 
 ## How much each defensive play is worth calling now: how well it holds up
