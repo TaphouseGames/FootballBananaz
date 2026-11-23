@@ -15,6 +15,11 @@ const CARD_BORDER: Color = Color(0.32, 0.38, 0.35)
 const CARD_SELECTED_BORDER: Color = Color(1.0, 1.0, 1.0)
 const NAME_COLOR: Color = Color(0.82, 0.84, 0.82)
 const NAME_SELECTED_COLOR: Color = Color(1.0, 0.9, 0.2)
+const NOTE_COLOR: Color = Color(0.6, 0.66, 0.62)
+## The tab of the plays the coach advises. Its title stands out from the tabs
+## of the book.
+const COACH_TAB: String = "ASK COACH"
+const COACH_TAB_COLOR: Color = Color(1.0, 0.85, 0.1)
 const COUNTDOWN_WARN_COLOR: Color = Color(1.0, 0.3, 0.25)
 
 var game: Game
@@ -126,8 +131,9 @@ func set_hint(text: String) -> void:
 
 
 ## `plays` holds the OffensePlay or DefensePlay resources of one tab, shown as a
-## grid of cards in playbook order. `tabs` names every tab; `tab` is the open one.
-func show_play_select(title: String, tabs: PackedStringArray, tab: int, plays: Array[Resource]) -> void:
+## grid of cards in that order. `tabs` names every tab; `tab` is the open one.
+## `notes`, when given, has a line for each card to show small under its name.
+func show_play_select(title: String, tabs: PackedStringArray, tab: int, plays: Array[Resource], notes: PackedStringArray = PackedStringArray()) -> void:
 	_show_tabs(tabs, tab)
 	for card: PanelContainer in _cards:
 		# Out of the grid at once, so a page change never shows both pages.
@@ -158,6 +164,14 @@ func show_play_select(title: String, tabs: PackedStringArray, tab: int, plays: A
 		name_label.add_theme_constant_override(&"outline_size", 6)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		column.add_child(name_label)
+
+		if i < notes.size():
+			var note: Label = Label.new()
+			note.text = notes[i]
+			note.add_theme_font_size_override(&"font_size", 13)
+			note.add_theme_color_override(&"font_color", NOTE_COLOR)
+			note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			column.add_child(note)
 
 		var diagram: PlayDiagram = PlayDiagram.new()
 		diagram.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -203,7 +217,8 @@ func _show_tabs(tabs: PackedStringArray, tab: int) -> void:
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override(&"font_size", 20)
-		label.add_theme_color_override(&"font_color", NAME_SELECTED_COLOR if selected else NAME_COLOR)
+		var color: Color = COACH_TAB_COLOR if tabs[i] == COACH_TAB else NAME_COLOR
+		label.add_theme_color_override(&"font_color", NAME_SELECTED_COLOR if selected else color)
 		label.add_theme_stylebox_override(&"normal", _tab_selected_style if selected else _tab_style)
 		play_tabs.add_child(label)
 

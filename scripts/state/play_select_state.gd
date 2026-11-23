@@ -1,12 +1,17 @@
 extends GameState
 ## Both sides pick a play. The person picks from their side's playbook on a grid
-## of cards; the CPU's PlayCaller picks for the other side.
+## of cards; the CPU's PlayCaller picks for the other side. The first tab is the
+## coach's: the plays of the book that fit the situation best
+## (PlayCaller.coach_offense and coach_defense).
 
 const INPUT_LOCK: float = 0.25
+## The place of the coach's tab (HUD.COACH_TAB) among the tabs. The book's tabs
+## follow it in Group order.
+const COACH_GROUP: int = 0
 
-## The plays of the person's side by tab (OffensePlay.Group or
-## DefensePlay.Group) and the tabs' titles, the open tab and its plays, and the
-## cursor's place and the number of cards on that tab.
+## The plays of the person's side by tab (the coach's, then one per
+## OffensePlay.Group or DefensePlay.Group) and the tabs' titles, the open tab and
+## its plays, and the cursor's place and the number of cards on that tab.
 var _groups: Array[Array] = []
 var _group_names: PackedStringArray = PackedStringArray()
 var _group: int = 0
@@ -25,17 +30,23 @@ func enter() -> void:
 	if not game.human.is_active():
 		return
 	_human_on_offense = game.human.team == game.offense
-	_group_names = OffensePlay.GROUP_NAMES if _human_on_offense else DefensePlay.GROUP_NAMES
+	_group_names = PackedStringArray([HUD.COACH_TAB])
+	_group_names.append_array(OffensePlay.GROUP_NAMES if _human_on_offense else DefensePlay.GROUP_NAMES)
 	_groups.clear()
 	for i: int in _group_names.size():
 		_groups.append([])
 	if _human_on_offense:
+		_groups[COACH_GROUP].assign(game.play_caller.coach_offense(game.offense_playbook.plays, game))
 		for play: OffensePlay in game.offense_playbook.plays:
-			_groups[play.group].append(play)
+			_groups[_tab_of(play)].append(play)
 	else:
+		_groups[COACH_GROUP].assign(game.play_caller.coach_defense(game.defense_playbook.plays, game))
 		for play: DefensePlay in game.defense_playbook.plays:
-			_groups[play.group].append(play)
-	_group = 0
+			_groups[_tab_of(play)].append(play)
+	# The coach's tab, or the first of the book with nothing on that.
+	_group = COACH_GROUP
+	while _groups[_group].is_empty() and _group < _groups.size() - 1:
+		_group += 1
 	_flipped = false
 	_show_group()
 	_show_hint()
@@ -61,7 +72,12 @@ func _show_group() -> void:
 	_count = _plays.size()
 	_cursor = 0
 	var title: String = "%s  -  %s" % ["OFFENSE" if _human_on_offense else "DEFENSE", game.down_text()]
-	game.hud.show_play_select(title, _group_names, _group, _plays)
+	# The coach's plays are from all over the book: each card says where from.
+	var notes: PackedStringArray = PackedStringArray()
+	if _group == COACH_GROUP:
+		for play: Resource in _plays:
+			notes.append(_group_names[_tab_of(play)])
+	game.hud.show_play_select(title, _group_names, _group, _plays, notes)
 	game.hud.set_play_flipped(_flipped)
 
 
@@ -108,6 +124,12 @@ func physics_update(delta: float) -> void:
 	if Input.is_action_just_pressed(&"confirm"):
 		game.audio.play(&"ui_confirm")
 		_confirm(_plays[_cursor])
+
+
+## The tab of the book `play` is on.
+func _tab_of(play: Resource) -> int:
+	var group: int = (play as OffensePlay).group if play is OffensePlay else (play as DefensePlay).group
+	return group + 1
 
 
 ## Moves the cursor one card across or down the grid, wrapping at the edges.

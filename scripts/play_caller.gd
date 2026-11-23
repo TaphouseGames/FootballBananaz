@@ -84,6 +84,84 @@ func run_share(team: Team) -> float:
 
 
 func pick_defense(plays: Array[DefensePlay], game: Game) -> DefensePlay:
+	return plays[_weighted(_defense_weights(plays, game))]
+
+
+func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
+	if situation(game).heave:
+		var deep: PackedFloat32Array = _heave_weights(plays)
+		if _sum(deep) > 0.0:
+			return plays[_weighted(deep)]
+	return plays[_weighted(_offense_weights(plays, game))]
+
+
+## The coach's advice to an offense: `count` plays for this down, the first one
+## his first choice. As many runs, short and deep passes as the situation asks
+## for, the kind it asks for most first. Which plays of a kind is drawn afresh
+## every time, as plays of a kind mostly fit an ordinary down equally well.
+func coach_offense(plays: Array[OffensePlay], game: Game, count: int = HUD.PAGE_SIZE) -> Array[OffensePlay]:
+	var picks: Array[OffensePlay] = []
+	if situation(game).heave:
+		# The deepest throws in the book, deepest first.
+		var deep: PackedFloat32Array = _heave_weights(plays)
+		for i: int in _ranked(deep):
+			if picks.size() < count and deep[i] > 0.0:
+				picks.append(plays[i])
+		if picks.size() >= count:
+			return picks
+	var weights: PackedFloat32Array = _offense_weights(plays, game)
+	# What can be drawn, by kind. A goal line play away from the goal line and
+	# the heave-only play are not advice for this down.
+	var pools: Array[Array] = [[], [], []]
+	for i: int in plays.size():
+		var play: OffensePlay = plays[i]
+		if weights[i] > 0.0 and not picks.has(play) and _goal_line_scale(play.goal_line, game) >= 1.0:
+			pools[play.category].append(i)
+			# Nine draws with no play twice would thin the goal line plays out
+			# among the many others of the book: here they come first.
+			if play.goal_line:
+				weights[i] *= GOAL_LINE_NEAR
+	var sizes: PackedInt32Array = PackedInt32Array([pools[0].size(), pools[1].size(), pools[2].size()])
+	var want: PackedFloat32Array = _offense_want(game)
+	if situation(game).to_goal <= game.tuning.ai_goal_line_distance:
+		# No room left for a deep ball: those slots go to short passes.
+		want[OffensePlay.Category.SHORT] += want[OffensePlay.Category.DEEP]
+		want[OffensePlay.Category.DEEP] = 0.0
+	var slots: PackedInt32Array = _share_out(want, count - picks.size(), sizes)
+	var order: Array[int] = [0, 1, 2]
+	order.sort_custom(func(a: int, b: int) -> bool: return slots[a] > slots[b] or (slots[a] == slots[b] and a < b))
+	for category: int in order:
+		var pool: Array = pools[category]
+		for n: int in slots[category]:
+			var left: PackedFloat32Array = PackedFloat32Array()
+			for i: int in pool:
+				left.append(weights[i])
+			var drawn: int = _weighted(left)
+			picks.append(plays[pool[drawn]])
+			pool.remove_at(drawn)
+	return picks
+
+
+## The coach's advice to a defense: the `count` plays that hold up best against
+## what the offense is likely to call, the best first.
+func coach_defense(plays: Array[DefensePlay], game: Game, count: int = HUD.PAGE_SIZE) -> Array[DefensePlay]:
+	var weights: PackedFloat32Array = _defense_weights(plays, game)
+	var picks: Array[DefensePlay] = []
+	var spare: Array[DefensePlay] = []
+	for i: int in _ranked(weights):
+		# A goal line stand away from the goal line only when nothing else is left.
+		if _goal_line_scale(plays[i].goal_line, game) >= 1.0:
+			picks.append(plays[i])
+		else:
+			spare.append(plays[i])
+	picks.append_array(spare)
+	return picks.slice(0, count)
+
+
+## How much each defensive play is worth calling now: how well it holds up
+## against what the offense is likely to call, by the situation and by what it
+## has been calling and gaining with.
+func _defense_weights(plays: Array[DefensePlay], game: Game) -> PackedFloat32Array:
 	var expect: PackedFloat32Array = _situation(game)
 	var calls: PackedFloat32Array = _row(_calls, game.offense)
 	var yards: PackedFloat32Array = _row(_yards, game.offense)
@@ -110,29 +188,37 @@ func pick_defense(plays: Array[DefensePlay], game: Game) -> DefensePlay:
 		for i: int in CATEGORIES:
 			fit += expect[i] * play.fit(i as OffensePlay.Category)
 		weights.append((pow(fit, SHARPNESS) + 0.01) * _goal_line_scale(play.goal_line, game))
-	return plays[_weighted(weights)]
+	return weights
 
 
-func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
-	if situation(game).heave:
-		# One play to reach the end zone: a deep pass, the deeper the better, and
-		# no time for a fake.
-		var deep: PackedFloat32Array = PackedFloat32Array()
-		var any: float = 0.0
-		for play: OffensePlay in plays:
-			var depth: float = play.deepest_route() if play.category == OffensePlay.Category.DEEP else 0.0
-			if play.play_action or play.flea_flicker:
-				depth *= 0.5
-			deep.append(depth * depth)
-			any += depth
-		if any > 0.0:
-			return plays[_weighted(deep)]
+## One play to reach the end zone: a deep pass, the deeper the better, and no
+## time for a fake. All zero in a book with no deep pass.
+func _heave_weights(plays: Array[OffensePlay]) -> PackedFloat32Array:
+	var deep: PackedFloat32Array = PackedFloat32Array()
+	for play: OffensePlay in plays:
+		var depth: float = play.deepest_route() if play.category == OffensePlay.Category.DEEP else 0.0
+		if play.play_action or play.flea_flicker:
+			depth *= 0.5
+		deep.append(depth * depth)
+	return deep
+
+
+## How much the offense wants a run, a short and a deep pass now: what the
+## situation asks for, and what this team likes to call, less and less as the
+## clock takes over.
+func _offense_want(game: Game) -> PackedFloat32Array:
 	var want: PackedFloat32Array = _situation(game)
-	# What this team likes to call, less and less as the clock takes over.
 	var now: GameSituation = situation(game)
 	var own_way: float = 1.0 - maxf(now.urgency, now.clock_kill)
 	for i: int in CATEGORIES:
 		want[i] *= lerpf(1.0, game.offense.call_bias[i], own_way)
+	return want
+
+
+## How much each offensive play is worth calling now, the last-play heave aside.
+func _offense_weights(plays: Array[OffensePlay], game: Game) -> PackedFloat32Array:
+	var want: PackedFloat32Array = _offense_want(game)
+	var now: GameSituation = situation(game)
 	var history: Array = _history.get(game.offense, [])
 	# Shared out over the plays of a category, so a playbook with more runs than
 	# deep passes does not run more often for it.
@@ -161,7 +247,7 @@ func pick_offense(plays: Array[OffensePlay], game: Game) -> OffensePlay:
 		elif repeats == 1:
 			weight *= 0.6
 		weights.append(weight)
-	return plays[_weighted(weights)]
+	return weights
 
 
 ## How likely each kind of play is: run, short, deep. From down and distance
@@ -231,6 +317,47 @@ func _goal_line_scale(goal_line_play: bool, game: Game) -> float:
 func _row(table:Dictionary[Team, PackedFloat32Array], team: Team) -> PackedFloat32Array:
 	var fallback: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
 	return table.get(team, fallback)
+
+
+## `count` slots shared out over the three kinds of play in proportion to
+## `want`, no kind getting more than it has plays (`sizes`). Whole slots first,
+## then the largest remainders.
+func _share_out(want: PackedFloat32Array, count: int, sizes: PackedInt32Array) -> PackedInt32Array:
+	var slots: PackedInt32Array = PackedInt32Array([0, 0, 0])
+	var total: float = maxf(_sum(want), 0.001)
+	var left: int = count
+	for i: int in CATEGORIES:
+		slots[i] = mini(floori(want[i] / total * float(count)), sizes[i])
+		left -= slots[i]
+	while left > 0:
+		var best: int = -1
+		var best_due: float = -INF
+		for i: int in CATEGORIES:
+			var due: float = want[i] / total * float(count) - float(slots[i])
+			if slots[i] < sizes[i] and due > best_due:
+				best = i
+				best_due = due
+		if best < 0:
+			break
+		slots[best] += 1
+		left -= 1
+	return slots
+
+
+## The indices of `weights`, the heaviest first; equal ones in their own order.
+func _ranked(weights: PackedFloat32Array) -> Array[int]:
+	var order: Array[int] = []
+	for i: int in weights.size():
+		order.append(i)
+	order.sort_custom(func(a: int, b: int) -> bool: return weights[a] > weights[b] or (weights[a] == weights[b] and a < b))
+	return order
+
+
+func _sum(values: PackedFloat32Array) -> float:
+	var total: float = 0.0
+	for value: float in values:
+		total += value
+	return total
 
 
 func _weighted(weights: PackedFloat32Array) -> int:
