@@ -152,29 +152,19 @@ Every team has a fruit mascot: `assets/stadium/mascot_<team>.glb`, where `<team>
 - **Same clips.** `idle`, `cheer`, `sulk`, `wave`, `run`, `point`, `flex`, `faint`, 30 frames a second. `Mascot._update_visual()` picks one: `faint` while it is knocked down, `run` while it is moving, a clip it has been asked to act out, `cheer` or `sulk` after a touchdown, else `idle`.
 - **Size.** `MASCOT_HEIGHT` (2.8 yards, the banana), but no wider than `MASCOT_WIDTH` (2 yards), so the round ones stand about 2 yards tall.
 
-### Standing by
+### After a touchdown
 
-There is no room between the lines and the wall, so each team's mascot is on the field with its team on every play. It is the team's `Mascot` (`scripts/mascot.gd`, `scenes/mascot.tscn`), a `Player` with `bystander` set: it has no assignment and leaves the ball alone, but it is as solid as anyone.
+There is no room between the lines and the wall, so the mascots are not on the field during a play: each team's `Mascot` (`scripts/mascot.gd`, `scenes/mascot.tscn`, a `Player`) is hidden and is in neither `PlayController.players` nor `Team.players`. Only a touchdown brings one on, and only the scorer's.
 
-- **Where it stands.** `PlayController._place_mascots()` (from `line_up()` and `line_up_kickoff()`) puts it with its own side, out of the way: `mascot_off_depth` (14 yards) behind the line of scrimmage with the offense, `mascot_def_depth` (8 yards) behind the deepest defender with the defense (behind the rearmost man of either team at a kickoff), `mascot_sideline_inset` (1.5 yards) in from its own sideline. The home team's sideline is the one at -Z. It stays there and turns to watch the ball (`PlayerBrain._stand_by()`).
-- **Not one of the team.** It is in `PlayController.players`, so it moves, collides and can be hit like everyone, but not in `Team.players`, so no play gives it a job, nobody covers it, it cannot catch, tip or pick up a ball, and the person cannot switch to it.
-- **Contact.** Bodies keep each other out as usual, and the mascot is `mascot_extra_radius` (0.4 yards) wider than a footballer. A player who runs into it at `mascot_bump_speed` (5 yards a second) or more knocks it over (`PlayController._bump_mascot()`, the stat `mascot_bumps`) and is slowed for `mascot_bump_slow_time`. The person's dive flattens it like any bystander. A carrier who runs into the other team's mascot gets an ordinary tackle attempt from it, broken tackles and fumbles included. Knocked down, it plays `faint` (a model without that clip tips over on its back) and gets up again.
-- **It acts things out.** `Game.mascot_moment(team, clip)` calls `Mascot.react()`, which holds a clip for `ACT_TIME` seconds:
-
-  | What happened | The team's own mascot | The other one |
-  | --- | --- | --- |
-  | A first down | `point` | |
-  | A sack, a stop on fourth down | `flex` (the defense's) | |
-  | An interception, a fumble lost | `flex` (the taker's) | `faint` |
-  | A touchdown | joins the huddle (below) | `faint` |
-
-  `faint` is played once and held (`ONE_SHOT`). A model without one of the three plays a stand-in (`STAND_INS`).
-- **It joins the touchdown huddle.** `PlayController._invite_mascot()` makes the scoring team's mascot one of `Team.players` until the next line-up: it runs over from where it stood, gets a place in the ring like any teammate, can be the victim of a cheap shot, and dives onto the heap with the rest when the person's player dives during the celebration (`PlayController.start_pile_on()`); `_dismiss_mascot()` (from `_reset_play()`) makes it a bystander again. `Tuning.mascot_joins_party` turns it off.
-- `tests/mascot_bystander_check.gd` checks where the two stand, that they never have the ball, that one run into goes over and gets up, and the wall (players kept inside it, a ball landing on the stands).
+- **It comes on out of sight.** `PlayController._invite_mascot()` puts the scoring team's mascot at `_mascot_entry_spot()`: from the scorer toward the camera, `MASCOT_ENTRY_MARGIN` (2 yards) past the first spot where neither its feet nor its head are in the picture, and inside the wall. That is about 15 yards from the scorer, so it runs in from the bottom of the screen in about two seconds.
+- **It joins the huddle.** From then until the next line-up it is one of `Team.players` and of `PlayController.players`: it gets a place in the ring like any teammate, cheers, can be the victim of a cheap shot, and dives onto the heap with the rest when the person's player dives during the celebration (`PlayController.start_pile_on()`). It is `mascot_extra_radius` (0.4 yards) wider than a footballer. Knocked down, it plays `faint` (a model without that clip tips over on its back) and gets up again.
+- **It leaves at the next line-up.** `_dismiss_mascot()` (from `_reset_play()`) takes it out of both lists and hides it. `Tuning.mascot_joins_party` turns the whole thing off.
+- `Mascot.react(clip)` holds a clip (`point`, `flex`, `faint` or any other) for `ACT_TIME` seconds; `faint` is played once and held (`ONE_SHOT`), and a model without one of the three plays a stand-in (`STAND_INS`). The game no longer asks for these (nobody would see them); the gallery does.
+- `tests/mascot_check.gd` checks that neither mascot is to be seen or on the field during a play, that one never has the ball, and the wall (players kept inside it, a ball landing on the stands).
 
 ### On the team select
 
-`TeamSelect` stands each side's mascot on the top edge of its panel (`_build_mascot()`, `_show_mascot()`): the same model, drawn in a small world of its own (a `SubViewport` with a camera and a light) only while the screen is up. It cheers on the side the controller is under and idles on the other. Here a round mascot is not kept small as on the sideline: each is scaled to `MASCOT_TALL`, unless that makes it wider than `MASCOT_WIDE`. `tests/menu_check.gd` checks that each side shows its own team's.
+`TeamSelect` stands each side's mascot on the top edge of its panel (`_build_mascot()`, `_show_mascot()`): the same model, drawn in a small world of its own (a `SubViewport` with a camera and a light) only while the screen is up. It cheers on the side the controller is under and idles on the other. Here a round mascot is not kept small as on the field: each is scaled to `MASCOT_TALL`, unless that makes it wider than `MASCOT_WIDE`. `tests/menu_check.gd` checks that each side shows its own team's.
 
 ### A new mascot
 
@@ -194,10 +184,10 @@ To add a mascot for a new team:
 ## Checks
 
 - `godot --headless --path . --script res://tests/stadium_check.gd` (real time, about 10 s): built, fans behind the wall, shares per side, the number of signs and the room between them, reactions, jumbotron, density, off switch.
-- `godot --path . --resolution 1280x720 --script res://tests/stadium_gallery.gd -- out=<dir> [only=<text>]` (window): screenshots from the game camera, the intro's first and last shot, the wall along a sideline and at an end, each prop, both mascots where a play puts them (`only=mascot home=<team> away=<team>` picks the teams), what they act out and one knocked over, a cheer and a wave. `only=tunnel`, `roof`, `press_box` and `facade` show the modelled pieces. A run with `only=` takes its shots in the first frames, before the signs' and the field's lettering are drawn: blank signs and plain numerals there are not a fault.
+- `godot --path . --resolution 1280x720 --script res://tests/stadium_gallery.gd -- out=<dir> [only=<text>]` (window): screenshots from the game camera, the intro's first and last shot, the wall along a sideline and at an end, each prop, both mascots stood by the sidelines (`only=mascot home=<team> away=<team>` picks the teams), what they act out and one knocked over, a cheer and a wave. `only=tunnel`, `roof`, `press_box` and `facade` show the modelled pieces. A run with `only=` takes its shots in the first frames, before the signs' and the field's lettering are drawn: blank signs and plain numerals there are not a fault.
 - `godot --headless --fixed-fps 60 --path . --script res://tests/wall_probe.gd -- seconds=400` (about a minute): the CPU plays both teams and every bone of every player and mascot is looked at every frame; it fails if any is in the wall, and says in which state.
 - `godot --headless --fixed-fps 60 --path . --script res://tests/wall_check.gd` (a few seconds): the wall as a solid thing. A player run at it stays up and slides along it, one shoved at it from close by is flattened, sticks and gets up, a carrier's dive into it is down (and not flattened when only his hands reach it), a loose ball and a pass come back off it (the pass still live), a carrier or a ball past the sideline is in play, and a ball in the stands is dead. The gallery's `only=wall` shots show the wall's height against a player and the squish from hit to getting up.
-- `tests/celebration_check.gd` checks that the mascot of the scorer's team reaches the huddle and is standing by again at the next line-up.
+- `tests/celebration_check.gd` checks that the mascot of the scorer's team comes on outside the picture, reaches the huddle and is off the field again at the next line-up.
 - `godot --path . --resolution 1400x1000 --script res://tests/crowd_gallery.gd -- out=<dir>` (window): every head on every outfit with the crowd's shader, from the front, behind, the side and in a cheer, each row close up, a fan with a sign and the plainest level.
 - `godot --path . --resolution 1280x720 --script res://tests/stadium_perf.gd -- [stop=jumbotron]` (window): frame times with the stadium off and on; with `stop=jumbotron`, from one stop that looks straight at a jumbotron.
 
@@ -234,7 +224,6 @@ The moulded seats, the rails, the tunnel mouths, the facade, the roof and the pr
 - A ball in the stands lies on the row it landed on, among the fans; it does not bounce off them, and nobody throws it back.
 - With no sideline to run out of, plays to the edge gain more than they did and the clock never stops for a carrier going out. Nothing has been retuned for that yet.
 - Being flattened on the wall has no sound of its own: it plays the big hit lower.
-- The CPU does not steer round a mascot standing by (its brains only look at `Team.players`), and the other team's mascot will tackle a carrier who runs into it.
 - The kit has men only so far (3 heads, 3 outfits, 1 pair of legs, all in the colours of their own textures, so shirts do not show the teams' colours); the women are to come. Until then `crowd_female_share` does nothing.
 - A fan with a sign always wears the first outfit (the jersey): only that one is made with the arms up, to save draw calls.
 - Beyond `crowd_lod_far` every fan of a gender has the same shape (colours still differ), and at the middle level the faces are rough. Neither shows from the game camera; they do in a close shot of a far stand.

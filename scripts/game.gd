@@ -318,12 +318,10 @@ func resolve_play(result: PlayController.Result, spot_x: float, final_team: Team
 				_set_first_down_target()
 				add_stat(&"first_downs")
 				audio.crowd_react(offense, 0.5)
-				mascot_moment(offense, &"point")
 			else:
 				down += 1
 
 	if down > tuning.downs_per_series:
-		mascot_moment(defense, &"flex")
 		start_drive(defense, los_x)
 		add_stat(&"turnovers")
 		banner_text = "TURNOVER ON DOWNS"
@@ -414,12 +412,6 @@ func is_playoff() -> bool:
 ## The season this match is a game of, or null: an exhibition, or a test.
 func season() -> Season:
 	return Season.current if season_match and not autoplay else null
-
-
-## Something for `team`'s mascot to act out where it stands: "point", "flex"
-## or "faint" (see Mascot.react).
-func mascot_moment(team: Team, clip: StringName) -> void:
-	team.mascot.react(clip)
 
 
 func add_stat(key: StringName, amount: int = 1) -> void:

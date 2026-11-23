@@ -113,8 +113,12 @@ var _flick_ready: float = 0.0
 ## the kick goes to, and there is no quarterback or play call.
 var kickoff: bool = false
 ## The scoring team's mascot while it is on the field for the party round the
-## scorer (see _invite_mascot); null while it is on its sideline.
+## scorer (see _invite_mascot); null the rest of the time, when it is away.
 var _mascot_guest: Mascot
+## Yards beyond the edge of the picture the mascot comes on at, and the furthest
+## from the scorer that is looked for.
+const MASCOT_ENTRY_MARGIN: float = 2.0
+const MASCOT_ENTRY_MAX: float = 45.0
 var returner: Player
 ## The returner gave himself up in his own end zone, or ran out of the back of it.
 var was_touchback: bool = false
@@ -300,7 +304,6 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 	_roll_technique(p_def)
 	_roll_takeout()
 	_roll_play_action()
-	_place_mascots()
 	var now: GameSituation = game.play_caller.situation(game)
 	qb_urgency = now.urgency
 	heave = now.heave and not p_off.is_run
@@ -600,7 +603,7 @@ func hole_lane() -> Vector2:
 	var left: float = reach
 	var right: float = reach
 	for player: Player in players:
-		if player == runner or player.bystander or player.is_down():
+		if player == runner or player.is_down():
 			continue
 		if player.team == offense and (player == qb or not player.brain.route.is_empty()):
 			continue
@@ -812,7 +815,6 @@ func line_up_kickoff() -> void:
 			spot = Vector3(los_x - float(kick_dir) * 0.7, 0.0, 0.0)
 		player.reset_for_play(spot, -face_off)
 		player.brain.assign_defense(assignment, spot, null, spot)
-	_place_mascots()
 
 	ball.place_on_ground(Vector3(los_x, 0.0, 0.0))
 	game.field.set_markers(los_x, los_x, false)
@@ -845,43 +847,14 @@ func kick_off() -> void:
 	_update_markers()
 
 
-# --- Mascots ---------------------------------------------------------------------
-
-## Everybody on the field: each team's eight and its mascot standing by.
+## Everybody on the field: each team's eight. A mascot is only out there for a
+## touchdown party (see _invite_mascot).
 func _gather_players() -> void:
 	players.clear()
 	for team: Team in [game.home, game.away]:
-		players.append_array(team.players)
-		if team.mascot != null and not players.has(team.mascot):
-			players.append(team.mascot)
+		players.append_array(team.squad)
 	for player: Player in players:
 		player.play = self
-
-
-## Stands each mascot with its own team, out of the way: behind the offense,
-## or behind the deepest man of the defense (of either side at a kickoff), and
-## by its own sideline (the home team's is the one at -Z).
-func _place_mascots() -> void:
-	var back: float = tuning.end_zone_depth - 1.5
-	for team: Team in [offense, defense]:
-		var mascot: Mascot = team.mascot
-		if mascot == null:
-			continue
-		var dir: float = float(team.attack_dir)
-		# Yards up the field the way this team attacks.
-		var rear: float = los_x * dir
-		for player: Player in team.players:
-			rear = minf(rear, player.position.x * dir)
-		var along: float = rear - tuning.mascot_def_depth
-		if team == offense and not kickoff:
-			along = minf(rear - 2.0, los_x * dir - tuning.mascot_off_depth)
-		var side: float = -1.0 if team == game.home else 1.0
-		var spot: Vector3 = Vector3(clampf(along * dir, -back, tuning.field_length + back), 0.0, side * (tuning.half_width() - tuning.mascot_sideline_inset))
-		var toward: Vector3 = Vector3(los_x - spot.x, 0.0, -spot.z)
-		mascot.reset_for_play(spot, toward.normalized())
-		mascot.brain.assign_offense(OffenseAssignment.new(), spot, PackedVector3Array())
-		mascot.bystander = true
-		mascot.play = self
 
 
 ## A defense that has seen this before adjusts. A play it recognises: tighter on
@@ -1266,7 +1239,6 @@ func _start_celebration() -> void:
 	celebration_seed = randi()
 	if scorer == null:
 		return
-	game.mascot_moment(scorer.team.opponent, &"faint")
 	_invite_mascot()
 	# Each teammate comes in on the side he is already on: places go round the
 	# ring in the order the players stand round the scorer now.
@@ -1289,8 +1261,9 @@ func _start_celebration() -> void:
 	_roll_cheap_shot()
 
 
-## The scoring team's mascot leaves its spot and joins the party round the
-## scorer: it is one of the team until the next line-up (_dismiss_mascot).
+## The scoring team's mascot, which is not on the field during a play, turns up
+## out of the camera's sight and runs in to join the party round the scorer: it
+## is one of the team until the next line-up (_dismiss_mascot).
 func _invite_mascot() -> void:
 	if _mascot_guest != null or not tuning.mascot_joins_party:
 		return
@@ -1298,19 +1271,50 @@ func _invite_mascot() -> void:
 	var guest: Mascot = team.mascot
 	if guest == null or team.players.has(guest):
 		return
-	guest.bystander = false
+	var spot: Vector3 = _mascot_entry_spot()
+	var toward: Vector3 = scorer.position - spot
+	toward.y = 0.0
+	guest.reset_for_play(spot, toward.normalized() if toward.length_squared() > 0.01 else Vector3(off_dir, 0.0, 0.0))
 	guest.frozen = false
+	guest.play = self
+	guest.visible = true
+	guest.reset_physics_interpolation()
 	team.players.append(guest)
+	players.append(guest)
 	_mascot_guest = guest
 	game.add_stat(&"mascot_parties")
 
 
-## The mascot that joined a celebration is a bystander again.
+## Where the mascot comes onto the field for the party: from the scorer toward
+## the camera, MASCOT_ENTRY_MARGIN yards past the first spot where none of it is
+## in the picture, so it runs in from the bottom of the screen.
+func _mascot_entry_spot() -> Vector3:
+	var camera: Camera3D = game.camera_rig.camera
+	var from: Vector3 = Vector3(scorer.position.x, 0.0, scorer.position.z)
+	var back: Vector3 = camera.global_position - from
+	back.y = 0.0
+	if back.length_squared() < 1.0:
+		back = Vector3(-float(scorer.team.attack_dir), 0.0, 0.0)
+	back = back.normalized()
+	var head: Vector3 = Vector3(0.0, Stadium.MASCOT_HEIGHT + 0.5, 0.0)
+	var away: float = MASCOT_ENTRY_MAX
+	for step: int in range(2, int(MASCOT_ENTRY_MAX)):
+		var at: Vector3 = from + back * float(step)
+		if not camera.is_position_in_frustum(at) and not camera.is_position_in_frustum(at + head):
+			away = float(step) + MASCOT_ENTRY_MARGIN
+			break
+	var spot: Vector3 = Stadium.keep_inside(tuning, from + back * away, tuning.wall_standoff + tuning.mascot_extra_radius)
+	spot.y = 0.0
+	return spot
+
+
+## The mascot that joined a celebration leaves the field again.
 func _dismiss_mascot() -> void:
 	if _mascot_guest == null:
 		return
 	_mascot_guest.team.players.erase(_mascot_guest)
-	_mascot_guest.bystander = true
+	players.erase(_mascot_guest)
+	_mascot_guest.visible = false
 	if human.controlled == _mascot_guest:
 		human.set_controlled(null)
 	_mascot_guest = null
@@ -1450,8 +1454,7 @@ func _splat_on_wall(player: Player) -> void:
 	game.impact(tuning.shove_shake * (1.0 if mine else 0.4), 0.5 if mine else 0.0)
 	game.rumble.play_mine(&"wall", player, null, hard)
 	# Everybody enjoys it but his own fans.
-	if not player.bystander:
-		game.audio.crowd_react(player.team.opponent, 0.35 + 0.25 * hard)
+	game.audio.crowd_react(player.team.opponent, 0.35 + 0.25 * hard)
 	game.audio.remark(&"announcer_hit", AudioDirector.REMARK_HIT)
 
 
@@ -1533,7 +1536,7 @@ func lateral_target(carrier: Player) -> Player:
 	var best: Player = null
 	var best_dist: float = tuning.lateral_range
 	for mate: Player in carrier.team.players:
-		if mate == carrier or mate.bystander or not mate.can_act() or mate.block_partner != null:
+		if mate == carrier or not mate.can_act() or mate.block_partner != null:
 			continue
 		if (mate.position.x - carrier.position.x) * dir > tuning.lateral_forward_slack:
 			continue
@@ -1547,7 +1550,7 @@ func lateral_target(carrier: Player) -> Player:
 ## `carrier` has the ball in his hands and is in a state to pitch it: on his
 ## feet, also with a tackler hanging on him.
 func can_lateral(carrier: Player) -> bool:
-	if ball_dead or carrier == null or ball.carrier != carrier or carrier.bystander or carrier.catch_timer > 0.0:
+	if ball_dead or carrier == null or ball.carrier != carrier or carrier.catch_timer > 0.0:
 		return false
 	if live_time < _lateral_ready or (carrier == qb and faking()):
 		return false
@@ -1631,7 +1634,7 @@ func _pick_pitch_men() -> void:
 	var before: Array[Player] = pitch_men.duplicate()
 	pitch_men.clear()
 	var carrier: Player = ball.carrier
-	if ball_dead or carrier == null or carrier.bystander:
+	if ball_dead or carrier == null:
 		return
 	var backs_only: bool = false
 	if phase == Phase.POCKET:
@@ -1644,7 +1647,7 @@ func _pick_pitch_men() -> void:
 	var found: Array[Player] = []
 	var scores: Dictionary[Player, float] = {}
 	for mate: Player in carrier.team.players:
-		if mate == carrier or mate.bystander or not mate.can_act() or mate.block_partner != null:
+		if mate == carrier or not mate.can_act() or mate.block_partner != null:
 			continue
 		if backs_only and mate.ratings.position != "RB":
 			continue
@@ -1891,7 +1894,7 @@ func pump_fake() -> void:
 	var worth: float = pow(tuning.pump_repeat_scale, float(_pump_count))
 	_pump_count += 1
 	for defender: Player in defense.players:
-		if defender.bystander or defender == human.controlled or not defender.can_act():
+		if defender == human.controlled or not defender.can_act():
 			continue
 		var assignment: DefenseAssignment = defender.brain.def_assign
 		if assignment == null:
@@ -2199,7 +2202,7 @@ func _check_line_tip() -> void:
 		return
 	var spot: Vector3 = ball.flat_position()
 	for defender: Player in defense.players:
-		if defender.bystander or defender.is_down() or defender.state == Player.State.DIVING or _line_tip_tried.has(defender):
+		if defender.is_down() or defender.state == Player.State.DIVING or _line_tip_tried.has(defender):
 			continue
 		var up: bool = defender.is_airborne()
 		var reach: float = tuning.line_tip_radius * (tuning.jump_catch_radius_scale if up else 1.0)
@@ -2468,7 +2471,7 @@ func _check_tipped_ball() -> void:
 	var spot: Vector3 = ball.flat_position()
 	var near: Array[Player] = []
 	for candidate: Player in players:
-		if candidate.bystander or candidate == ball.thrower or _tip_tried.has(candidate.team):
+		if candidate == ball.thrower or _tip_tried.has(candidate.team):
 			continue
 		if reaches_tip(candidate):
 			near.append(candidate)
@@ -2634,8 +2637,6 @@ func _intercept(defender: Player) -> void:
 	game.audio.shout(&"announcer_interception")
 	game.audio.quip(&"color_interception", AudioDirector.QUIP_INTERCEPTION)
 	game.audio.crowd_react(defender.team, 0.9)
-	game.mascot_moment(defender.team, &"flex")
-	game.mascot_moment(defender.team.opponent, &"faint")
 	_add_placement_stat("interceptions")
 	human.on_carrier_changed(defender)
 
@@ -2847,10 +2848,6 @@ func _resolve_contacts(delta: float) -> void:
 			var push: Vector3 = normal * (min_dist - dist) * 0.5
 			_pushes[i] -= push
 			_pushes[j] += push
-			if b.bystander and not a.bystander:
-				_bump_mascot(a, b, normal)
-			elif a.bystander and not b.bystander:
-				_bump_mascot(b, a, -normal)
 			if not enemies:
 				continue
 			if a.is_blocking or b.is_blocking:
@@ -2894,17 +2891,6 @@ func _body_distance(a: Player, b: Player) -> float:
 	if a.team == b.team or a.is_blocking or b.is_blocking:
 		return tuning.player_radius * 2.0 + extra
 	return tuning.body_radius * 2.0 + extra
-
-
-## `runner` has run into a mascot that is standing by (`dir` points from him to
-## it) at some pace: it goes over, whichever team it is with, and he is slowed
-## for a moment.
-func _bump_mascot(runner: Player, mascot: Player, dir: Vector3) -> void:
-	if runner.is_down() or mascot.is_down() or runner.velocity.dot(dir) < tuning.mascot_bump_speed:
-		return
-	_knock_over(runner, mascot, dir)
-	runner.block_slow_timer = maxf(runner.block_slow_timer, tuning.mascot_bump_slow_time)
-	game.add_stat(&"mascot_bumps")
 
 
 ## A second pass over positions only. Pushing one pair apart can push either of
@@ -3122,7 +3108,6 @@ func _finish_tackle(carrier: Player, dir: Vector3, kind: PlayerFall.Kind, tackle
 		game.audio.shout(&"announcer_sack")
 		game.audio.quip(&"color_sack", AudioDirector.QUIP_SACK)
 		game.audio.crowd_react(carrier.team.opponent, 0.7)
-		game.mascot_moment(carrier.team.opponent, &"flex")
 	end_play(Result.TACKLED, _carrier_spot_x(carrier))
 
 
@@ -3220,7 +3205,7 @@ func _check_loose_ball(delta: float) -> void:
 		return
 	var near: Array[Player] = []
 	for candidate: Player in players:
-		if candidate.bystander or candidate.ball_grab_cooldown > 0.0 or not sees_loose_ball(candidate):
+		if candidate.ball_grab_cooldown > 0.0 or not sees_loose_ball(candidate):
 			continue
 		var reach: float = tuning.fumble_scoop_radius
 		if _is_diving(candidate):
@@ -3277,8 +3262,6 @@ func _grab_loose_ball(player: Player) -> void:
 	if player.team != fumbler.team:
 		was_fumble = true
 		game.add_stat(&"fumbles_lost")
-		game.mascot_moment(player.team, &"flex")
-		game.mascot_moment(fumbler.team, &"faint")
 	human.on_carrier_changed(player)
 
 

@@ -1,20 +1,20 @@
 extends SceneTree
-## Headless check of the mascots standing by on the field and of the wall round
-## it. Lines a play up at several spots and lets the CPU play it: each team's
-## mascot is out there with its own side, by its own sideline, is not one of
-## the team's players, never has the ball and never gets past the wall. Then a
-## player is run into a mascot (it goes over, he is slowed, it gets up again),
-## a player is put past the wall (he is brought back inside it), and a ball is
-## dropped over the stands (it comes to rest on them, not under them).
+## Headless check that the mascots are off the field during a play, and of the
+## wall round it. Lines a play up at several spots and lets the CPU play it:
+## neither team's mascot is to be seen, is one of the players on the field or
+## of its team, or has the ball, unless its team has just scored (then it is a
+## guest at the party: see celebration_check.gd), and nobody gets past the
+## wall. Then a player is put past the wall (he is brought back inside it), and
+## a ball is dropped over the stands (it comes to rest on them, not under them).
 ##
-## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/mascot_bystander_check.gd [-- plays=N]
+## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/mascot_check.gd [-- plays=N]
 
 ## Yards from its own goal line each play starts at, in turn.
 const YARDS: PackedFloat32Array = [30.0, 5.0, 92.0, 50.0, 70.0, 12.0]
 ## Physics ticks a play, or one of the checks after them, may take.
 const STUCK_TICKS: int = 1500
 
-enum Step { PLAYS, BUMP, WALL, BALL, DONE }
+enum Step { PLAYS, WALL, BALL, DONE }
 
 var _game: Game
 var _pc: PlayController
@@ -23,9 +23,6 @@ var _played: int = 0
 var _step: int = Step.PLAYS
 var _ticks: int = 0
 var _lined_up: bool = false
-var _runner: Player
-var _went_over: bool = false
-var _bumps_before: int = 0
 var _failures: PackedStringArray = PackedStringArray()
 
 
@@ -50,8 +47,6 @@ func _tick() -> void:
 	match _step:
 		Step.PLAYS:
 			_tick_play()
-		Step.BUMP:
-			_tick_bump()
 		Step.WALL:
 			_tick_wall()
 		Step.BALL:
@@ -74,11 +69,15 @@ func _tick_play() -> void:
 	for team: Team in [_game.home, _game.away]:
 		if team.mascot.has_ball or _pc.ball.carrier == team.mascot:
 			_fail("the %s mascot has the ball" % team.short_name)
+		# Only a touchdown brings one on, and only the scorer's.
+		var party: bool = _pc.ball_dead and _pc.result == PlayController.Result.TOUCHDOWN and _pc.scorer != null and _pc.scorer.team == team
+		if not party:
+			_check_away(team, "during a play")
 	if _pc.ball_dead or _ticks > STUCK_TICKS:
 		_played += 1
 		_lined_up = false
 		if _played >= _plays:
-			_next(Step.BUMP)
+			_next(Step.WALL)
 
 
 func _line_up(yard: float, home_ball: bool) -> void:
@@ -95,69 +94,25 @@ func _line_up(yard: float, home_ball: bool) -> void:
 	_ticks = 0
 
 
+## At the line-up there are the two eights and nobody else, whatever the play
+## before ended in.
 func _check_line_up() -> void:
-	var tuning: Tuning = _game.tuning
-	if _pc.players.size() != 18:
-		_fail("%d on the field, not the two eights and the two mascots" % _pc.players.size())
-	var lane: float = tuning.half_width() - tuning.mascot_sideline_inset
+	if _pc.players.size() != 16:
+		_fail("%d on the field at the line-up, not the two eights" % _pc.players.size())
 	for team: Team in [_game.home, _game.away]:
-		var mascot: Mascot = team.mascot
-		var who: String = "the %s mascot" % team.short_name
-		if not _pc.players.has(mascot) or not mascot.visible:
-			_fail("%s is not on the field" % who)
-			continue
-		if team.players.has(mascot) or team.players.size() != 8:
-			_fail("%s is one of its team's %d players" % [who, team.players.size()])
-		if not mascot.bystander:
-			_fail("%s is not standing by" % who)
-		var side: float = -1.0 if team == _game.home else 1.0
-		if absf(mascot.position.z - side * lane) > 0.05:
-			_fail("%s is at z %.1f, not by its own sideline (%.1f)" % [who, mascot.position.z, side * lane])
-		if mascot.position.x < -tuning.end_zone_depth or mascot.position.x > tuning.field_length + tuning.end_zone_depth:
-			_fail("%s is off the end of the field at x %.1f" % [who, mascot.position.x])
-		# Behind its own team: nobody of its eight is further back than it is,
-		# unless the end line is in the way.
-		var dir: float = float(team.attack_dir)
-		var back_x: float = -(tuning.end_zone_depth - 1.5) if dir > 0.0 else tuning.field_length + tuning.end_zone_depth - 1.5
-		for player: Player in team.players:
-			if player.position.x * dir < mascot.position.x * dir - 0.01 and absf(mascot.position.x - back_x) > 0.01:
-				_fail("%s is in front of its own %s" % [who, player.ratings.display_name])
-				break
+		_check_away(team, "at the line-up")
 
 
-# --- Run into ----------------------------------------------------------------------
-
-func _tick_bump() -> void:
-	var mascot: Mascot = _game.home.mascot
-	if _runner == null:
-		_line_up(40.0, true)
-		_runner = _game.home.players[_game.home.players.size() - 1]
-		_bumps_before = _game.get_stat(&"mascot_bumps")
-		return
-	if not _went_over:
-		# A teammate at a run, a yard short of it and going straight at it.
-		_runner.position = mascot.position + Vector3(1.0, 0.0, 0.0)
-		_runner.velocity = Vector3(-8.0, 0.0, 0.0)
-		if mascot.is_down():
-			_went_over = true
-			if _game.get_stat(&"mascot_bumps") != _bumps_before + 1:
-				_fail("running a mascot over was counted %d times" % (_game.get_stat(&"mascot_bumps") - _bumps_before))
-			if _runner.block_slow_timer <= 0.0:
-				_fail("the player who ran into the mascot was not slowed")
-			if _runner.is_down():
-				_fail("the player who ran into the mascot went down himself")
-			# Out of its way while it gets up.
-			_runner.position = mascot.position + Vector3(8.0, 0.0, 0.0)
-			_ticks = 0
-		elif _ticks > 30:
-			_fail("a player run into the mascot for half a second did not knock it over")
-			_next(Step.WALL)
-		return
-	if not mascot.is_down():
-		_next(Step.WALL)
-	elif _ticks > STUCK_TICKS:
-		_fail("the mascot never got up again")
-		_next(Step.WALL)
+## `team`'s mascot is off the field: not to be seen and nobody's player.
+func _check_away(team: Team, when: String) -> void:
+	var mascot: Mascot = team.mascot
+	var who: String = "the %s mascot" % team.short_name
+	if mascot.visible:
+		_fail("%s is to be seen %s" % [who, when])
+	if _pc.players.has(mascot):
+		_fail("%s is on the field %s" % [who, when])
+	if team.players.has(mascot) or team.players.size() != 8:
+		_fail("%s is one of its team's %d players %s" % [who, team.players.size(), when])
 
 
 # --- The wall ----------------------------------------------------------------------
@@ -231,12 +186,12 @@ func _fail(what: String) -> void:
 
 func _finish() -> void:
 	physics_frame.disconnect(_tick)
-	print("Played %d plays with the mascots standing by." % _played)
+	print("Played %d plays with the mascots off the field." % _played)
 	if _failures.is_empty():
-		print("mascot_bystander_check PASSED")
+		print("mascot_check PASSED")
 		quit(0)
 	else:
 		for failure: String in _failures:
 			print("FAIL: %s" % failure)
-		print("mascot_bystander_check FAILED")
+		print("mascot_check FAILED")
 		quit(1)

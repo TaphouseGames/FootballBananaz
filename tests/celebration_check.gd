@@ -25,6 +25,10 @@ var _gathered_total: int = 0
 var _mates_total: int = 0
 var _floored: int = 0
 var _mascots_there: int = 0
+## Whether this score's mascot has been looked at as it came on, and the yards
+## from the scorer they came on at, added up.
+var _entry_seen: bool = false
+var _entry_total: float = 0.0
 ## Every other score one of the scorer's teammates dives during the party, as
 ## the person's player might, and the rest are to pile on him.
 var _pile_diver: Player
@@ -78,6 +82,7 @@ func _tick() -> void:
 			carrier.position = Vector3(_game.tuning.goal_x(carrier.team.attack_dir) + dir * 3.0, 0.0, 0.0)
 			_scorer_start = carrier.position
 			_sampled = false
+			_entry_seen = false
 			_pile_diver = null
 			_pile_joined.clear()
 			_pile_worst = 0.0
@@ -86,6 +91,7 @@ func _tick() -> void:
 			if state == &"Live":
 				return
 			if state == &"Scored":
+				_entry()
 				_pile()
 				if not _sampled and _pc.state_machine.current.time_in_state >= _game.tuning.scored_banner_time - 0.2:
 					_sample()
@@ -107,11 +113,27 @@ func _snap() -> void:
 	_game.clock = 100.0
 	_game.start_drive(team, _game.tuning.yard_to_x(team.attack_dir, 92.0))
 	_pc.line_up(_game.offense_playbook.plays[0], _game.defense_playbook.plays[0])
-	# The mascot that joined the last party is standing by again.
-	if _pc.players.size() != 18 or team.players.size() != 8 or not team.mascot.bystander:
+	# The mascot that joined the last party has left the field again.
+	if _pc.players.size() != 16 or team.players.size() != 8 or team.mascot.visible:
 		_failures.append("score %d: %d players lined up, %d of them the home team's" % [_scores + 1, _pc.players.size(), team.players.size()])
 	_pc.snap()
 	_pc.state_machine.transition(&"Live")
+
+
+## Where the scorer's mascot comes onto the field: out of the camera's sight,
+## looked at once, on the first tick of the celebration.
+func _entry() -> void:
+	if _entry_seen or not _game.tuning.mascot_joins_party or _pc.scorer == null:
+		return
+	_entry_seen = true
+	var guest: Mascot = _pc.scorer.team.mascot
+	if not _pc.players.has(guest):
+		return
+	var camera: Camera3D = _game.camera_rig.camera
+	var away: float = _flat(guest.position, _pc.scorer.position)
+	_entry_total += away
+	if camera.is_position_in_frustum(guest.position) or camera.is_position_in_frustum(guest.position + Vector3(0.0, Stadium.MASCOT_HEIGHT, 0.0)):
+		_failures.append("score %d: the mascot came on in the picture, %.1f yd from the scorer" % [_scores + 1, away])
 
 
 ## Starts the pile-on on every other score and keeps track of who dives in and
@@ -173,10 +195,10 @@ func _sample() -> void:
 	else:
 		_gathered_total += gathered
 		_mates_total += scorer.team.players.size() - 1
-	# The mascot standing by with the scorer's team has joined the huddle.
+	# The mascot of the scorer's team has come on and joined the huddle.
 	if _game.tuning.mascot_joins_party:
 		var guest: Mascot = scorer.team.mascot
-		if not scorer.team.players.has(guest) or not guest.visible or guest.bystander:
+		if not scorer.team.players.has(guest) or not guest.visible or not _pc.players.has(guest):
 			_failures.append("score %d: the mascot of the scorer's team did not join the party" % (_scores + 1))
 		elif _flat(guest.position, scorer.position) <= ring + 1.5:
 			_mascots_there += 1
@@ -212,7 +234,7 @@ func _finish() -> void:
 			_failures.append("only %.0f%% of the team piled on" % (joined * 100.0))
 		if _game.get_stat(&"pile_ons") != _piles:
 			_failures.append("%d pile-ons counted in %d started" % [_game.get_stat(&"pile_ons"), _piles])
-	print("The mascot was in the huddle at the end of %d of them." % _mascots_there)
+	print("The mascot was in the huddle at the end of %d of them; it came on %.1f yd from the scorer on average." % [_mascots_there, _entry_total / float(maxi(_scores, 1))])
 	if _game.tuning.mascot_joins_party and float(_mascots_there) < 0.7 * float(_scores):
 		_failures.append("the mascot reached the huddle in only %d of %d scores" % [_mascots_there, _scores])
 	if _game.get_stat(&"spikes") < _scores - shots:

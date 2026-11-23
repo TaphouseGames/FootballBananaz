@@ -219,8 +219,7 @@ func _check_reactions() -> void:
 				if not play.is_run:
 					_expect(_pc.eligible == order, "snap: %s: the pass buttons changed" % where)
 				for player: Player in _pc.players:
-					if not player.bystander:
-						_expect(not player.frozen, "snap: %s: somebody is still frozen" % where)
+					_expect(not player.frozen, "snap: %s: somebody is still frozen" % where)
 		if _detail:
 			print("  %-20s %-7s followed in %2d of %d line-ups, biggest zone shift %.1f yd" % [play.play_name, OffensePlay.Motion.keys()[play.motion], play_followed, defenses.size() * 2, play_shift])
 	_counts["followed"] = followed
@@ -292,8 +291,7 @@ func _check_back() -> void:
 		if not play.is_run:
 			_expect(_pc.eligible == order, "back: %s: the pass buttons changed" % where)
 		for player: Player in _pc.players:
-			if not player.bystander:
-				_expect(not player.frozen, "back: %s: somebody is still frozen" % where)
+			_expect(not player.frozen, "back: %s: somebody is still frozen" % where)
 	print("back: %d line-ups called back" % runs)
 
 

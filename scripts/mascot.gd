@@ -1,10 +1,10 @@
 class_name Mascot
 extends Player
-## A team's mascot. It is on the field with its team on every play, standing
-## by out of the way (Player.bystander, PlayController._place_mascots): no part
-## of the play, but as solid as anyone, so it can be run into and knocked over.
-## After a touchdown the scorer's one joins the party round the scorer
-## (PlayController._invite_mascot). It is Stadium.mascot_model with that
+## A team's mascot. It is not on the field during a play: hidden, and not one
+## of PlayController.players. After a touchdown the scorer's one turns up out
+## of the camera's sight and runs in to join the party round the scorer, as
+## one of the team (PlayController._invite_mascot), until the next line-up
+## sends it off again. It is Stadium.mascot_model with that
 ## model's own clips, not a PlayerModel, so it has no PlayerAnimator. Every
 ## mascot has the same ratings: 50 in everything.
 

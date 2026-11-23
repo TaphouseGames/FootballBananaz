@@ -246,7 +246,7 @@ func _next() -> void:
 
 	_row.clear()
 	for player: Player in _cpu.players:
-		if player != back and player != _pc.qb and not player.bystander and _row.size() < ROW.size():
+		if player != back and player != _pc.qb and _row.size() < ROW.size():
 			player.ratings = player.ratings.duplicate() as PlayerRatings
 			_row.append(player)
 	if kind == Kind.WHISTLE:

@@ -225,9 +225,6 @@ func think(pc: PlayController, delta: float) -> void:
 	_decision_timer = maxf(_decision_timer - delta, 0.0)
 	_lane_timer = maxf(_lane_timer - delta, 0.0)
 	_hurdle_timer = maxf(_hurdle_timer - delta, 0.0)
-	if player.bystander:
-		_stand_by(pc)
-		return
 	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
 #	if _leap != Leap.NONE:
 #		_think_leap(pc)
@@ -272,22 +269,6 @@ func think(pc: PlayController, delta: float) -> void:
 			_think_loose(pc)
 		PlayController.Phase.TIPPED:
 			_think_tipped(pc)
-
-
-## A mascot on the field with its team: it stays where it was put and watches
-## the ball, and hangs its head when the other side scores.
-func _stand_by(pc: PlayController) -> void:
-	if not player.can_act():
-		return
-	if pc.ball_dead:
-		player.look_dir = Vector3.ZERO
-		if pc.result == PlayController.Result.TOUCHDOWN and pc.scorer != null and not pc.is_celebrating(player):
-			_sulk(pc)
-		return
-	var to_ball: Vector3 = pc.ball.flat_position() - player.position
-	to_ball.y = 0.0
-	if to_ball.length_squared() > 1.0:
-		player.look_dir = to_ball.normalized()
 
 
 # --- Tipped pass ---------------------------------------------------------------

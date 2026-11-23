@@ -24,8 +24,7 @@ var score: int = 0
 var opponent: Team
 ## Who plays for this team: its eight, and its mascot while it is a guest at
 ## a touchdown party (PlayController._invite_mascot). The eight are always in
-## `squad`. The mascot is on the field with them, but only stands by (see
-## Player.bystander), so otherwise it is not one of these.
+## `squad`. The rest of the time the mascot is off the field and hidden.
 var players: Array[Player] = []
 var squad: Array[Player] = []
 var mascot: Mascot
@@ -59,4 +58,4 @@ func setup(tuning: Tuning, p_opponent: Team) -> void:
 		mascot.setup(self, squad.size(), tuning, Mascot.ratings_for(self))
 	players.clear()
 	players.append_array(squad)
-	mascot.bystander = true
+	mascot.visible = false

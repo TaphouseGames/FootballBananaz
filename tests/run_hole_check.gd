@@ -266,7 +266,7 @@ func _print_bodies(lane: float) -> void:
 	for player: Player in _pc.players:
 		var depth: float = (player.position.x - _pc.los_x) * _pc.off_dir
 		var across: float = player.position.z - _pc.run_hole.z
-		if player.bystander or depth < -4.0 or depth > 4.0 or absf(across) > 5.0:
+		if depth < -4.0 or depth > 4.0 or absf(across) > 5.0:
 			continue
 		var tag: String = "O" if player.team == _pc.offense else "D"
 		if player == _pc.runner:

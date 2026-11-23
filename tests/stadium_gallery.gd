@@ -1,7 +1,7 @@
 extends SceneTree
 ## Pictures of the stadium: the game camera at both ends and midfield, the
 ## looks across at each stand, the intro's opening shot, close-ups of the
-## crowd, the wall and the props, the mascots standing by, then a home cheer
+## crowd, the wall and the props, the mascots, then a home cheer
 ## and a wave. Needs a window (no
 ## --headless), since headless does not render.
 ##
@@ -83,8 +83,9 @@ func _run() -> void:
 	await _shoot("field_numbers_far", Vector3(70.0, 13.0, -19.0), Vector3(70.0, 0.0, -12.0))
 	await _shoot("field_corner", Vector3(88.0, 7.0, 6.0 + out), Vector3(108.0, 0.0, 19.0 + out))
 	await _shoot("field_overhead", Vector3(50.0, 95.0, 0.5), Vector3(50.0, 0.0, 0.0))
-	# The mascots stand by with their teams. A play is lined up at midfield and
-	# stopped there, so that they are where a play puts them.
+	# The mascots are off the field during a play: a play is lined up at
+	# midfield and stopped there, and the two are stood by the sidelines for
+	# their pictures.
 	var pc: PlayController = _game.play_controller
 	_game.start_drive(_game.home, 50.0)
 	pc.line_up(_game.offense_playbook.plays[0], _game.defense_playbook.plays[0])
@@ -92,9 +93,14 @@ func _run() -> void:
 	pc.process_mode = Node.PROCESS_MODE_DISABLED
 	_game.ball.process_mode = Node.PROCESS_MODE_DISABLED
 	var dir: Vector3 = Vector3(float(_game.home.attack_dir), 1.0, 1.0)
-	await _shoot("mascots_cam", Vector3(50.0, 0.0, 0.0) + back * dir, Vector3(50.0, 0.0, 0.0) + ahead * dir)
 	var home_mascot: Mascot = _game.home.mascot
 	var away_mascot: Mascot = _game.away.mascot
+	var lane: float = _game.tuning.half_width() - 1.5
+	home_mascot.reset_for_play(Vector3(50.0 - 14.0 * dir.x, 0.0, -lane), Vector3(dir.x, 0.0, 0.0))
+	away_mascot.reset_for_play(Vector3(50.0 + 14.0 * dir.x, 0.0, lane), Vector3(-dir.x, 0.0, 0.0))
+	home_mascot.visible = true
+	away_mascot.visible = true
+	await _shoot("mascots_cam", Vector3(50.0, 0.0, 0.0) + back * dir, Vector3(50.0, 0.0, 0.0) + ahead * dir)
 	var close_home: Array[Vector3] = [home_mascot.position + Vector3(2.5, 1.8, 6.0), home_mascot.position + Vector3(0.0, 1.5, 0.0)]
 	var close_away: Array[Vector3] = [away_mascot.position + Vector3(2.5, 1.8, -6.0), away_mascot.position + Vector3(0.0, 1.5, 0.0)]
 	await _shoot("mascot", close_home[0], close_home[1])

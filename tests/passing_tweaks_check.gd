@@ -257,7 +257,7 @@ func _next() -> void:
 		player.position = Vector3(tuning.field_length * 0.5 - _dir * 35.0, 0.0, float(player.index) * 2.0 - 30.0)
 		player.velocity = Vector3.ZERO
 		player.frozen = true
-		if player.team != _team and not player.bystander and player.brain.def_assign != null:
+		if player.team != _team and player.brain.def_assign != null:
 			var job: DefenseAssignment.Job = player.brain.def_assign.job
 			var covers: bool = job == DefenseAssignment.Job.MAN or job == DefenseAssignment.Job.ZONE
 			if _case == Case.PUMP_TAP and covers:

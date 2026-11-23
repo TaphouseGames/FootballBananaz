@@ -74,9 +74,6 @@ var state: State = State.NORMAL
 var state_timer: float = 0.0
 ## True before the snap: the player holds his spot.
 var frozen: bool = true
-## On the field but not in the play: a mascot standing by with its team. It
-## has no assignment and leaves the ball alone, but it is as solid as anyone.
-var bystander: bool = false
 ## Yards wider than a footballer (a mascot is).
 var extra_radius: float = 0.0
 var has_ball: bool = false

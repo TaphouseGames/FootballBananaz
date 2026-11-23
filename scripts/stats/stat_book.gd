@@ -26,8 +26,8 @@ func setup(home: Team, away: Team) -> void:
 		teams[team] = TeamLine.new()
 		for player: Player in team.squad:
 			players[player] = PlayerLine.new()
-		# The mascot can bring a carrier down who runs into it: it has a line
-		# to write to, which no table shows.
+		# The mascot is one of the team during a touchdown party: it has a
+		# line to write to, which no table shows.
 		players[team.mascot] = PlayerLine.new()
 
 

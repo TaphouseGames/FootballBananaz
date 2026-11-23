@@ -950,7 +950,7 @@ extends Resource
 @export var celebration_ring_radius: float = 2.4
 ## Seconds after the whistle that the scorer spikes the ball.
 @export var celebration_spike_time: float = 0.5
-## The scoring team's mascot leaves the spot it stands by at and joins the huddle
+## The scoring team's mascot runs onto the field and joins the huddle
 ## round the scorer.
 @export var mascot_joins_party: bool = true
 ## The person's player dives during his team's celebration and the rest pile on
@@ -1500,18 +1500,9 @@ extends Resource
 @export var camera_swing_time: float = 0.8
 
 @export_group("Mascots")
-## Each team's mascot stands on the field with its side, out of the way: this
-## far behind the line of scrimmage with the offense, this far behind the
-## deepest defender with the defense, and this far in from its own sideline.
-@export var mascot_off_depth: float = 14.0
-@export var mascot_def_depth: float = 8.0
-@export var mascot_sideline_inset: float = 1.5
-## It is wider than a footballer by this much (yards added to its radius).
+## A mascot (on the field only for its team's touchdown party) is wider than a
+## footballer by this much (yards added to its radius).
 @export var mascot_extra_radius: float = 0.4
-## Run into at this speed or more, it goes over; whoever did it is slowed for
-## this long.
-@export var mascot_bump_speed: float = 5.0
-@export var mascot_bump_slow_time: float = 0.5
 
 @export_group("Stadium")
 ## Yards from the sidelines and the end lines to the face of the wall: the

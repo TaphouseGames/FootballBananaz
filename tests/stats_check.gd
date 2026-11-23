@@ -112,7 +112,7 @@ func _check_book() -> void:
 
 		var sum: PlayerLine = PlayerLine.new()
 		var defense: PlayerLine = PlayerLine.new()
-		# The eight and the mascot, which can make a tackle where it stands.
+		# The eight and the mascot, which is one of them at a touchdown party.
 		var everyone: Array[Player] = team.squad.duplicate()
 		everyone.append(team.mascot)
 		for player: Player in everyone:
