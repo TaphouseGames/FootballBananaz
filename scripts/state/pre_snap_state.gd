@@ -19,7 +19,9 @@ extends GameState
 ##  - (Y), on offense: a hot route. A pass button picks the receiver, the stick
 ##    his route: on the left stick up a streak, down a curl, left or right a
 ##    slant that way; on the right stick up a post, down a drag, left or right
-##    an out. The left trigger leaves (HotRouteMenu shows all of it).
+##    an out. With the left trigger held the stick only draws that route on the
+##    field, and letting go of the trigger calls it; let go with the sticks at
+##    rest, the trigger leaves (HotRouteMenu shows all of it).
 ## A new formation is walked to (PreSnapShift), and the offense cannot snap or
 ## send a man in motion until it is set again. The play clock runs all the while.
 
@@ -42,6 +44,8 @@ var _cpu_motion_at: float = -1.0
 ## The hint under the banner right now (the jet motion's snap cue, the shift,
 ## the hot route's buttons), or nothing.
 var _hint: String = ""
+## The state of the motion the banner was last written for.
+var _banner_motion: PreSnapMotion.State = PreSnapMotion.State.NONE
 var _mode: Mode = Mode.LINE
 ## The audible menu: the formations (or tabs) it can go to with the called one
 ## first, the open one, its plays, the cursor and whether the play is mirrored.
@@ -52,6 +56,11 @@ var _menu_cursor: int = 0
 var _menu_flipped: bool = false
 ## The receiver a hot route is being given to, once he is picked.
 var _hot_man: Player
+## The left trigger was pressed while a hot route is being given: until it is
+## let go the sticks show a route and do not call it.
+var _hot_lt: bool = false
+## The route drawn on the field for him right now (see _hot_held), or -1.
+var _hot_shown: int = -1
 
 
 func enter() -> void:
@@ -92,7 +101,12 @@ func exit() -> void:
 func _show_banner() -> void:
 	if _human_snaps:
 		var flipped: String = " (flipped)" if pc.off_flipped else ""
-		var motion: String = "  (LB) motion" if pc.motion.available() else ""
+		var motion: String = ""
+		if pc.motion.available():
+			motion = "  (LB) motion"
+		elif pc.motion.can_send_back():
+			motion = "  (LB) call back"
+		_banner_motion = pc.motion.state
 		game.hud.show_banner("", "%s%s  -  (A) snap  (B) shout  (X) audible  (Y) hot route%s  (LT) show" % [pc.off_play.play_name, flipped, motion])
 	else:
 		var flipped: String = " (flipped)" if pc.def_flipped else ""
@@ -165,7 +179,10 @@ func physics_update(delta: float) -> void:
 			if Input.is_action_just_pressed(&"qb_call") and time_in_state - _last_call >= tuning.qb_call_gap:
 				_last_call = time_in_state
 				game.audio.qb_call()
-			if Input.is_action_just_pressed(&"motion") and pc.motion.call_motion():
+			# (LB) sends him, and (LB) again calls him back to where he stood.
+			if Input.is_action_just_pressed(&"motion") and not pc.motion.call_motion():
+				pc.motion.send_back()
+			if pc.motion.state != _banner_motion:
 				_show_banner()
 			snap_now = time_in_state >= tuning.pre_snap_delay and Input.is_action_just_pressed(&"confirm")
 		if shifting:
@@ -290,6 +307,8 @@ func _close() -> void:
 		_show_banner()
 	_mode = Mode.LINE
 	_hot_man = null
+	_hot_lt = false
+	_hot_shown = -1
 
 
 # --- The audible menu ------------------------------------------------------------
@@ -394,6 +413,8 @@ func _update_menu() -> void:
 func _open_hot() -> void:
 	_mode = Mode.HOT
 	_hot_man = null
+	_hot_lt = false
+	_hot_shown = -1
 	pc.set_hot_picking(true)
 	# The play on the field, so the new route is seen next to the others.
 	game.play_art.show_offense(pc.off_play, pc.off_flipped)
@@ -404,56 +425,117 @@ func _open_hot() -> void:
 
 
 ## The four face buttons are the receivers' own here, so it is the left trigger
-## that leaves.
+## that leaves: let go with no route on the field. Held, it turns the sticks
+## from calling a route to showing it, and letting go calls the one shown.
 func _update_hot() -> void:
-	if not _can_change() or Input.is_action_just_pressed(&"reveal_play"):
+	if not _can_change():
 		_close()
 		return
+	# Only a trigger pulled in here: one still held from showing the play is not it.
+	if Input.is_action_just_pressed(&"reveal_play"):
+		_hot_lt = true
 	for slot: int in mini(HumanController.PASS_ACTIONS.size(), pc.eligible.size()):
 		if Input.is_action_just_pressed(HumanController.PASS_ACTIONS[slot]):
 			var man: Player = pc.eligible[slot]
 			# Only a man who was going out on a route: not the back the ball is
 			# handed to.
 			if man.brain.off_assign.job == OffenseAssignment.Job.ROUTE:
+				_show_hot(-1)
 				_hot_man = man
 				game.hud.show_hot_routes("(%s) %s" % [game.human.pass_label(slot), man.brain.off_assign.label])
 				game.audio.play(&"ui_move")
 			else:
 				game.audio.play(&"ui_tick")
 			return
-	if _hot_man == null:
+	if _hot_lt:
+		var held: int = _hot_held() if _hot_man != null else -1
+		if Input.is_action_pressed(&"reveal_play"):
+			_show_hot(held)
+		elif held < 0 or not _give_hot(held):
+			_close()
 		return
-	var kind: OffenseAssignment.Hot = OffenseAssignment.Hot.STREAK
-	var side: float = 0.0
+	if _hot_man != null:
+		var pressed: int = _hot_pressed()
+		if pressed >= 0:
+			_give_hot(pressed)
+
+
+## A route and the way it breaks on screen (-1 left, 0 neither, 1 right) as one
+## number.
+func _hot_key(kind: OffenseAssignment.Hot, way: int) -> int:
+	return int(kind) * 3 + way + 1
+
+
+## The route a stick pushed just now asks for (see _hot_key), or -1.
+func _hot_pressed() -> int:
 	if Input.is_action_just_pressed(&"move_up"):
-		kind = OffenseAssignment.Hot.STREAK
-	elif Input.is_action_just_pressed(&"move_down"):
-		kind = OffenseAssignment.Hot.CURL
-	elif Input.is_action_just_pressed(&"move_left"):
-		kind = OffenseAssignment.Hot.SLANT
-		side = -1.0
-	elif Input.is_action_just_pressed(&"move_right"):
-		kind = OffenseAssignment.Hot.SLANT
-		side = 1.0
-	elif Input.is_action_just_pressed(&"quick_up"):
-		kind = OffenseAssignment.Hot.POST
-	elif Input.is_action_just_pressed(&"quick_down"):
-		kind = OffenseAssignment.Hot.DRAG
-	elif Input.is_action_just_pressed(&"quick_left"):
-		kind = OffenseAssignment.Hot.OUT
-		side = -1.0
-	elif Input.is_action_just_pressed(&"quick_right"):
-		kind = OffenseAssignment.Hot.OUT
-		side = 1.0
-	else:
-		return
-	# Left and right as the person sees them: the camera's right, in the frame
-	# the play is drawn in (PlayController.to_world).
+		return _hot_key(OffenseAssignment.Hot.STREAK, 0)
+	if Input.is_action_just_pressed(&"move_down"):
+		return _hot_key(OffenseAssignment.Hot.CURL, 0)
+	if Input.is_action_just_pressed(&"move_left"):
+		return _hot_key(OffenseAssignment.Hot.SLANT, -1)
+	if Input.is_action_just_pressed(&"move_right"):
+		return _hot_key(OffenseAssignment.Hot.SLANT, 1)
+	if Input.is_action_just_pressed(&"quick_up"):
+		return _hot_key(OffenseAssignment.Hot.POST, 0)
+	if Input.is_action_just_pressed(&"quick_down"):
+		return _hot_key(OffenseAssignment.Hot.DRAG, 0)
+	if Input.is_action_just_pressed(&"quick_left"):
+		return _hot_key(OffenseAssignment.Hot.OUT, -1)
+	if Input.is_action_just_pressed(&"quick_right"):
+		return _hot_key(OffenseAssignment.Hot.OUT, 1)
+	return -1
+
+
+## The route the sticks are held on right now (see _hot_key): that of the one
+## pushed further, or -1 with both at rest.
+func _hot_held() -> int:
+	var left: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	var right: Vector2 = Input.get_vector(&"quick_left", &"quick_right", &"quick_up", &"quick_down")
+	var on_right: bool = right.length() > left.length()
+	var stick: Vector2 = right if on_right else left
+	if stick.length() < REVEAL_STICK:
+		return -1
+	if absf(stick.x) > absf(stick.y):
+		return _hot_key(OffenseAssignment.Hot.OUT if on_right else OffenseAssignment.Hot.SLANT, -1 if stick.x < 0.0 else 1)
+	if stick.y < 0.0:
+		return _hot_key(OffenseAssignment.Hot.POST if on_right else OffenseAssignment.Hot.STREAK, 0)
+	return _hot_key(OffenseAssignment.Hot.DRAG if on_right else OffenseAssignment.Hot.CURL, 0)
+
+
+@warning_ignore("integer_division")
+func _hot_kind(key: int) -> OffenseAssignment.Hot:
+	return (key / 3) as OffenseAssignment.Hot
+
+
+## The way route `key` breaks, in the play's own frame. Left and right are as
+## the person sees them: the camera's right, in the frame the play is drawn in
+## (PlayController.to_world).
+func _hot_side(key: int) -> float:
 	var right: float = signf(game.camera_rig.basis.x.z)
 	if right == 0.0:
 		right = pc.off_dir
 	var flip: float = -1.0 if pc.off_flipped else 1.0
-	if pc.hot_route(_hot_man, kind, side * right * pc.off_dir * flip):
-		game.audio.play(&"ui_confirm")
-		_show_banner()
-		_close()
+	return float(key % 3 - 1) * right * pc.off_dir * flip
+
+
+## Draws route `key` on the field for the picked man, in place of the one he
+## has (-1: no route, his own again).
+func _show_hot(key: int) -> void:
+	if key == _hot_shown:
+		return
+	_hot_shown = key
+	if key < 0:
+		game.play_art.clear_hot_preview()
+		return
+	game.play_art.set_hot_preview(_hot_man, OffenseAssignment.hot_route(_hot_man.brain.off_assign, _hot_kind(key), _hot_side(key)))
+	game.audio.play(&"ui_tick")
+
+
+## The hot route itself: the picked man runs route `key`, and it is back to the line.
+func _give_hot(key: int) -> bool:
+	if not pc.hot_route(_hot_man, _hot_kind(key), _hot_side(key)):
+		return false
+	game.audio.play(&"ui_confirm")
+	_close()
+	return true

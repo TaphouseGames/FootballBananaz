@@ -932,6 +932,7 @@ script = ExtResource("1_editor")
 league = ExtResource("2_league")
 
 [node name="rugged_humanoid_3d_model" parent="." unique_id=362855813 instance=ExtResource("3_tljq7")]
+visible = false
 
 [node name="tripo_node_263120a4" parent="rugged_humanoid_3d_model/Armature/Skeleton3D" parent_id_path=PackedInt32Array(362855813, 1740742074) index="0" unique_id=655706857]
 mesh = SubResource("ArrayMesh_fsph1")
@@ -939,6 +940,7 @@ skin = SubResource("Skin_j6w3n")
 surface_material_override/0 = SubResource("StandardMaterial3D_f0lfi")
 
 [node name="armored_humanoid_3d_model" parent="." unique_id=1051133673 instance=ExtResource("8_3i4js")]
+visible = false
 
 [node name="tripo_node_ddd51737" parent="armored_humanoid_3d_model/Armature/Skeleton3D" parent_id_path=PackedInt32Array(1051133673, 1063314703) index="0" unique_id=1175112775]
 mesh = SubResource("ArrayMesh_bpofs")
@@ -946,6 +948,7 @@ skin = SubResource("Skin_fbui0")
 surface_material_override/0 = SubResource("StandardMaterial3D_cyjjk")
 
 [node name="stylized_male_head_3d_model" parent="." unique_id=2131905844 instance=ExtResource("15_ta1rs")]
+visible = false
 
 [node name="tripo_node_483dfa60" parent="stylized_male_head_3d_model" index="0" unique_id=1421699866]
 mesh = SubResource("ArrayMesh_1rxmy")

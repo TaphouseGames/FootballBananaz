@@ -16,6 +16,8 @@ const DASH: float = 0.7
 const GAP: float = 0.5
 const ARROW: float = 0.9
 const ALPHA: float = 0.9
+## The route a man has now, under a hot route that is being shown for him.
+const FAINT: float = 0.3
 const ZONE_FILL: float = 0.16
 const ZONE_STEPS: int = 32
 
@@ -23,6 +25,10 @@ const ZONE_STEPS: int = 32
 var shown: Resource
 ## Triangles in the drawing as it was last built.
 var triangles: int = 0
+## A hot route the person is looking at before calling it: the man it would go
+## to and the route, drawn over the one he has. Null with none.
+var hot_preview_man: Player
+var hot_preview: OffenseAssignment
 
 var _game: Game
 var _flipped: bool = false
@@ -57,7 +63,20 @@ func show_defense(play: DefensePlay, flipped: bool) -> void:
 	_show(play, flipped)
 
 
+## Shows `assignment` as the route of `man`, for as long as the called play is
+## drawn (see PreSnapState: a hot route with the left trigger held).
+func set_hot_preview(man: Player, assignment: OffenseAssignment) -> void:
+	hot_preview_man = man
+	hot_preview = assignment
+
+
+func clear_hot_preview() -> void:
+	hot_preview_man = null
+	hot_preview = null
+
+
 func clear() -> void:
+	clear_hot_preview()
 	if shown == null:
 		return
 	shown = null
@@ -122,38 +141,54 @@ func _draw_offense(pc: PlayController, play: OffensePlay) -> void:
 				continue
 			if motion.state == PreSnapMotion.State.MOVING and assignment != as_drawn:
 				path.append(_flat(pc.to_world(assignment.start, flip)))
-		if assignment.route.is_empty():
-			continue
-		var color: Color = PlayDiagram.ROUTE_COLOR
-		var width: float = WIDTH
-		var arrow: bool = not assignment.settle
-		match assignment.job:
-			OffenseAssignment.Job.QB:
-				color = PlayDiagram.QB_COLOR
-				width = THIN
-				arrow = false
-			OffenseAssignment.Job.BLOCK:
-				# A lead blocker's path is only there on a run play.
-				if not play.is_run:
-					continue
-				color = PlayDiagram.BLOCK_COLOR
-				width = THIN
-			OffenseAssignment.Job.RUNNER:
-				color = PlayDiagram.RUN_COLOR
-		var base: Vector3 = path[path.size() - 1]
-		var drawn: Vector3 = pc.to_world(assignment.start, flip)
-		for waypoint: Vector2 in assignment.route:
-			path.append(_flat(base + pc.to_world(assignment.start + waypoint, flip) - drawn))
-		_polyline(path, color, width)
-		var tip: Vector3 = path[path.size() - 1]
-		var from: Vector3 = path[path.size() - 2]
-		if arrow:
-			_arrow_head(from, tip, color)
+		if play == pc.off_play and player == hot_preview_man and hot_preview != null:
+			# A hot route being looked at: white, over the route he has now.
+			_draw_route(pc, play, assignment, path.duplicate(), flip, FAINT)
+			_draw_route(pc, play, hot_preview, path, flip, ALPHA, PlayDiagram.QB_COLOR)
 		else:
-			_end_bar(from, tip, color, width)
-	# Not the called play's once its man has a hot route: it is off then.
-	if not called and (play != pc.off_play or motion.available()):
+			_draw_route(pc, play, assignment, path, flip)
+	# Not the called play's once its man has a hot route, or is shown one: it is
+	# off then.
+	var hot_shown: bool = play == pc.off_play and hot_preview_man != null and hot_preview_man == motion.man
+	if not called and not hot_shown and (play != pc.off_play or motion.available()):
 		_draw_motion(pc, play, flip)
+
+
+## One man's job from the end of `path` (where he stands, or where his motion
+## takes him): a line along his route with an arrow, or a bar where he stops.
+## `ink` in place of the job's own colour when it is not transparent.
+func _draw_route(pc: PlayController, play: OffensePlay, assignment: OffenseAssignment, path: PackedVector3Array, flip: float, alpha: float = ALPHA, ink: Color = Color.TRANSPARENT) -> void:
+	if assignment.route.is_empty():
+		return
+	var color: Color = PlayDiagram.ROUTE_COLOR
+	var width: float = WIDTH
+	var arrow: bool = not assignment.settle
+	match assignment.job:
+		OffenseAssignment.Job.QB:
+			color = PlayDiagram.QB_COLOR
+			width = THIN
+			arrow = false
+		OffenseAssignment.Job.BLOCK:
+			# A lead blocker's path is only there on a run play.
+			if not play.is_run:
+				return
+			color = PlayDiagram.BLOCK_COLOR
+			width = THIN
+		OffenseAssignment.Job.RUNNER:
+			color = PlayDiagram.RUN_COLOR
+	if ink.a > 0.0:
+		color = ink
+	var base: Vector3 = path[path.size() - 1]
+	var drawn: Vector3 = pc.to_world(assignment.start, flip)
+	for waypoint: Vector2 in assignment.route:
+		path.append(_flat(base + pc.to_world(assignment.start + waypoint, flip) - drawn))
+	_polyline(path, color, width, alpha)
+	var tip: Vector3 = path[path.size() - 1]
+	var from: Vector3 = path[path.size() - 2]
+	if arrow:
+		_arrow_head(from, tip, color, alpha)
+	else:
+		_end_bar(from, tip, color, width, alpha)
 
 
 ## The job of the man in motion were the ball snapped now (see
@@ -239,8 +274,8 @@ func _triangle(a: Vector3, b: Vector3, c: Vector3, color: Color) -> void:
 	_colors.append_array([color, color, color])
 
 
-func _segment(a: Vector3, b: Vector3, color: Color, width: float) -> void:
-	_polyline(PackedVector3Array([a, b]), color, width)
+func _segment(a: Vector3, b: Vector3, color: Color, width: float, alpha: float = ALPHA) -> void:
+	_polyline(PackedVector3Array([a, b]), color, width, alpha)
 
 
 ## A ribbon through `path`, with its corners joined.
@@ -278,20 +313,20 @@ func _dashed(a: Vector3, b: Vector3, color: Color, width: float) -> void:
 		at += DASH + GAP
 
 
-func _arrow_head(from: Vector3, tip: Vector3, color: Color) -> void:
+func _arrow_head(from: Vector3, tip: Vector3, color: Color, alpha: float = ALPHA) -> void:
 	var side: Vector3 = _across(from, tip)
 	if side == Vector3.ZERO:
 		return
 	var along: Vector3 = (tip - from).normalized()
 	var back: Vector3 = tip - along * ARROW * 0.4
-	_triangle(tip + along * ARROW * 0.6, back + side * ARROW * 0.5, back - side * ARROW * 0.5, Color(color, ALPHA))
+	_triangle(tip + along * ARROW * 0.6, back + side * ARROW * 0.5, back - side * ARROW * 0.5, Color(color, alpha))
 
 
 ## A route that stops: a short bar across its end.
-func _end_bar(from: Vector3, tip: Vector3, color: Color, width: float) -> void:
+func _end_bar(from: Vector3, tip: Vector3, color: Color, width: float, alpha: float = ALPHA) -> void:
 	var side: Vector3 = _across(from, tip) * ARROW * 0.5
 	if side != Vector3.ZERO:
-		_segment(tip - side, tip + side, color, width)
+		_segment(tip - side, tip + side, color, width, alpha)
 
 
 func _ring(center: Vector3, radius: float, color: Color, width: float, alpha: float = ALPHA) -> void:

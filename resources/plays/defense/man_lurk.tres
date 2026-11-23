@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="DefensePlay" format=3]
+[gd_resource type="Resource" script_class="DefensePlay" format=3 uid="uid://dfhu22xat6ajs"]
 
-[ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="1_play"]
-[ext_resource type="Script" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
+[ext_resource type="Script" uid="uid://pc5a2xgh1eir" path="res://scripts/data/defense_play.gd" id="1_play"]
+[ext_resource type="Script" uid="uid://bf50m7vsxynks" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="d0"]
 script = ExtResource("2_assign")
@@ -23,7 +23,6 @@ start = Vector2(1, -1.5)
 script = ExtResource("2_assign")
 label = "LB"
 job = 2
-start = Vector2(5, 0)
 align = 2
 zone_center = Vector2(6, 0)
 zone_radius = 9.5
@@ -37,21 +36,17 @@ start = Vector2(1, 1.5)
 [sub_resource type="Resource" id="d4"]
 script = ExtResource("2_assign")
 label = "CB"
-job = 1
 start = Vector2(5, -18.4)
-man_target = 0
 
 [sub_resource type="Resource" id="d5"]
 script = ExtResource("2_assign")
 label = "CB"
-job = 1
 start = Vector2(5, 18.4)
 man_target = 1
 
 [sub_resource type="Resource" id="d6"]
 script = ExtResource("2_assign")
 label = "LB"
-job = 1
 start = Vector2(5, 3)
 man_target = 2
 green_dog = true
@@ -59,7 +54,6 @@ green_dog = true
 [sub_resource type="Resource" id="d7"]
 script = ExtResource("2_assign")
 label = "LB"
-job = 1
 start = Vector2(5, -3)
 man_target = 3
 green_dog = true

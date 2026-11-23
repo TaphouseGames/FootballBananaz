@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="DefensePlay" format=3]
+[gd_resource type="Resource" script_class="DefensePlay" format=3 uid="uid://c3cqyge0kp5bf"]
 
-[ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="1_play"]
-[ext_resource type="Script" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
+[ext_resource type="Script" uid="uid://pc5a2xgh1eir" path="res://scripts/data/defense_play.gd" id="1_play"]
+[ext_resource type="Script" uid="uid://bf50m7vsxynks" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="d0"]
 script = ExtResource("2_assign")
@@ -56,7 +56,6 @@ start = Vector2(2, 4)
 [sub_resource type="Resource" id="d7"]
 script = ExtResource("2_assign")
 label = "LB"
-job = 1
 start = Vector2(4, -3)
 man_target = 3
 green_dog = true
@@ -65,8 +64,8 @@ green_dog = true
 script = ExtResource("1_play")
 play_name = "Fire Zone"
 description = "Five rush with two deep halves behind it and a man on the tight end. Everything else short is open if the ball gets out."
+group = 2
 run_fit = 0.42
 short_fit = 0.41
 deep_fit = 0.59
-group = 2
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

@@ -72,6 +72,7 @@ func _tick() -> void:
 		_check_pick()
 		_check_rules()
 		_check_reactions()
+		_check_back()
 		_check_snaps()
 		_check_jet()
 		_plan_button()
@@ -225,6 +226,74 @@ func _check_reactions() -> void:
 	print("move: %d line-ups, a man went with him in %d, %d zone shifts, closest two defenders came %.2f yd" % [runs, followed, shifted, closest])
 
 
+# --- called back -----------------------------------------------------------------
+
+## A second call sends him home: he and the defense end where they stood, the
+## motion can be called again, and a snap on the way back gives him his own job.
+func _check_back() -> void:
+	var runs: int = 0
+	for play: OffensePlay in _game.offense_playbook.plays:
+		if not MotionRules.has_motion(play):
+			continue
+		for defense: DefensePlay in _game.defense_playbook.plays:
+			# Called back on his way, and once he has set.
+			for share: float in [0.4, 1.0]:
+				var where: String = "%s against %s, called back at %d%%" % [play.play_name, defense.play_name, roundi(share * 100.0)]
+				_line_up(play, defense, false)
+				var motion: PreSnapMotion = _pc.motion
+				var before: Dictionary[Player, Vector3] = _positions()
+				motion.call_motion()
+				for _i: int in MAX_TICKS:
+					if motion.state == PreSnapMotion.State.SET or (share < 1.0 and motion.progress() >= share):
+						break
+					motion.tick(DT)
+				if play.motion == OffensePlay.Motion.RETURN and share >= 1.0:
+					# He is home by himself: nobody to call back.
+					_expect(not motion.send_back(), "back: %s: called back a man who is home" % where)
+					continue
+				runs += 1
+				_expect(motion.send_back(), "back: %s: the call was refused" % where)
+				_expect(not motion.send_back(), "back: %s: called back twice" % where)
+				_expect(motion.called() and not motion.available(), "back: %s: the play can be changed with him on his way back" % where)
+				for _i: int in MAX_TICKS:
+					if motion.state == PreSnapMotion.State.READY:
+						break
+					motion.tick(DT)
+				_expect(motion.state == PreSnapMotion.State.READY, "back: %s: he never got home" % where)
+				for player: Player in before:
+					var off: float = _flat(player.position, before[player])
+					_expect(off < 0.05, "back: %s: %s ends %.2f yd from where he stood" % [where, "the motion man" if player == motion.man else "somebody", off])
+					_expect(player.frozen, "back: %s: somebody is not set again" % where)
+				if share < 1.0:
+					# And he can be sent again, all the way.
+					_expect(motion.call_motion(), "back: %s: he cannot be sent again" % where)
+					_run_motion(where)
+					_expect(motion.state == PreSnapMotion.State.SET, "back: %s: sent again he never set" % where)
+		# The snap with him on his way back: the job the play draws, from where he is.
+		var where: String = "%s, snapped on his way back" % play.play_name
+		_line_up(play, _defense("man cover 1"), false)
+		var motion: PreSnapMotion = _pc.motion
+		var man: Player = motion.man
+		var order: Array[Player] = _pc.eligible.duplicate()
+		motion.call_motion()
+		for _i: int in MAX_TICKS:
+			if motion.state == PreSnapMotion.State.SET or motion.progress() >= 0.5:
+				break
+			motion.tick(DT)
+		motion.send_back()
+		for _i: int in 6:
+			motion.tick(DT)
+		_pc.snap()
+		_expect(man.brain.off_assign == play.assignments[MotionRules.pick(play)], "back: %s: he has the wrong job" % where)
+		_expect(_pc.runner != man or play.assignments[MotionRules.pick(play)].job == OffenseAssignment.Job.RUNNER, "back: %s: the ball goes to him" % where)
+		if not play.is_run:
+			_expect(_pc.eligible == order, "back: %s: the pass buttons changed" % where)
+		for player: Player in _pc.players:
+			if not player.bystander:
+				_expect(not player.frozen, "back: %s: somebody is still frozen" % where)
+	print("back: %d line-ups called back" % runs)
+
+
 # --- snap while he is on his way -------------------------------------------------
 
 func _check_snaps() -> void:
@@ -351,7 +420,8 @@ func _plan_button() -> void:
 	_steps.append([2, func() -> void: Input.action_press(&"motion")])
 	_steps.append([2, func() -> void:
 		Input.action_release(&"motion")
-		_expect(_game.stats.get(&"motions", 0) == _counts["before"] + 1, "button: a second (LB) sent him again")])
+		_expect(_game.stats.get(&"motions", 0) == _counts["before"] + 1, "button: a second (LB) sent him again")
+		_expect(_pc.motion.state == PreSnapMotion.State.RETURNING, "button: a second (LB) did not call him back")])
 	# A play without one.
 	_steps.append([20, _pre_snap.bind(without, defense)])
 	_steps.append([2, func() -> void:

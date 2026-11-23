@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="DefensePlay" format=3]
+[gd_resource type="Resource" script_class="DefensePlay" format=3 uid="uid://cvtkpj2g3vcaj"]
 
-[ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="1_play"]
-[ext_resource type="Script" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
+[ext_resource type="Script" uid="uid://pc5a2xgh1eir" path="res://scripts/data/defense_play.gd" id="1_play"]
+[ext_resource type="Script" uid="uid://bf50m7vsxynks" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="d0"]
 script = ExtResource("2_assign")
@@ -64,9 +64,9 @@ zone_radius = 7
 script = ExtResource("1_play")
 play_name = "Goal Line Pinch"
 description = "Five across the front, one linebacker behind them. Corners sit in the flats."
+group = 3
 run_fit = 0.48
 short_fit = 0.67
 deep_fit = 0.1
-group = 3
 goal_line = true
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

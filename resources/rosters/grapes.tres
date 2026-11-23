@@ -1,8 +1,8 @@
-[gd_resource type="Resource" script_class="Roster" format=3]
+[gd_resource type="Resource" script_class="Roster" format=3 uid="uid://chs0buxsfmoaq"]
 
-[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
-[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
-[ext_resource type="Script" path="res://scripts/data/player_look.gd" id="3_look"]
+[ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://ntulcvmygfjd" path="res://scripts/data/player_look.gd" id="3_look"]
 
 [sub_resource type="Resource" id="look_clyde_concord"]
 script = ExtResource("3_look")
@@ -152,9 +152,9 @@ blocking = 60
 tackling = 90
 coverage = 88
 get_open = 40
-catching = 40
-juke = 60
-security = 85
+catching = 42
+juke = 62
+security = 86
 
 [sub_resource type="Resource" id="look_bull_malbec"]
 script = ExtResource("3_look")

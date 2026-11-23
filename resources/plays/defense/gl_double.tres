@@ -1,14 +1,12 @@
-[gd_resource type="Resource" script_class="DefensePlay" format=3]
+[gd_resource type="Resource" script_class="DefensePlay" format=3 uid="uid://cuhrwip3wg6gw"]
 
-[ext_resource type="Script" path="res://scripts/data/defense_play.gd" id="1_play"]
-[ext_resource type="Script" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
+[ext_resource type="Script" uid="uid://pc5a2xgh1eir" path="res://scripts/data/defense_play.gd" id="1_play"]
+[ext_resource type="Script" uid="uid://bf50m7vsxynks" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="d0"]
 script = ExtResource("2_assign")
 label = "S"
-job = 1
 start = Vector2(2, -12.7)
-man_target = 0
 underneath = true
 
 [sub_resource type="Resource" id="d1"]
@@ -32,21 +30,17 @@ start = Vector2(1, 1.9)
 [sub_resource type="Resource" id="d4"]
 script = ExtResource("2_assign")
 label = "CB"
-job = 1
 start = Vector2(3, -17)
-man_target = 0
 
 [sub_resource type="Resource" id="d5"]
 script = ExtResource("2_assign")
 label = "CB"
-job = 1
 start = Vector2(3, 17)
 man_target = 1
 
 [sub_resource type="Resource" id="d6"]
 script = ExtResource("2_assign")
 label = "S"
-job = 1
 start = Vector2(2, 12.7)
 man_target = 1
 underneath = true
@@ -64,9 +58,9 @@ zone_radius = 8
 script = ExtResource("1_play")
 play_name = "Goal Line Double"
 description = "Three rush, two men on each wideout: one in front, one behind. One man in the short middle, nobody on the back."
+group = 3
 run_fit = 0.22
 short_fit = 0.28
 deep_fit = 0.3
-group = 3
 goal_line = true
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

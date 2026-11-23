@@ -16,8 +16,10 @@ extends RefCounted
 ##    toward where that puts him: a safety rotates, a linebacker bumps over.
 
 ## READY: the play has a motion and it has not been called. MOVING: he is on
-## his way. SET: he has stopped where the motion ends.
-enum State { NONE, READY, MOVING, SET }
+## his way. SET: he has stopped where the motion ends. RETURNING: he has been
+## called back and he and the defense are on their way to where they stood;
+## once they are all there it is READY again.
+enum State { NONE, READY, MOVING, SET, RETURNING }
 
 ## Closer than this to where he is going, a mover is there.
 const ARRIVE: float = 0.15
@@ -52,6 +54,11 @@ var _covered: float = 0.0
 var _followers: Dictionary[Player, float] = {}
 ## Zone defenders on their way to a new spot.
 var _shifts: Dictionary[Player, Vector3] = {}
+## Where he and every defender who answers the motion stood when it was called.
+var _home: Vector3 = Vector3.ZERO
+var _homes: Dictionary[Player, Vector3] = {}
+## Followers on the way back who have left their lane for their own spot.
+var _homing: Array[Player] = []
 ## Movers who have stopped and are frozen again.
 var _settled: Array[Player] = []
 ## The one follower has left his lane for the depth he plays at.
@@ -79,6 +86,9 @@ func reset() -> void:
 	_covered = 0.0
 	_followers.clear()
 	_shifts.clear()
+	_home = Vector3.ZERO
+	_homes.clear()
+	_homing.clear()
 	_settled.clear()
 	_stepping_up = false
 	_kick_left = 0.0
@@ -109,9 +119,43 @@ func cancel() -> void:
 		reset()
 
 
-## He has been sent: on his way, or set where the motion ends.
+## He has been sent: on his way, set where the motion ends, or on his way back.
 func called() -> bool:
-	return state == State.MOVING or state == State.SET
+	return state == State.MOVING or state == State.SET or state == State.RETURNING
+
+
+## He can be called back to where he stood: he has been sent and is not on his
+## way home already.
+func can_send_back() -> bool:
+	if not pc.ball_dead:
+		return false
+	if state == State.MOVING:
+		return pc.off_play.motion != OffensePlay.Motion.RETURN or _leg == 0
+	return state == State.SET and pc.off_play.motion != OffensePlay.Motion.RETURN
+
+
+## The quarterback calls him back: he jogs home the way he came, and the
+## defense goes back to where it stood. False when there is nobody to call back.
+func send_back() -> bool:
+	if not can_send_back():
+		return false
+	var back: PackedVector3Array = PackedVector3Array()
+	if pc.off_play.motion != OffensePlay.Motion.RETURN:
+		for i: int in range(mini(_leg, _path.size() - 1) - 1, -1, -1):
+			back.append(_path[i])
+	back.append(_home)
+	_path = back
+	_leg = 0
+	_covered = 0.0
+	_length = 0.0
+	time = 0.0
+	set_time = 0.0
+	_settled.clear()
+	_homing.clear()
+	_stepping_up = false
+	man.frozen = false
+	state = State.RETURNING
+	return true
 
 
 func is_jet() -> bool:
@@ -138,6 +182,10 @@ func call_motion() -> bool:
 	_covered = 0.0
 	time = 0.0
 	state = State.MOVING
+	_home = man.position
+	_settled.clear()
+	_homing.clear()
+	_stepping_up = false
 	man.frozen = false
 	_plan_defense()
 
@@ -160,16 +208,33 @@ func tick(delta: float) -> void:
 		_kick_left -= delta
 		if pc.qb != null and pc.qb.frozen:
 			pc.qb.integrate(delta)
-	if state != State.MOVING and state != State.SET:
-		return
-	time += delta
-	if state == State.MOVING:
-		_move_man(delta)
-	_move_followers(delta)
-	_move_shifts(delta)
+	if called():
+		time += delta
+		if state == State.MOVING or (state == State.RETURNING and not _settled.has(man)):
+			_move_man(delta)
+		_move_followers(delta)
+		_move_shifts(delta)
+		if state == State.RETURNING and _all_home():
+			# Everybody is where he stood: the motion can be called again.
+			state = State.READY
+			_path = PackedVector3Array()
+			_leg = 0
 	# Whoever has stopped turns to face the ball again and gets back in his stance.
 	for player: Player in _settled:
 		player.integrate(delta)
+
+
+## Called back, and he and every defender who moved is where he stood.
+func _all_home() -> bool:
+	if not _settled.has(man):
+		return false
+	for defender: Player in _followers:
+		if not _settled.has(defender):
+			return false
+	for defender: Player in _shifts:
+		if not _settled.has(defender):
+			return false
+	return true
 
 
 ## JET: he is where the ball should be snapped: close to the quarterback and
@@ -197,14 +262,16 @@ func progress() -> float:
 ## The snap: gives the motion man the job that goes with where he is now.
 ## Returns whether anything about the play changed.
 func settle() -> bool:
-	if state != State.MOVING and state != State.SET:
+	if not called():
 		return false
 	var play: OffensePlay = pc.off_play
-	var moving: bool = state == State.MOVING
+	var returning: bool = state == State.RETURNING
+	var moving: bool = state == State.MOVING or (returning and not _settled.has(man))
 	var after: OffenseAssignment = _drawn
 	var anchored: bool = true
 	jet_sweep = false
-	match play.motion:
+	# Called back, he has the job the play draws for him, from where he stands.
+	match OffensePlay.Motion.RETURN if returning else play.motion:
 		OffensePlay.Motion.RETURN:
 			pass
 		OffensePlay.Motion.JET:
@@ -289,14 +356,17 @@ func _move_man(delta: float) -> void:
 		_leg += 1
 		if _leg >= _path.size():
 			_stop(man, target, Vector3(pc.off_dir, 0.0, 0.0))
-			state = State.SET
-			set_time = time
+			if state == State.MOVING:
+				state = State.SET
+				set_time = time
 			return
 		target = _path[_leg]
 		last = _leg == _path.size() - 1
 		dist = _flat(man.position, target)
-	var jet: bool = play.motion == OffensePlay.Motion.JET
-	var runs: bool = jet or play.motion == OffensePlay.Motion.ACROSS
+	# Back home he jogs, whatever the motion.
+	var back: bool = state == State.RETURNING
+	var jet: bool = play.motion == OffensePlay.Motion.JET and not back
+	var runs: bool = jet or (play.motion == OffensePlay.Motion.ACROSS and not back)
 	man.ai_speed_scale = 1.0 if runs else tuning.motion_jog_scale
 	man.wants_turbo = jet
 	steer(man, target, last)
@@ -327,6 +397,7 @@ func _leg_start() -> Vector3:
 func _plan_defense() -> void:
 	_followers.clear()
 	_shifts.clear()
+	_homes.clear()
 	var play: OffensePlay = pc.off_play
 	var end: Vector3 = _path[_path.size() - 1]
 	if play.motion != OffensePlay.Motion.RETURN:
@@ -354,6 +425,10 @@ func _plan_defense() -> void:
 			lane = back
 		taken.append(lane)
 		_followers[defender] = lane
+	for defender: Player in _followers:
+		_homes[defender] = defender.position
+	for defender: Player in _shifts:
+		_homes[defender] = defender.position
 
 
 ## No teammate stands on the lane at depth `lane`, between `low` and `high`
@@ -430,7 +505,10 @@ func _plan_shifts(end: Vector3) -> void:
 
 func _move_followers(delta: float) -> void:
 	var play: OffensePlay = pc.off_play
-	var jet: bool = play.motion == OffensePlay.Motion.JET
+	var back: bool = state == State.RETURNING
+	var jet: bool = play.motion == OffensePlay.Motion.JET and not back
+	# His man is back where he stood: now the follower goes home too.
+	var man_home: bool = back and _settled.has(man)
 	if time < tuning.motion_follow_delay:
 		return
 	for defender: Player in _followers:
@@ -438,7 +516,15 @@ func _move_followers(delta: float) -> void:
 			continue
 		# Across from his man, wherever he is right now: so he trails him.
 		var spot: Vector3 = Vector3(_followers[defender], 0.0, man.position.z)
-		if state == State.SET and _followers.size() == 1 and (_stepping_up or absf(defender.position.z - spot.z) < 0.3):
+		if man_home:
+			# Along his lane until he is across from his own spot, then up to it.
+			var home: Vector3 = _homes[defender]
+			spot.z = home.z
+			if _homing.has(defender) or absf(defender.position.z - home.z) < 0.3:
+				if not _homing.has(defender):
+					_homing.append(defender)
+				spot = home
+		elif state == State.SET and _followers.size() == 1 and (_stepping_up or absf(defender.position.z - spot.z) < 0.3):
 			# His man has stopped and he is across from him: he comes back up
 			# to the depth he plays at, if nobody is standing there or in the way.
 			var own: Vector3 = Vector3(defender.brain.start_point.x, 0.0, man.position.z)
@@ -450,7 +536,7 @@ func _move_followers(delta: float) -> void:
 		var off_lane: float = absf(defender.position.x - spot.x)
 		if off_lane > 0.4:
 			spot.z = defender.position.z + clampf(spot.z - defender.position.z, -0.5, 0.5)
-		if state == State.SET and _flat(defender.position, spot) < ARRIVE:
+		if (state == State.SET or _homing.has(defender)) and _flat(defender.position, spot) < ARRIVE:
 			_stop(defender, spot, Vector3(-pc.off_dir, 0.0, 0.0))
 			continue
 		defender.frozen = false
@@ -466,13 +552,14 @@ func _move_shifts(delta: float) -> void:
 	for defender: Player in _shifts:
 		if _settled.has(defender):
 			continue
-		if _flat(defender.position, _shifts[defender]) < ARRIVE:
-			_stop(defender, _shifts[defender], Vector3(-pc.off_dir, 0.0, 0.0))
+		var spot: Vector3 = _homes[defender] if state == State.RETURNING else _shifts[defender]
+		if _flat(defender.position, spot) < ARRIVE:
+			_stop(defender, spot, Vector3(-pc.off_dir, 0.0, 0.0))
 			continue
 		defender.frozen = false
 		defender.ai_speed_scale = tuning.motion_zone_walk_scale
 		defender.wants_turbo = false
-		steer(defender, _shifts[defender], true)
+		steer(defender, spot, true)
 		defender.integrate(delta)
 
 

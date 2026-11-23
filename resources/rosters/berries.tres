@@ -1,8 +1,8 @@
-[gd_resource type="Resource" script_class="Roster" format=3]
+[gd_resource type="Resource" script_class="Roster" format=3 uid="uid://7m42fyci470h"]
 
-[ext_resource type="Script" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
-[ext_resource type="Script" path="res://scripts/data/roster.gd" id="2_roster"]
-[ext_resource type="Script" path="res://scripts/data/player_look.gd" id="3_look"]
+[ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
+[ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
+[ext_resource type="Script" uid="uid://ntulcvmygfjd" path="res://scripts/data/player_look.gd" id="3_look"]
 
 [sub_resource type="Resource" id="look_jet_huckle"]
 script = ExtResource("3_look")
@@ -20,12 +20,13 @@ speed = 94
 endurance = 85
 strength = 40
 blocking = 25
-tackling = 20
-coverage = 12
-catching = 35
-juke = 84
-power = 35
-accuracy = 85
+tackling = 40
+coverage = 39
+catching = 43
+juke = 91
+security = 62
+power = 39
+accuracy = 95
 
 [sub_resource type="Resource" id="look_pip_bramble"]
 script = ExtResource("3_look")
@@ -41,8 +42,8 @@ number = 60
 look = SubResource("look_pip_bramble")
 speed = 42
 strength = 38
-blocking = 58
-tackling = 35
+blocking = 61
+tackling = 38
 coverage = 18
 get_open = 25
 
@@ -59,8 +60,8 @@ number = 67
 look = SubResource("look_tad_thorn")
 speed = 42
 strength = 40
-blocking = 60
-tackling = 32
+blocking = 61
+tackling = 34
 coverage = 18
 get_open = 20
 
@@ -77,8 +78,8 @@ number = 71
 look = SubResource("look_sol_briar")
 speed = 44
 strength = 36
-blocking = 55
-tackling = 37
+blocking = 57
+tackling = 39
 coverage = 18
 get_open = 25
 
@@ -96,7 +97,7 @@ look = SubResource("look_ray_acai")
 speed = 62
 endurance = 55
 strength = 40
-blocking = 40
+blocking = 42
 tackling = 29
 coverage = 15
 get_open = 58
@@ -140,7 +141,7 @@ look = SubResource("look_flash_elder")
 speed = 83
 endurance = 55
 strength = 35
-blocking = 35
+blocking = 40
 tackling = 25
 coverage = 12
 get_open = 65
@@ -163,11 +164,11 @@ look = SubResource("look_boyd_mulberry")
 speed = 67
 endurance = 64
 strength = 56
-blocking = 58
-tackling = 52
-coverage = 58
-get_open = 66
-catching = 83
+blocking = 61
+tackling = 62
+coverage = 60
+get_open = 71
+catching = 87
 juke = 55
 security = 62
 

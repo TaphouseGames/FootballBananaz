@@ -264,6 +264,65 @@ func _plan_offense() -> void:
 	_tap(&"hot_route")
 	_tap(&"reveal_play")
 	_steps.append([0, func() -> void: _expect(_mode() == LINE, "hot: the left trigger did not leave it")])
+	# With the trigger held the stick shows a route on the field and does not
+	# call it; letting go of the trigger calls the one that is shown.
+	_tap(&"hot_route")
+	_steps.append([2, func() -> void: Input.action_press(HumanController.PASS_ACTIONS[_kept["man"]])])
+	_steps.append([2, func() -> void:
+		_release()
+		_kept["hots"] = _game.stats.get(&"hot_routes", 0)
+		_kept["route"] = _pc.eligible[_kept["man"]].brain.route.duplicate()
+		_kept["triangles"] = _game.play_art.triangles
+		Input.action_press(&"reveal_play")])
+	_steps.append([2, func() -> void: Input.action_press(&"move_right")])
+	_steps.append([2, func() -> void:
+		var man: Player = _pc.eligible[_kept["man"]]
+		var art: PlayArt = _game.play_art
+		_expect(_mode() == HOT, "show: the stick left the hot routes with the trigger held")
+		_expect(_game.stats.get(&"hot_routes", 0) == _kept["hots"] and man.brain.route == _kept["route"], "show: the route was called with the trigger held")
+		_expect(art.hot_preview_man == man and art.hot_preview != null, "show: no route is shown for him")
+		if art.hot_preview != null:
+			var legs: PackedVector2Array = art.hot_preview.route
+			_expect(legs.size() == 2 and absf(absf(legs[1].y) - 7.0) < 0.1 and not art.hot_preview.settle, "show: stick right shows %s, not a slant" % legs)
+		_expect(art.triangles > _kept["triangles"], "show: the route is not drawn (%d triangles, %d before)" % [art.triangles, _kept["triangles"]])
+		Input.action_release(&"move_right")
+		Input.action_press(&"move_down")])
+	_steps.append([2, func() -> void:
+		var art: PlayArt = _game.play_art
+		_expect(_mode() == HOT and art.hot_preview != null and art.hot_preview.settle, "show: stick down does not show the curl")
+		Input.action_release(&"reveal_play")])
+	_steps.append([2, func() -> void:
+		_release()
+		var man: Player = _pc.eligible[_kept["man"]]
+		var deep: float = (man.brain.route[man.brain.route.size() - 1].x - man.brain.start_point.x) * _pc.off_dir
+		_expect(_mode() == LINE, "show: still open after the trigger was let go")
+		_expect(_game.stats.get(&"hot_routes", 0) == _kept["hots"] + 1, "show: letting go of the trigger did not call the route")
+		_expect(absf(deep - 6.5) < 0.1, "show: the route called ends %.1f yd deep, not the curl that was shown" % deep)
+		_expect(_game.play_art.hot_preview == null, "show: the route is still shown after it was called")])
+	# The stick let go first: nothing is called.
+	_tap(&"hot_route")
+	_steps.append([2, func() -> void: Input.action_press(HumanController.PASS_ACTIONS[_kept["man"]])])
+	_steps.append([2, func() -> void:
+		_release()
+		_kept["hots"] = _game.stats.get(&"hot_routes", 0)
+		Input.action_press(&"reveal_play")
+		Input.action_press(&"move_up")])
+	_steps.append([2, func() -> void:
+		_expect(_game.play_art.hot_preview != null, "show: the streak is not shown")
+		Input.action_release(&"move_up")])
+	_steps.append([2, func() -> void:
+		_expect(_mode() == HOT and _game.play_art.hot_preview == null, "show: the route stays on the field with the stick at rest")
+		Input.action_release(&"reveal_play")])
+	_steps.append([2, func() -> void:
+		_expect(_mode() == LINE, "show: the trigger let go with the stick at rest did not leave")
+		_expect(_game.stats.get(&"hot_routes", 0) == _kept["hots"], "show: a route was called with the stick at rest")])
+	# A trigger held since before (Y) is not the one that leaves.
+	_steps.append([2, func() -> void: Input.action_press(&"reveal_play")])
+	_tap(&"hot_route")
+	_steps.append([2, func() -> void: Input.action_release(&"reveal_play")])
+	_steps.append([0, func() -> void: _expect(_mode() == HOT, "show: a trigger held from before left the hot routes")])
+	_tap(&"reveal_play")
+	_steps.append([0, func() -> void: _expect(_mode() == LINE, "show: the left trigger did not leave it afterwards")])
 
 	# Motion on the bumper, and no audible after it.
 	_steps.append([45, func() -> void:

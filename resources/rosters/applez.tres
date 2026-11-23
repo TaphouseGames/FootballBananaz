@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="Roster" format=3 uid="uid://b5svrfch3voq1"]
+[gd_resource type="Resource" script_class="Roster" format=3 uid="uid://dd6wl2touncwi"]
 
 [ext_resource type="Script" uid="uid://dc2085a6u108o" path="res://scripts/data/player_ratings.gd" id="1_ratings"]
 [ext_resource type="Script" uid="uid://dn4mrnpldg6x6" path="res://scripts/data/roster.gd" id="2_roster"]
@@ -6,66 +6,16 @@
 
 [sub_resource type="Resource" id="look_cannon_cortland"]
 script = ExtResource("3_look")
-gender = 0
 build = 2
 person = "cannon_cortland"
 height_in = 75
 
-[sub_resource type="Resource" id="look_granny_smith"]
-script = ExtResource("3_look")
-gender = 1
-build = 2
-person = "granny_smith"
-height_in = 72
-
-[sub_resource type="Resource" id="look_mac_intosh"]
-script = ExtResource("3_look")
-gender = 0
-build = 2
-person = "mac_intosh"
-height_in = 69
-
-[sub_resource type="Resource" id="look_gala_core"]
-script = ExtResource("3_look")
-gender = 1
-build = 2
-person = "gala_core"
-height_in = 70
-
-[sub_resource type="Resource" id="look_jet_pippin"]
-script = ExtResource("3_look")
-gender = 1
-build = 0
-person = "jet_pippin"
-height_in = 70
-
-[sub_resource type="Resource" id="look_fuji_stem"]
-script = ExtResource("3_look")
-gender = 0
-build = 0
-person = "fuji_stem"
-height_in = 69
-
-[sub_resource type="Resource" id="look_honey_crisp"]
-script = ExtResource("3_look")
-gender = 1
-build = 0
-person = "honey_crisp"
-height_in = 61
-
-[sub_resource type="Resource" id="look_bram_russet"]
-script = ExtResource("3_look")
-gender = 0
-build = 1
-person = "bram_russet"
-height_in = 69
-
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Cannon Cortland"
-look = SubResource("look_cannon_cortland")
 position = "QB"
 number = 9
+look = SubResource("look_cannon_cortland")
 speed = 30
 endurance = 45
 strength = 60
@@ -79,44 +29,77 @@ security = 60
 power = 97
 accuracy = 72
 
+[sub_resource type="Resource" id="look_granny_smith"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "granny_smith"
+
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")
 display_name = "Granny Smith"
-look = SubResource("look_granny_smith")
 number = 72
+look = SubResource("look_granny_smith")
 speed = 45
 strength = 56
 blocking = 85
+tackling = 49
 coverage = 35
 get_open = 25
+catching = 54
+security = 53
+
+[sub_resource type="Resource" id="look_mac_intosh"]
+script = ExtResource("3_look")
+build = 2
+person = "mac_intosh"
+height_in = 69
 
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Mac Intosh"
-look = SubResource("look_mac_intosh")
 number = 68
+look = SubResource("look_mac_intosh")
 strength = 55
 blocking = 82
 tackling = 48
 coverage = 35
 get_open = 25
+security = 48
+
+[sub_resource type="Resource" id="look_gala_core"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "gala_core"
+height_in = 70
 
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Gala Core"
-look = SubResource("look_gala_core")
 number = 77
+look = SubResource("look_gala_core")
 strength = 54
 blocking = 80
+tackling = 52
 coverage = 30
 get_open = 20
+juke = 52
+security = 47
+
+[sub_resource type="Resource" id="look_jet_pippin"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "jet_pippin"
+height_in = 70
 
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Jet Pippin"
-look = SubResource("look_jet_pippin")
 position = "WR"
 number = 11
+look = SubResource("look_jet_pippin")
 speed = 90
 endurance = 65
 strength = 35
@@ -126,12 +109,18 @@ get_open = 78
 catching = 70
 juke = 55
 
+[sub_resource type="Resource" id="look_fuji_stem"]
+script = ExtResource("3_look")
+build = 0
+person = "fuji_stem"
+height_in = 69
+
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Fuji Stem"
-look = SubResource("look_fuji_stem")
 position = "WR"
 number = 85
+look = SubResource("look_fuji_stem")
 speed = 80
 endurance = 60
 strength = 45
@@ -142,12 +131,19 @@ get_open = 72
 catching = 78
 security = 60
 
+[sub_resource type="Resource" id="look_honey_crisp"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "honey_crisp"
+height_in = 61
+
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Honey Crisp"
-look = SubResource("look_honey_crisp")
 position = "RB"
 number = 28
+look = SubResource("look_honey_crisp")
 speed = 82
 endurance = 60
 strength = 25
@@ -157,12 +153,17 @@ get_open = 75
 catching = 80
 security = 40
 
+[sub_resource type="Resource" id="look_bram_russet"]
+script = ExtResource("3_look")
+person = "bram_russet"
+height_in = 69
+
 [sub_resource type="Resource" id="player_7"]
 script = ExtResource("1_ratings")
 display_name = "Bram Russet"
-look = SubResource("look_bram_russet")
 position = "TE"
 number = 44
+look = SubResource("look_bram_russet")
 speed = 55
 endurance = 55
 strength = 62

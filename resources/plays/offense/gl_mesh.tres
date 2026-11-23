@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="OffensePlay" format=3]
+[gd_resource type="Resource" script_class="OffensePlay" format=3 uid="uid://o7natrx2xm6w"]
 
-[ext_resource type="Script" path="res://scripts/data/offense_play.gd" id="1_play"]
-[ext_resource type="Script" path="res://scripts/data/offense_assignment.gd" id="2_assign"]
+[ext_resource type="Script" uid="uid://dq7qo82c5f17i" path="res://scripts/data/offense_play.gd" id="1_play"]
+[ext_resource type="Script" uid="uid://ds6tjxgm8nxo2" path="res://scripts/data/offense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="qb"]
 script = ExtResource("2_assign")
@@ -15,18 +15,21 @@ script = ExtResource("2_assign")
 label = "C"
 job = 2
 start = Vector2(-0.6, 0)
+route = null
 
 [sub_resource type="Resource" id="lg"]
 script = ExtResource("2_assign")
 label = "G"
 job = 2
 start = Vector2(-0.9, -1.7)
+route = null
 
 [sub_resource type="Resource" id="rg"]
 script = ExtResource("2_assign")
 label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
+route = null
 
 [sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")

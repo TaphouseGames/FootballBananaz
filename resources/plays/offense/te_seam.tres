@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="OffensePlay" format=3]
+[gd_resource type="Resource" script_class="OffensePlay" format=3 uid="uid://cdpkecqtx272b"]
 
-[ext_resource type="Script" path="res://scripts/data/offense_play.gd" id="1_play"]
-[ext_resource type="Script" path="res://scripts/data/offense_assignment.gd" id="2_assign"]
+[ext_resource type="Script" uid="uid://dq7qo82c5f17i" path="res://scripts/data/offense_play.gd" id="1_play"]
+[ext_resource type="Script" uid="uid://ds6tjxgm8nxo2" path="res://scripts/data/offense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="qb"]
 script = ExtResource("2_assign")
@@ -15,18 +15,21 @@ script = ExtResource("2_assign")
 label = "C"
 job = 2
 start = Vector2(-0.6, 0)
+route = null
 
 [sub_resource type="Resource" id="lg"]
 script = ExtResource("2_assign")
 label = "G"
 job = 2
 start = Vector2(-0.9, -1.7)
+route = null
 
 [sub_resource type="Resource" id="rg"]
 script = ExtResource("2_assign")
 label = "G"
 job = 2
 start = Vector2(-0.9, 1.7)
+route = null
 
 [sub_resource type="Resource" id="x"]
 script = ExtResource("2_assign")
@@ -36,7 +39,6 @@ route = PackedVector2Array(10, 0, 26, -10)
 
 [sub_resource type="Resource" id="z"]
 script = ExtResource("2_assign")
-label = "WR"
 start = Vector2(-1.2, 18.4)
 route = PackedVector2Array(14, 0, 13, -2.2)
 settle = true
@@ -55,7 +57,6 @@ route = PackedVector2Array(12, 0, 40, -2)
 
 [sub_resource type="Resource" id="motion"]
 script = ExtResource("2_assign")
-label = "WR"
 start = Vector2(-2.4, -9)
 route = PackedVector2Array(13, 0, 11.5, 1.5)
 settle = true

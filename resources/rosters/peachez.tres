@@ -7,65 +7,15 @@
 [sub_resource type="Resource" id="look_georgia_pitt"]
 script = ExtResource("3_look")
 gender = 1
-build = 1
 person = "georgia_pitt"
 height_in = 65
-
-[sub_resource type="Resource" id="look_fuzz_melba"]
-script = ExtResource("3_look")
-gender = 1
-build = 2
-person = "fuzz_melba"
-height_in = 70
-
-[sub_resource type="Resource" id="look_donut_clingstone"]
-script = ExtResource("3_look")
-gender = 0
-build = 2
-person = "donut_clingstone"
-height_in = 66
-
-[sub_resource type="Resource" id="look_hal_freestone"]
-script = ExtResource("3_look")
-gender = 0
-build = 0
-person = "hal_freestone"
-height_in = 74
-
-[sub_resource type="Resource" id="look_belle_nectar"]
-script = ExtResource("3_look")
-gender = 1
-build = 0
-person = "belle_nectar"
-height_in = 68
-
-[sub_resource type="Resource" id="look_skip_blossom"]
-script = ExtResource("3_look")
-gender = 0
-build = 0
-person = "skip_blossom"
-height_in = 64
-
-[sub_resource type="Resource" id="look_rusty_cobbler"]
-script = ExtResource("3_look")
-gender = 0
-build = 1
-person = "rusty_cobbler"
-height_in = 68
-
-[sub_resource type="Resource" id="look_dixie_crumble"]
-script = ExtResource("3_look")
-gender = 1
-build = 2
-person = "dixie_crumble"
-height_in = 61
 
 [sub_resource type="Resource" id="player_0"]
 script = ExtResource("1_ratings")
 display_name = "Georgia Pitt"
-look = SubResource("look_georgia_pitt")
 position = "QB"
 number = 10
+look = SubResource("look_georgia_pitt")
 speed = 60
 endurance = 60
 strength = 55
@@ -79,45 +29,71 @@ security = 60
 power = 66
 accuracy = 68
 
+[sub_resource type="Resource" id="look_fuzz_melba"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "fuzz_melba"
+height_in = 70
+
 [sub_resource type="Resource" id="player_1"]
 script = ExtResource("1_ratings")
 display_name = "Fuzz Melba"
-look = SubResource("look_fuzz_melba")
 number = 63
+look = SubResource("look_fuzz_melba")
 strength = 64
 blocking = 66
 tackling = 64
 coverage = 35
 get_open = 25
 
+[sub_resource type="Resource" id="look_donut_clingstone"]
+script = ExtResource("3_look")
+build = 2
+person = "donut_clingstone"
+height_in = 66
+
 [sub_resource type="Resource" id="player_2"]
 script = ExtResource("1_ratings")
 display_name = "Donut Clingstone"
-look = SubResource("look_donut_clingstone")
 number = 70
+look = SubResource("look_donut_clingstone")
 strength = 62
 blocking = 64
 tackling = 60
 coverage = 35
 get_open = 25
 
+[sub_resource type="Resource" id="look_hal_freestone"]
+script = ExtResource("3_look")
+build = 0
+person = "hal_freestone"
+height_in = 74
+
 [sub_resource type="Resource" id="player_3"]
 script = ExtResource("1_ratings")
 display_name = "Hal Freestone"
-look = SubResource("look_hal_freestone")
 number = 58
+look = SubResource("look_hal_freestone")
 strength = 60
 blocking = 62
 tackling = 62
 coverage = 35
 get_open = 25
 
+[sub_resource type="Resource" id="look_belle_nectar"]
+script = ExtResource("3_look")
+gender = 1
+build = 0
+person = "belle_nectar"
+height_in = 68
+
 [sub_resource type="Resource" id="player_4"]
 script = ExtResource("1_ratings")
 display_name = "Belle Nectar"
-look = SubResource("look_belle_nectar")
 position = "WR"
 number = 83
+look = SubResource("look_belle_nectar")
 speed = 74
 endurance = 60
 tackling = 55
@@ -127,12 +103,18 @@ catching = 68
 juke = 60
 security = 60
 
+[sub_resource type="Resource" id="look_skip_blossom"]
+script = ExtResource("3_look")
+build = 0
+person = "skip_blossom"
+height_in = 64
+
 [sub_resource type="Resource" id="player_5"]
 script = ExtResource("1_ratings")
 display_name = "Skip Blossom"
-look = SubResource("look_skip_blossom")
 position = "WR"
 number = 86
+look = SubResource("look_skip_blossom")
 speed = 68
 endurance = 60
 blocking = 52
@@ -143,12 +125,17 @@ catching = 70
 juke = 55
 security = 62
 
+[sub_resource type="Resource" id="look_rusty_cobbler"]
+script = ExtResource("3_look")
+person = "rusty_cobbler"
+height_in = 68
+
 [sub_resource type="Resource" id="player_6"]
 script = ExtResource("1_ratings")
 display_name = "Rusty Cobbler"
-look = SubResource("look_rusty_cobbler")
 position = "RB"
 number = 25
+look = SubResource("look_rusty_cobbler")
 speed = 70
 endurance = 68
 strength = 66
@@ -160,12 +147,19 @@ catching = 58
 juke = 68
 security = 66
 
+[sub_resource type="Resource" id="look_dixie_crumble"]
+script = ExtResource("3_look")
+gender = 1
+build = 2
+person = "dixie_crumble"
+height_in = 61
+
 [sub_resource type="Resource" id="player_7"]
 script = ExtResource("1_ratings")
 display_name = "Dixie Crumble"
-look = SubResource("look_dixie_crumble")
 position = "TE"
 number = 48
+look = SubResource("look_dixie_crumble")
 speed = 56
 endurance = 56
 strength = 60

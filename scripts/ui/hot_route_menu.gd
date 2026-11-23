@@ -2,7 +2,8 @@ class_name HotRouteMenu
 extends PanelContainer
 ## The hot-route panel at the line of scrimmage, in the corner the audible
 ## menu uses and drawn the same way: a title bar, the two sticks each with the
-## route every direction gives, and the button that leaves. Until a receiver is
+## route every direction gives, and what the left trigger does (held, it shows
+## a route before it is called; by itself it leaves). Until a receiver is
 ## picked the sticks are dim and the line under the title asks for one.
 ## PreSnapState drives it.
 
@@ -82,13 +83,18 @@ func _init() -> void:
 	foot_style.content_margin_top = 2.0
 	foot_style.content_margin_bottom = 2.0
 	foot.add_theme_stylebox_override(&"panel", foot_style)
-	var foot_row: HBoxContainer = HBoxContainer.new()
-	foot_row.add_theme_constant_override(&"separation", 8)
-	foot.add_child(foot_row)
-	foot_row.add_child(_key("LT"))
-	var what: Label = AudibleMenu.text_label(15, AudibleMenu.TEXT_COLOR)
-	what.text = "Cancel"
-	foot_row.add_child(what)
+	var foot_rows: VBoxContainer = VBoxContainer.new()
+	foot_rows.add_theme_constant_override(&"separation", 3)
+	foot.add_child(foot_rows)
+	# What the trigger does, held and by itself.
+	for text: String in ["Hold with a stick: see the route, let go to call it", "Tap: cancel"]:
+		var foot_row: HBoxContainer = HBoxContainer.new()
+		foot_row.add_theme_constant_override(&"separation", 8)
+		foot_rows.add_child(foot_row)
+		foot_row.add_child(_key("LT"))
+		var what: Label = AudibleMenu.text_label(15, AudibleMenu.TEXT_COLOR)
+		what.text = text
+		foot_row.add_child(what)
 	body.add_child(foot)
 
 
