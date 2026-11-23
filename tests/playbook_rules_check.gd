@@ -9,6 +9,9 @@ extends SceneTree
 ##    and the men who can walk out move with the receivers, nobody able to cover
 ##    a split receiver leaves him alone, nobody stands in a teammate, every
 ##    defender has a job and no receiver gets two men while another gets none;
+##  - the back cannot walk out of the backfield to a side where nobody has him:
+##    a man on him, or on each side a flat defender or a rusher who peels
+##    (the plays in OPEN_FLATS leave him on purpose);
 ##  - every route stays on the field.
 ##
 ## Run:  godot --headless --path . --script res://tests/playbook_rules_check.gd
@@ -19,6 +22,9 @@ const MIN_PLAYS: int = 4
 const REACH: float = 5.0
 ## Defenders closer together than this stand in each other.
 const CROWDED: float = 1.0
+## Plays that give the back the flats on purpose: the deep shells, which have
+## one man underneath, and the goal-line play that doubles both wideouts.
+const OPEN_FLATS: PackedStringArray = ["Cover 4", "Prevent", "Goal Line Double"]
 
 var _game: Game
 var _failures: PackedStringArray = PackedStringArray()
@@ -163,6 +169,7 @@ func _check_alignment(offense: Array[OffensePlay], defense: Array[DefensePlay]) 
 						here.append(row["at"])
 					spots.append(here)
 				_check_lineup(play, "%s%s" % [formation, " (flipped)" if flipped else ""], rows, pc, -1.0 if flipped else 1.0)
+				_check_back(play, "%s against %s%s" % [play.play_name, formation, " (flipped)" if flipped else ""], pc)
 		for i: int in play.assignments.size():
 			var assignment: DefenseAssignment = play.assignments[i]
 			var moves: bool = false
@@ -238,6 +245,28 @@ func _check_lineup(play: DefensePlay, against: String, rows: Array[Dictionary], 
 			if not men.has(Probe.frame(pc, receiver.position)):
 				free += 1
 		_expect(not (doubled and free > 0), "%s: a receiver is doubled while %d have nobody and there is no zone" % [where, free])
+
+
+## Somebody has the back whichever way he comes out of the backfield.
+func _check_back(play: DefensePlay, where: String, pc: PlayController) -> void:
+	var back: Player = pc.seen_back()
+	if back == null or OPEN_FLATS.has(play.play_name):
+		return
+	# Index 0: the side of negative world z; 1: the other.
+	var sides: Array[bool] = [false, false]
+	for defender: Player in pc.defense.players:
+		var brain: PlayerBrain = defender.brain
+		var assignment: DefenseAssignment = brain.def_assign
+		if assignment.job == DefenseAssignment.Job.MAN and brain.man_target == back:
+			return
+		if assignment.job == DefenseAssignment.Job.ZONE and assignment.flat:
+			sides[0 if brain.zone_center.z < 0.0 else 1] = true
+		if brain.peel_target == back:
+			if brain.peel_side <= 0.0:
+				sides[0] = true
+			if brain.peel_side >= 0.0:
+				sides[1] = true
+	_expect(sides[0] and sides[1], "%s: the back can come out to a side where nobody has him" % where)
 
 
 ## A corner who blitzes from over the receiver counts: that is the play.

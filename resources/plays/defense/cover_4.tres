@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="DefensePlay" format=3 uid="uid://q4klmxpwacrl"]
 
 [ext_resource type="Script" uid="uid://pc5a2xgh1eir" path="res://scripts/data/defense_play.gd" id="1_play"]
+
 [ext_resource type="Script" uid="uid://bf50m7vsxynks" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="d0"]
@@ -72,7 +73,7 @@ zone_radius = 8
 [resource]
 script = ExtResource("1_play")
 play_name = "Cover 4"
-description = "Three rush, four deep quarters across the field. Only one linebacker underneath."
+description = "Three rush, four deep quarters across the field. Only one linebacker underneath: the flats are open."
 group = 1
 run_fit = 0.44
 short_fit = 0.49

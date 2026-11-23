@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="DefensePlay" format=3 uid="uid://b5aow0jldvmjo"]
 
 [ext_resource type="Script" uid="uid://pc5a2xgh1eir" path="res://scripts/data/defense_play.gd" id="1_play"]
+
 [ext_resource type="Script" uid="uid://bf50m7vsxynks" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="d0"]
@@ -55,9 +56,11 @@ deep = true
 script = ExtResource("2_assign")
 label = "LB"
 job = 2
+start = Vector2(5, 6)
 align = 2
-zone_center = Vector2(7, 0)
-zone_radius = 13.5
+zone_center = Vector2(6, 8)
+zone_radius = 9
+flat = true
 
 [sub_resource type="Resource" id="d7"]
 script = ExtResource("2_assign")
@@ -65,16 +68,16 @@ label = "LB"
 job = 2
 start = Vector2(5, -6)
 align = 2
-zone_center = Vector2(6, -7)
-zone_radius = 7
+zone_center = Vector2(6, -8)
+zone_radius = 9
+flat = true
 
 [resource]
 script = ExtResource("1_play")
 play_name = "Cover 3"
-description = "Three rush, three deep thirds, two underneath. Flats are open."
+description = "Three rush, three deep thirds, a curl-flat man on each side. The short middle is open."
 group = 1
 run_fit = 0.39
 short_fit = 0.43
 deep_fit = 0.52
-strength_side = -1
 assignments = Array[ExtResource("2_assign")]([SubResource("d0"), SubResource("d1"), SubResource("d2"), SubResource("d3"), SubResource("d4"), SubResource("d5"), SubResource("d6"), SubResource("d7")])

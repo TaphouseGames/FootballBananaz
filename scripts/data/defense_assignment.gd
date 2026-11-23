@@ -41,3 +41,7 @@ enum Align { SPOT, OUTSIDE, SLOT, STRENGTH }
 ## ZONE: a deep defender stays over the top of the deepest receiver in his area
 ## instead of sitting on him.
 @export var deep: bool = false
+## ZONE, underneath: the curl-flat defender of his side. Any receiver who comes
+## out wider than the middle of his zone is his all the way to the sideline,
+## whatever the radius, and he goes out with the widest of them.
+@export var flat: bool = false

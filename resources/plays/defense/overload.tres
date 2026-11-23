@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="DefensePlay" format=3 uid="uid://ccb2574uamkwt"]
 
 [ext_resource type="Script" uid="uid://pc5a2xgh1eir" path="res://scripts/data/defense_play.gd" id="1_play"]
+
 [ext_resource type="Script" uid="uid://bf50m7vsxynks" path="res://scripts/data/defense_assignment.gd" id="2_assign"]
 
 [sub_resource type="Resource" id="d0"]
@@ -35,6 +36,7 @@ start = Vector2(5, -11.2)
 align = 1
 zone_center = Vector2(6, -11.2)
 zone_radius = 12
+flat = true
 
 [sub_resource type="Resource" id="d5"]
 script = ExtResource("2_assign")

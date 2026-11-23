@@ -21,6 +21,10 @@ extends SceneTree
 ##   tab=<text>    only offensive plays on the tab (formation) whose name contains the text
 ##   def=<text>    only defensive plays whose name contains the text
 ##   detail        also print yards, completion, turnover and sack rates per cell
+##   big           also print, per defensive play, how often it gives up BIG_PLAY
+##                 yards or more (uncapped), how many of those were caught with
+##                 nobody within ALONE yards, who caught them, what the nearest
+##                 defender's job was and what the defense had gambled on
 ##   place=normal|lead|under|cpu   spam probe: how the throw is placed (cpu lets
 ##                 the CPU quarterback choose; default normal)
 ##   times=<a>/<b>/...   release times for the spam probe (default 0.8/1.4/2.0/2.6)
@@ -68,6 +72,13 @@ const SCRAMBLE: int = -2
 const OPEN_SAMPLE_TIME: float = 1.8
 const WIDE_OPEN: float = 6.0
 var _sampled: bool = false
+## The `big` report: a gain of this many yards, and a catcher with no defender
+## within this many.
+const BIG_PLAY: float = 25.0
+const ALONE: float = 7.0
+var _big: bool = false
+## Defensive play index -> what it gave up (see _note_big).
+var _big_rows: Dictionary[int, Dictionary] = {}
 
 ## One job: an offensive play against a defensive play, optionally with a fixed
 ## throw (slot >= 0) at a fixed time.
@@ -100,6 +111,8 @@ func _initialize() -> void:
 			_start_yard = float(arg.trim_prefix("yard="))
 		elif arg == "detail":
 			_detail = true
+		elif arg == "big":
+			_big = true
 		elif arg == "rollout":
 			_rollout = 1.0
 		elif arg.begins_with("rollout="):
@@ -290,9 +303,84 @@ func _record(job: Dictionary) -> void:
 	if gain >= 20.0:
 		var big: int = job["big"]
 		job["big"] = big + 1
+	if _big and int(job["slot"]) == -1:
+		_note_big(int(job["def"]), turnover)
 	_snaps_left -= 1
 	if _snaps_left <= 0:
 		_next_job()
+
+
+## The `big` report: what this snap adds to the row of its defensive play.
+func _note_big(def_index: int, turnover: bool) -> void:
+	if not _big_rows.has(def_index):
+		_big_rows[def_index] = {"n": 0, "pass": 0, "big": 0, "td": 0, "alone": 0, "who": {}, "near": {}, "gambles": {}, "all_gambles": {}}
+	var row: Dictionary = _big_rows[def_index]
+	row["n"] = int(row["n"]) + 1
+	var all_gambles: Dictionary = row["all_gambles"]
+	for gamble: StringName in _unique(_pc.gambles):
+		all_gambles[gamble] = int(all_gambles.get(gamble, 0)) + 1
+	if _pc.off_play.is_run:
+		return
+	row["pass"] = int(row["pass"]) + 1
+	if turnover or _pc.catcher == null or (_pc.dead_spot_x - _pc.los_x) * _pc.off_dir < BIG_PLAY:
+		return
+	row["big"] = int(row["big"]) + 1
+	if _pc.result == PlayController.Result.TOUCHDOWN:
+		row["td"] = int(row["td"]) + 1
+	var who: Dictionary = row["who"]
+	var label: String = _pc.catcher.brain.off_assign.label
+	who[label] = int(who.get(label, 0)) + 1
+	var gambles: Dictionary = row["gambles"]
+	for gamble: StringName in _unique(_pc.gambles):
+		gambles[gamble] = int(gambles.get(gamble, 0)) + 1
+	if _pc.catch_open < ALONE:
+		return
+	row["alone"] = int(row["alone"]) + 1
+	if _pc.catch_nearest != null and _pc.catch_nearest.brain.def_assign != null:
+		var near: Dictionary = row["near"]
+		var assignment: DefenseAssignment = _pc.catch_nearest.brain.def_assign
+		var job: String = "%s %s%s" % [assignment.label, ["rush", "man", "zone", "spy"][assignment.job], " deep" if assignment.deep else ""]
+		near[job] = int(near.get(job, 0)) + 1
+
+
+func _unique(names: Array[StringName]) -> Array[StringName]:
+	var result: Array[StringName] = []
+	for name: StringName in names:
+		if not result.has(name):
+			result.append(name)
+	return result
+
+
+func _counts(counts: Dictionary) -> String:
+	var keys: Array = counts.keys()
+	keys.sort_custom(func(a: Variant, b: Variant) -> bool: return int(counts[a]) > int(counts[b]))
+	var parts: PackedStringArray = PackedStringArray()
+	for key: Variant in keys:
+		parts.append("%s %d" % [key, counts[key]])
+	return ", ".join(parts)
+
+
+func _report_big(defs: Array[DefensePlay]) -> void:
+	print("
+BIG PLAYS: completed passes of %d+ yards (uncapped), per defensive play, pass plays only." % int(BIG_PLAY))
+	print("alone = caught with no defender within %d yd. near = the job of the nearest defender on those." % int(ALONE))
+	print("%-18s %5s %5s %5s %6s   %s" % ["", "snaps", "big%", "td%", "alone%", "who caught | near | gambles on big plays (on all snaps)"])
+	var total: Dictionary = {"pass": 0, "big": 0, "td": 0, "alone": 0}
+	for d: int in defs.size():
+		if not _big_rows.has(d):
+			continue
+		var row: Dictionary = _big_rows[d]
+		var passes: float = maxf(float(row["pass"]), 1.0)
+		for key: String in total:
+			total[key] = int(total[key]) + int(row[key])
+		var gambles: Dictionary = row["gambles"]
+		var all_gambles: Dictionary = row["all_gambles"]
+		var gamble_text: PackedStringArray = PackedStringArray()
+		for gamble: Variant in all_gambles:
+			gamble_text.append("%s %d (%d)" % [gamble, gambles.get(gamble, 0), all_gambles[gamble]])
+		print("%-18s %5d %5.1f %5.1f %6.1f   %s | %s | %s" % [defs[d].play_name.substr(0, 18), int(row["pass"]), 100.0 * float(row["big"]) / passes, 100.0 * float(row["td"]) / passes, 100.0 * float(row["alone"]) / passes, _counts(row["who"]), _counts(row["near"]), ", ".join(gamble_text)])
+	var all_passes: float = maxf(float(total["pass"]), 1.0)
+	print("%-18s %5d %5.1f %5.1f %6.1f" % ["ALL", int(total["pass"]), 100.0 * float(total["big"]) / all_passes, 100.0 * float(total["td"]) / all_passes, 100.0 * float(total["alone"]) / all_passes])
 
 
 func _mean(job: Dictionary, key: String) -> float:
@@ -368,6 +456,8 @@ func _report() -> void:
 			if _def_filter == "" or defs[d].play_name.to_lower().contains(_def_filter):
 				footer += "%8.1f" % (column_sum[d] / float(maxi(rows, 1)))
 		print(footer)
+		if _big:
+			_report_big(defs)
 
 	var spam: Array[Dictionary] = _jobs.filter(func(job: Dictionary) -> bool: return int(job["slot"]) != -1)
 	if not spam.is_empty():

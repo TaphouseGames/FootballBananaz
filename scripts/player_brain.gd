@@ -36,6 +36,16 @@ var route_ahead_dir: Vector3 = Vector3.ZERO
 var route_ahead_cut: bool = false
 
 var man_target: Player
+## A rusher's peel: the back nobody covers, whom he leaves the rush for when the
+## man comes out (see PlayController._assign_peel). `peel_side` of -1 or +1
+## (world z) has him do it only for a man who comes out to that side.
+var peel_target: Player
+var peel_side: float = 0.0
+var _peeling: bool = false
+## Counted once a play: he was the last man in front of the carrier, he had the
+## contain on him.
+var _last_man_noted: bool = false
+var _contain_noted: bool = false
 var zone_center: Vector3 = Vector3.ZERO
 var zone_radius: float = 0.0
 
@@ -1713,8 +1723,11 @@ func _defense_pocket(pc: PlayController) -> void:
 		return
 	match def_assign.job:
 		DefenseAssignment.Job.RUSH:
-			# Rushers hold their turbo at first so the QB gets a moment to read.
-			_pursue(pc, pc.qb, pc.live_time >= _sharp(tuning.ai_rush_turbo_delay, tuning.ai_edge_rush_turbo_delay))
+			if _peels(pc):
+				_cover_man(pc)
+			else:
+				# Rushers hold their turbo at first so the QB gets a moment to read.
+				_pursue(pc, pc.qb, pc.live_time >= _sharp(tuning.ai_rush_turbo_delay, tuning.ai_edge_rush_turbo_delay))
 		DefenseAssignment.Job.MAN:
 			if man_target == null:
 				_cover_zone(pc)
@@ -1728,9 +1741,40 @@ func _defense_pocket(pc: PlayController) -> void:
 			_spy(pc)
 			return
 	if pc.live_time < blown_time:
-		# Blown coverage: caught flat-footed, looking into the backfield.
-		player.move_input = Vector3.ZERO
+		# Blown coverage: slow off the mark, looking into the backfield.
+		player.ai_speed_scale *= tuning.ai_blown_coverage_speed
 		player.wants_turbo = false
+
+
+## A rusher told to peel: the back nobody covers has come out of the backfield
+## on his side instead of staying in to block, so he leaves the rush and takes
+## him man to man.
+func _peels(pc: PlayController) -> bool:
+	if _peeling:
+		return true
+	var back: Player = peel_target
+	if back == null or back.is_down() or back.is_blocking or back.has_ball:
+		return false
+	var job: OffenseAssignment = back.brain.off_assign
+	if job == null or back.brain.chipping(pc):
+		return false
+	match job.job:
+		OffenseAssignment.Job.ROUTE:
+			pass
+		OffenseAssignment.Job.RUNNER:
+			# A faked handoff: he is a receiver once the fake is over.
+			if pc.off_play.is_run or pc.live_time < pc.fake_end():
+				return false
+		_:
+			return false
+	if _flat_distance(back.position, back.brain.start_point) < tuning.ai_peel_release:
+		return false
+	if peel_side != 0.0 and (back.position.z - back.brain.start_point.z) * peel_side < 0.0:
+		return false
+	_peeling = true
+	man_target = back
+	pc.game.add_stat(&"peels")
+	return true
 
 
 ## His man is staying in to block, so he comes for the quarterback: the extra
@@ -1804,8 +1848,18 @@ func _cover_man(pc: PlayController) -> void:
 	# behind him is a touchdown.
 	aim.x += pc.off_dir * _man_cushion(pc)
 	aim.z += leverage
+	# A man still in the backfield is waited for past the line, not chased into
+	# it through the blockers: the defender stays across from him.
+	var hold: float = pc.los_x + pc.off_dir * tuning.ai_cover_back_depth
+	var waiting: bool = (pc.los_x - man_target.position.x) * pc.off_dir > 2.0 and (hold - aim.x) * pc.off_dir > 0.0
+	if waiting:
+		# Across from where he is going, not where he is.
+		aim = Vector3(hold, 0.0, man_target.position.z + _read_velocity.z * tuning.ai_cover_back_lead + leverage)
 	player.ai_speed_scale = tuning.ai_cover_speed_scale * _cut_scale(man_target)
 	_seek(aim)
+	if waiting:
+		player.wants_turbo = _bust_timer <= 0.0 and _flat_distance(player.position, aim) > tuning.ai_cover_back_slack
+		return
 	# Beaten: he is past the defender or has pulled away. Burn turbo to recover.
 	var behind: float = (man_target.position.x - player.position.x) * pc.off_dir
 	var gap: float = _flat_distance(player.position, man_target.position)
@@ -1837,6 +1891,12 @@ func _man_cushion(pc: PlayController) -> float:
 func _cover_zone(pc: PlayController) -> void:
 	var deep: bool = def_assign.deep
 	var hot: Player = pc.hot_receiver()
+	# Underneath, with a deep zone behind him: a receiver who has gone on up the
+	# field belongs to the deep man now, and he looks for the next one in.
+	var passes_off: bool = not deep and pc.deep_help()
+	# The curl-flat man: whoever comes out into the flat wider than the middle
+	# of his zone is his, out to the sideline.
+	var flat_side: float = signf(zone_center.z) if def_assign.flat and not deep else 0.0
 	var threat: Player = null
 	var best: float = -INF
 	var nearest: Player = null
@@ -1851,13 +1911,29 @@ func _cover_zone(pc: PlayController) -> void:
 		if receiver == hot:
 			# The man who keeps getting the ball draws help from further away.
 			reach *= tuning.ai_hot_zone_scale
+		var past: float = (receiver.position.x - zone_center.x) * pc.off_dir
+		if passes_off and past > tuning.ai_zone_pass_off_depth:
+			continue
 		if dist < nearest_dist:
 			nearest_dist = dist
 			nearest = receiver
-		if dist > reach:
+		var in_flat: bool = false
+		var out: float = 0.0
+		if flat_side != 0.0 and (receiver.position.x - pc.los_x) * pc.off_dir < tuning.ai_zone_flat_depth:
+			# Short and wide of him, and on his way out there: a back, or a man
+			# who has left his stance for the sideline. Not a wideout who is
+			# simply standing out there.
+			out = maxf(soon.z - zone_center.z, receiver.position.z - zone_center.z) * flat_side
+			var start: Vector3 = receiver.brain.start_point
+			var from_backfield: bool = (start.x - pc.los_x) * pc.off_dir < DefenseAligner.BACKFIELD
+			in_flat = out > 0.0 and (from_backfield or (receiver.position.z - start.z) * flat_side >= 2.0)
+		if dist > reach and not in_flat:
 			continue
 		# Deep zones take the deepest man; underneath zones take the closest.
 		var score: float = (receiver.position.x - pc.los_x) * pc.off_dir if deep else -dist
+		if in_flat:
+			# Before anybody else, and the widest of them first.
+			score = 100.0 + out
 		if receiver == hot:
 			score += tuning.ai_hot_bonus
 		if score > best:
@@ -1942,6 +2018,7 @@ func _cover_spot(pc: PlayController, target: Player) -> Vector3:
 			_bust_timer = tuning.ai_cover_bust_time
 			_bust_ghost = target.position
 			pc.game.add_stat(&"coverage_busts")
+			pc.gambles.append(&"bust")
 			_show_fake_out(pc, target)
 	if _bust_timer > 0.0:
 		# Fooled: he keeps chasing the receiver he thought he saw.
@@ -1994,14 +2071,50 @@ func _reading_run(pc: PlayController, carrier: Player) -> bool:
 
 
 ## Run to where the target will be, not where it is.
+## A carrier who has broken into the open field is run down as a team: the men
+## ahead of him take the angle that cuts him off, everybody sprints, the widest
+## man ahead keeps him off the sideline, and the last man in front of him stays
+## on his feet between him and the goal line until help is there.
 func _pursue(pc: PlayController, target: Player, allow_turbo: bool = true) -> void:
-	var lead: float = Ball.intercept_time(player.position, target.position, target.velocity, player.max_speed())
-	lead = minf(lead, tuning.ai_pursuit_max_lead)
-	var aim: Vector3 = target.position + target.velocity * lead
-	player.move_input = _direction_to(aim)
 	var dist: float = _flat_distance(player.position, target.position)
-	player.wants_turbo = allow_turbo and dist < tuning.ai_turbo_range
-	if dist < tuning.ai_dive_range and _decision_timer <= 0.0:
+	var dir: float = float(target.team.attack_dir)
+	var loose: bool = target.has_ball and pc.phase == PlayController.Phase.RUN \
+			and (target.team != pc.offense or (target.position.x - pc.los_x) * dir >= tuning.ai_pursuit_open_yards)
+	var ahead: bool = loose and (player.position.x - target.position.x) * dir > 0.0
+	var lead: float = Ball.intercept_time(player.position, target.position, target.velocity, player.max_speed())
+	lead = minf(lead, tuning.ai_pursuit_cutoff_lead if ahead else tuning.ai_pursuit_max_lead)
+	var aim: Vector3 = target.position + target.velocity * lead
+	var turbo: bool = allow_turbo and (loose or dist < tuning.ai_turbo_range)
+	var dive_range: float = tuning.ai_dive_range
+	if ahead:
+		var limit: float = tuning.half_width() - 0.5
+		aim.z = clampf(aim.z, -limit, limit)
+		var to_goal: float = (tuning.goal_x(target.team.attack_dir) - target.position.x) * dir
+		if pc.last_defender(target) == player and to_goal > tuning.ai_last_man_goal_yards and not pc.tackle_help(target, player):
+			if not _last_man_noted:
+				_last_man_noted = true
+				pc.game.add_stat(&"last_man_stands")
+			# Nobody behind him: he does not leave his feet for a tackle he might miss.
+			dive_range = tuning.ai_last_man_dive_range
+			if dist <= tuning.ai_last_man_range:
+				# He breaks down: squares up in front of the carrier and lets him
+				# come. A carrier who pulls up gets closed on.
+				aim = Vector3(player.position.x, 0.0, clampf(target.position.z + target.velocity.z * tuning.ai_last_man_mirror, -limit, limit))
+				if target.velocity.x * dir < tuning.run_speed * 0.3:
+					aim.x = target.position.x
+				turbo = allow_turbo and absf(aim.z - player.position.z) > 2.0
+			elif (aim.x - target.position.x) * dir < tuning.ai_last_man_cushion:
+				# Never level with him on the way there: always the goal side.
+				aim.x = target.position.x + dir * tuning.ai_last_man_cushion
+		elif pc.contain_defender(target) == player:
+			if not _contain_noted:
+				_contain_noted = true
+				pc.game.add_stat(&"contains")
+			# Outside shoulder: the sideline lane is shut and he is turned back in.
+			aim.z = clampf(aim.z + signf(target.position.z) * tuning.ai_contain_width, -limit, limit)
+	player.move_input = _direction_to(aim)
+	player.wants_turbo = turbo
+	if dist < dive_range and _decision_timer <= 0.0:
 		_decision_timer = 0.4
 		# The sharper defender nearly always leaves his feet: a dive is a big hit,
 		# and big hits are what knock the ball loose.
@@ -2299,6 +2412,11 @@ func _reset() -> void:
 	route_index = 0
 	route_exit_dir = Vector3.ZERO
 	man_target = null
+	peel_target = null
+	peel_side = 0.0
+	_peeling = false
+	_last_man_noted = false
+	_contain_noted = false
 	blown_time = 0.0
 	bite_time = 0.0
 	pump_bite_from = 0.0

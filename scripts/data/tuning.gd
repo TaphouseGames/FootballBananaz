@@ -1003,6 +1003,18 @@ extends Resource
 ## Seconds after the snap a green dog (DefenseAssignment.green_dog) needs to
 ## see that his man is staying in to block, before he rushes.
 @export var ai_green_dog_delay: float = 0.5
+## A man defender whose man is still in the backfield (a back) does not go in
+## after him: he waits this many yards past the line and stays across from him,
+## and comes up once the man is nearly at the line. He aims `lead` seconds
+## ahead of the man's run across, and sprints when he is more than `slack`
+## yards from where he should be.
+@export var ai_cover_back_depth: float = 1.5
+@export var ai_cover_back_lead: float = 0.4
+@export var ai_cover_back_slack: float = 1.5
+## Peel: a back nobody covers who has come this many yards out of his stance
+## without blocking is picked up by the rusher told to watch him (see
+## PlayController._assign_peel).
+@export var ai_peel_release: float = 2.5
 ## Seconds a coverage defender takes to read a change in his receiver's movement.
 @export var ai_cover_lag: float = 0.42
 ## Share of his speed a coverage defender loses for a moment when his receiver
@@ -1074,6 +1086,14 @@ extends Resource
 @export var ai_zone_tightness: float = 0.85
 ## With the zone empty, how far he leans toward the nearest receiver (share of radius).
 @export var ai_zone_lean: float = 0.35
+## An underneath zone defender with a deep zone behind him lets a receiver go
+## once the man is this many yards past the middle of his zone: the deep man
+## has him from there, and the underneath man takes the next one in.
+@export var ai_zone_pass_off_depth: float = 6.0
+## The flat a curl-flat defender (DefenseAssignment.flat) owns reaches this
+## many yards past the line of scrimmage, and from the middle of his zone to
+## the sideline.
+@export var ai_zone_flat_depth: float = 6.0
 ## Yards a deep-zone defender stays behind the deepest receiver.
 @export var ai_deep_cushion: float = 3.5
 ## A deep-zone defender comes no shallower than this share of his radius in
@@ -1093,8 +1113,8 @@ extends Resource
 ## favourite receiver is on his cuts (fully recognised; less in between).
 @export var ai_scout_cover_scale: float = 0.45
 ## Recognised play: chance (when fully recognised) that a second defender leaves
-## his own job to sit in front of the favourite receiver. Whoever he left is
-## open.
+## his own job to sit in front of the favourite receiver. Never the only man on
+## another receiver: a zone defender underneath, or a second man on somebody.
 @export var ai_scout_bracket_chance: float = 0.6
 ## Recognised play: share of ai_ball_react_time and ai_run_read_time the defense
 ## saves.
@@ -1110,9 +1130,11 @@ extends Resource
 @export var ai_scramble_read_time: float = 0.45
 @export var ai_scramble_read_range: float = 14.0
 ## Chance per coverage defender (before his coverage rating) that he blows his
-## assignment at the snap: for a random time between the two below he stands
-## flat-footed, then has to catch up. About one play in ten has one.
+## assignment at the snap: for a random time between the two below he is slow
+## off the mark (`speed` of his own), then has to catch up. One defender a play
+## at most, and only in a play with a deep zone behind him.
 @export var ai_blown_coverage_chance: float = 0.04
+@export var ai_blown_coverage_speed: float = 0.4
 @export var ai_blown_coverage_time_min: float = 1.3
 @export var ai_blown_coverage_time_max: float = 2.2
 ## Seconds coverage defenders keep covering after a handoff before they read run.
@@ -1196,6 +1218,31 @@ extends Resource
 ## Max seconds ahead of the carrier a pursuer aims.
 @export var ai_pursuit_max_lead: float = 1.5
 @export var ai_turbo_range: float = 9.0
+## A carrier this many yards past the line of scrimmage (or any man running a
+## turnover back) is loose in the open field. From then on every pursuer
+## sprints, and one who is still ahead of him aims up to `cutoff_lead` seconds
+## ahead: the angle that cuts him off instead of the line that chases him.
+@export var ai_pursuit_open_yards: float = 4.0
+@export var ai_pursuit_cutoff_lead: float = 4.0
+## Contain on a loose carrier `min_width` yards or more from the middle of the
+## field: the defender ahead of him who is furthest toward that sideline (and
+## no more than `reach` yards inside him) aims `width` yards outside the point
+## he would meet him at, so the carrier is turned back in to the others.
+@export var ai_contain_min_width: float = 4.0
+@export var ai_contain_reach: float = 3.0
+@export var ai_contain_width: float = 1.5
+## The last man ahead of a loose carrier, with no teammate within `help` yards
+## of the carrier and the goal line more than `goal_yards` away, does not sell
+## out. On his way he stays `cushion` yards on the goal side of him. Within
+## `range` yards he squares up and moves only sideways with him, aiming `mirror`
+## seconds ahead, and he dives only from `dive_range` (a tackle on his feet
+## reaches about that far anyway).
+@export var ai_last_man_help: float = 5.0
+@export var ai_last_man_goal_yards: float = 8.0
+@export var ai_last_man_cushion: float = 3.0
+@export var ai_last_man_range: float = 6.0
+@export var ai_last_man_mirror: float = 0.35
+@export var ai_last_man_dive_range: float = 1.4
 @export var ai_dive_range: float = 2.3
 @export var ai_dive_chance: float = 0.6
 ## Chance that a CPU carrier answers a tackler straight ahead with a spin.

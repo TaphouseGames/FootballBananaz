@@ -59,6 +59,13 @@ var pass_intended: Player
 ## The pass in the air was thrown into the stands on purpose: nobody can get to it.
 var thrown_away: bool = false
 var catcher: Player
+## How far the nearest defender on his feet was from the catcher as he caught
+## it (yards; -1 without a catch), and that defender.
+var catch_open: float = -1.0
+var catch_nearest: Player
+## What the defense gambled on this snap: &"blown", &"takeout", &"bracket",
+## &"spy", &"bite" (play action), &"bust" (a defender fooled by a cut).
+var gambles: Array[StringName] = []
 var interceptor: Player
 var tackled_by: Player
 var fumble_forcer: Player
@@ -288,6 +295,7 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 			player.speed_scale = tuning.line_speed_scale
 		player.brain.assign_defense(assignment, start, target, to_world(_def_point(assignment.zone_center, deepest, room), def_flip))
 	_scout_defense()
+	_assign_peel()
 	_roll_blown_coverage()
 	_roll_technique(p_def)
 	_roll_takeout()
@@ -664,6 +672,9 @@ func _reset_play() -> void:
 	_pass_target = -1
 	_qb_ran = false
 	_completed = false
+	catch_open = -1.0
+	catch_nearest = null
+	gambles.clear()
 	_tip_untouched = false
 	_tip_tried.clear()
 	_pump_ready = 0.0
@@ -847,7 +858,8 @@ func _place_mascots() -> void:
 ## A defense that has seen this before adjusts. A play it recognises: tighter on
 ## the favourite receiver, sometimes with a second man in front of him. A
 ## quarterback who keeps running: sometimes a spy. Both take a defender away
-## from something else, which is then open.
+## from something else: a blitz, a zone underneath, a double team. Never the
+## only man on a receiver.
 func _scout_defense() -> void:
 	read = 0.0
 	read_target = null
@@ -865,6 +877,11 @@ func _scout_defense() -> void:
 	var blitzers: Array[Player] = []
 	var underneath: Array[Player] = []
 	var has_spy: bool = false
+	var men_on: Dictionary[Player, int] = {}
+	for defender: Player in defense.players:
+		var man: Player = defender.brain.man_target
+		if defender.brain.def_assign.job == DefenseAssignment.Job.MAN and man != null:
+			men_on[man] = men_on.get(man, 0) + 1
 	for defender: Player in defense.players:
 		var assignment: DefenseAssignment = defender.brain.def_assign
 		match assignment.job:
@@ -877,14 +894,17 @@ func _scout_defense() -> void:
 				if not assignment.deep:
 					underneath.append(defender)
 			DefenseAssignment.Job.MAN:
-				# Whoever already has the favourite receiver stays on him.
-				if read_target == null or defender.brain.man_target != read_target:
+				# Whoever already has the favourite receiver stays on him, and so
+				# does the only man another receiver has.
+				var man: Player = defender.brain.man_target
+				if man != null and man != read_target and men_on.get(man, 0) > 1:
 					underneath.append(defender)
 	underneath.shuffle()
 
 	if read_target != null and not underneath.is_empty() and randf() < read * tuning.ai_scout_bracket_chance:
 		_reassign(underneath.pop_back(), DefenseAssignment.Job.MAN, read_target, true)
 		game.add_stat(&"scout_brackets")
+		gambles.append(&"bracket")
 	if not has_spy and randf() < game.scout.scramble_threat(offense) * strength:
 		# A blitzer is the cheapest spy; otherwise somebody leaves the coverage.
 		var spy: Player = null
@@ -895,6 +915,7 @@ func _scout_defense() -> void:
 		if spy != null:
 			_reassign(spy, DefenseAssignment.Job.SPY, null, false)
 			game.add_stat(&"scout_spies")
+			gambles.append(&"spy")
 
 
 ## Gives `defender` a new job for this play. He stays where he lined up.
@@ -908,9 +929,69 @@ func _reassign(defender: Player, job: DefenseAssignment.Job, target: Player, und
 	defender.brain.assign_defense(assignment, defender.brain.start_point, target, Vector3.ZERO)
 
 
-## Every so often a coverage defender gets it wrong from the snap, and somebody
-## runs free.
+## A back nobody covers man to man would walk out of the backfield free on a
+## side that has no flat defender either. The rusher coming from off the line
+## nearest him peels: he leaves the rush for the back if the back comes out on
+## such a side (PlayerBrain._peels). With a rusher like that on either side of
+## the back each one has his own side. The back is read from where the offense
+## stands, as the rest of the line-up is.
+func _assign_peel() -> void:
+	var back: Player = seen_back()
+	if back == null:
+		return
+	# Index 0: the side of negative world z; 1: the other.
+	var nearest: Array[Player] = [null, null]
+	var open_sides: Array[int] = [0, 1]
+	for defender: Player in defense.players:
+		var assignment: DefenseAssignment = defender.brain.def_assign
+		match assignment.job:
+			DefenseAssignment.Job.MAN:
+				if defender.brain.man_target == back:
+					return
+			DefenseAssignment.Job.ZONE:
+				if assignment.flat:
+					open_sides.erase(0 if defender.brain.zone_center.z < 0.0 else 1)
+			DefenseAssignment.Job.RUSH:
+				if assignment.start.x > tuning.line_depth:
+					var side: int = 0 if defender.position.z < back.position.z else 1
+					if nearest[side] == null or _flat_distance(defender.position, back.position) < _flat_distance(nearest[side].position, back.position):
+						nearest[side] = defender
+	for side: int in open_sides:
+		# His own side's rusher, or else the one from across.
+		var both: bool = nearest[side] != null and nearest[1 - side] != null
+		var peeler: Player = nearest[side] if nearest[side] != null else nearest[1 - side]
+		if peeler != null:
+			peeler.brain.peel_target = back
+			# One side only, unless he is the only one there is for two open sides.
+			peeler.brain.peel_side = 0.0 if open_sides.size() == 2 and not both else float(side * 2 - 1)
+
+
+## The back, as the defense saw the offense line up: the man DefenseAssignment
+## .man_target 2 stands for, if he is in the backfield. Null without one.
+func seen_back() -> Player:
+	if _cover_order.size() < 3:
+		return null
+	var back: Player = _seen_players[_cover_order[2]]
+	if (back.position.x - los_x) * off_dir >= DefenseAligner.BACKFIELD:
+		return null
+	return back
+
+
+## A deep zone defender is behind the coverage in this play.
+func deep_help() -> bool:
+	for defender: Player in defense.players:
+		var assignment: DefenseAssignment = defender.brain.def_assign
+		if assignment.job == DefenseAssignment.Job.ZONE and assignment.deep:
+			return true
+	return false
+
+
+## Every so often a coverage defender gets it wrong from the snap and is late
+## to his man. One defender a play at most, and only with a deep zone behind
+## him: a mistake costs a completion, not the game.
 func _roll_blown_coverage() -> void:
+	if not deep_help():
+		return
 	for defender: Player in defense.players:
 		var assignment: DefenseAssignment = defender.brain.def_assign
 		var covers: bool = assignment.job == DefenseAssignment.Job.MAN or (assignment.job == DefenseAssignment.Job.ZONE and not assignment.deep)
@@ -919,6 +1000,8 @@ func _roll_blown_coverage() -> void:
 		if covers and randf() < chance:
 			defender.brain.blown_time = randf_range(tuning.ai_blown_coverage_time_min, tuning.ai_blown_coverage_time_max)
 			game.add_stat(&"blown_coverages")
+			gambles.append(&"blown")
+			return
 
 
 ## How much sharper `team`'s CPU players are than the plain ones (0..1). The
@@ -966,8 +1049,12 @@ func _roll_technique(play: DefensePlay) -> void:
 ## Now and then a coverage defender (sometimes two) means to take his man out
 ## of the play before the ball is thrown: a dive that puts a receiver or the
 ## back on the turf. The man the offense keeps going to comes first, then the
-## back. A dive that misses leaves the defender on the ground and his man free.
+## back. A dive that misses leaves the defender on the ground and his man free,
+## so it is only tried with a deep zone behind the coverage, and not in a play
+## that already has a defender late to his man.
 func _roll_takeout() -> void:
+	if gambles.has(&"blown") or not deep_help():
+		return
 	if randf() >= tuning.ai_takeout_chance * team_edge(defense):
 		return
 	var hot: Player = hot_receiver()
@@ -996,6 +1083,7 @@ func _roll_takeout() -> void:
 	for i: int in mini(hitters, candidates.size()):
 		candidates[i].brain.takeout_time = randf_range(tuning.ai_takeout_time_min, tuning.ai_takeout_time_max)
 		game.add_stat(&"takeout_plans")
+		gambles.append(&"takeout")
 
 
 ## The quarterback cannot throw yet: on play action the handoff is still being
@@ -1056,6 +1144,7 @@ func _roll_play_action() -> void:
 		if randf() < chance:
 			defender.brain.bite_time = fake_end() + randf_range(tuning.ai_play_action_bite_time_min, tuning.ai_play_action_bite_time_max)
 			game.add_stat(&"play_action_bites")
+			gambles.append(&"bite")
 
 
 func snap() -> void:
@@ -2259,6 +2348,12 @@ func _complete_pass(receiver: Player) -> void:
 	phase = Phase.RUN
 	_completed = true
 	catcher = receiver
+	catch_open = INF
+	for defender: Player in defense.players:
+		var gap: float = _flat_distance(defender.position, receiver.position)
+		if not defender.is_down() and gap < catch_open:
+			catch_open = gap
+			catch_nearest = defender
 	game.add_stat(&"completions")
 	if receiver.is_airborne() or receiver.dive_reach_timer > 0.0:
 		game.audio.remark(&"announcer_catch", AudioDirector.REMARK_CATCH)
@@ -3426,6 +3521,49 @@ func _remember_target(target: Player) -> void:
 	while recent.size() > tuning.ai_hot_memory:
 		recent.pop_front()
 	_recent_targets[offense] = recent
+
+
+## The last man between `carrier` and the goal line he is running at: the
+## deepest opponent on his feet who is still ahead of him. Null with nobody
+## ahead of him.
+func last_defender(carrier: Player) -> Player:
+	var dir: float = float(carrier.team.attack_dir)
+	var best: Player = null
+	var best_ahead: float = 1.0
+	for defender: Player in carrier.team.opponent.players:
+		var ahead: float = (defender.position.x - carrier.position.x) * dir
+		if not defender.is_down() and ahead > best_ahead:
+			best_ahead = ahead
+			best = defender
+	return best
+
+
+## An opponent other than `but` is on his feet close enough to `carrier` to make
+## the tackle with him.
+func tackle_help(carrier: Player, but: Player) -> bool:
+	for defender: Player in carrier.team.opponent.players:
+		if defender != but and not defender.is_down() and _flat_distance(defender.position, carrier.position) <= tuning.ai_last_man_help:
+			return true
+	return false
+
+
+## The man with the contain on `carrier`: of the opponents ahead of him, the one
+## furthest toward the sideline the carrier is nearer to. Null in the middle of
+## the field, or with nobody out there who can still get outside him.
+func contain_defender(carrier: Player) -> Player:
+	if absf(carrier.position.z) < tuning.ai_contain_min_width:
+		return null
+	var dir: float = float(carrier.team.attack_dir)
+	var side: float = signf(carrier.position.z)
+	var best: Player = null
+	var best_out: float = -tuning.ai_contain_reach
+	for defender: Player in carrier.team.opponent.players:
+		var ahead: float = (defender.position.x - carrier.position.x) * dir
+		var out: float = (defender.position.z - carrier.position.z) * side
+		if not defender.is_down() and ahead > 0.0 and out > best_out:
+			best_out = out
+			best = defender
+	return best
 
 
 func nearest_opponent_distance(player: Player) -> float:
