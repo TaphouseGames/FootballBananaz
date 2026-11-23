@@ -279,14 +279,21 @@ func hide_audible() -> void:
 
 ## The hot-route panel (see HotRouteMenu), made the first time it is asked
 ## for. `receiver` names the picked man, or is empty while one is being picked.
-func show_hot_routes(receiver: String) -> void:
+## `inside`: the side of the screen the ball is on from him (-1 left, 1 right).
+func show_hot_routes(receiver: String, inside: float = 1.0) -> void:
 	if _hot_routes == null:
 		_hot_routes = HotRouteMenu.new()
 		add_child(_hot_routes)
 		# Under the pause menu.
 		move_child(_hot_routes, pause_menu.get_index())
 	_hot_routes.visible = true
-	_hot_routes.show_for(receiver)
+	_hot_routes.show_for(receiver, inside)
+
+
+## Lights the box of the route shown on the field (see HotRouteMenu.light).
+func light_hot_route(kind: int, way: int) -> void:
+	if _hot_routes != null:
+		_hot_routes.light(kind, way)
 
 
 func hide_hot_routes() -> void:

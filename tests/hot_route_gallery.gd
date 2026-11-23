@@ -48,6 +48,7 @@ func _run() -> void:
 	_pc = _game.play_controller
 	var tuning: Tuning = _game.tuning
 	# Nobody snaps and nobody calls a motion but this script.
+	tuning.play_clock = 0.0
 	tuning.cpu_snap_delay_min = 1.0e9
 	tuning.cpu_snap_delay_max = 1.0e9
 	tuning.ai_motion_chance = 0.0
@@ -82,10 +83,17 @@ func _run() -> void:
 	var art: PlayArt = _game.play_art
 	art.show_offense(offense, false)
 	_game.hud.hide_banner()
-	_game.hud.show_hot_routes("(%s) %s" % [_game.human.pass_label(_pc.eligible.find(man)), man.brain.off_assign.label])
+	_game.hud.show_hot_routes("")
+	await _shot("0_pick_a_receiver")
+	# Play frame to screen, as PreSnapState._hot_screen has it.
+	var screen: float = signf(_game.camera_rig.basis.x.z) * _pc.off_dir
+	var start_y: float = man.brain.off_assign.start.y
+	var inside: float = (-signf(start_y) if absf(start_y) > 0.5 else 1.0) * screen
+	_game.hud.show_hot_routes("(%s) %s" % [_game.human.pass_label(_pc.eligible.find(man)), man.brain.off_assign.label], inside)
 	await _shot("0_as_called")
 	for shot: Array in SHOTS:
 		art.set_hot_preview(man, OffenseAssignment.hot_route(man.brain.off_assign, shot[1], shot[2]))
+		_game.hud.light_hot_route(int(shot[1]), int(shot[2] * screen))
 		await _wait(0.1)
 		# The drawing is rebuilt in a frame of its own, and none runs while a
 		# picture is taken.

@@ -45,6 +45,7 @@ func _run() -> void:
 	await create_timer(0.6).timeout
 	_pc = _game.play_controller
 	var tuning: Tuning = _game.tuning
+	tuning.play_clock = 0.0
 	tuning.cpu_snap_delay_min = 1.0e9
 	tuning.cpu_snap_delay_max = 1.0e9
 	tuning.ai_motion_chance = 0.0

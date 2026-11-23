@@ -7,9 +7,7 @@ extends PanelContainer
 ## beside the scoreboard, so the players stay in view. PreSnapState drives it.
 
 ## How far in from the left edge of the screen and up from the bottom the
-## panels at the line sit that are too wide to go beside the scoreboard
-## (HotRouteMenu), and how far this one does.
-const CORNER: Vector2 = Vector2(24.0, 124.0)
+## panels at the line sit (this one and HotRouteMenu).
 const MENU_CORNER: Vector2 = Vector2(10.0, 10.0)
 ## One play's box, and the drawing in it.
 const BOX_WIDTH: float = 128.0

@@ -158,7 +158,7 @@ func _plan_defense() -> void:
 	# From here on every line-up opens with a silly line.
 	tuning.qb_silly_open_chance = 1.0
 	_steps.append([0.2, func() -> void:
-		_expect(not _game.hud.countdown.visible, "defense: the play clock is up")
+		_expect(_game.hud.countdown.visible, "defense: the CPU's play clock is not up")
 		_shouts_before = _shouts()
 		_defender_before = _game.human.controlled
 		_tap(&"qb_call")

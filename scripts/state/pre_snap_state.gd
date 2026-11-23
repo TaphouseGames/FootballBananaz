@@ -215,6 +215,10 @@ func physics_update(delta: float) -> void:
 			_close()
 			snap_now = not shifting
 	else:
+		# The CPU has the same play clock. It snaps on its own timer long before
+		# the clock is out; if it ever is, the ball is snapped as soon as they
+		# are set, as it is for the person.
+		var out_of_time: bool = count_down(game.tuning.play_clock, delta)
 		_cpu_offense_read()
 		if person and pc.shift.active(game.defense):
 			hint = "SHIFTING..."
@@ -223,7 +227,7 @@ func physics_update(delta: float) -> void:
 		if _cpu_motion_at >= 0.0 and time_in_state >= _cpu_motion_at and _cpu_offense_read_at < 0.0 and not pc.shift.active():
 			_cpu_motion_at = -1.0
 			pc.motion.call_motion()
-		snap_now = _cpu_snaps()
+		snap_now = _cpu_snaps() or (out_of_time and not pc.shift.active(game.offense))
 	_cpu_defense_read()
 	if person:
 		if hint != _hint:
@@ -347,19 +351,20 @@ func _cpu_defense_read() -> void:
 	if pick == null or randf() >= game.tuning.ai_audible_chance:
 		return
 	var flipped: bool = DefenseAligner.cpu_flip(pick, pc.off_play, pc.off_flipped)
+	# The person's menu and hot routes stay open: the offense's play, its
+	# receivers and their buttons are as they were.
 	if pc.audible(pc.off_play, pick, pc.off_flipped, flipped, game.defense):
 		game.add_stat(&"cpu_audibles")
-		# The person's menu and hot routes are shut while anybody walks.
-		if _mode != Mode.LINE:
-			_close()
 
 
 # --- Audibles ------------------------------------------------------------------
 
 ## The play can be changed right now: the teams have been set for a moment,
-## nobody is walking to a new formation and nobody has been sent in motion.
+## the person's own team is not walking to a new formation and nobody has been
+## sent in motion. The other team walking to its audible is no reason to wait:
+## that is when an answer to it is wanted.
 func _can_change() -> bool:
-	return time_in_state >= game.tuning.pre_snap_delay and not pc.shift.active() and not pc.motion.called()
+	return time_in_state >= game.tuning.pre_snap_delay and not pc.shift.active(game.human.team) and not pc.motion.called()
 
 
 ## At the line: (X) opens the menu, (Y) the hot routes, and the right stick
@@ -536,7 +541,10 @@ func _update_hot() -> void:
 			if man.brain.off_assign.job == OffenseAssignment.Job.ROUTE:
 				_show_hot(-1)
 				_hot_man = man
-				game.hud.show_hot_routes("(%s) %s" % [game.human.pass_label(slot), man.brain.off_assign.label])
+				# The way to the ball on screen, as OffenseAssignment.hot_route has it.
+				var start_y: float = man.brain.off_assign.start.y
+				var inside: float = (-signf(start_y) if absf(start_y) > 0.5 else 1.0) * _hot_screen()
+				game.hud.show_hot_routes("(%s) %s" % [game.human.pass_label(slot), man.brain.off_assign.label], inside)
 				game.audio.play(&"ui_move")
 			else:
 				game.audio.play(&"ui_tick")
@@ -603,14 +611,20 @@ func _hot_kind(key: int) -> OffenseAssignment.Hot:
 
 
 ## The way route `key` breaks, in the play's own frame. Left and right are as
-## the person sees them: the camera's right, in the frame the play is drawn in
-## (PlayController.to_world).
+## the person sees them.
 func _hot_side(key: int) -> float:
+	return float(key % 3 - 1) * _hot_screen()
+
+
+## Turns a side on screen (-1 left, 1 right) into one in the play's own frame,
+## and back: the camera's right, in the frame the play is drawn in
+## (PlayController.to_world).
+func _hot_screen() -> float:
 	var right: float = signf(game.camera_rig.basis.x.z)
 	if right == 0.0:
 		right = pc.off_dir
 	var flip: float = -1.0 if pc.off_flipped else 1.0
-	return float(key % 3 - 1) * right * pc.off_dir * flip
+	return right * pc.off_dir * flip
 
 
 ## Draws route `key` on the field for the picked man, in place of the one he
@@ -621,7 +635,9 @@ func _show_hot(key: int) -> void:
 	_hot_shown = key
 	if key < 0:
 		game.play_art.clear_hot_preview()
+		game.hud.light_hot_route(-1, 0)
 		return
+	game.hud.light_hot_route(int(_hot_kind(key)), key % 3 - 1)
 	game.play_art.set_hot_preview(_hot_man, OffenseAssignment.hot_route(_hot_man.brain.off_assign, _hot_kind(key), _hot_side(key)))
 	game.audio.play(&"ui_tick")
 
