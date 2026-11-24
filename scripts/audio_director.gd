@@ -20,6 +20,15 @@ const BUS_CROWD: StringName = &"Crowd"
 const BUS_VOICE: StringName = &"Voice"
 const BUS_UI: StringName = &"UI"
 const BUS_MUSIC: StringName = &"Music"
+## The voices a sound can start on (see _start): any free one of the pool for
+## the effects, and one each for Jim, Tony, the quarterback, the music and the
+## crowd's chant.
+const VOICE_POOL: StringName = &"pool"
+const VOICE_ANNOUNCER: StringName = &"announcer"
+const VOICE_COLOR: StringName = &"color"
+const VOICE_QB: StringName = &"qb"
+const VOICE_MUSIC: StringName = &"music"
+const VOICE_CHANT: StringName = &"chant"
 const MUSIC_PREFIX: String = "music_"
 const POOL_SIZE: int = 16
 ## Real seconds before the same sound may start again.
@@ -276,6 +285,64 @@ func setup(p_game: Game) -> void:
 	game.ball.bounced.connect(_on_ball_bounced)
 
 
+# --- Voices ---------------------------------------------------------------------------
+
+## Starts `stream` on one of the voices. Every sound but the loops of the crowd
+## starts here. In an online match the server tells each person's machine
+## (NetEvents), which does the same through net_start(): the server alone
+## decides what is heard and when, so both people hear the same broadcast.
+func _start(voice: StringName, stream: AudioStream, volume: float, pitch: float = 1.0, bus: StringName = &"") -> void:
+	var player: AudioStreamPlayer = _voice_player(voice)
+	if player == null or stream == null:
+		return
+	if bus != &"":
+		player.bus = bus
+	player.stream = stream
+	player.volume_linear = volume
+	player.pitch_scale = pitch
+	player.play()
+	if NetEvents.recording and stream.resource_path != "":
+		NetEvents.tell(NetEvents.Part.AUDIO, &"net_start", [voice, stream.resource_path, volume, pitch, bus])
+
+
+func _voice_player(voice: StringName) -> AudioStreamPlayer:
+	match voice:
+		VOICE_POOL:
+			return _free_player()
+		VOICE_ANNOUNCER:
+			return _announcer
+		VOICE_COLOR:
+			return _color
+		VOICE_QB:
+			return _voice
+		VOICE_MUSIC:
+			return _music
+		VOICE_CHANT:
+			return _chant
+	return null
+
+
+## On a person's machine in an online match: the server started this sound.
+func net_start(voice: StringName, path: String, volume: float, pitch: float, bus: StringName) -> void:
+	if not tuning.audio_enabled or not path.begins_with(AUDIO_DIR) or not ResourceLoader.exists(path):
+		return
+	var stream: AudioStream = load(path) as AudioStream
+	if stream == null or (bus != &"" and AudioServer.get_bus_index(bus) < 0):
+		return
+	if voice == VOICE_MUSIC:
+		_music_stopping = false
+		_music_level = volume
+	elif voice == VOICE_CHANT:
+		_chant_fading = false
+	_start(voice, stream, clampf(volume, 0.0, 2.0), clampf(pitch, 0.25, 4.0), bus)
+
+
+## On a person's machine in an online match: the booth was cut off.
+func net_hush() -> void:
+	_announcer.stop()
+	_color.stop()
+
+
 # --- Playing -------------------------------------------------------------------------
 
 ## Plays one take of `sound`. `volume` is linear (1 = as mixed), `pitch` a speed
@@ -290,13 +357,8 @@ func play(sound: StringName, volume: float = 1.0, pitch: float = 1.0) -> void:
 		return
 	_last_played[sound] = now
 	var bus: StringName = _bus_of(sound)
-	var player: AudioStreamPlayer = _free_player()
-	player.stream = stream
-	player.bus = bus
-	player.volume_linear = volume
 	# Hits and whooshes vary a little each time; jingles and voices stay in tune.
-	player.pitch_scale = pitch * (randf_range(0.94, 1.06) if bus == BUS_SFX else 1.0)
-	player.play()
+	_start(VOICE_POOL, stream, volume, pitch * (randf_range(0.94, 1.06) if bus == BUS_SFX else 1.0), bus)
 
 
 ## The announcer says `sounds` one after the other, once he has finished
@@ -497,6 +559,8 @@ func hush() -> void:
 	_quip_pending = &""
 	_announcer.stop()
 	_color.stop()
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.AUDIO, &"net_hush", [])
 
 
 ## A cue of the broadcast music, from the start, in place of any playing.
@@ -508,11 +572,9 @@ func play_music(sound: StringName) -> bool:
 		return false
 	if not tuning.audio_enabled:
 		return true
-	_music.stream = stream
 	_music_stopping = false
 	_music_level = _music_target()
-	_music.volume_linear = maxf(_music_level, SILENT)
-	_music.play()
+	_start(VOICE_MUSIC, stream, maxf(_music_level, SILENT))
 	return true
 
 
@@ -589,18 +651,13 @@ func _say_quip() -> void:
 		exchange_counts[&"started"] += 1
 		_say_part()
 		return
-	_color.stream = line as AudioStream
-	_color.volume_linear = tuning.audio_color_level
-	_color.play()
+	_start(VOICE_COLOR, line as AudioStream, tuning.audio_color_level)
 
 
 ## The next line of the exchange going on.
 func _say_part() -> void:
 	var part: Array = _exchange_parts.pop_front()
-	var player: AudioStreamPlayer = _color if part[0] else _announcer
-	player.stream = part[1] as AudioStream
-	player.volume_linear = tuning.audio_color_level if part[0] else tuning.audio_announcer_level
-	player.play()
+	_start(VOICE_COLOR if part[0] else VOICE_ANNOUNCER, part[1] as AudioStream, tuning.audio_color_level if part[0] else tuning.audio_announcer_level)
 	# The wait before Tony's next thought counts from the end of the exchange.
 	_last_quip = Time.get_ticks_msec()
 	# A line of the chapter itself, not the "as I was saying" before it.
@@ -841,9 +898,7 @@ func _speak(sound: StringName) -> void:
 	var stream: AudioStream = _pick_fresh(sound, true) as AudioStream
 	if stream == null or not tuning.audio_enabled:
 		return
-	_announcer.stream = stream
-	_announcer.volume_linear = tuning.audio_announcer_level
-	_announcer.play()
+	_start(VOICE_ANNOUNCER, stream, tuning.audio_announcer_level)
 
 
 ## A line from the quarterback. A new line cuts off the one before it. `fresh`
@@ -854,8 +909,7 @@ func say(sound: StringName, fresh: bool = false) -> float:
 	var stream: AudioStream = (_pick_fresh(sound, true) as AudioStream) if fresh else _pick(sound)
 	if stream == null or not tuning.audio_enabled:
 		return 0.0
-	_voice.stream = stream
-	_voice.play()
+	_start(VOICE_QB, stream, _voice.volume_linear)
 	return stream.get_length()
 
 
@@ -970,10 +1024,17 @@ func _process(_delta: float) -> void:
 	var now: int = Time.get_ticks_usec()
 	var delta: float = minf(float(now - _last_tick) / 1000000.0, 0.1)
 	_last_tick = now
-	if not _star_repeats.is_empty():
+	# On a person's machine in an online match the server says what starts
+	# (net_start) and how excited the crowd is (NetState): only the levels of
+	# what is playing are worked out here.
+	var following: bool = Game.net_mode == Game.NetMode.CLIENT
+	if not _star_repeats.is_empty() and not following:
 		_tick_stars(delta)
 
-	excitement =maxf(maxf(excitement - tuning.audio_crowd_decay * delta, 0.0), _live_excitement())
+	if not following:
+		excitement = maxf(maxf(excitement - tuning.audio_crowd_decay * delta, 0.0), _live_excitement())
+	elif _huddle_on and not _huddle.playing and tuning.audio_enabled:
+		_huddle.play()
 	# Quick to rise, slow to settle.
 	var rate: float = 3.0 if excitement > _roar_level else 0.8
 	_roar_level = move_toward(_roar_level, excitement, rate * delta)
@@ -984,11 +1045,12 @@ func _process(_delta: float) -> void:
 	if _huddle_level <= 0.0 and _huddle.playing:
 		_huddle.stop()
 
-	if _chant_in >= 0.0:
-		_chant_in -= delta
-		if _chant_in < 0.0:
-			_start_chant()
-	_update_booth(delta)
+	if not following:
+		if _chant_in >= 0.0:
+			_chant_in -= delta
+			if _chant_in < 0.0:
+				_start_chant()
+		_update_booth(delta)
 	_update_music(delta)
 	if _chant_fading and _chant.playing:
 		_chant.volume_linear = move_toward(_chant.volume_linear, 0.0, delta / FADE_TIME)
@@ -1026,6 +1088,9 @@ func _live_excitement() -> float:
 
 
 func _on_state_changed(from: StringName, to: StringName) -> void:
+	# The server's broadcast is the one that is heard.
+	if Game.net_mode == Game.NetMode.CLIENT:
+		return
 	if from == &"PlaySelect":
 		_huddle_on = false
 		if game.human.is_active():
@@ -1134,9 +1199,7 @@ func _start_chant() -> void:
 	if stream == null or not tuning.audio_enabled:
 		return
 	_chant_fading = false
-	_chant.stream = stream
-	_chant.volume_linear = tuning.audio_chant_level
-	_chant.play()
+	_start(VOICE_CHANT, stream, tuning.audio_chant_level)
 
 
 # --- Internals -----------------------------------------------------------------------

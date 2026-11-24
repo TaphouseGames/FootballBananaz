@@ -425,6 +425,8 @@ func watch(game: Game) -> void:
 ## Something good happened for the home team (or the visitors), `size` 0..1:
 ## their fans get up, the others sink into their seats.
 func react(for_home: bool, size: float) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.STADIUM, &"react", [for_home, size])
 	if size < REACT_FROM:
 		return
 	var mine: int = 0 if for_home else 1

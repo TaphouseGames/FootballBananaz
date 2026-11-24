@@ -234,6 +234,8 @@ func snap_camera() -> void:
 
 ## Camera shake plus a brief hit-stop. `stop_scale` scales the hit-stop length.
 func impact(shake: float, stop_scale: float) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.GAME, &"impact", [shake, stop_scale])
 	camera_rig.add_trauma(shake)
 	var duration: float = tuning.hit_stop_time * stop_scale
 	# The server's clock is both people's: it does not stop for a hit.
@@ -302,7 +304,8 @@ func start_kickoff(receiving: Team) -> void:
 
 ## Halftime is the full report, not just the banner.
 func has_halftime_show() -> bool:
-	return tuning.halftime_show_enabled and not autoplay
+	# Not online yet: it waits for a person to skip it.
+	return tuning.halftime_show_enabled and not autoplay and net_mode == NetMode.OFFLINE
 
 
 ## The second half's kickoff goes to the team that kicked off the first.

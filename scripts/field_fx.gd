@@ -100,6 +100,8 @@ func setup(p_tuning: Tuning) -> void:
 ## Sprays `drops` of blood from chest height at `pos`, thrown mostly along `dir`.
 ## With `pool`, a bigger splat lands right away where the victim falls.
 func blood_burst(pos: Vector3, dir: Vector3, drops: int, pool: bool) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.FX, &"blood_burst", [pos, dir, drops, pool])
 	if tuning == null or not tuning.blood_enabled:
 		return
 	var origin: Vector3 = Vector3(pos.x, 1.0, pos.z)
@@ -119,6 +121,8 @@ func blood_burst(pos: Vector3, dir: Vector3, drops: int, pool: bool) -> void:
 ## dust thrown up the way he is going, stars knocked out of his head, and a
 ## long gouge in the grass.
 func daze_impact(pos: Vector3, dir: Vector3, speed: float) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.FX, &"daze_impact", [pos, dir, speed])
 	if tuning == null:
 		return
 	var along: Vector3 = Vector3(dir.x, 0.0, dir.z)
@@ -146,6 +150,8 @@ func daze_impact(pos: Vector3, dir: Vector3, speed: float) -> void:
 ## A small puff of dust at `pos`, thrown along `dir` (flat; zero for all round)
 ## and up: feet planted hard, or a throw off one foot. `force` of 1 is a stamp.
 func dust_puff(pos: Vector3, dir: Vector3, force: float) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.FX, &"dust_puff", [pos, dir, force])
 	if tuning == null:
 		return
 	if _puffs.is_empty():

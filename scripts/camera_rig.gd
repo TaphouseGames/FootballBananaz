@@ -133,6 +133,8 @@ func _room(seen: Array[Vector3], back: float, across: float) -> Vector2:
 ## world and looks at `aim`, wherever the rig is, until end_shot(). Call it
 ## every physics tick to move it; `cut` jumps there without gliding.
 func shot(eye: Vector3, aim: Vector3, cut: bool = false) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.CAMERA, &"shot", [eye, aim, cut])
 	_shot = true
 	_shot_eye = eye
 	_shot_aim = aim
@@ -143,6 +145,8 @@ func shot(eye: Vector3, aim: Vector3, cut: bool = false) -> void:
 
 ## Back onto the rig, behind the play.
 func end_shot() -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.CAMERA, &"end_shot", [])
 	if not _shot:
 		return
 	_shot = false
@@ -151,6 +155,8 @@ func end_shot() -> void:
 
 
 func snap_to(target: Vector3, p_facing: float) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.CAMERA, &"snap_to", [target, p_facing])
 	facing = p_facing
 	_swing_t = 1.0
 	_pull = Vector2.ZERO
@@ -215,6 +221,8 @@ func add_trauma(amount: float) -> void:
 
 ## A quick push in: the view narrows by `degrees` at once and eases back out.
 func punch(degrees: float) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.CAMERA, &"punch", [degrees])
 	_punch = maxf(_punch, degrees)
 
 

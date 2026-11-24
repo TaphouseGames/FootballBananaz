@@ -97,6 +97,8 @@ static func mascot_decal(team: Team) -> Texture2D:
 
 
 func set_markers(los_x: float, first_down_x: float, show_first_down: bool) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.FIELD, &"set_markers", [los_x, first_down_x, show_first_down])
 	_los_marker.position.x = los_x
 	_first_down_marker.position.x = first_down_x
 	_first_down_marker.visible = show_first_down

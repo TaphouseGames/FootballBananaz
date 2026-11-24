@@ -5,7 +5,8 @@ extends SceneTree
 ##  - the match starts here and states keep coming, one a tick near enough,
 ##  - the game here goes through the states of a match (line-up, live, dead),
 ##  - players and the ball move, and a person's own player is marked as theirs,
-##  - things that happen once (falls, resets) are done here too,
+##  - things that happen once (falls, resets) are done here too, and sounds,
+##    banners, shakes of the gamepad and the markers on the field among them,
 ##  - the clock runs.
 ##
 ## In real time, so no --fixed-fps. About a minute.
@@ -122,8 +123,13 @@ func _judge(seconds: float) -> void:
 		_failures.append("the ball moved %.1f yd" % _ball_moved)
 	if view.refused > 0:
 		_failures.append("%d states were not what a state should be" % view.refused)
-	if view.replayed <= 0:
-		_failures.append("nothing that happens once was done here")
+	var by_part: PackedStringArray = PackedStringArray()
+	for part: int in NetEvents.Part.values():
+		by_part.append("%s %d" % [NetEvents.Part.keys()[part], view.replayed_on.get(part, 0)])
+	print("done once, by part: %s; two states a tick %d times" % [", ".join(by_part), view.caught_up])
+	for part: int in [NetEvents.Part.PLAYER, NetEvents.Part.AUDIO, NetEvents.Part.HUD, NetEvents.Part.RUMBLE, NetEvents.Part.FIELD]:
+		if view.replayed_on.get(part, 0) <= 0:
+			_failures.append("nothing was done here on %s" % NetEvents.Part.keys()[part])
 	if not _own_seen:
 		_failures.append("the person's own player was never marked as theirs")
 	if game.clock >= _first_clock:

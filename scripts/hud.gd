@@ -202,6 +202,8 @@ func _process(_delta: float) -> void:
 
 
 func show_banner(text: String, sub_text: String = "") -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"show_banner", [text, sub_text])
 	banner.text = text
 	banner.visible = text != ""
 	sub_banner.text = sub_text
@@ -246,6 +248,8 @@ func hide_halftime() -> void:
 
 
 func hide_banner() -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"hide_banner", [])
 	banner.visible = false
 	sub_banner.visible = false
 	for label: Label in _line_hints:
@@ -253,6 +257,8 @@ func hide_banner() -> void:
 
 
 func set_hint(text: String) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"set_hint", [text], &"hint")
 	hint.text = text
 	hint.visible = text != ""
 
@@ -400,12 +406,17 @@ func _make_card_style(fill: Color, border: Color, border_width: int) -> StyleBox
 ## The play clock and the play-select timer: whole seconds left, red when
 ## `warn`.
 func set_countdown(seconds_left: float, warn: bool) -> void:
+	if NetEvents.recording:
+		# Whole seconds are all that shows: told once a second, not every tick.
+		NetEvents.tell(NetEvents.Part.HUD, &"set_countdown", [float(ceili(seconds_left)), warn], &"countdown")
 	countdown.text = str(ceili(seconds_left))
 	countdown.add_theme_color_override(&"font_color", COUNTDOWN_WARN_COLOR if warn else Color.WHITE)
 	countdown.visible = true
 
 
 func hide_countdown() -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"hide_countdown", [], &"countdown")
 	countdown.visible = false
 
 

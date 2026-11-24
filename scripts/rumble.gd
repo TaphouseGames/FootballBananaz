@@ -149,6 +149,8 @@ func involves(a: Player, b: Player = null) -> bool:
 
 ## Plays a preset on everybody's pad, at `scale` times its strength.
 func play(preset: StringName, scale: float = 1.0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.RUMBLE, &"play", [preset, scale])
 	var scales: PackedFloat32Array = PackedFloat32Array()
 	for channel: Channel in _channels:
 		scales.append(scale)
@@ -157,6 +159,8 @@ func play(preset: StringName, scale: float = 1.0) -> void:
 
 ## Plays it for the person whose player is `a` or `b`, and for nobody else.
 func play_mine(preset: StringName, a: Player, b: Player = null, scale: float = 1.0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.RUMBLE, &"play_mine", [preset, a, b, scale])
 	var scales: PackedFloat32Array = PackedFloat32Array()
 	for channel: Channel in _channels:
 		scales.append(scale if channel.involves(a, b) else 0.0)
@@ -167,6 +171,8 @@ func play_mine(preset: StringName, a: Player, b: Player = null, scale: float = 1
 ## (`others` times that; Tuning.rumble_others unless given) for anybody it
 ## happened next to.
 func play_for(preset: StringName, a: Player, b: Player = null, scale: float = 1.0, others: float = -1.0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.RUMBLE, &"play_for", [preset, a, b, scale, others])
 	if others < 0.0:
 		others = tuning.rumble_others if tuning != null else 0.0
 	var scales: PackedFloat32Array = PackedFloat32Array()
@@ -177,6 +183,8 @@ func play_for(preset: StringName, a: Player, b: Player = null, scale: float = 1.
 
 ## Plays it for the person who plays `team`.
 func play_team(preset: StringName, team: Team, scale: float = 1.0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.RUMBLE, &"play_team", [preset, team, scale])
 	var scales: PackedFloat32Array = PackedFloat32Array()
 	for channel: Channel in _channels:
 		scales.append(scale if team != null and channel.human.team == team else 0.0)
@@ -186,6 +194,8 @@ func play_team(preset: StringName, team: Team, scale: float = 1.0) -> void:
 ## A steady level for as long as this is called every tick: a person's player
 ## (`a` or `b`) is dragging somebody or being dragged.
 func hold_drag(a: Player, b: Player) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.RUMBLE, &"hold_drag", [a, b])
 	if not _enabled():
 		return
 	for channel: Channel in _channels:
@@ -315,5 +325,8 @@ func _watch_stamina() -> void:
 
 
 func _on_state_changed(_from: StringName, to: StringName) -> void:
+	# In an online match each machine does this for itself.
+	if Game.net_mode == Game.NetMode.SERVER:
+		return
 	if to == &"Halftime" or to == &"Overtime" or to == &"GameOver":
 		play(&"buzzer")

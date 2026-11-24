@@ -1968,6 +1968,9 @@ func on_feet_planted(player: Player) -> void:
 ## A body knocked down has just hit the turf, `impact` hard (0..1; see
 ## PlayerFall.impact).
 func on_body_landed(player: Player, impact: float) -> void:
+	# He lands in the picture: each machine of an online match feels its own.
+	if Game.net_mode == Game.NetMode.SERVER:
+		return
 	game.rumble.play_mine(&"land", player, null, impact)
 
 

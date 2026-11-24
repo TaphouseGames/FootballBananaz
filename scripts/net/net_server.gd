@@ -73,7 +73,8 @@ func _exit_tree() -> void:
 		_socket.close()
 	if Game.net_mode == Game.NetMode.SERVER:
 		NetEvents.recording = false
-		NetEvents.take()
+		NetEvents.game = null
+		NetEvents.clear()
 		Game.net_mode = Game.NetMode.OFFLINE
 		Game.remote_pads.clear()
 		Game.two_players = false
@@ -227,9 +228,10 @@ func _start() -> void:
 	Game.show_intro = false
 	Game.season_match = false
 	Game.team_picks = _picks.duplicate()
-	NetEvents.take()
+	NetEvents.clear()
 	NetEvents.recording = true
 	game = _scene.instantiate() as Game
+	NetEvents.game = game
 	add_child(game)
 	print("NetServer: match on")
 

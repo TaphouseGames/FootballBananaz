@@ -513,6 +513,9 @@ func _make_name_tag() -> Label3D:
 
 ## Button prompt above the head for "throw to this receiver". Empty text hides it.
 func set_pass_icon(text: String, color: Color) -> void:
+	# Asked for every tick; told only when it changes.
+	if NetEvents.recording and (pass_icon.text != text or pass_icon.modulate != color or pass_icon.visible != (text != "")):
+		NetEvents.note(self, NetEvents.Part.PLAYER, &"set_pass_icon", [text, color])
 	pass_icon.visible = text != ""
 	pass_icon.text = text
 	pass_icon.modulate = color
@@ -522,6 +525,9 @@ func set_pass_icon(text: String, color: Color) -> void:
 ## Hidden with `chosen` (0..3, a place in HumanController.PAD_LABELS) the
 ## button that was pressed stays up by itself for a moment first.
 func set_dance_prompt(shown: bool, chosen: int = -1) -> void:
+	# Asked for every tick; told only when it changes.
+	if NetEvents.recording and shown != (_dance_prompt != null and _dance_prompt.visible):
+		NetEvents.note(self, NetEvents.Part.PLAYER, &"set_dance_prompt", [shown, chosen])
 	if _dance_prompt == null:
 		if not shown:
 			return

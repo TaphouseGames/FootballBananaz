@@ -92,6 +92,8 @@ static func pack(game: Game) -> Array:
 		String(pc.state_machine.current_name()), off_play, eligible,
 		pc.celebration_style, pc.celebration_seed, String(pc.touchdown_quip),
 		game.home.score, game.away.score, game.banner_text,
+		# What the levels of the crowd, the huddle, the music and the chant go by.
+		[game.audio.excitement, game.audio._huddle_on, game.audio._music_stopping, game.audio._chant_fading],
 	]
 	return [players, ball, play, match_now, rest]
 
@@ -101,7 +103,7 @@ static func fits(game: Game, state: Variant) -> bool:
 	if typeof(state) != TYPE_ARRAY:
 		return false
 	var parts: Array = state
-	if parts.size() != 5 or typeof(parts[4]) != TYPE_ARRAY or (parts[4] as Array).size() != 9:
+	if parts.size() != 5 or typeof(parts[4]) != TYPE_ARRAY or (parts[4] as Array).size() != 10:
 		return false
 	for at: int in 4:
 		if typeof(parts[at]) != TYPE_PACKED_FLOAT32_ARRAY:
@@ -137,7 +139,9 @@ static func unpack(game: Game, state: Array, seat: int) -> void:
 	_read(pc, PLAY, state[2], 0, game)
 	_read(game, GAME, state[3], 0, game)
 	var rest: Array = state[4]
-	pc.state_machine.shown = StringName(str(rest[0]))
+	var state_name: StringName = StringName(str(rest[0]))
+	var was: StringName = pc.state_machine.shown
+	pc.state_machine.shown = state_name
 	var plays: Array[OffensePlay] = game.offense_playbook.plays
 	var off_play: int = int(rest[1])
 	pc.off_play = plays[off_play] if off_play >= 0 and off_play < plays.size() else null
@@ -152,6 +156,16 @@ static func unpack(game: Game, state: Array, seat: int) -> void:
 	game.home.score = int(rest[6])
 	game.away.score = int(rest[7])
 	game.banner_text = str(rest[8])
+	if typeof(rest[9]) == TYPE_ARRAY and (rest[9] as Array).size() == 4:
+		var sound: Array = rest[9]
+		game.audio.excitement = clampf(float(sound[0]), 0.0, 1.0)
+		game.audio._huddle_on = bool(sound[1])
+		game.audio._music_stopping = bool(sound[2])
+		game.audio._chant_fading = bool(sound[3])
+	# Last, with everything else in place: whoever listens for a new state of
+	# the match (the rumble, for one) hears of it here too.
+	if state_name != was:
+		pc.state_machine.state_changed.emit(was, state_name)
 
 
 ## Floats a table's rows take.
