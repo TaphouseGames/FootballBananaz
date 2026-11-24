@@ -392,6 +392,15 @@ func update_dead() -> void:
 	player.ai_speed_scale = 1.0
 	player.move_input = move
 	player.wants_turbo = pad.pressed(&"turbo")
+	# He has scored and holds the ball up, or has made a first down or a long
+	# gain: the face buttons pick his dance, and do nothing else while they can.
+	if pc.celebration_pick_open and player == pc.celebrant:
+		if pc.can_pick_celebration(player):
+			for slot: int in PASS_ACTIONS.size():
+				if pad.just_pressed(PASS_ACTIONS[slot]):
+					pc.pick_celebration(slot)
+					break
+		return
 	if not pad.just_pressed(&"action") or not player.can_act():
 		return
 	var on_defense: bool = is_defending()

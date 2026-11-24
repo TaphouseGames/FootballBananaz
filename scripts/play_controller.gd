@@ -88,6 +88,16 @@ var dead_time: float = 0.0
 ## cheers and sulks round the rest.
 var celebration_style: int = 0
 var celebration_seed: int = 0
+## A person's player may dance and they have not picked his dance yet (see
+## pick_celebration): `celebrant` is the scorer, who holds the ball up until
+## they do, or the carrier after a first down or a long gain, who dances only
+## if they pick one.
+var celebration_pick_open: bool = false
+var celebrant: Player
+## A dance was picked after a gain, and for how many seconds he has been on his
+## feet since: the next play waits for it (gain_dance_running).
+var gain_dance: bool = false
+var gain_dance_time: float = 0.0
 ## Where on the ring round the scorer each of his teammates stands.
 var _party_angles: Dictionary[Player, float] = {}
 ## One of the celebrating team has dived and the rest pile on him: who, when
@@ -688,6 +698,10 @@ func _reset_play() -> void:
 	loose_time = 0.0
 	_loose_untouched = 0.0
 	was_dive = false
+	_close_celebration_pick()
+	celebrant = null
+	gain_dance = false
+	gain_dance_time = 0.0
 	scorer = null
 	dead_time = 0.0
 	pile_target = null
@@ -1230,20 +1244,26 @@ func simulate_dead(delta: float) -> void:
 		person.update_dead()
 	_think_and_move(delta)
 	_resolve_contacts(delta)
+	_update_celebration_pick()
+	if gain_dance and celebrant != null and celebrant.can_act():
+		gain_dance_time += delta
 	_spike_ball()
 	ball.integrate(delta)
 
 
 # --- Celebration -----------------------------------------------------------------
 
-## A score: the dance is picked, the scorer's teammates get their places round
-## him, and now and then one of the beaten team makes up his mind to spoil it.
+## A score: the dance is rolled (a person picks their own scorer's, see
+## pick_celebration), the scorer's teammates get their places round him, and
+## now and then one of the beaten team makes up his mind to spoil it.
 func _start_celebration() -> void:
 	scorer = ball.carrier
 	celebration_style = randi()
 	celebration_seed = randi()
 	if scorer == null:
 		return
+	celebrant = scorer
+	celebration_pick_open = scorer.human != null
 	_invite_mascot()
 	# Each teammate comes in on the side he is already on: places go round the
 	# ring in the order the players stand round the scorer now.
@@ -1402,15 +1422,88 @@ func pile_dive_speed(dist: float) -> float:
 	return clampf(speed, tuning.dive_speed * 0.35, tuning.dive_speed)
 
 
-## The scorer holds the ball up for a moment, then slams it into the turf.
+## True while the person whose player `player` is can pick his dance: he is the
+## one who may, and the moment in which a press does not count yet is over.
+func can_pick_celebration(player: Player) -> bool:
+	return celebration_pick_open and player == celebrant and dead_time >= tuning.celebration_pick_delay
+
+
+## The person has picked their player's dance (0..PlayerAnimator.DANCES - 1, the
+## face buttons in the order of HumanController.PASS_ACTIONS): he spikes the
+## ball and goes into it.
+func pick_celebration(style: int) -> void:
+	if not celebration_pick_open or celebrant == null:
+		return
+	celebration_style = posmod(style, PlayerAnimator.DANCES)
+	celebration_pick_open = false
+	if result != Result.TOUCHDOWN:
+		gain_dance = true
+		gain_dance_time = 0.0
+		game.add_stat(&"gain_dances")
+	celebrant.set_dance_prompt(false, celebration_style)
+	game.audio.play(&"ui_confirm")
+	game.rumble.play_mine(&"celebrate", celebrant)
+	game.add_stat(&"dance_picks")
+
+
+## The play that just ended is worth a dance from the person's own carrier: the
+## offense kept the ball and made the first down or a long gain.
+func _gain_earns_dance(spot_x: float) -> bool:
+	var carrier: Player = ball.carrier
+	if carrier == null or carrier.human == null or carrier.team != offense:
+		return false
+	if kickoff or game.conversion or (result != Result.TACKLED and result != Result.OUT_OF_PLAY):
+		return false
+	if (spot_x - los_x) * off_dir >= tuning.celebration_gain_yards:
+		return true
+	return not game.goal_to_go and (spot_x - game.first_down_x) * off_dir >= 0.0
+
+
+## A dance picked after a gain is still going: the next play waits for it, but
+## not for ever should he never get to his feet.
+func gain_dance_running() -> bool:
+	if not gain_dance or gain_dance_time >= tuning.celebration_gain_dance_time:
+		return false
+	return dead_time < tuning.late_hit_window + 2.0 * tuning.celebration_gain_dance_time
+
+
+## The buttons over his head while his dance can be picked. Nothing picked in
+## time, or nobody's player any more: the scorer does the rolled dance, the
+## carrier after a gain none.
+func _update_celebration_pick() -> void:
+	if not celebration_pick_open:
+		return
+	var limit: float = tuning.celebration_pick_time if result == Result.TOUCHDOWN else tuning.late_hit_window
+	if celebrant == null or celebrant.human == null or dead_time >= limit:
+		_close_celebration_pick()
+		return
+	celebrant.set_dance_prompt(dead_time >= tuning.celebration_pick_delay)
+
+
+func _close_celebration_pick() -> void:
+	celebration_pick_open = false
+	if celebrant != null:
+		celebrant.set_dance_prompt(false)
+
+
+## The scorer holds the ball up for a moment (a person's for as long as they
+## are picking his dance), then slams it into the turf. So does a carrier whose
+## dance was picked after a gain, as soon as he is on his feet.
 func _spike_ball() -> void:
-	if scorer == null or ball.carrier != scorer or dead_time < tuning.celebration_spike_time:
+	var who: Player = scorer
+	if who == null and gain_dance:
+		who = celebrant
+	if who == null or ball.carrier != who:
 		return
-	if not scorer.can_act() or scorer.velocity.length() > 3.0:
+	if who == scorer and dead_time < tuning.celebration_spike_time:
 		return
-	ball.spike(scorer.facing * 2.5 + Vector3(0.0, -15.0, 0.0))
-	if scorer.animator != null:
-		scorer.animator.spike()
+	if celebration_pick_open:
+		return
+	if not who.can_act() or who.velocity.length() > 3.0:
+		return
+	ball.spike(who.facing * 2.5 + Vector3(0.0, -15.0, 0.0))
+	if who.animator != null:
+		who.animator.spike()
 	game.audio.play(&"throw", 0.5, 0.8)
 	game.add_stat(&"spikes")
 
@@ -1821,6 +1914,9 @@ func end_play(p_result: Result, spot_x: float) -> void:
 	game.stat_book.record_play(game)
 	if result == Result.TOUCHDOWN:
 		_start_celebration()
+	elif _gain_earns_dance(spot_x):
+		celebrant = ball.carrier
+		celebration_pick_open = true
 	_update_markers()
 
 

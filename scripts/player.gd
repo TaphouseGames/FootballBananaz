@@ -43,6 +43,19 @@ const GROUNDED_TIMEOUT: float = 0.4
 ## the ring's centre the name starts, in yards on screen.
 const NAME_TAG_PIXEL: float = 0.0125
 const NAME_TAG_DROP: float = 1.35
+## The buttons over a scorer's head while his dance is being picked, in pixels
+## of the label: where the diamond's middle is above DANCE_PROMPT_HEIGHT (yards
+## off the turf, just over the ball he holds up), how far out each button sits
+## (in the order of HumanController.PAD_LABELS, laid out as on the pad) and
+## where the caption is.
+const DANCE_PROMPT_HEIGHT: float = 3.2
+const DANCE_PROMPT_PIXEL: float = 0.012
+const DANCE_PROMPT_RISE: float = 120.0
+const DANCE_PROMPT_SPREAD: float = 100.0
+const DANCE_PROMPT_SPOTS: Array[Vector2] = [Vector2(0.0, -1.0), Vector2(-1.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0)]
+const DANCE_PROMPT_CAPTION_RISE: float = 300.0
+## Seconds the button that was pressed stays up by itself.
+const DANCE_PROMPT_LINGER: float = 0.45
 
 ## Which part of the model's texture is repainted in the team colour: the grey
 ## cloth (true) or the green jersey (false). Set per model in the player scene.
@@ -218,6 +231,11 @@ var _flash_strength: float = 0.0
 var _flash_left: float = 0.0
 ## Made the first time the person takes this player over.
 var _name_tag: Label3D
+## Made the first time his dance can be picked: the four buttons, then the caption.
+var _dance_prompt: Node3D
+var _dance_buttons: Array[Label3D] = []
+var _dance_caption: Label3D
+var _dance_tween: Tween
 
 @onready var body: Node3D = $Body
 @onready var control_ring: MeshInstance3D = $ControlRing
@@ -302,6 +320,7 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	ball_grab_cooldown = 0.0
 	drag_partner = null
 	set_pass_icon("", Color.WHITE)
+	set_dance_prompt(false)
 	_update_visual(0.0, true)
 	reset_physics_interpolation()
 
@@ -479,6 +498,65 @@ func set_pass_icon(text: String, color: Color) -> void:
 	pass_icon.visible = text != ""
 	pass_icon.text = text
 	pass_icon.modulate = color
+
+
+## The four face buttons above his head: "pick the dance". Shown while `shown`.
+## Hidden with `chosen` (0..3, a place in HumanController.PAD_LABELS) the
+## button that was pressed stays up by itself for a moment first.
+func set_dance_prompt(shown: bool, chosen: int = -1) -> void:
+	if _dance_prompt == null:
+		if not shown:
+			return
+		_make_dance_prompt()
+	var lingering: bool = not shown and chosen >= 0 and chosen < _dance_buttons.size() and _dance_prompt.visible
+	if shown == _dance_prompt.visible and not lingering:
+		return
+	if _dance_tween != null:
+		_dance_tween.kill()
+		_dance_tween = null
+	if not lingering:
+		_dance_prompt.visible = shown
+		_dance_caption.visible = true
+		for button: Label3D in _dance_buttons:
+			button.visible = true
+			button.pixel_size = DANCE_PROMPT_PIXEL
+		return
+	_dance_caption.visible = false
+	for i: int in _dance_buttons.size():
+		_dance_buttons[i].visible = i == chosen
+	# It swells a little as it goes: the press was taken.
+	_dance_tween = create_tween()
+	_dance_tween.tween_property(_dance_buttons[chosen], ^"pixel_size", DANCE_PROMPT_PIXEL * 1.35, DANCE_PROMPT_LINGER)
+	_dance_tween.tween_callback(_dance_prompt.hide)
+
+
+func _make_dance_prompt() -> void:
+	_dance_prompt = Node3D.new()
+	_dance_prompt.position = Vector3(0.0, DANCE_PROMPT_HEIGHT, 0.0)
+	_dance_prompt.visible = false
+	add_child(_dance_prompt)
+	for i: int in DANCE_PROMPT_SPOTS.size():
+		var spot: Vector2 = Vector2(0.0, DANCE_PROMPT_RISE) + DANCE_PROMPT_SPOTS[i] * DANCE_PROMPT_SPREAD
+		var button: Label3D = _dance_label(HumanController.PAD_LABELS[i], 100, 32, spot)
+		button.modulate = HumanController.PAD_COLORS[i]
+		_dance_buttons.append(button)
+	_dance_caption = _dance_label("CELEBRATE!", 56, 18, Vector2(0.0, DANCE_PROMPT_CAPTION_RISE))
+
+
+func _dance_label(text: String, font_size: int, outline: int, spot: Vector2) -> Label3D:
+	var label: Label3D = Label3D.new()
+	label.text = text
+	label.pixel_size = DANCE_PROMPT_PIXEL
+	label.offset = spot
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.render_priority = 4
+	label.outline_render_priority = 3
+	label.font_size = font_size
+	label.outline_size = outline
+	label.outline_modulate = Color(0.05, 0.05, 0.08)
+	_dance_prompt.add_child(label)
+	return label
 
 
 func can_act() -> bool:

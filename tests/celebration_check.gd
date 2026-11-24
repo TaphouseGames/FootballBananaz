@@ -38,6 +38,13 @@ var _pile_rest: Vector3 = Vector3.ZERO
 var _piles: int = 0
 var _pile_joined_total: int = 0
 var _pile_mates_total: int = 0
+## Picking the dance. Two scores in three the scorer is somebody's player
+## (the game's person stands in): on one of them they pick, on the other they
+## leave it and it is rolled for them. 0 = the CPU's score, 1 = pick, 2 = leave.
+var _pick_case: int = 0
+var _pick_looked: bool = false
+var _picks: int = 0
+var _left_alone: int = 0
 
 
 func _initialize() -> void:
@@ -86,12 +93,18 @@ func _tick() -> void:
 			_pile_diver = null
 			_pile_joined.clear()
 			_pile_worst = 0.0
+			_pick_case = _scores % 3
+			_pick_looked = false
+			if _pick_case != 0:
+				_game.human.team = carrier.team
+				_game.human.set_controlled(carrier)
 			_step = 2
 		2:
 			if state == &"Live":
 				return
 			if state == &"Scored":
 				_entry()
+				_pick()
 				_pile()
 				if not _sampled and _pc.state_machine.current.time_in_state >= _game.tuning.scored_banner_time - 0.2:
 					_sample()
@@ -136,6 +149,45 @@ func _entry() -> void:
 		_failures.append("score %d: the mascot came on in the picture, %.1f yd from the scorer" % [_scores + 1, away])
 
 
+## The dance of a person's scorer: he holds the ball up until they pick it or
+## the time for it is over. A CPU scorer's is never theirs to pick.
+func _pick() -> void:
+	var scorer: Player = _pc.scorer
+	if scorer == null:
+		return
+	var number: int = _scores + 1
+	if _pick_case == 0:
+		if _pc.celebration_pick_open:
+			_failures.append("score %d: a CPU scorer's dance was open to pick" % number)
+		return
+	if _pc.dead_time < _game.tuning.celebration_pick_delay and _pc.can_pick_celebration(scorer):
+		_failures.append("score %d: the dance could be picked %.2f s after the whistle" % [number, _pc.dead_time])
+	# Once, well after he would have spiked it and before a cheap shot can land.
+	if _pick_looked or _pc.dead_time < 1.0:
+		return
+	_pick_looked = true
+	if not _pc.can_pick_celebration(scorer):
+		_failures.append("score %d: the person's scorer had no dance to pick" % number)
+		return
+	if not scorer.has_ball:
+		_failures.append("score %d: he spiked the ball before the dance was picked" % number)
+	if _pick_case == 2:
+		_left_alone += 1
+		return
+	var want: int = _picks % PlayerAnimator.DANCES
+	var before: int = _game.get_stat(&"dance_picks")
+	_pc.pick_celebration(want)
+	_picks += 1
+	if _pc.celebration_pick_open or posmod(_pc.celebration_style, PlayerAnimator.DANCES) != want:
+		_failures.append("score %d: dance %d was picked and it is %d" % [number, want, posmod(_pc.celebration_style, PlayerAnimator.DANCES)])
+	if _game.get_stat(&"dance_picks") != before + 1:
+		_failures.append("score %d: the pick was not counted" % number)
+	# A second press changes nothing.
+	_pc.pick_celebration(want + 1)
+	if posmod(_pc.celebration_style, PlayerAnimator.DANCES) != want:
+		_failures.append("score %d: the dance changed after it was picked" % number)
+
+
 ## Starts the pile-on on every other score and keeps track of who dives in and
 ## how far from the man at the bottom each of them comes down.
 func _pile() -> void:
@@ -174,6 +226,14 @@ func _pile() -> void:
 func _sample() -> void:
 	_sampled = true
 	var scorer: Player = _pc.scorer
+	# Picked or not, the time for it is long over (and the ball spiked: below).
+	if _pc.celebration_pick_open:
+		_failures.append("score %d: the dance was still open to pick at the end" % (_scores + 1))
+	if _pick_case != 0:
+		if not _pick_looked:
+			_failures.append("score %d: the pick was never looked at" % (_scores + 1))
+		_game.human.set_controlled(null)
+		_game.human.team = null
 	if scorer == null:
 		_failures.append("score %d: nobody was the scorer" % (_scores + 1))
 		return
@@ -237,6 +297,9 @@ func _finish() -> void:
 	print("The mascot was in the huddle at the end of %d of them; it came on %.1f yd from the scorer on average." % [_mascots_there, _entry_total / float(maxi(_scores, 1))])
 	if _game.tuning.mascot_joins_party and float(_mascots_there) < 0.7 * float(_scores):
 		_failures.append("the mascot reached the huddle in only %d of %d scores" % [_mascots_there, _scores])
+	print("%d dances picked, %d left to be rolled." % [_picks, _left_alone])
+	if _scores >= 3 and (_picks == 0 or _left_alone == 0):
+		_failures.append("%d dances picked and %d left alone in %d scores" % [_picks, _left_alone, _scores])
 	if _game.get_stat(&"spikes") < _scores - shots:
 		_failures.append("%d spikes in %d scores" % [_game.get_stat(&"spikes"), _scores])
 	if chance <= 0.0 and shots > 0:

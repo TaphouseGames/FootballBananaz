@@ -43,6 +43,7 @@ const PRESETS: Dictionary[StringName, Array] = {
 	# The game.
 	&"touchdown": [[0.7, 0.7, 0.4, 0.0], [0.5, 0.4, 0.12, 0.5], [0.5, 0.4, 0.12, 0.72]],
 	&"touchdown_against": [[0.2, 0.45, 0.3, 0.0]],
+	&"celebrate": [[0.3, 0.0, 0.07, 0.0]],
 	&"buzzer": [[0.3, 0.3, 0.4, 0.0]],
 }
 ## The steady level of a drag: the weak and the strong motor.

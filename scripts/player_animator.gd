@@ -1096,6 +1096,12 @@ func _build_pose(delta: float) -> void:
 		_wave = 0.0
 		_after_score(pc)
 		return
+	# A dance picked after a first down or a long gain: the scorer's, by himself.
+	if pc.ball_dead and pc.gain_dance and pc.celebrant == player:
+		_wave = 0.0
+		var drift: Vector3 = Vector3(player.velocity.x, 0.0, player.velocity.z)
+		_scorer_dance(pc, 1.0 - smoothstep(0.8, 2.6, drift.length()))
+		return
 
 	if player.has_ball:
 		# A quarterback sprinting on turbo tucks it until his feet are set again.

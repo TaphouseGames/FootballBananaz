@@ -45,6 +45,13 @@ func _run() -> void:
 	scorer.position = Vector3(_game.tuning.goal_x(team.attack_dir) + dir * 4.0, 0.0, 0.0)
 
 	await _wait(0.4)
+	# The buttons a person picks his dance with, as they are over their scorer.
+	scorer.set_dance_prompt(true)
+	await _game_shot("00_dance_prompt")
+	scorer.set_dance_prompt(false, 2)
+	await _wait(0.2)
+	await _game_shot("00_dance_picked")
+	scorer.set_dance_prompt(false)
 	await _close("01_ball_up", scorer)
 	for i: int in 30:
 		if not scorer.has_ball:
@@ -106,6 +113,17 @@ func _close(label: String, player: Player) -> void:
 
 func _wait(seconds: float) -> void:
 	await create_timer(seconds).timeout
+
+
+## The picture as the game's own camera has it.
+func _game_shot(label: String) -> void:
+	paused = true
+	_game.camera_rig.camera.make_current()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(_out_dir.path_join(label + ".png"))
+	print("saved ", label)
+	paused = false
 
 
 ## Freezes the game for the picture so every shot of one moment matches.

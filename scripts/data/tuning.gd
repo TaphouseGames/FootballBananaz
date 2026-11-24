@@ -29,6 +29,9 @@ extends Resource
 ## After a touchdown: one untimed play from this many yards out, worth this much.
 @export var conversion_points: int = 2
 @export var conversion_distance: float = 3.0
+## Seconds the game stays on the try after its whistle (on top of the late hit
+## window) before the teams line up for the kickoff.
+@export var conversion_linger: float = 5.0
 
 @export_group("Kickoff")
 ## Yard line (from the kicking team's own goal) the ball is kicked from.
@@ -950,6 +953,17 @@ extends Resource
 @export var celebration_ring_radius: float = 2.4
 ## Seconds after the whistle that the scorer spikes the ball.
 @export var celebration_spike_time: float = 0.5
+## A person's scorer holds the ball up while they pick his dance with a face
+## button: seconds after the whistle before a press counts (a button mashed on
+## the way in picks nothing), and seconds after it that the pick is over and
+## the dance is rolled for them.
+@export var celebration_pick_delay: float = 0.35
+@export var celebration_pick_time: float = 2.5
+## A person's carrier who made a first down, or this many yards from scrimmage,
+## may dance too (the same buttons, until the late-hit window closes): picked,
+## the next play waits for this many seconds of him dancing on his feet.
+@export var celebration_gain_yards: float = 15.0
+@export var celebration_gain_dance_time: float = 2.0
 ## The scoring team's mascot runs onto the field and joins the huddle
 ## round the scorer.
 @export var mascot_joins_party: bool = true
