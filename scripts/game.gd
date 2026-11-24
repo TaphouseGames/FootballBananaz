@@ -82,6 +82,8 @@ var rumble: Rumble = Rumble.new()
 var humans: Array[HumanController] = []
 ## Draws a play on the turf before the snap (LT and the stick).
 var play_art: PlayArt
+## Debug builds: tries out a network delay offline (F9, F10). Null otherwise.
+var net_feel: NetFeel
 
 var _hit_stop_left: float = 0.0
 ## Team the camera sits behind, and the offense it was last set from.
@@ -136,6 +138,10 @@ func _ready() -> void:
 	play_art = PlayArt.new()
 	play_art.setup(self)
 	add_child(play_art)
+	if OS.is_debug_build():
+		net_feel = NetFeel.new()
+		add_child(net_feel)
+		net_feel.setup(self)
 
 	clock = tuning.game_length * 0.5
 	opening_receiver = home if randf() < 0.5 else away
