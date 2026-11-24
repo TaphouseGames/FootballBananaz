@@ -89,6 +89,9 @@ func is_defending() -> bool:
 ## up runs away from the camera, right runs to screen right. It goes by where
 ## the camera is right now, so it holds while the camera swings round.
 func read_move() -> Vector3:
+	# Somebody on another machine has a camera of their own, and sends the move.
+	if pad.has_view:
+		return pad.world_move
 	var stick: Vector2 = pad.vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	var rig: Basis = game.camera_rig.basis
 	var move: Vector3 = rig.x * stick.x + rig.z * stick.y

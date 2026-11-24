@@ -1,0 +1,92 @@
+class_name NetSocket
+extends RefCounted
+## The line between the server and the people's machines: messages of
+## [kind, body] (see NetProtocol) over ENet. poll() once a tick takes in what
+## has arrived. The server's id is 1; everyone else gets one when they join.
+##
+## Nothing but this class knows that it is ENet underneath.
+
+signal peer_joined(id: int)
+signal peer_left(id: int)
+signal message(from: int, kind: int, body: Variant)
+
+const SERVER: int = 1
+## Messages longer than this are not looked at.
+const MAX_BYTES: int = 16384
+
+var _peer: ENetMultiplayerPeer
+
+
+## Listens on `port` for up to `seats` machines. Null when the port cannot be had.
+static func host(port: int, seats: int) -> NetSocket:
+	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
+	if peer.create_server(port, seats) != OK:
+		return null
+	return NetSocket.new(peer)
+
+
+## Sets out for the server at `address`. peer_joined(SERVER) says it got there;
+## failed() that it did not.
+static func join(address: String, port: int) -> NetSocket:
+	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
+	if peer.create_client(address, port) != OK:
+		return null
+	return NetSocket.new(peer)
+
+
+func _init(peer: ENetMultiplayerPeer) -> void:
+	_peer = peer
+	_peer.peer_connected.connect(func(id: int) -> void: peer_joined.emit(id))
+	_peer.peer_disconnected.connect(func(id: int) -> void: peer_left.emit(id))
+
+
+func poll() -> void:
+	if _peer == null:
+		return
+	_peer.poll()
+	while _peer != null and _peer.get_available_packet_count() > 0:
+		var from: int = _peer.get_packet_peer()
+		var bytes: PackedByteArray = _peer.get_packet()
+		if bytes.size() > MAX_BYTES:
+			continue
+		# No objects come out of this: only plain values.
+		var data: Variant = bytes_to_var(bytes)
+		if typeof(data) != TYPE_ARRAY:
+			continue
+		var parts: Array = data
+		if parts.size() == 2 and typeof(parts[0]) == TYPE_INT:
+			message.emit(from, parts[0], parts[1])
+
+
+## `to` 0 is everyone. `reliable` messages arrive, and in order; the others may
+## be lost, and are not waited for.
+func send(to: int, kind: int, body: Variant, reliable: bool = true) -> void:
+	if _peer == null or _peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+		return
+	_peer.set_target_peer(to)
+	_peer.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE if reliable else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE
+	_peer.put_packet(var_to_bytes([kind, body]))
+
+
+## The server takes `id` off the line, once what was sent to it has gone out.
+func drop(id: int) -> void:
+	if _peer != null:
+		var line: ENetPacketPeer = _peer.get_peer(id)
+		if line != null:
+			line.peer_disconnect_later()
+
+
+## Still on its way to the server.
+func joining() -> bool:
+	return _peer != null and _peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTING
+
+
+## The line is gone, or never came about.
+func failed() -> bool:
+	return _peer == null or _peer.get_connection_status() == MultiplayerPeer.CONNECTION_DISCONNECTED
+
+
+func close() -> void:
+	if _peer != null:
+		_peer.close()
+		_peer = null

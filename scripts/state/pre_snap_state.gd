@@ -632,7 +632,7 @@ func _update_hot(line: Line) -> void:
 				line.hot_man = man
 				# The way to the ball on screen, as OffenseAssignment.hot_route has it.
 				var start_y: float = man.brain.off_assign.start.y
-				var inside: float = (-signf(start_y) if absf(start_y) > 0.5 else 1.0) * _hot_screen()
+				var inside: float = (-signf(start_y) if absf(start_y) > 0.5 else 1.0) * _hot_screen(line)
 				game.hud.show_hot_routes("(%s) %s" % [line.human.pass_label(slot), man.brain.off_assign.label], inside, line.slot)
 				game.audio.play(&"ui_move")
 			else:
@@ -702,15 +702,16 @@ func _hot_kind(key: int) -> OffenseAssignment.Hot:
 
 ## The way route `key` breaks, in the play's own frame. Left and right are as
 ## the person sees them.
-func _hot_side(key: int) -> float:
-	return float(key % 3 - 1) * _hot_screen()
+func _hot_side(line: Line, key: int) -> float:
+	return float(key % 3 - 1) * _hot_screen(line)
 
 
 ## Turns a side on screen (-1 left, 1 right) into one in the play's own frame,
 ## and back: the camera's right, in the frame the play is drawn in
 ## (PlayController.to_world).
-func _hot_screen() -> float:
-	var right: float = signf(game.camera_rig.basis.x.z)
+func _hot_screen(line: Line) -> float:
+	# Somebody on another machine has a camera of their own.
+	var right: float = signf(line.pad.view_right.z if line.pad.has_view else game.camera_rig.basis.x.z)
 	if right == 0.0:
 		right = pc.off_dir
 	var flip: float = -1.0 if pc.off_flipped else 1.0
@@ -728,13 +729,13 @@ func _show_hot(line: Line, key: int) -> void:
 		game.hud.light_hot_route(-1, 0)
 		return
 	game.hud.light_hot_route(int(_hot_kind(key)), key % 3 - 1)
-	game.play_art.set_hot_preview(line.hot_man, OffenseAssignment.hot_route(line.hot_man.brain.off_assign, _hot_kind(key), _hot_side(key)))
+	game.play_art.set_hot_preview(line.hot_man, OffenseAssignment.hot_route(line.hot_man.brain.off_assign, _hot_kind(key), _hot_side(line, key)))
 	game.audio.play(&"ui_tick")
 
 
 ## The hot route itself: the picked man runs route `key`, and it is back to the line.
 func _give_hot(line: Line, key: int) -> bool:
-	if not pc.hot_route(line.hot_man, _hot_kind(key), _hot_side(key)):
+	if not pc.hot_route(line.hot_man, _hot_kind(key), _hot_side(line, key)):
 		return false
 	game.audio.play(&"ui_confirm")
 	_close(line)

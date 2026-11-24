@@ -5,6 +5,11 @@ extends Node3D
 
 const DOWN_NAMES: Array[String] = ["1ST", "2ND", "3RD", "4TH"]
 
+## OFFLINE: the match is played on this machine, as ever. SERVER: this is the
+## server of an online match, and both teams are played by people whose buttons
+## come in over the network (see NetServer).
+enum NetMode { OFFLINE, SERVER }
+
 ## Normal Engine.time_scale. Hit-stop returns to this (tests raise it).
 static var base_time_scale: float = 1.0
 ## The next match opens with the pregame intro. The main menu sets it; the
@@ -24,6 +29,10 @@ static var team_picks: PackedInt32Array = PackedInt32Array([-1, -1])
 ## the final whistle, the booth tells its stories and talks about the table,
 ## and the way out leads back to the season. The season's screen sets it.
 static var season_match: bool = false
+## What this match is to the network. NetServer sets it.
+static var net_mode: NetMode = NetMode.OFFLINE
+## On the server: the buttons of each person, by seat, as the network brings them.
+static var remote_pads: Array[PadInput] = []
 
 @export var tuning: Tuning
 ## Every team there is to play as.
@@ -185,7 +194,10 @@ func _seat_people() -> void:
 			person = HumanController.new()
 			person.name = "HumanController%d" % (seat + 1)
 			add_child(person)
-		person.setup(self, playing[seat], controllers.input_for(seat) if two_players else controllers.any, seat)
+		var pad: PadInput = controllers.input_for(seat) if two_players else controllers.any
+		if net_mode == NetMode.SERVER and seat < remote_pads.size():
+			pad = remote_pads[seat]
+		person.setup(self, playing[seat], pad, seat)
 		humans.append(person)
 	if humans.is_empty():
 		human.setup(self, null, controllers.any)
