@@ -176,6 +176,7 @@ func open() -> void:
 	joined = false
 	versus = false
 	_held.clear()
+	Controllers.of(Engine.get_main_loop() as SceneTree).start_over()
 	visible = true
 	_refresh(false)
 
@@ -222,19 +223,25 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## Whose press this is: 0 player one's, 1 player two's, -1 nobody's (it is not
-## acted on). A gamepad that is neither's yet becomes player two's with its
-## first button, and that press only brings player two in.
+## acted on). A gamepad that is neither's yet becomes player two's by going
+## left or right, which takes it there at once, or with any button, which only
+## brings player two in.
 func _seat_of(event: InputEvent) -> int:
 	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion):
 		return 0
 	var controllers: Controllers = Controllers.of(get_tree())
 	var seat: int = controllers.seat_of(event.device)
 	var button: InputEventJoypadButton = event as InputEventJoypadButton
-	if seat < 0 and button != null and button.pressed:
+	var pressed: bool = button != null and button.pressed
+	var sideways: bool = event.is_action_pressed(&"ui_left") or event.is_action_pressed(&"ui_right")
+	if seat < 0 and (pressed or sideways):
 		seat = controllers.claim(event.device)
 	if seat != 1 or joined:
 		return seat
-	if button != null and button.pressed:
+	if sideways:
+		_join()
+		return seat
+	if pressed:
 		_join()
 		get_viewport().set_input_as_handled()
 	return -1
@@ -393,7 +400,7 @@ func _refresh(animated: bool) -> void:
 		for model: PlayerModel in _cast_stands[i].get_children():
 			ModelStage.motion_of(model).cheering = mine
 	_start_hint.modulate.a = 1.0 if _ready_to_start() else 0.35
-	_join_hint.text = "P2:  (B) LEAVE" if joined else "SECOND CONTROLLER:  PRESS ANY BUTTON TO JOIN"
+	_join_hint.text = "P2:  (B) LEAVE" if joined else "SECOND CONTROLLER:  MOVE LEFT / RIGHT TO JOIN"
 
 	# Each controller under its team, in that team's colour.
 	for seat: int in _icons.size():

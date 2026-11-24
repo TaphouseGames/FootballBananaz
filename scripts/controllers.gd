@@ -56,6 +56,8 @@ var _game: Game
 var _resuming: bool = false
 var _toast_left: float = 0.0
 var _built_at: int = 0
+## The pad a button was pressed on last, -1 for none yet.
+var _last_pad: int = -1
 
 var _panel: PanelContainer
 var _style: StyleBoxFlat
@@ -116,6 +118,15 @@ func release(seat: int) -> void:
 	_refresh()
 
 
+## One person again, on the pad that was pressed last: where the team select
+## starts from. Whatever sat on a seat before (a pad from the last match, some
+## other device that sent a button once) does not keep it.
+func start_over() -> void:
+	release(1)
+	if _last_pad >= 0 and devices[0] != _last_pad:
+		_assign(0, _last_pad)
+
+
 ## A match is on: from here on a pad that goes away stops it.
 func enter_match(game: Game) -> void:
 	_game = game
@@ -150,6 +161,8 @@ func joy_changed(device: int, connected: bool) -> void:
 		else:
 			_show_toast("CONTROLLER CONNECTED")
 		return
+	if _last_pad == device:
+		_last_pad = -1
 	if not _real.erase(device):
 		return
 	var two: bool = _in_match() and Game.two_players
@@ -173,6 +186,7 @@ func _input(event: InputEvent) -> void:
 	var button: InputEventJoypadButton = event as InputEventJoypadButton
 	if button == null or not button.pressed:
 		return
+	_last_pad = button.device
 	var seat: int = seat_of(button.device)
 	if seat < 0:
 		# A pad nobody has: it takes the seat that is waiting for one, or is

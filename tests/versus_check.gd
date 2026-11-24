@@ -68,6 +68,13 @@ func _do(wait: int, what: Callable) -> void:
 # --- The team select -----------------------------------------------------------------
 
 func _plan_team_select() -> void:
+	# Two devices that are no gamepad anybody plays with hold both seats (a
+	# keypad that shows up as one does that): the screen starts over from the
+	# gamepad that was pressed last.
+	_do(8, func() -> void:
+		_controllers.claim(7)
+		_controllers.claim(8)
+		_button(0, JOY_BUTTON_LEFT_STICK))
 	_do(8, func() -> void: _menu.start_button.pressed.emit())
 	_do(8, func() -> void: _button(0, JOY_BUTTON_DPAD_RIGHT))
 	_do(8, func() -> void:
@@ -103,12 +110,15 @@ func _plan_team_select() -> void:
 		var select: TeamSelect = _menu.team_select
 		_expect(not select.joined and select.visible, "player two's (B) did not take them out and leave the screen up")
 		_expect(_controllers.seat_of(1) < 0, "the gamepad that left is still player two's")
-		_button(1, JOY_BUTTON_X))
+		# Back in by pushing the stick to a side, no button first.
+		var push: InputEventJoypadMotion = InputEventJoypadMotion.new()
+		push.device = 1
+		push.axis = JOY_AXIS_LEFT_X
+		push.axis_value = -1.0
+		Input.parse_input_event(push))
 	_do(8, func() -> void:
-		_expect(_menu.team_select.joined, "the gamepad that left could not come back in")
-		_button(1, JOY_BUTTON_DPAD_LEFT))
-	_do(8, func() -> void:
-		_expect(_menu.team_select.side2 == -1, "player two did not get back under the left team")
+		_expect(_menu.team_select.joined, "the gamepad that left could not come back in by going left")
+		_expect(_menu.team_select.side2 == -1, "going left brought player two in but not under the left team")
 		_save("team_select")
 		_button(0, JOY_BUTTON_A))
 	_do(0, func() -> void:
