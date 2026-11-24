@@ -20,6 +20,8 @@ const MASCOT_SCENE: PackedScene = preload("res://scenes/mascot.tscn")
 ## Wears white with a band of the team colour instead of the colour all over.
 ## The home team does, so two teams of a similar colour are still told apart.
 var white_kit: bool = false
+## The person who plays this team (kept by HumanController.team), or null: the CPU.
+var human: HumanController
 var score: int = 0
 var opponent: Team
 ## Who plays for this team: its eight, and its mascot while it is a guest at
@@ -31,6 +33,17 @@ var mascot: Mascot
 ## How the CPU leans when it calls this team's offense: a multiplier for each
 ## OffensePlay.Category (run, short, deep). See Roster.call_bias().
 var call_bias: PackedFloat32Array = PackedFloat32Array([1.0, 1.0, 1.0])
+
+
+## `color` as it marks what is a team's on screen (the ring under the player a
+## person controls, their stamina bar, their panels): a dark one is lightened,
+## or it would not show on the turf or a dark panel.
+static func marker_of(color: Color) -> Color:
+	return color.lightened(0.4) if color.get_luminance() < 0.3 else color
+
+
+func marker_color() -> Color:
+	return marker_of(team_color)
 
 
 func setup(tuning: Tuning, p_opponent: Team) -> void:

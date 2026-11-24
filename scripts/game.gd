@@ -13,6 +13,10 @@ static var show_intro: bool = false
 ## The team the person plays, picked on the team select: 0 home, 1 away.
 ## -1 leaves it to Team.is_human.
 static var human_side: int = -1
+## Two people play, one team each: player one the team of `human_side` (home
+## when that is not set), player two the other. Each on their own gamepad (see
+## Controllers). The team select sets it.
+static var two_players: bool = false
 ## The league teams picked on the team select for home and away, as places in
 ## `league.teams`. -1 leaves the scene's own team.
 static var team_picks: PackedInt32Array = PackedInt32Array([-1, -1])
@@ -70,8 +74,12 @@ var stat_book: StatBook = StatBook.new()
 ## The season itself moves on at the final whistle. -1 in an exhibition.
 var season_round: int = -1
 
-## Shakes the person's gamepad.
+## Shakes the gamepad of each person playing.
 var rumble: Rumble = Rumble.new()
+## The people playing, player one first: one against the CPU, two against each
+## other, nobody in autoplay. `human` is the first of them (and there with no
+## team when nobody plays).
+var humans: Array[HumanController] = []
 ## Draws a play on the turf before the snap (LT and the stick).
 var play_art: PlayArt
 
@@ -97,7 +105,10 @@ var hold_camera_side: bool = false
 func _ready() -> void:
 	if season() != null:
 		season_round = season().current_round()
-	if human_side >= 0:
+	if two_players:
+		home.is_human = true
+		away.is_human = true
+	elif human_side >= 0:
 		home.is_human = human_side == 0
 		away.is_human = human_side == 1
 	var sides: Array[Team] = [home, away]
@@ -113,7 +124,7 @@ func _ready() -> void:
 	ball.ground_at = field.stadium.surface_height
 	ball.wall_normal_at = func(x: float, z: float) -> Vector3: return Stadium.wall_normal(tuning, x, z)
 	camera_rig.setup(tuning)
-	human.setup(self)
+	_seat_people()
 	play_controller.setup(self)
 	add_child(rumble)
 	rumble.setup(self)
@@ -140,6 +151,40 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Engine.time_scale = base_time_scale
+	Controllers.of(get_tree()).leave_match(self)
+
+
+## The half of the screen that is `person`'s for what each of two people has
+## of their own (play select, the menus at the line): 0 the left one, the home
+## team's, and 1 the right one. Always 0 with one person playing.
+func screen_slot(person: HumanController) -> int:
+	return 1 if humans.size() > 1 and person.team == away else 0
+
+
+## Gives each team a person plays its HumanController and that person's buttons.
+func _seat_people() -> void:
+	var controllers: Controllers = Controllers.of(get_tree())
+	var playing: Array[Team] = []
+	if not autoplay:
+		if two_players:
+			playing.assign([away, home] if human_side == 1 else [home, away])
+		else:
+			for team: Team in [home, away]:
+				if team.is_human:
+					playing = [team]
+	humans.clear()
+	for seat: int in playing.size():
+		var person: HumanController = human
+		if seat > 0:
+			person = HumanController.new()
+			person.name = "HumanController%d" % (seat + 1)
+			add_child(person)
+		person.setup(self, playing[seat], controllers.input_for(seat) if two_players else controllers.any, seat)
+		humans.append(person)
+	if humans.is_empty():
+		human.setup(self, null, controllers.any)
+		humans.append(human)
+	controllers.enter_match(self)
 
 
 func _physics_process(delta: float) -> void:
@@ -462,7 +507,7 @@ func _camera_target() -> Vector3:
 func _camera_must_see() -> Array[Vector3]:
 	var pc: PlayController = play_controller
 	var spots: Array[Vector3] = []
-	if pc.qb == null or pc.kickoff or not pc.qb.team.is_human:
+	if pc.qb == null or pc.kickoff or pc.qb.team.human == null:
 		return spots
 	var before_snap: bool = pc.ball_dead and pc.result == PlayController.Result.NONE
 	var in_pocket: bool = not pc.ball_dead and pc.phase == PlayController.Phase.POCKET and ball.carrier == pc.qb and not pc.off_play.is_run

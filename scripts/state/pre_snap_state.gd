@@ -31,6 +31,13 @@ extends GameState
 ## ball asks for it (_cpu_offense_read, _cpu_defense_read). It sees what the
 ## person sees: the kind of defense, the offense's formation, not the play.
 
+##
+## With two people playing each has a line of their own (Line): their own
+## gamepad, their own menu in their own corner, their own fakes. Both look at
+## one screen, so nothing on it names the play either of them called: the
+## banner is only their buttons, the audible menu does not mark the play that
+## is on, and a hot route shows the one man's route, not the rest of the play.
+
 ## LINE: at the line. MENU: the audible menu is open. HOT: a hot route is
 ## being given.
 enum Mode { LINE, MENU, HOT }
@@ -44,8 +51,38 @@ const CPU_SET_WAIT: float = 2.5
 ## order of AudibleMenu.WAYS.
 const MENU_ACTIONS: Array[StringName] = [&"move_up", &"move_left", &"move_right", &"move_down"]
 
-## Other plays of the called play's formation, in the order left, right, down.
-var _fakes: Array[Resource] = []
+## One person at the line: which side of the ball they are on, and what they
+## have open.
+class Line:
+	var human: HumanController
+	var pad: PadInput
+	## Their half of the screen for the menus: 0, or with two playing 0 left
+	## and 1 right.
+	var slot: int = 0
+	var on_offense: bool = false
+	## Other plays of the called play's formation, in the order left, right, down.
+	var fakes: Array[Resource] = []
+	var mode: Mode = Mode.LINE
+	## The mode this tick began in: what a button does goes by it, so the (B)
+	## that closes the menu is not a shout as well.
+	var was_at_line: bool = true
+	## The plays of the audible menu, in the order of MENU_ACTIONS. Picked the
+	## first time it is opened and kept for the line-up, so opening it again is
+	## no way to be dealt other plays.
+	var menu_plays: Array[Resource] = []
+	## The receiver a hot route is being given to, once he is picked.
+	var hot_man: Player
+	## The left trigger was pressed while a hot route is being given: until it
+	## is let go the sticks show a route and do not call it.
+	var hot_lt: bool = false
+	## The route drawn on the field for him right now (see _hot_held), or -1.
+	var hot_shown: int = -1
+
+
+## The people at the line, in the order of Game.humans, and the one whose team
+## has the ball (null: the CPU snaps).
+var _lines: Array[Line] = []
+var _snapper: Line
 var _human_snaps: bool = false
 var _cpu_delay: float = 0.0
 ## When the person's quarterback last shouted, in time_in_state.
@@ -54,7 +91,7 @@ var _last_call: float = 0.0
 ## does not, or it has).
 var _cpu_motion_at: float = -1.0
 ## When a CPU offense and a CPU defense look across the ball for a reason to
-## change the play, in time_in_state (negative: they have, or the person runs
+## change the play, in time_in_state (negative: they have, or a person runs
 ## that side).
 var _cpu_offense_read_at: float = -1.0
 var _cpu_defense_read_at: float = -1.0
@@ -63,52 +100,66 @@ var _cpu_defense_read_at: float = -1.0
 var _hint: String = ""
 ## The state of the motion the banner was last written for.
 var _banner_motion: PreSnapMotion.State = PreSnapMotion.State.NONE
-var _mode: Mode = Mode.LINE
-## The plays of the audible menu, in the order of MENU_ACTIONS. Picked the
-## first time it is opened and kept for the line-up, so opening it again is no
-## way to be dealt other plays.
-var _menu_plays: Array[Resource] = []
-## The receiver a hot route is being given to, once he is picked.
-var _hot_man: Player
-## The left trigger was pressed while a hot route is being given: until it is
-## let go the sticks show a route and do not call it.
-var _hot_lt: bool = false
-## The route drawn on the field for him right now (see _hot_held), or -1.
-var _hot_shown: int = -1
+
+## The first person's mode, menu and picked receiver (the tests look at them).
+var _mode: Mode:
+	get:
+		return _lines[0].mode if not _lines.is_empty() else Mode.LINE
+var _menu_plays: Array[Resource]:
+	get:
+		return _lines[0].menu_plays if not _lines.is_empty() else ([] as Array[Resource])
+var _hot_man: Player:
+	get:
+		return _lines[0].hot_man if not _lines.is_empty() else null
 
 
 func enter() -> void:
-	_human_snaps = game.human.is_active() and game.human.team == game.offense
+	_lines.clear()
+	_snapper = null
+	var defender: Line = null
+	for person: HumanController in game.humans:
+		if not person.is_active():
+			continue
+		var line: Line = Line.new()
+		line.human = person
+		line.pad = person.pad
+		line.slot = game.screen_slot(person)
+		line.on_offense = person.team == game.offense
+		_lines.append(line)
+		if line.on_offense:
+			_snapper = line
+		else:
+			defender = line
+	_human_snaps = _snapper != null
 	_cpu_delay = randf_range(game.tuning.cpu_snap_delay_min, game.tuning.cpu_snap_delay_max)
 	_last_call = 0.0
 	_cpu_motion_at = -1.0
 	_hint = ""
-	_mode = Mode.LINE
-	_hot_man = null
-	_menu_plays.clear()
-	_pick_fakes()
+	for line: Line in _lines:
+		_pick_fakes(line)
 	# A CPU quarterback gets a silly line out before he snaps.
 	var silly: float = game.audio.qb_open()
 	_cpu_delay = maxf(_cpu_delay, minf(silly, game.tuning.cpu_silly_hold_max))
 	var read_at: float = game.tuning.pre_snap_delay + game.tuning.ai_audible_time
-	var person_on_defense: bool = game.human.is_active() and not _human_snaps
 	_cpu_offense_read_at = -1.0 if _human_snaps else read_at
-	_cpu_defense_read_at = -1.0 if person_on_defense else read_at
+	_cpu_defense_read_at = -1.0 if defender != null else read_at
 	if not _human_snaps and pc.motion.available() and randf() < game.tuning.ai_motion_chance:
 		# After the look across the ball: a man in motion rules out an audible.
 		_cpu_motion_at = maxf(game.tuning.ai_motion_time, read_at + 0.1)
 		if pc.motion.is_jet():
 			# A jet is snapped while he runs: he is sent late enough for that.
 			_cpu_motion_at = maxf(_cpu_motion_at, _cpu_delay - 0.6)
-	if game.human.is_active():
-		_show_banner()
+	if not _lines.is_empty():
+		for line: Line in _lines:
+			_show_banner(line)
 		game.hud.set_hint("")
 	else:
 		game.hud.set_hint("AUTOPLAY")
 
 
 func exit() -> void:
-	_close()
+	for line: Line in _lines:
+		_close(line)
 	game.hud.hide_banner()
 	game.hud.hide_countdown()
 	game.play_art.clear()
@@ -116,10 +167,18 @@ func exit() -> void:
 		game.hud.set_hint("")
 
 
-## The person's play and buttons. The motion is offered for as long as there is
-## one to call.
-func _show_banner() -> void:
-	if _human_snaps:
+## Two people are at the line, looking at one screen.
+func _shared() -> bool:
+	return _lines.size() > 1
+
+
+## A person's play and buttons. The motion is offered for as long as there is
+## one to call. With two at the line only the buttons, each on their own half:
+## the play's name would tell the other one.
+func _show_banner(line: Line) -> void:
+	var play: String = ""
+	var buttons: String = ""
+	if line.on_offense:
 		var flipped: String = " (flipped)" if pc.off_flipped else ""
 		var motion: String = ""
 		if pc.motion.available():
@@ -127,35 +186,53 @@ func _show_banner() -> void:
 		elif pc.motion.can_send_back():
 			motion = "  (LB) call back"
 		_banner_motion = pc.motion.state
-		game.hud.show_banner("", "%s%s  -  (A) snap  (B) shout  (X) audible  (Y) hot route%s  (LT) show" % [pc.off_play.play_name, flipped, motion])
+		play = pc.off_play.play_name + flipped
+		buttons = "(A) snap  (B) shout  (X) audible  (Y) hot route%s  (LT) show" % motion
 	else:
 		var flipped: String = " (flipped)" if pc.def_flipped else ""
-		game.hud.show_banner("", "%s%s  -  get ready   (X) audible   (LT) show play" % [pc.def_play.play_name, flipped])
+		play = pc.def_play.play_name + flipped
+		buttons = "get ready   (X) audible   (LT) show play"
+	if _shared():
+		game.hud.show_line_hint(line.slot, buttons)
+	else:
+		game.hud.show_banner("", "%s  -  %s" % [play, buttons])
+
+
+## Takes a person's line of buttons away: a menu of theirs is going up there.
+func _hide_banner(line: Line) -> void:
+	if _shared():
+		game.hud.show_line_hint(line.slot, "")
+	else:
+		game.hud.hide_banner()
 
 
 ## The plays a fake can be: the others of the formation the person's play is in.
-func _pick_fakes() -> void:
-	_fakes.clear()
-	if not game.human.is_active():
-		return
-	if _human_snaps:
+func _pick_fakes(line: Line) -> void:
+	line.fakes.clear()
+	if line.on_offense:
 		for play: OffensePlay in game.offense_playbook.plays:
 			if play != pc.off_play and play.group == pc.off_play.group:
-				_fakes.append(play)
+				line.fakes.append(play)
 	else:
 		for play: DefensePlay in game.defense_playbook.plays:
 			if play != pc.def_play and play.group == pc.def_play.group:
-				_fakes.append(play)
-	_fakes.shuffle()
+				line.fakes.append(play)
+	line.fakes.shuffle()
+
+
+## Takes the drawing of a person's side of the ball off the field.
+func _clear_art(line: Line) -> void:
+	if line.on_offense:
+		game.play_art.clear_offense()
+	else:
+		game.play_art.clear_defense()
 
 
 ## Left trigger and the stick: the play on the field, or a fake.
-func _update_reveal() -> void:
-	if not game.human.is_active():
-		return
-	var stick: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	if not Input.is_action_pressed(&"reveal_play") or stick.length() < REVEAL_STICK:
-		game.play_art.clear()
+func _update_reveal(line: Line) -> void:
+	var stick: Vector2 = line.pad.vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	if not line.pad.pressed(&"reveal_play") or stick.length() < REVEAL_STICK:
+		_clear_art(line)
 		return
 	# Up is the real one. With no other play in the formation every way is.
 	var slot: int = -1
@@ -163,48 +240,50 @@ func _update_reveal() -> void:
 		slot = 0 if stick.x < 0.0 else 1
 	elif stick.y > 0.0:
 		slot = 2
-	var fake: Resource = _fakes[slot % _fakes.size()] if slot >= 0 and not _fakes.is_empty() else null
-	if _human_snaps:
+	var fake: Resource = line.fakes[slot % line.fakes.size()] if slot >= 0 and not line.fakes.is_empty() else null
+	if line.on_offense:
 		game.play_art.show_offense(fake as OffensePlay if fake != null else pc.off_play, pc.off_flipped)
 	else:
 		game.play_art.show_defense(fake as DefensePlay if fake != null else pc.def_play, pc.def_flipped)
 
 
 func physics_update(delta: float) -> void:
-	var person: bool = game.human.is_active()
+	var person: bool = not _lines.is_empty()
 	# What a button does goes by the mode this tick began in: the (B) that
 	# closes the menu is not a shout as well.
-	var at_line: bool = _mode == Mode.LINE
-	if at_line:
-		game.human.update_pre_snap()
-		_update_reveal()
+	for line: Line in _lines:
+		line.was_at_line = line.mode == Mode.LINE
+		if line.was_at_line:
+			line.human.update_pre_snap()
+			_update_reveal(line)
 	pc.motion.tick(delta)
 	pc.shift.tick(delta)
-	if person:
-		match _mode:
+	for line: Line in _lines:
+		match line.mode:
 			Mode.LINE:
-				_update_line()
+				_update_line(line)
 			Mode.MENU:
-				_update_menu()
+				_update_menu(line)
 			Mode.HOT:
-				_update_hot()
-	at_line = at_line and _mode == Mode.LINE
+				_update_hot(line)
 	var snap_now: bool = false
 	var hint: String = ""
 	if _human_snaps:
 		var tuning: Tuning = game.tuning
+		var pad: PadInput = _snapper.pad
+		var at_line: bool = _snapper.was_at_line and _snapper.mode == Mode.LINE
 		# An offense on its way to a new formation is not set: no snap, no motion.
 		var shifting: bool = pc.shift.active(game.offense)
 		if at_line and not shifting:
-			if Input.is_action_just_pressed(&"qb_call") and time_in_state - _last_call >= tuning.qb_call_gap:
+			if pad.just_pressed(&"qb_call") and time_in_state - _last_call >= tuning.qb_call_gap:
 				_last_call = time_in_state
 				game.audio.qb_call()
 			# (LB) sends him, and (LB) again calls him back to where he stood.
-			if Input.is_action_just_pressed(&"motion") and not pc.motion.call_motion():
+			if pad.just_pressed(&"motion") and not pc.motion.call_motion():
 				pc.motion.send_back()
 			if pc.motion.state != _banner_motion:
-				_show_banner()
-			snap_now = time_in_state >= tuning.pre_snap_delay and Input.is_action_just_pressed(&"confirm")
+				_show_banner(_snapper)
+			snap_now = time_in_state >= tuning.pre_snap_delay and pad.just_pressed(&"confirm")
 		if shifting:
 			hint = "SHIFTING..."
 		elif pc.motion.jet_in_window():
@@ -212,7 +291,8 @@ func physics_update(delta: float) -> void:
 			hint = "(A) SNAP IT!"
 		# Out of time: the ball is snapped for them, as soon as they are set.
 		if count_down(tuning.play_clock, delta):
-			_close()
+			for line: Line in _lines:
+				_close(line)
 			snap_now = not shifting
 	else:
 		# The CPU has the same play clock. It snaps on its own timer long before
@@ -359,115 +439,120 @@ func _cpu_defense_read() -> void:
 
 # --- Audibles ------------------------------------------------------------------
 
-## The play can be changed right now: the teams have been set for a moment,
-## the person's own team is not walking to a new formation and nobody has been
+## A person can change the play right now: the teams have been set for a
+## moment, their own team is not walking to a new formation and nobody has been
 ## sent in motion. The other team walking to its audible is no reason to wait:
 ## that is when an answer to it is wanted.
-func _can_change() -> bool:
-	return time_in_state >= game.tuning.pre_snap_delay and not pc.shift.active(game.human.team) and not pc.motion.called()
+func _can_change(line: Line) -> bool:
+	return time_in_state >= game.tuning.pre_snap_delay and not pc.shift.active(line.human.team) and not pc.motion.called()
 
 
 ## At the line: (X) opens the menu, (Y) the hot routes, and the right stick
 ## calls a quick audible.
-func _update_line() -> void:
-	if not _can_change():
+func _update_line(line: Line) -> void:
+	if not _can_change(line):
 		return
-	if Input.is_action_just_pressed(&"audible"):
-		_open_menu()
-	elif _human_snaps and Input.is_action_just_pressed(&"hot_route"):
-		_open_hot()
-	elif Input.is_action_just_pressed(&"quick_right"):
-		_call(_called(), not _called_flipped())
-	elif Input.is_action_just_pressed(&"quick_down"):
-		_call_quick(OffensePlay.Category.RUN)
-	elif Input.is_action_just_pressed(&"quick_left"):
-		_call_quick(OffensePlay.Category.SHORT)
-	elif Input.is_action_just_pressed(&"quick_up"):
-		_call_quick(OffensePlay.Category.DEEP)
+	var pad: PadInput = line.pad
+	if pad.just_pressed(&"audible"):
+		_open_menu(line)
+	elif line.on_offense and pad.just_pressed(&"hot_route"):
+		_open_hot(line)
+	elif pad.just_pressed(&"quick_right"):
+		_call(line, _called(line), not _called_flipped(line))
+	elif pad.just_pressed(&"quick_down"):
+		_call_quick(line, OffensePlay.Category.RUN)
+	elif pad.just_pressed(&"quick_left"):
+		_call_quick(line, OffensePlay.Category.SHORT)
+	elif pad.just_pressed(&"quick_up"):
+		_call_quick(line, OffensePlay.Category.DEEP)
 
 
-## The play of the person's side as it is called now, and whether it is mirrored.
-func _called() -> Resource:
-	return pc.off_play if _human_snaps else pc.def_play
+## The play of a person's side as it is called now, and whether it is mirrored.
+func _called(line: Line) -> Resource:
+	return pc.off_play if line.on_offense else pc.def_play
 
 
-func _called_flipped() -> bool:
-	return pc.off_flipped if _human_snaps else pc.def_flipped
+func _called_flipped(line: Line) -> bool:
+	return pc.off_flipped if line.on_offense else pc.def_flipped
 
 
-func _call_quick(kind: OffensePlay.Category) -> void:
+func _call_quick(line: Line, kind: OffensePlay.Category) -> void:
 	var pick: Resource = null
-	if _human_snaps:
+	if line.on_offense:
 		pick = OffensePlay.quick_pick(game.offense_playbook.plays, pc.off_play, kind)
 	else:
 		pick = DefensePlay.quick_pick(game.defense_playbook.plays, pc.def_play, kind)
 	if pick != null:
-		_call(pick, _called_flipped())
+		_call(line, pick, _called_flipped(line))
 
 
 ## The audible itself: `play` of the person's side, mirrored or not.
-func _call(play: Resource, flipped: bool) -> void:
+func _call(line: Line, play: Resource, flipped: bool) -> void:
 	var done: bool = false
-	if _human_snaps:
+	# The other side is the CPU's: it may answer. A person's play stays theirs.
+	var cpu_defense: bool = game.defense.human == null
+	if line.on_offense:
 		var off_play: OffensePlay = play as OffensePlay
 		# A CPU defense drawn for one side of the formation goes to that side of
 		# the new one.
 		var def_flipped: bool = pc.def_flipped
-		if pc.def_play.strength_side != 0:
+		if cpu_defense and pc.def_play.strength_side != 0:
 			def_flipped = DefenseAligner.cpu_flip(pc.def_play, off_play, flipped)
 		done = pc.audible(off_play, pc.def_play, flipped, def_flipped, game.offense)
 	else:
 		done = pc.audible(pc.off_play, play as DefensePlay, pc.off_flipped, flipped, game.defense)
 	if not done:
 		return
-	_close()
-	_pick_fakes()
-	_show_banner()
+	_close(line)
+	_pick_fakes(line)
+	_show_banner(line)
 	game.audio.play(&"ui_confirm")
-	if _human_snaps:
+	if line.on_offense:
 		# The quarterback shouts it down the line.
 		_last_call = time_in_state
 		game.audio.qb_call()
 		# A CPU defense has a new formation to look at.
-		_cpu_defense_read_at = time_in_state + game.tuning.ai_audible_time
+		if cpu_defense:
+			_cpu_defense_read_at = time_in_state + game.tuning.ai_audible_time
 
 
 ## Back to the line: the menu shut, no receiver being picked.
-func _close() -> void:
-	if _mode == Mode.MENU:
-		game.hud.hide_audible()
-		_show_banner()
-	elif _mode == Mode.HOT:
+func _close(line: Line) -> void:
+	if line.mode == Mode.MENU:
+		game.hud.hide_audible(line.slot)
+		_show_banner(line)
+	elif line.mode == Mode.HOT:
 		pc.set_hot_picking(false)
-		game.play_art.clear()
+		_clear_art(line)
 		game.hud.hide_hot_routes()
-		_show_banner()
-	_mode = Mode.LINE
-	_hot_man = null
-	_hot_lt = false
-	_hot_shown = -1
+		_show_banner(line)
+	line.mode = Mode.LINE
+	line.hot_man = null
+	line.hot_lt = false
+	line.hot_shown = -1
 
 
 # --- The audible menu ------------------------------------------------------------
 
-func _open_menu() -> void:
-	if _menu_plays.is_empty():
-		_pick_menu()
-	if _menu_plays.is_empty():
+func _open_menu(line: Line) -> void:
+	if line.menu_plays.is_empty():
+		_pick_menu(line)
+	if line.menu_plays.is_empty():
 		return
-	_mode = Mode.MENU
-	game.play_art.clear()
+	line.mode = Mode.MENU
+	_clear_art(line)
 	# The banner's line of buttons would run under the menu.
-	game.hud.hide_banner()
-	game.hud.show_audible(_menu_plays, _called_flipped(), _called())
+	_hide_banner(line)
+	# The play that is on is not marked with somebody else looking on.
+	game.hud.show_audible(line.menu_plays, _called_flipped(line), null if _shared() else _called(line), line.slot)
 	game.audio.play(&"ui_page")
 
 
 ## The menu's plays for this line-up: from the plays the coach advised on the
 ## play-select screen, or, with none kept for this side, from his advice now.
-func _pick_menu() -> void:
+func _pick_menu(line: Line) -> void:
 	var caller: PlayCaller = game.play_caller
-	if _human_snaps:
+	if line.on_offense:
 		var book: Array[OffensePlay] = game.offense_playbook.plays
 		var advised: Array[OffensePlay] = []
 		for play: Resource in game.coach_plays:
@@ -475,7 +560,7 @@ func _pick_menu() -> void:
 				advised.append(play as OffensePlay)
 		if advised.is_empty():
 			advised = caller.coach_offense(book, game)
-		_menu_plays.assign(caller.audible_offense(advised, book, game, pc.off_play))
+		line.menu_plays.assign(caller.audible_offense(advised, book, game, pc.off_play))
 	else:
 		var advised: Array[DefensePlay] = []
 		for play: Resource in game.coach_plays:
@@ -483,83 +568,87 @@ func _pick_menu() -> void:
 				advised.append(play as DefensePlay)
 		if advised.is_empty():
 			advised = caller.coach_defense(game.defense_playbook.plays, game)
-		_menu_plays.assign(caller.audible_defense(advised, pc.def_play))
+		line.menu_plays.assign(caller.audible_defense(advised, pc.def_play))
 
 
-func _update_menu() -> void:
-	# A CPU offense has sent its man in motion: too late.
-	if not _can_change():
-		_close()
+func _update_menu(line: Line) -> void:
+	# The offense has sent its man in motion: too late.
+	if not _can_change(line):
+		_close(line)
 		return
-	if Input.is_action_just_pressed(&"back") or Input.is_action_just_pressed(&"audible"):
-		_close()
+	var pad: PadInput = line.pad
+	if pad.just_pressed(&"back") or pad.just_pressed(&"audible"):
+		_close(line)
 		game.audio.play(&"ui_move")
 		return
-	for slot: int in mini(MENU_ACTIONS.size(), _menu_plays.size()):
-		if not Input.is_action_just_pressed(MENU_ACTIONS[slot]):
+	for slot: int in mini(MENU_ACTIONS.size(), line.menu_plays.size()):
+		if not pad.just_pressed(MENU_ACTIONS[slot]):
 			continue
-		if _menu_plays[slot] == _called():
+		if line.menu_plays[slot] == _called(line):
 			# The play that is on already: nothing to change.
-			_close()
+			_close(line)
 			game.audio.play(&"ui_move")
 		else:
-			_call(_menu_plays[slot], _called_flipped())
+			_call(line, line.menu_plays[slot], _called_flipped(line))
 		return
 
 
 # --- Hot routes ------------------------------------------------------------------
 
-func _open_hot() -> void:
-	_mode = Mode.HOT
-	_hot_man = null
-	_hot_lt = false
-	_hot_shown = -1
+func _open_hot(line: Line) -> void:
+	line.mode = Mode.HOT
+	line.hot_man = null
+	line.hot_lt = false
+	line.hot_shown = -1
 	pc.set_hot_picking(true)
-	# The play on the field, so the new route is seen next to the others.
+	# The play on the field, so the new route is seen next to the others. With
+	# somebody else looking on, only the route being shown.
+	game.play_art.hot_preview_only = _shared()
 	game.play_art.show_offense(pc.off_play, pc.off_flipped)
 	# The banner's line of buttons would run into the panel.
-	game.hud.hide_banner()
-	game.hud.show_hot_routes("")
+	_hide_banner(line)
+	game.hud.show_hot_routes("", 1.0, line.slot)
 	game.audio.play(&"ui_page")
 
 
 ## The four face buttons are the receivers' own here, so it is the left trigger
 ## that leaves: let go with no route on the field. Held, it turns the sticks
 ## from calling a route to showing it, and letting go calls the one shown.
-func _update_hot() -> void:
-	if not _can_change():
-		_close()
+func _update_hot(line: Line) -> void:
+	if not _can_change(line):
+		_close(line)
 		return
+	var pad: PadInput = line.pad
 	# Only a trigger pulled in here: one still held from showing the play is not it.
-	if Input.is_action_just_pressed(&"reveal_play"):
-		_hot_lt = true
+	if pad.just_pressed(&"reveal_play"):
+		line.hot_lt = true
 	for slot: int in mini(HumanController.PASS_ACTIONS.size(), pc.eligible.size()):
-		if Input.is_action_just_pressed(HumanController.PASS_ACTIONS[slot]):
+		if pad.just_pressed(HumanController.PASS_ACTIONS[slot]):
 			var man: Player = pc.eligible[slot]
 			# Only a man who was going out on a route: not the back the ball is
 			# handed to.
 			if man.brain.off_assign.job == OffenseAssignment.Job.ROUTE:
-				_show_hot(-1)
-				_hot_man = man
+				_show_hot(line, -1)
+				line.hot_man = man
 				# The way to the ball on screen, as OffenseAssignment.hot_route has it.
 				var start_y: float = man.brain.off_assign.start.y
 				var inside: float = (-signf(start_y) if absf(start_y) > 0.5 else 1.0) * _hot_screen()
-				game.hud.show_hot_routes("(%s) %s" % [game.human.pass_label(slot), man.brain.off_assign.label], inside)
+				game.hud.show_hot_routes("(%s) %s" % [line.human.pass_label(slot), man.brain.off_assign.label], inside, line.slot)
 				game.audio.play(&"ui_move")
 			else:
 				game.audio.play(&"ui_tick")
 			return
-	if _hot_lt:
-		var held: int = _hot_held() if _hot_man != null else -1
-		if Input.is_action_pressed(&"reveal_play"):
-			_show_hot(held)
-		elif held < 0 or not _give_hot(held):
-			_close()
+	if line.hot_lt:
+		var held: int = _hot_held(line) if line.hot_man != null else -1
+		if pad.pressed(&"reveal_play"):
+			_show_hot(line, held)
+		elif held < 0 or not _give_hot(line, held):
+			_close(line)
 		return
-	if _hot_man != null:
-		var pressed: int = _hot_pressed()
+	if line.hot_man != null:
+		var pressed: int = _hot_pressed(line)
 		if pressed >= 0:
-			_give_hot(pressed)
+			_give_hot(line, pressed)
 
 
 ## A route and the way it breaks on screen (-1 left, 0 neither, 1 right) as one
@@ -569,31 +658,32 @@ func _hot_key(kind: OffenseAssignment.Hot, way: int) -> int:
 
 
 ## The route a stick pushed just now asks for (see _hot_key), or -1.
-func _hot_pressed() -> int:
-	if Input.is_action_just_pressed(&"move_up"):
+func _hot_pressed(line: Line) -> int:
+	var pad: PadInput = line.pad
+	if pad.just_pressed(&"move_up"):
 		return _hot_key(OffenseAssignment.Hot.STREAK, 0)
-	if Input.is_action_just_pressed(&"move_down"):
+	if pad.just_pressed(&"move_down"):
 		return _hot_key(OffenseAssignment.Hot.CURL, 0)
-	if Input.is_action_just_pressed(&"move_left"):
+	if pad.just_pressed(&"move_left"):
 		return _hot_key(OffenseAssignment.Hot.SLANT, -1)
-	if Input.is_action_just_pressed(&"move_right"):
+	if pad.just_pressed(&"move_right"):
 		return _hot_key(OffenseAssignment.Hot.SLANT, 1)
-	if Input.is_action_just_pressed(&"quick_up"):
+	if pad.just_pressed(&"quick_up"):
 		return _hot_key(OffenseAssignment.Hot.POST, 0)
-	if Input.is_action_just_pressed(&"quick_down"):
+	if pad.just_pressed(&"quick_down"):
 		return _hot_key(OffenseAssignment.Hot.DRAG, 0)
-	if Input.is_action_just_pressed(&"quick_left"):
+	if pad.just_pressed(&"quick_left"):
 		return _hot_key(OffenseAssignment.Hot.OUT, -1)
-	if Input.is_action_just_pressed(&"quick_right"):
+	if pad.just_pressed(&"quick_right"):
 		return _hot_key(OffenseAssignment.Hot.OUT, 1)
 	return -1
 
 
 ## The route the sticks are held on right now (see _hot_key): that of the one
 ## pushed further, or -1 with both at rest.
-func _hot_held() -> int:
-	var left: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	var right: Vector2 = Input.get_vector(&"quick_left", &"quick_right", &"quick_up", &"quick_down")
+func _hot_held(line: Line) -> int:
+	var left: Vector2 = line.pad.vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	var right: Vector2 = line.pad.vector(&"quick_left", &"quick_right", &"quick_up", &"quick_down")
 	var on_right: bool = right.length() > left.length()
 	var stick: Vector2 = right if on_right else left
 	if stick.length() < REVEAL_STICK:
@@ -629,23 +719,23 @@ func _hot_screen() -> float:
 
 ## Draws route `key` on the field for the picked man, in place of the one he
 ## has (-1: no route, his own again).
-func _show_hot(key: int) -> void:
-	if key == _hot_shown:
+func _show_hot(line: Line, key: int) -> void:
+	if key == line.hot_shown:
 		return
-	_hot_shown = key
+	line.hot_shown = key
 	if key < 0:
 		game.play_art.clear_hot_preview()
 		game.hud.light_hot_route(-1, 0)
 		return
 	game.hud.light_hot_route(int(_hot_kind(key)), key % 3 - 1)
-	game.play_art.set_hot_preview(_hot_man, OffenseAssignment.hot_route(_hot_man.brain.off_assign, _hot_kind(key), _hot_side(key)))
+	game.play_art.set_hot_preview(line.hot_man, OffenseAssignment.hot_route(line.hot_man.brain.off_assign, _hot_kind(key), _hot_side(key)))
 	game.audio.play(&"ui_tick")
 
 
 ## The hot route itself: the picked man runs route `key`, and it is back to the line.
-func _give_hot(key: int) -> bool:
-	if not pc.hot_route(_hot_man, _hot_kind(key), _hot_side(key)):
+func _give_hot(line: Line, key: int) -> bool:
+	if not pc.hot_route(line.hot_man, _hot_kind(key), _hot_side(key)):
 		return false
 	game.audio.play(&"ui_confirm")
-	_close()
+	_close(line)
 	return true

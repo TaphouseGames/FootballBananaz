@@ -912,8 +912,7 @@ func crowd_react(team: Team, size: float) -> void:
 ## A hit on `victim`: the crunch, and him landing. The person's own collisions
 ## are louder than the ones going on around them.
 func hit(attacker: Player, victim: Player, big: bool) -> void:
-	var mine: Player = game.human.controlled
-	var near: bool = victim.has_ball or (mine != null and (attacker == mine or victim == mine))
+	var near: bool = victim.has_ball or attacker.human != null or victim.human != null
 	var volume: float = 1.0 if near else 0.5
 	play(&"big_hit" if big else &"tackle", volume)
 	play(&"body_fall", volume * 0.8)
@@ -926,7 +925,7 @@ func action(player: Player, sound: StringName) -> void:
 
 
 func _action_volume(player: Player) -> float:
-	return 1.0 if player == game.human.controlled or player.has_ball else 0.45
+	return 1.0 if player.human != null or player.has_ball else 0.45
 
 
 ## `player` has just landed a jump dive and lies dazed: the thump, then the
@@ -1105,7 +1104,8 @@ func _on_state_changed(from: StringName, to: StringName) -> void:
 			# A playoff game and the final of the season end on words of their own.
 			shout(_season_take(StringName("announcer_final")))
 			quip(_season_take(StringName(QUIP_PREFIX + "final")), QUIP_FINAL)
-			var mine: Team = game.human.team if game.human.is_active() and game.human.team != null else game.home
+			# The crowd is the one person's, or the home team's.
+			var mine: Team = game.human.team if game.humans.size() == 1 and game.human.is_active() else game.home
 			if mine.score > mine.opponent.score:
 				crowd_react(mine, 1.0)
 			elif mine.score < mine.opponent.score:

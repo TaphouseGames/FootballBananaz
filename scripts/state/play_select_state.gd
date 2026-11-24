@@ -1,26 +1,56 @@
 extends GameState
-## Both sides pick a play. The person picks from their side's playbook on a grid
-## of cards; the CPU's PlayCaller picks for the other side. The first tab is the
-## coach's: the plays of the book that fit the situation best
+## Both sides pick a play. A person picks from their side's playbook on a grid
+## of cards; the CPU's PlayCaller picks for a side nobody plays. The first tab
+## is the coach's: the plays of the book that fit the situation best
 ## (PlayCaller.coach_offense and coach_defense).
+##
+## With two people playing each has their own half of the screen (the home
+## team's on the left) and their own gamepad, and both pick at once. A side that
+## has picked shows READY and waits for the other; the clock picks the
+## highlighted card for whoever is not in when it runs out.
 
 const INPUT_LOCK: float = 0.25
 ## The place of the coach's tab (HUD.COACH_TAB) among the tabs. The book's tabs
 ## follow it in Group order.
 const COACH_GROUP: int = 0
 
-## The plays of the person's side by tab (the coach's, then one per
-## OffensePlay.Group or DefensePlay.Group) and the tabs' titles, the open tab and
-## its plays, and the cursor's place and the number of cards on that tab.
-var _groups: Array[Array] = []
-var _group_names: PackedStringArray = PackedStringArray()
-var _group: int = 0
-var _plays: Array[Resource] = []
-var _cursor: int = 0
-var _count: int = 0
-var _human_on_offense: bool = false
-## The person wants their play mirrored left to right.
-var _flipped: bool = false
+## One person at the cards: the plays of their side by tab (the coach's, then
+## one per OffensePlay.Group or DefensePlay.Group) and the tabs' titles, the
+## open tab and its plays, and the cursor's place and the number of cards on
+## that tab.
+class Picker:
+	var human: HumanController
+	## Their panel on the HUD: 0, or with two playing 0 left and 1 right.
+	var slot: int = 0
+	var on_offense: bool = false
+	var groups: Array[Array] = []
+	var group_names: PackedStringArray = PackedStringArray()
+	var group: int = 0
+	var plays: Array[Resource] = []
+	var cursor: int = 0
+	var count: int = 0
+	## They want their play mirrored left to right.
+	var flipped: bool = false
+	## The play they picked, once they have.
+	var choice: Resource
+
+
+## The people picking, in the order of Game.humans. Nobody in autoplay.
+var _pickers: Array[Picker] = []
+
+## The first person's tab, cards and cursor (the tests look at them).
+var _group: int:
+	get:
+		return _pickers[0].group if not _pickers.is_empty() else 0
+var _group_names: PackedStringArray:
+	get:
+		return _pickers[0].group_names if not _pickers.is_empty() else PackedStringArray()
+var _plays: Array[Resource]:
+	get:
+		return _pickers[0].plays if not _pickers.is_empty() else ([] as Array[Resource])
+var _cursor: int:
+	get:
+		return _pickers[0].cursor if not _pickers.is_empty() else 0
 
 
 func enter() -> void:
@@ -28,30 +58,40 @@ func enter() -> void:
 	pc.line_up(game.offense_playbook.plays[0], game.defense_playbook.plays[0])
 	game.hud.hide_banner()
 	game.coach_plays.clear()
-	if not game.human.is_active():
-		return
-	_human_on_offense = game.human.team == game.offense
-	_group_names = PackedStringArray([HUD.COACH_TAB])
-	_group_names.append_array(OffensePlay.GROUP_NAMES if _human_on_offense else DefensePlay.GROUP_NAMES)
-	_groups.clear()
-	for i: int in _group_names.size():
-		_groups.append([])
-	if _human_on_offense:
-		_groups[COACH_GROUP].assign(game.play_caller.coach_offense(game.offense_playbook.plays, game))
+	_pickers.clear()
+	for person: HumanController in game.humans:
+		if person.is_active():
+			_pickers.append(_seat(person))
+	for picker: Picker in _pickers:
+		_show_group(picker)
+		_show_hint(picker)
+
+
+## `person` at the cards of their side, on the coach's tab.
+func _seat(person: HumanController) -> Picker:
+	var picker: Picker = Picker.new()
+	picker.human = person
+	picker.slot = game.screen_slot(person)
+	picker.on_offense = person.team == game.offense
+	picker.group_names = PackedStringArray([HUD.COACH_TAB])
+	picker.group_names.append_array(OffensePlay.GROUP_NAMES if picker.on_offense else DefensePlay.GROUP_NAMES)
+	for i: int in picker.group_names.size():
+		picker.groups.append([])
+	if picker.on_offense:
+		picker.groups[COACH_GROUP].assign(game.play_caller.coach_offense(game.offense_playbook.plays, game))
 		for play: OffensePlay in game.offense_playbook.plays:
-			_groups[_tab_of(play)].append(play)
+			picker.groups[_tab_of(play)].append(play)
 	else:
-		_groups[COACH_GROUP].assign(game.play_caller.coach_defense(game.defense_playbook.plays, game))
+		picker.groups[COACH_GROUP].assign(game.play_caller.coach_defense(game.defense_playbook.plays, game))
 		for play: DefensePlay in game.defense_playbook.plays:
-			_groups[_tab_of(play)].append(play)
-	game.coach_plays.assign(_groups[COACH_GROUP])
+			picker.groups[_tab_of(play)].append(play)
+	# Kept for the audible menu at the line, which takes its side's from them.
+	game.coach_plays.append_array(picker.groups[COACH_GROUP])
 	# The coach's tab, or the first of the book with nothing on that.
-	_group = COACH_GROUP
-	while _groups[_group].is_empty() and _group < _groups.size() - 1:
-		_group += 1
-	_flipped = false
-	_show_group()
-	_show_hint()
+	picker.group = COACH_GROUP
+	while picker.groups[picker.group].is_empty() and picker.group < picker.groups.size() - 1:
+		picker.group += 1
+	return picker
 
 
 func exit() -> void:
@@ -61,71 +101,95 @@ func exit() -> void:
 
 
 ## Under the cards: the buttons that pick a play and mirror it.
-func _show_hint() -> void:
+func _show_hint(picker: Picker) -> void:
 	var text: String = "(LB/RB) Category      (A) Pick play      (X) Flip play"
-	if _flipped:
+	if _pickers.size() > 1:
+		text = "(LB/RB) Category   (A) Pick   (X) Flip"
+	if picker.flipped:
 		text += "  -  FLIPPED"
-	game.hud.set_hint(text)
+	if picker.choice != null:
+		text = "READY"
+	game.hud.set_play_hint(text, picker.slot)
 
 
 ## Puts the open tab's cards on screen with the cursor on the first one.
-func _show_group() -> void:
-	_plays.assign(_groups[_group])
-	_count = _plays.size()
-	_cursor = 0
-	var title: String = "%s  -  %s" % ["OFFENSE" if _human_on_offense else "DEFENSE", game.down_text()]
+func _show_group(picker: Picker) -> void:
+	picker.plays.assign(picker.groups[picker.group])
+	picker.count = picker.plays.size()
+	picker.cursor = 0
+	var title: String = "%s  -  %s" % ["OFFENSE" if picker.on_offense else "DEFENSE", game.down_text()]
+	if _pickers.size() > 1:
+		title = "%s  %s" % [picker.human.team.short_name, title]
 	# The coach's plays are from all over the book: each card says where from.
 	var notes: PackedStringArray = PackedStringArray()
-	if _group == COACH_GROUP:
-		for play: Resource in _plays:
-			notes.append(_group_names[_tab_of(play)])
-	game.hud.show_play_select(title, _group_names, _group, _plays, notes)
-	game.hud.set_play_flipped(_flipped)
+	if picker.group == COACH_GROUP:
+		for play: Resource in picker.plays:
+			notes.append(picker.group_names[_tab_of(play)])
+	game.hud.show_play_select(title, picker.group_names, picker.group, picker.plays, notes, picker.slot)
+	game.hud.set_play_flipped(picker.flipped, picker.slot)
 
 
 func physics_update(delta: float) -> void:
-	if not game.human.is_active():
+	if _pickers.is_empty():
 		if time_in_state >= 0.3:
-			_confirm(null)
+			_confirm()
 		return
-	# Out of time: the highlighted play it is.
+	# Out of time: the highlighted play it is, for whoever has not picked.
 	if count_down(game.tuning.play_select_time, delta):
 		game.audio.play(&"ui_confirm")
-		_confirm(_plays[_cursor])
+		for picker: Picker in _pickers:
+			if picker.choice == null:
+				picker.choice = picker.plays[picker.cursor]
+		_confirm()
 		return
 	if time_in_state < INPUT_LOCK:
 		return
-	var turn: int = int(Input.is_action_just_pressed(&"page_next")) - int(Input.is_action_just_pressed(&"page_prev"))
+	var waiting: bool = false
+	for picker: Picker in _pickers:
+		if picker.choice == null:
+			_update(picker)
+		waiting = waiting or picker.choice == null
+	if not waiting:
+		_confirm()
+
+
+## One person's buttons, until they have picked.
+func _update(picker: Picker) -> void:
+	var pad: PadInput = picker.human.pad
+	var turn: int = int(pad.just_pressed(&"page_next")) - int(pad.just_pressed(&"page_prev"))
 	if turn != 0:
 		# Past a tab with no plays on it.
-		for i: int in _groups.size():
-			_group = posmod(_group + turn, _groups.size())
-			if not _groups[_group].is_empty():
+		for i: int in picker.groups.size():
+			picker.group = posmod(picker.group + turn, picker.groups.size())
+			if not picker.groups[picker.group].is_empty():
 				break
-		_show_group()
+		_show_group(picker)
 		game.audio.play(&"ui_page")
-	var moved: int = _cursor
-	if Input.is_action_just_pressed(&"move_right"):
-		moved = _step(_cursor, 1, 0)
-	elif Input.is_action_just_pressed(&"move_left"):
-		moved = _step(_cursor, -1, 0)
-	elif Input.is_action_just_pressed(&"move_down"):
-		moved = _step(_cursor, 0, 1)
-	elif Input.is_action_just_pressed(&"move_up"):
-		moved = _step(_cursor, 0, -1)
-	if moved != _cursor:
-		_cursor = moved
-		game.hud.set_play_cursor(_cursor)
+	var moved: int = picker.cursor
+	if pad.just_pressed(&"move_right"):
+		moved = _step(picker, 1, 0)
+	elif pad.just_pressed(&"move_left"):
+		moved = _step(picker, -1, 0)
+	elif pad.just_pressed(&"move_down"):
+		moved = _step(picker, 0, 1)
+	elif pad.just_pressed(&"move_up"):
+		moved = _step(picker, 0, -1)
+	if moved != picker.cursor:
+		picker.cursor = moved
+		game.hud.set_play_cursor(picker.cursor, picker.slot)
 		game.audio.play(&"ui_move")
 
-	if Input.is_action_just_pressed(&"flip_play"):
-		_flipped = not _flipped
-		game.hud.set_play_flipped(_flipped)
-		_show_hint()
+	if pad.just_pressed(&"flip_play"):
+		picker.flipped = not picker.flipped
+		game.hud.set_play_flipped(picker.flipped, picker.slot)
+		_show_hint(picker)
 		game.audio.play(&"ui_flip")
-	if Input.is_action_just_pressed(&"confirm"):
+	if pad.just_pressed(&"confirm"):
 		game.audio.play(&"ui_confirm")
-		_confirm(_plays[_cursor])
+		picker.choice = picker.plays[picker.cursor]
+		# Their half says so while the other person is still choosing.
+		game.hud.set_play_ready(true, picker.slot)
+		_show_hint(picker)
 
 
 ## The tab of the book `play` is on.
@@ -135,26 +199,35 @@ func _tab_of(play: Resource) -> int:
 
 
 ## Moves the cursor one card across or down the grid, wrapping at the edges.
-func _step(from: int, dx: int, dy: int) -> int:
+func _step(picker: Picker, dx: int, dy: int) -> int:
+	var from: int = picker.cursor
 	var columns: int = HUD.GRID_COLUMNS
 	@warning_ignore("integer_division")
-	var rows: int = (_count + columns - 1) / columns
+	var rows: int = (picker.count + columns - 1) / columns
 	@warning_ignore("integer_division")
 	var row: int = posmod(from / columns + dy, rows)
 	var column: int = posmod(from % columns + dx, columns)
 	var to: int = row * columns + column
-	return to if to < _count else from
+	return to if to < picker.count else from
 
 
-## `choice` is the person's pick, or null when the CPU picks for both sides.
-func _confirm(choice: Resource) -> void:
+## Lines both teams up for the plays picked. The CPU picks for a side with no
+## person on it.
+func _confirm() -> void:
 	var off_plays: Array[OffensePlay] = game.offense_playbook.plays
 	var def_plays: Array[DefensePlay] = game.defense_playbook.plays
-	var off_play: OffensePlay = choice as OffensePlay
-	var def_play: DefensePlay = choice as DefensePlay
-	# The person's flip is for their own play. The CPU runs its plays to either side.
-	var off_flipped: bool = _flipped
-	var def_flipped: bool = _flipped
+	var off_play: OffensePlay = null
+	var def_play: DefensePlay = null
+	# A person's flip is for their own play. The CPU runs its plays to either side.
+	var off_flipped: bool = false
+	var def_flipped: bool = false
+	for picker: Picker in _pickers:
+		if picker.on_offense:
+			off_play = picker.choice as OffensePlay
+			off_flipped = picker.flipped
+		else:
+			def_play = picker.choice as DefensePlay
+			def_flipped = picker.flipped
 	if off_play == null:
 		off_play = game.play_caller.pick_offense(off_plays, game)
 		off_flipped = randf() < 0.5

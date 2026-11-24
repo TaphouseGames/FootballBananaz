@@ -1,7 +1,9 @@
 class_name HumanController
 extends Node
-## Turns Input Map actions into inputs for the one player the person controls.
-## `team` is null in autoplay, which disables everything here.
+## Turns Input Map actions into inputs for the one player a person controls.
+## There is one of these for each person playing (Game.humans): one against the
+## CPU, two against each other. `team` is null in autoplay, which disables
+## everything here.
 
 const PASS_ACTIONS: Array[StringName] = [&"pass_1", &"pass_2", &"pass_3", &"pass_4"]
 const PAD_LABELS: Array[String] = ["A", "X", "B", "Y"]
@@ -10,8 +12,20 @@ const PAD_COLORS: Array[Color] = [Color(0.3, 0.85, 0.35), Color(0.25, 0.55, 1.0)
 var game: Game
 var pc: PlayController
 var tuning: Tuning
-var team: Team
+## The team this person plays. The team knows it too (Team.human).
+var team: Team:
+	set(value):
+		if team != null and team.human == self:
+			team.human = null
+		team = value
+		if team != null:
+			team.human = self
 var controlled: Player
+## This person's buttons: every pad's with one person playing, their own pad's
+## with two (see Controllers).
+var pad: PadInput = PadInput.new()
+## 0 for player one, 1 for player two.
+var seat: int = 0
 ## True on ticks where the controlled player should run on AI instead
 ## (a targeted receiver with the stick at rest runs to the ball by himself).
 var assist: bool = false
@@ -24,15 +38,15 @@ var _fake_armed: bool = false
 var _fake_press_time: float = 0.0
 
 
-func setup(p_game: Game) -> void:
+## `p_team` is the team this person plays (null: nobody does), `p_pad` their
+## buttons and `p_seat` which of the people playing they are.
+func setup(p_game: Game, p_team: Team, p_pad: PadInput, p_seat: int = 0) -> void:
 	game = p_game
 	pc = game.play_controller
 	tuning = game.tuning
-	team = null
-	if not game.autoplay:
-		for candidate: Team in [game.home, game.away]:
-			if candidate.is_human:
-				team = candidate
+	pad = p_pad
+	seat = p_seat
+	team = p_team
 
 
 func is_active() -> bool:
@@ -44,8 +58,13 @@ func set_controlled(player: Player) -> void:
 		return
 	if controlled != null:
 		controlled.set_controlled(false)
+		controlled.human = null
 	controlled = player
 	if controlled != null:
+		# Never two people's: the other one lets go of him.
+		if controlled.human != null and controlled.human != self:
+			controlled.human.set_controlled(null)
+		controlled.human = self
 		controlled.set_controlled(true)
 
 
@@ -70,7 +89,7 @@ func is_defending() -> bool:
 ## up runs away from the camera, right runs to screen right. It goes by where
 ## the camera is right now, so it holds while the camera swings round.
 func read_move() -> Vector3:
-	var stick: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	var stick: Vector2 = pad.vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	var rig: Basis = game.camera_rig.basis
 	var move: Vector3 = rig.x * stick.x + rig.z * stick.y
 	return Vector3(move.x, 0.0, move.z)
@@ -127,7 +146,7 @@ func on_fumble() -> void:
 func update_pre_snap() -> void:
 	if not is_active() or team == pc.offense or controlled == null:
 		return
-	if Input.is_action_just_pressed(&"switch_player"):
+	if pad.just_pressed(&"switch_player"):
 		var next: int = (team.players.find(controlled) + 1) % team.players.size()
 		set_controlled(team.players[next])
 
@@ -148,7 +167,7 @@ func update_live() -> void:
 	player.calling_for_ball = false
 	player.ai_speed_scale = 1.0
 	player.move_input = move
-	player.wants_turbo = Input.is_action_pressed(&"turbo")
+	player.wants_turbo = pad.pressed(&"turbo")
 
 	# Play action: he stays with the back until the fake is over.
 	if player == pc.qb and player.has_ball and pc.faking():
@@ -189,17 +208,17 @@ func update_live() -> void:
 	var in_grasp: bool = player == pc.qb and pc.in_the_grasp()
 	if in_grasp:
 		for slot: int in mini(PASS_ACTIONS.size(), pc.eligible.size()):
-			if Input.is_action_just_pressed(PASS_ACTIONS[slot]):
+			if pad.just_pressed(PASS_ACTIONS[slot]):
 				pc.throw_ball(pc.eligible[slot], tuning.hit_throw_power, _pass_placement(), true)
 				return
-	elif player.has_ball and not is_passer and Input.is_action_just_pressed(&"secure_ball"):
+	elif player.has_ball and not is_passer and pad.just_pressed(&"secure_ball"):
 		pc.do_secure(player)
 
 	# A lateral to the nearest teammate level with him or behind him: for any
 	# carrier, also with a tackler on his back. A quarterback who can still
 	# throw has to tuck the ball first (turbo): untucked, the same trigger
 	# throws it away.
-	if player.has_ball and not is_passer and Input.is_action_just_pressed(&"lateral"):
+	if player.has_ball and not is_passer and pad.just_pressed(&"lateral"):
 		if pc.do_lateral(player):
 			_pass_slot = -1
 			_fake_armed = false
@@ -212,19 +231,19 @@ func update_live() -> void:
 	if is_passer:
 		# Getting rid of it: into the stands on the side the stick leans to, or else
 		# the nearer sideline. It beats a pass being wound up.
-		if Input.is_action_just_pressed(&"throw_away"):
+		if pad.just_pressed(&"throw_away"):
 			_pass_slot = -1
 			var side: float = signf(move.z) if absf(move.z) > 0.3 else signf(player.position.z)
 			pc.throw_away(side if side != 0.0 else 1.0)
 			return
 		# The right bumper tapped by itself is a pump fake. Held as a pass leaves
 		# it underthrows, so a pass button pressed meanwhile calls the fake off.
-		if Input.is_action_just_pressed(&"pass_under"):
+		if pad.just_pressed(&"pass_under"):
 			_fake_armed = _pass_slot < 0
 			_fake_press_time = pc.live_time
 		if _pass_slot >= 0:
 			_fake_armed = false
-		elif _fake_armed and not Input.is_action_pressed(&"pass_under"):
+		elif _fake_armed and not pad.pressed(&"pass_under"):
 			_fake_armed = false
 			if pc.live_time - _fake_press_time <= tuning.pump_tap_time:
 				pc.pump_fake()
@@ -232,13 +251,13 @@ func update_live() -> void:
 		if _pass_slot < 0 or _pass_slot >= pc.eligible.size():
 			_pass_slot = -1
 			for slot: int in mini(PASS_ACTIONS.size(), pc.eligible.size()):
-				if Input.is_action_just_pressed(PASS_ACTIONS[slot]):
+				if pad.just_pressed(PASS_ACTIONS[slot]):
 					_pass_slot = slot
 					_pass_press_time = pc.live_time
 					return
 		else:
 			var held: float = pc.live_time - _pass_press_time
-			if not Input.is_action_pressed(PASS_ACTIONS[_pass_slot]) or held >= tuning.pass_charge_time:
+			if not pad.pressed(PASS_ACTIONS[_pass_slot]) or held >= tuning.pass_charge_time:
 				var target: Player = pc.eligible[_pass_slot]
 				_pass_slot = -1
 				pc.throw_ball(target, pc.pass_power(held), _pass_placement())
@@ -248,7 +267,7 @@ func update_live() -> void:
 		_fake_armed = false
 		# A tucked quarterback is a runner: the pass buttons do nothing until turbo
 		# is released, and the jump and action buttons below work for him.
-		if not player.has_ball and Input.is_action_just_pressed(&"switch_player"):
+		if not player.has_ball and pad.just_pressed(&"switch_player"):
 			if carrier == null or carrier.team != team:
 				_switch_to_nearest()
 			return
@@ -256,7 +275,7 @@ func update_live() -> void:
 	# TODO(jump-dive): shelved 2026-11-19. Re-enable or delete once we decide whether to keep it.
 #	# In the air from a jump the action is a jump dive. Not for a quarterback who
 #	# can still throw: his action button is a pass button up there too.
-#	if player.state == Player.State.JUMPING and not is_passer and Input.is_action_just_pressed(&"action"):
+#	if player.state == Player.State.JUMPING and not is_passer and pad.just_pressed(&"action"):
 #		pc.do_jump_dive(player, _jump_dive_aim(player, move, moving, carrier))
 #		return
 	if not player.can_act():
@@ -264,20 +283,20 @@ func update_live() -> void:
 	# With four men out the jump button is the fourth pass button for as long
 	# as the quarterback can throw.
 	var jump_is_pass: bool = is_passer and pc.eligible.size() >= PASS_ACTIONS.size()
-	if Input.is_action_just_pressed(&"jump") and not jump_is_pass:
+	if pad.just_pressed(&"jump") and not jump_is_pass:
 		pc.do_jump(player)
 		return
 	if is_passer:
 		return
 	# The second jump button is a pass button while the quarterback can throw,
 	# and secures the ball for anyone carrying it.
-	if not player.has_ball and Input.is_action_just_pressed(&"jump_alt"):
+	if not player.has_ball and pad.just_pressed(&"jump_alt"):
 		pc.do_jump(player)
 		return
 	if player.has_ball:
 		_carrier_moves(player, move, moving)
 		return
-	if not Input.is_action_just_pressed(&"action"):
+	if not pad.just_pressed(&"action"):
 		return
 	# A dive always goes where the stick points. The aiming below (at the pass,
 	# the loose ball, the carrier) is only for a stick left alone.
@@ -323,11 +342,11 @@ func _in_exchange() -> bool:
 ## gives himself up for the last few yards. (Securing the ball is read in
 ## update_live: it also works with a tackler on his back.)
 func _carrier_moves(player: Player, move: Vector3, moving: bool) -> void:
-	if Input.is_action_just_pressed(&"stiff_arm_left"):
+	if pad.just_pressed(&"stiff_arm_left"):
 		pc.do_stiff_arm(player, 1.0)
-	elif Input.is_action_just_pressed(&"stiff_arm_right"):
+	elif pad.just_pressed(&"stiff_arm_right"):
 		pc.do_stiff_arm(player, -1.0)
-	elif Input.is_action_just_pressed(&"spin"):
+	elif pad.just_pressed(&"spin"):
 		# Stick leaned across his running line: spin and sidestep that way.
 		# Otherwise a plain spin, turning away from the nearest defender.
 		var line: Vector3 = player.velocity.normalized() if player.velocity.length_squared() > 0.6 else player.facing
@@ -337,7 +356,7 @@ func _carrier_moves(player: Player, move: Vector3, moving: bool) -> void:
 			pc.do_spin(player, signf(lean), true)
 		else:
 			pc.do_spin(player, 1.0 if _spin_direction(player).dot(left) >= 0.0 else -1.0)
-	elif Input.is_action_just_pressed(&"action"):
+	elif pad.just_pressed(&"action"):
 		pc.do_dive(player, move.normalized() if moving else player.facing)
 
 
@@ -372,8 +391,8 @@ func update_dead() -> void:
 	player.calling_for_ball = false
 	player.ai_speed_scale = 1.0
 	player.move_input = move
-	player.wants_turbo = Input.is_action_pressed(&"turbo")
-	if not Input.is_action_just_pressed(&"action") or not player.can_act():
+	player.wants_turbo = pad.pressed(&"turbo")
+	if not pad.just_pressed(&"action") or not player.can_act():
 		return
 	var on_defense: bool = is_defending()
 	var victim: Player = null
@@ -401,8 +420,8 @@ func update_dead() -> void:
 ## A bumper held as the pass leaves: left leads the receiver, right underthrows
 ## him. Both together cancel out.
 func _pass_placement() -> PlayController.Placement:
-	var lead: bool = Input.is_action_pressed(&"pass_lead")
-	var under: bool = Input.is_action_pressed(&"pass_under")
+	var lead: bool = pad.pressed(&"pass_lead")
+	var under: bool = pad.pressed(&"pass_under")
 	if lead and not under:
 		return PlayController.Placement.LEAD
 	if under and not lead:

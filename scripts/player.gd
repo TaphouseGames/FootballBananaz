@@ -49,6 +49,9 @@ const NAME_TAG_DROP: float = 1.35
 @export var grey_kit: bool = false
 
 var team: Team
+## The person controlling him right now (see HumanController.set_controlled), or
+## null: he runs on his brain.
+var human: HumanController
 var tuning: Tuning
 var ratings: PlayerRatings
 var brain: PlayerBrain
@@ -228,6 +231,12 @@ func setup(p_team: Team, p_index: int, p_tuning: Tuning, p_ratings: PlayerRating
 	ratings = p_ratings
 	brain = PlayerBrain.new(self, p_tuning)
 	_setup_model()
+	# The ring under a person's player is in their team's colour. A material of
+	# his own: the scene's is shared by every player.
+	var ring: StandardMaterial3D = StandardMaterial3D.new()
+	ring.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring.albedo_color = team.marker_color()
+	control_ring.set_surface_override_material(0, ring)
 	set_controlled(false)
 	set_pass_icon("", Color.WHITE)
 

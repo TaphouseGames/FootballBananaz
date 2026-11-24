@@ -7,6 +7,9 @@ extends Node3D
 ## PreSnapState decides which play is shown: the one that was called, or a fake
 ## from the same formation. Every play of a formation lines up on the same
 ## spots, so a fake starts under the same feet as the real one.
+##
+## There is a drawing for each side of the ball, so with two people playing
+## both can have one up at once.
 
 ## Above the turf's paint and the marks players leave on it.
 const HEIGHT: float = 0.07
@@ -21,8 +24,14 @@ const FAINT: float = 0.3
 const ZONE_FILL: float = 0.16
 const ZONE_STEPS: int = 32
 
-## The play drawn right now (an OffensePlay or a DefensePlay), or null.
-var shown: Resource
+## The play drawn right now (an OffensePlay or a DefensePlay), or null. With
+## one drawn for each side, the offense's.
+var shown: Resource:
+	get:
+		return _offense if _offense != null else _defense
+## Only the man being shown a hot route is drawn, not the rest of his play:
+## with two people playing the other one is looking at the same screen.
+var hot_preview_only: bool = false
 ## Triangles in the drawing as it was last built.
 var triangles: int = 0
 ## A hot route the person is looking at before calling it: the man it would go
@@ -31,7 +40,11 @@ var hot_preview_man: Player
 var hot_preview: OffenseAssignment
 
 var _game: Game
+## The play drawn for each side, and whether it is mirrored.
+var _offense: OffensePlay
+var _defense: DefensePlay
 var _flipped: bool = false
+var _defense_flipped: bool = false
 var _mesh: ImmediateMesh = ImmediateMesh.new()
 var _points: PackedVector3Array = PackedVector3Array()
 var _colors: PackedColorArray = PackedColorArray()
@@ -56,11 +69,21 @@ func setup(game: Game) -> void:
 
 
 func show_offense(play: OffensePlay, flipped: bool) -> void:
-	_show(play, flipped)
+	if play == null:
+		clear_offense()
+		return
+	_offense = play
+	_flipped = flipped
+	_rebuild()
 
 
 func show_defense(play: DefensePlay, flipped: bool) -> void:
-	_show(play, flipped)
+	if play == null:
+		clear_defense()
+		return
+	_defense = play
+	_defense_flipped = flipped
+	_rebuild()
 
 
 ## Shows `assignment` as the route of `man`, for as long as the called play is
@@ -75,22 +98,25 @@ func clear_hot_preview() -> void:
 	hot_preview = null
 
 
+## Takes both sides' drawings away.
 func clear() -> void:
+	clear_offense()
+	clear_defense()
+
+
+## Takes the offense's drawing away, and any hot route shown with it.
+func clear_offense() -> void:
 	clear_hot_preview()
-	if shown == null:
-		return
-	shown = null
-	triangles = 0
-	_mesh.clear_surfaces()
+	hot_preview_only = false
+	if _offense != null:
+		_offense = null
+		_rebuild()
 
 
-func _show(play: Resource, flipped: bool) -> void:
-	if play == null:
-		clear()
-		return
-	shown = play
-	_flipped = flipped
-	_rebuild()
+func clear_defense() -> void:
+	if _defense != null:
+		_defense = null
+		_rebuild()
 
 
 func _process(_delta: float) -> void:
@@ -104,10 +130,10 @@ func _rebuild() -> void:
 	_colors.clear()
 	var pc: PlayController = _game.play_controller
 	if pc.offense != null and pc.defense != null:
-		if shown is OffensePlay:
-			_draw_offense(pc, shown as OffensePlay)
-		elif shown is DefensePlay:
-			_draw_defense(pc, shown as DefensePlay)
+		if _offense != null:
+			_draw_offense(pc, _offense)
+		if _defense != null:
+			_draw_defense(pc, _defense)
 	_mesh.clear_surfaces()
 	triangles = _points.size() / 3
 	if _points.is_empty():
@@ -128,6 +154,8 @@ func _draw_offense(pc: PlayController, play: OffensePlay) -> void:
 	var players: Array[Player] = pc.offense.players
 	for i: int in players.size():
 		var player: Player = players[i]
+		if hot_preview_only and player != hot_preview_man:
+			continue
 		var as_drawn: OffenseAssignment = play.assignments[mini(i, play.assignments.size() - 1)]
 		var assignment: OffenseAssignment = as_drawn
 		# A hot route given at the line is the route he runs.
@@ -150,7 +178,7 @@ func _draw_offense(pc: PlayController, play: OffensePlay) -> void:
 	# Not the called play's once its man has a hot route, or is shown one: it is
 	# off then.
 	var hot_shown: bool = play == pc.off_play and hot_preview_man != null and hot_preview_man == motion.man
-	if not called and not hot_shown and (play != pc.off_play or motion.available()):
+	if not called and not hot_shown and not hot_preview_only and (play != pc.off_play or motion.available()):
 		_draw_motion(pc, play, flip)
 
 

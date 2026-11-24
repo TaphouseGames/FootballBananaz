@@ -98,6 +98,10 @@ class RouteIcon extends Control:
 			draw_colored_polygon(PackedVector2Array([tip + dir * 3.0, tip - dir * 4.0 + across * 3.5, tip - dir * 4.0 - across * 3.5]), color)
 
 
+## In the bottom right corner instead (see AudibleMenu.on_right).
+var on_right: bool = false
+
+
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	anchor_top = 1.0
@@ -188,11 +192,7 @@ func show_for(receiver: String, inside: float = 1.0) -> void:
 		icon.inside = inside
 		icon.queue_redraw()
 	light(-1, 0)
-	var needed: Vector2 = get_combined_minimum_size()
-	offset_left = AudibleMenu.MENU_CORNER.x
-	offset_right = AudibleMenu.MENU_CORNER.x + needed.x
-	offset_bottom = -AudibleMenu.MENU_CORNER.y
-	offset_top = -AudibleMenu.MENU_CORNER.y - needed.y
+	AudibleMenu.to_corner(self, on_right)
 
 
 ## Lights the box of the route being shown on the field: route `kind` (an

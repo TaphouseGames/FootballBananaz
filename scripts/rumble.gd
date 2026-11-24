@@ -1,7 +1,8 @@
 class_name Rumble
 extends Node
-## Shakes the person's gamepad with what happens to their player: hits given and
+## Shakes a person's gamepad with what happens to their player: hits given and
 ## taken, the ball leaving and reaching his hands, scores. Nothing in autoplay.
+## With two people playing each pad shakes with its own player.
 ##
 ## A gamepad has two motors: the weak one is small and buzzes (ticks, clicks),
 ## the strong one is big and thuds (bodies). Starting a vibration replaces the
@@ -63,29 +64,45 @@ var unknown: Array[StringName] = []
 
 var game: Game
 var tuning: Tuning
-var human: HumanController
 
-## Pulses running or waiting: weak, strong, seconds left, seconds before it starts.
-var _pulses: Array[Vector4] = []
-var _hold: Vector2 = Vector2.ZERO
-var _hold_left: float = 0.0
-## What the motors are at now, weak and strong, and what the pad was last told.
-var _level: Vector2 = Vector2.ZERO
-var _sent: Vector2 = Vector2.ZERO
-var _sent_age: float = 0.0
-var _sent_pad: int = -1
-## The gamepad last used, -1 before any was.
+## A motor mixer for each person playing, in the order of Game.humans.
+var _channels: Array[Channel] = []
+## The gamepad last used, -1 before any was: the one to shake with one person
+## playing, who may pick up whichever pad there is.
 var _device: int = -1
 var _last_tick: int = 0
-## The player whose stamina is watched, and whether he was out of it.
-var _watched: Player
-var _was_spent: bool = false
+
+
+## One person's gamepad: what is running on its motors.
+class Channel:
+	var human: HumanController
+	## Pulses running or waiting: weak, strong, seconds left, seconds before it starts.
+	var pulses: Array[Vector4] = []
+	var hold: Vector2 = Vector2.ZERO
+	var hold_left: float = 0.0
+	## What the motors are at now, weak and strong, and what the pad was last told.
+	var level: Vector2 = Vector2.ZERO
+	var sent: Vector2 = Vector2.ZERO
+	var sent_age: float = 0.0
+	var sent_pad: int = -1
+	## The player whose stamina is watched, and whether he was out of it.
+	var watched: Player
+	var was_spent: bool = false
+
+	func involves(a: Player, b: Player) -> bool:
+		if human.controlled == null:
+			return false
+		return human.controlled == a or human.controlled == b
 
 
 func setup(p_game: Game) -> void:
 	game = p_game
 	tuning = game.tuning
-	human = game.human
+	_channels.clear()
+	for person: HumanController in game.humans:
+		var channel: Channel = Channel.new()
+		channel.human = person
+		_channels.append(channel)
 	_last_tick = Time.get_ticks_usec()
 	game.play_controller.state_machine.state_changed.connect(_on_state_changed)
 
@@ -121,16 +138,119 @@ func _process(_delta: float) -> void:
 	advance(delta)
 
 
-## The person's player is part of it (either of the two may be null).
+## The player of somebody playing is part of it (either of the two may be null).
 func involves(a: Player, b: Player = null) -> bool:
-	if human == null or human.controlled == null:
-		return false
-	return human.controlled == a or human.controlled == b
+	for channel: Channel in _channels:
+		if channel.involves(a, b):
+			return true
+	return false
 
 
-## Plays a preset, at `scale` times its strength.
+## Plays a preset on everybody's pad, at `scale` times its strength.
 func play(preset: StringName, scale: float = 1.0) -> void:
-	if not _on() or scale <= 0.0:
+	var scales: PackedFloat32Array = PackedFloat32Array()
+	for channel: Channel in _channels:
+		scales.append(scale)
+	_pulse(preset, scales)
+
+
+## Plays it for the person whose player is `a` or `b`, and for nobody else.
+func play_mine(preset: StringName, a: Player, b: Player = null, scale: float = 1.0) -> void:
+	var scales: PackedFloat32Array = PackedFloat32Array()
+	for channel: Channel in _channels:
+		scales.append(scale if channel.involves(a, b) else 0.0)
+	_pulse(preset, scales)
+
+
+## Plays it in full for the person whose player is `a` or `b`, and faintly
+## (`others` times that; Tuning.rumble_others unless given) for anybody it
+## happened next to.
+func play_for(preset: StringName, a: Player, b: Player = null, scale: float = 1.0, others: float = -1.0) -> void:
+	if others < 0.0:
+		others = tuning.rumble_others if tuning != null else 0.0
+	var scales: PackedFloat32Array = PackedFloat32Array()
+	for channel: Channel in _channels:
+		scales.append(scale if channel.involves(a, b) else scale * others)
+	_pulse(preset, scales)
+
+
+## Plays it for the person who plays `team`.
+func play_team(preset: StringName, team: Team, scale: float = 1.0) -> void:
+	var scales: PackedFloat32Array = PackedFloat32Array()
+	for channel: Channel in _channels:
+		scales.append(scale if team != null and channel.human.team == team else 0.0)
+	_pulse(preset, scales)
+
+
+## A steady level for as long as this is called every tick: a person's player
+## (`a` or `b`) is dragging somebody or being dragged.
+func hold_drag(a: Player, b: Player) -> void:
+	if not _enabled():
+		return
+	for channel: Channel in _channels:
+		if channel.human.is_active() and channel.involves(a, b):
+			channel.hold = DRAG_HOLD * tuning.rumble_strength
+			channel.hold_left = HOLD_TIME
+
+
+## Everything off, now.
+func stop() -> void:
+	for channel: Channel in _channels:
+		channel.pulses.clear()
+		channel.hold_left = 0.0
+		channel.level = Vector2.ZERO
+		_send(channel)
+
+
+## What the motors of person `seat` are at: x the weak one, y the strong one.
+func level(seat: int = 0) -> Vector2:
+	return _channels[seat].level if seat < _channels.size() else Vector2.ZERO
+
+
+## Moves every pulse on by `delta` real seconds and sets the motors to the
+## strongest of what is running.
+func advance(delta: float) -> void:
+	for channel: Channel in _channels:
+		var weak: float = 0.0
+		var strong: float = 0.0
+		channel.hold_left -= delta
+		if channel.hold_left > 0.0:
+			weak = channel.hold.x
+			strong = channel.hold.y
+		var i: int = channel.pulses.size() - 1
+		while i >= 0:
+			var pulse: Vector4 = channel.pulses[i]
+			# What is left of `delta` once the wait is over comes off its length.
+			pulse.w -= delta
+			if pulse.w < 0.0:
+				pulse.z += pulse.w
+				pulse.w = 0.0
+			if pulse.z <= 0.0:
+				channel.pulses.remove_at(i)
+			else:
+				channel.pulses[i] = pulse
+				if pulse.w <= 0.0:
+					weak = maxf(weak, pulse.x)
+					strong = maxf(strong, pulse.y)
+			i -= 1
+		channel.level = Vector2(weak, strong) if _enabled() and channel.human.is_active() else Vector2.ZERO
+		channel.sent_age += delta
+		_send(channel)
+
+
+func _enabled() -> bool:
+	return game != null and tuning.rumble_enabled
+
+
+## Starts `preset` on each person's pad at that person's scale (0: not theirs).
+func _pulse(preset: StringName, scales: PackedFloat32Array) -> void:
+	if not _enabled():
+		return
+	var anybody: bool = false
+	for i: int in _channels.size():
+		if scales[i] > 0.0 and _channels[i].human.is_active():
+			anybody = true
+	if not anybody:
 		return
 	if not PRESETS.has(preset):
 		if not unknown.has(preset):
@@ -138,90 +258,22 @@ func play(preset: StringName, scale: float = 1.0) -> void:
 			push_warning("Rumble: no preset called '%s'" % preset)
 		return
 	play_counts[preset] = play_counts.get(preset, 0) + 1
-	scale *= tuning.rumble_strength
-	for step: Array in PRESETS[preset]:
-		var weak: float = clampf(float(step[0]) * scale, 0.0, 1.0)
-		var strong: float = clampf(float(step[1]) * scale, 0.0, 1.0)
-		_pulses.append(Vector4(weak, strong, float(step[2]), float(step[3])))
+	for i: int in _channels.size():
+		var channel: Channel = _channels[i]
+		if scales[i] <= 0.0 or not channel.human.is_active():
+			continue
+		var scale: float = scales[i] * tuning.rumble_strength
+		for step: Array in PRESETS[preset]:
+			var weak: float = clampf(float(step[0]) * scale, 0.0, 1.0)
+			var strong: float = clampf(float(step[1]) * scale, 0.0, 1.0)
+			channel.pulses.append(Vector4(weak, strong, float(step[2]), float(step[3])))
 
 
-## Plays it only when the person's player is `a` or `b`.
-func play_mine(preset: StringName, a: Player, b: Player = null, scale: float = 1.0) -> void:
-	if involves(a, b):
-		play(preset, scale)
-
-
-## Plays it in full when the person's player is `a` or `b`, and faintly
-## (Tuning.rumble_others) when it happened to somebody else.
-func play_for(preset: StringName, a: Player, b: Player = null, scale: float = 1.0) -> void:
-	if _on():
-		play(preset, scale if involves(a, b) else scale * tuning.rumble_others)
-
-
-## Plays it when `team` is the person's.
-func play_team(preset: StringName, team: Team, scale: float = 1.0) -> void:
-	if human != null and team != null and team == human.team:
-		play(preset, scale)
-
-
-## A steady level for as long as this is called every tick: the person's player
-## (`a` or `b`) is dragging somebody or being dragged.
-func hold_drag(a: Player, b: Player) -> void:
-	if not _on() or not involves(a, b):
-		return
-	_hold = DRAG_HOLD * tuning.rumble_strength
-	_hold_left = HOLD_TIME
-
-
-## Everything off, now.
-func stop() -> void:
-	_pulses.clear()
-	_hold_left = 0.0
-	_level = Vector2.ZERO
-	_send()
-
-
-## What the motors are at: x the weak one, y the strong one.
-func level() -> Vector2:
-	return _level
-
-
-## Moves every pulse on by `delta` real seconds and sets the motors to the
-## strongest of what is running.
-func advance(delta: float) -> void:
-	var weak: float = 0.0
-	var strong: float = 0.0
-	_hold_left -= delta
-	if _hold_left > 0.0:
-		weak = _hold.x
-		strong = _hold.y
-	var i: int = _pulses.size() - 1
-	while i >= 0:
-		var pulse: Vector4 = _pulses[i]
-		# What is left of `delta` once the wait is over comes off its length.
-		pulse.w -= delta
-		if pulse.w < 0.0:
-			pulse.z += pulse.w
-			pulse.w = 0.0
-		if pulse.z <= 0.0:
-			_pulses.remove_at(i)
-		else:
-			_pulses[i] = pulse
-			if pulse.w <= 0.0:
-				weak = maxf(weak, pulse.x)
-				strong = maxf(strong, pulse.y)
-		i -= 1
-	_level = Vector2(weak, strong) if _on() else Vector2.ZERO
-	_sent_age += delta
-	_send()
-
-
-func _on() -> bool:
-	return game != null and tuning.rumble_enabled and human.is_active()
-
-
-## The gamepad to shake: the one last used, or the first there is. -1 for none.
-func _pad() -> int:
+## The gamepad to shake for a person: their own with two playing (-1 while it
+## is unplugged); with one, the pad last used, or the first there is.
+func _pad(channel: Channel) -> int:
+	if Game.two_players:
+		return Controllers.of(get_tree()).device_of(channel.human.seat) if is_inside_tree() else -1
 	var pads: Array[int] = Input.get_connected_joypads()
 	if pads.has(_device):
 		return _device
@@ -229,35 +281,36 @@ func _pad() -> int:
 
 
 ## Tells the pad, when there is something new to tell it.
-func _send() -> void:
-	var pad: int = _pad()
-	if pad != _sent_pad:
-		if _sent_pad >= 0 and _sent != Vector2.ZERO:
-			Input.stop_joy_vibration(_sent_pad)
-		_sent_pad = pad
-		_sent = Vector2.ZERO
+func _send(channel: Channel) -> void:
+	var pad: int = _pad(channel)
+	if pad != channel.sent_pad:
+		if channel.sent_pad >= 0 and channel.sent != Vector2.ZERO:
+			Input.stop_joy_vibration(channel.sent_pad)
+		channel.sent_pad = pad
+		channel.sent = Vector2.ZERO
 	if pad < 0:
 		return
-	if _level == Vector2.ZERO:
-		if _sent != Vector2.ZERO:
+	if channel.level == Vector2.ZERO:
+		if channel.sent != Vector2.ZERO:
 			Input.stop_joy_vibration(pad)
-			_sent = Vector2.ZERO
+			channel.sent = Vector2.ZERO
 		return
-	if _level.is_equal_approx(_sent) and _sent_age < RESEND_TIME:
+	if channel.level.is_equal_approx(channel.sent) and channel.sent_age < RESEND_TIME:
 		return
-	Input.start_joy_vibration(pad, _level.x, _level.y, SEND_TIME)
-	_sent = _level
-	_sent_age = 0.0
+	Input.start_joy_vibration(pad, channel.level.x, channel.level.y, SEND_TIME)
+	channel.sent = channel.level
+	channel.sent_age = 0.0
 
 
-## Two ticks when the person's player runs out of stamina.
+## Two ticks when a person's player runs out of stamina.
 func _watch_stamina() -> void:
-	var player: Player = human.controlled if human != null else null
-	var spent: bool = player != null and player.turbo_locked
-	if player == _watched and spent and not _was_spent:
-		play(&"spent")
-	_watched = player
-	_was_spent = spent
+	for channel: Channel in _channels:
+		var player: Player = channel.human.controlled
+		var spent: bool = player != null and player.turbo_locked
+		if player == channel.watched and spent and not channel.was_spent:
+			play_mine(&"spent", player)
+		channel.watched = player
+		channel.was_spent = spent
 
 
 func _on_state_changed(_from: StringName, to: StringName) -> void:

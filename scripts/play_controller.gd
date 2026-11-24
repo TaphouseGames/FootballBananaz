@@ -311,7 +311,8 @@ func line_up(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool = false, p_
 	ball.place_on_ground(Vector3(los_x, 0.0, 0.0))
 	game.field.set_markers(los_x, game.first_down_x, not game.goal_to_go)
 	motion.prepare()
-	human.on_line_up()
+	for person: HumanController in game.humans:
+		person.on_line_up()
 	_update_markers()
 
 
@@ -328,7 +329,8 @@ func audible(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool, p_def_flip
 	for team: Team in [offense, defense]:
 		for player: Player in team.players:
 			from[player] = player.position
-	var mine: Player = human.controlled
+	var keeper: HumanController = defense.human
+	var mine: Player = keeper.controlled if keeper != null else null
 	# The defense changing its play does not take the offense's hot routes away.
 	var hot: Dictionary[Player, OffenseAssignment] = {}
 	if p_off == off_play and p_flipped == off_flipped:
@@ -338,7 +340,7 @@ func audible(p_off: OffensePlay, p_def: DefensePlay, p_flipped: bool, p_def_flip
 		_give_hot(player, hot[player])
 	# The defender the person had picked is still theirs.
 	if mine != null and mine.team == defense:
-		human.set_controlled(mine)
+		keeper.set_controlled(mine)
 	shift.start(from)
 	if by == offense:
 		_qb_signals(0.0)
@@ -633,10 +635,10 @@ func _check_hole_burst() -> void:
 		return
 	runner.burst_timer = tuning.hole_burst_time
 	game.add_stat(&"hole_bursts")
-	if runner == human.controlled:
+	if runner.human != null:
 		game.audio.play(&"spin", 0.5, 1.4)
 		game.impact(tuning.shove_shake * 0.5, 0.0)
-		game.rumble.play(&"hole")
+		game.rumble.play_mine(&"hole", runner)
 
 
 ## A defensive play-frame point with its depth squeezed so that a play whose
@@ -818,7 +820,8 @@ func line_up_kickoff() -> void:
 
 	ball.place_on_ground(Vector3(los_x, 0.0, 0.0))
 	game.field.set_markers(los_x, los_x, false)
-	human.on_line_up()
+	for person: HumanController in game.humans:
+		person.on_line_up()
 	_update_markers()
 
 
@@ -867,7 +870,7 @@ func _scout_defense() -> void:
 	read_target = null
 	var strength: float = tuning.ai_scout_strength
 	# The person's own play call is run as called.
-	if strength <= 0.0 or (human.is_active() and human.team == defense):
+	if strength <= 0.0 or defense.human != null:
 		return
 	read = game.scout.recognition(offense, off_play) * strength
 	if off_play.is_run:
@@ -1012,7 +1015,7 @@ func _roll_blown_coverage() -> void:
 func team_edge(team: Team) -> float:
 	if edge_team != null:
 		return tuning.cpu_skill if team == edge_team else 0.0
-	if human.is_active() and human.team == team:
+	if team.human != null:
 		return 0.0
 	return tuning.cpu_skill
 
@@ -1194,7 +1197,8 @@ func simulate(delta: float) -> void:
 			game.stat_book.add_possession(offense, delta)
 	_try_handoff()
 	_try_flea_flicker()
-	human.update_live()
+	for person: HumanController in game.humans:
+		person.update_live()
 	_pick_pitch_men()
 	_think_and_move(delta)
 	_check_hole_burst()
@@ -1222,7 +1226,8 @@ func simulate(delta: float) -> void:
 ## One tick after the whistle: everyone can still move and hit.
 func simulate_dead(delta: float) -> void:
 	dead_time += delta
-	human.update_dead()
+	for person: HumanController in game.humans:
+		person.update_dead()
 	_think_and_move(delta)
 	_resolve_contacts(delta)
 	_spike_ball()
@@ -1315,8 +1320,8 @@ func _dismiss_mascot() -> void:
 	_mascot_guest.team.players.erase(_mascot_guest)
 	players.erase(_mascot_guest)
 	_mascot_guest.visible = false
-	if human.controlled == _mascot_guest:
-		human.set_controlled(null)
+	if _mascot_guest.human != null:
+		_mascot_guest.human.set_controlled(null)
 	_mascot_guest = null
 
 
@@ -1325,7 +1330,7 @@ func _roll_cheap_shot() -> void:
 		return
 	var sore: Array[Player] = []
 	for loser: Player in scorer.team.opponent.players:
-		if loser == human.controlled:
+		if loser.human != null:
 			continue
 		if _flat_distance(loser.position, scorer.position) <= tuning.cheap_shot_range:
 			sore.append(loser)
@@ -1413,7 +1418,7 @@ func _spike_ball() -> void:
 func _think_and_move(delta: float) -> void:
 	_thinking = true
 	for player: Player in players:
-		if player == human.controlled and not human.assist:
+		if player.human != null and not player.human.assist:
 			continue
 		player.brain.think(self, delta)
 	_thinking = false
@@ -1444,7 +1449,7 @@ func _think_and_move(delta: float) -> void:
 ## shake and the crowd, bigger the faster he went in and when it is the
 ## person's own player.
 func _splat_on_wall(player: Player) -> void:
-	var mine: bool = player == human.controlled
+	var mine: bool = player.human != null
 	var hard: float = clampf(player.wall_hit / 12.0, 0.4, 1.0)
 	game.add_stat(&"wall_splats")
 	game.audio.play(&"big_hit", hard if mine or player.has_ball else hard * 0.6, 0.7)
@@ -1501,7 +1506,8 @@ func _try_handoff() -> void:
 	phase = Phase.RUN
 	handoff_time = live_time
 	game.add_stat(&"handoffs")
-	human.on_carrier_changed(runner)
+	for person: HumanController in game.humans:
+		person.on_carrier_changed(runner)
 
 
 ## `from` gives the ball to his teammate `to`: handed over when they are close
@@ -1622,7 +1628,8 @@ func do_lateral(carrier: Player) -> bool:
 		return true
 	_lateral_ready = live_time + _hand_over(carrier, target) + tuning.lateral_cooldown
 	game.rumble.play_mine(&"lateral", carrier, target)
-	human.on_carrier_changed(target)
+	for person: HumanController in game.humans:
+		person.on_carrier_changed(target)
 	return true
 
 
@@ -1696,7 +1703,8 @@ func _try_flea_flicker() -> void:
 	handoff_done = true
 	handoff_time = live_time
 	game.add_stat(&"flea_flicker_kept")
-	human.on_carrier_changed(runner)
+	for person: HumanController in game.humans:
+		person.on_carrier_changed(runner)
 
 
 func _check_carrier() -> void:
@@ -1894,7 +1902,7 @@ func pump_fake() -> void:
 	var worth: float = pow(tuning.pump_repeat_scale, float(_pump_count))
 	_pump_count += 1
 	for defender: Player in defense.players:
-		if defender == human.controlled or not defender.can_act():
+		if defender.human != null or not defender.can_act():
 			continue
 		var assignment: DefenseAssignment = defender.brain.def_assign
 		if assignment == null:
@@ -2134,11 +2142,11 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 		qb.start_flair(point - qb.position, wild)
 		game.add_stat(&"flair_throws")
 		game.field.fx.dust_puff(qb.position, -(point - qb.position), 1.0 + wild)
-		if qb == human.controlled:
+		if qb.human != null:
 			game.impact(0.15 * wild, tuning.flair_stop_scale * wild)
 			game.camera_rig.punch(tuning.flair_camera_punch * wild)
 			game.audio.play(&"spin", 0.7, 1.2)
-			game.rumble.play(&"flair", wild)
+			game.rumble.play_mine(&"flair", qb, null, wild)
 	ball.throw_to(qb, target, point, speed, tuning)
 	ball.wobbly = bad
 	hit_throw = bad
@@ -2167,7 +2175,8 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	game.rumble.play_mine(&"throw", qb, null, lerpf(0.4, 1.0, power))
 	if hit:
 		_flatten_passer()
-	human.on_throw(target)
+	for person: HumanController in game.humans:
+		person.on_throw(target)
 
 
 ## The quarterback has got the ball away with a tackler on him: he goes down
@@ -2264,7 +2273,8 @@ func _resolve_pass_arrival() -> void:
 		game.add_stat(&"kick_returns")
 		game.audio.play(&"catch")
 		game.rumble.play_team(&"catch", returner.team)
-		human.on_carrier_changed(returner)
+		for person: HumanController in game.humans:
+			person.on_carrier_changed(returner)
 		return
 	if thrown_away:
 		# Out of everybody's reach: it goes on until it lands.
@@ -2396,7 +2406,8 @@ func _complete_pass(receiver: Player) -> void:
 	game.rumble.play_team(&"catch", receiver.team)
 	game.audio.crowd_react(receiver.team, 0.35)
 	_add_placement_stat("completions")
-	human.on_carrier_changed(receiver)
+	for person: HumanController in game.humans:
+		person.on_carrier_changed(receiver)
 
 
 ## Flat direction from `player` to the ball, or the way he faces when he is under it.
@@ -2638,7 +2649,8 @@ func _intercept(defender: Player) -> void:
 	game.audio.quip(&"color_interception", AudioDirector.QUIP_INTERCEPTION)
 	game.audio.crowd_react(defender.team, 0.9)
 	_add_placement_stat("interceptions")
-	human.on_carrier_changed(defender)
+	for person: HumanController in game.humans:
+		person.on_carrier_changed(defender)
 
 
 ## Counts what became of a lead pass or an underthrown one, apart from the rest.
@@ -2936,7 +2948,7 @@ func _check_hit(attacker: Player, victim: Player, offset: Vector3, dist: float) 
 		elif attacker.has_ball:
 			# A carrier's dive is for yards: it knocks nobody over.
 			pass
-		elif ball_dead or attacker == human.controlled or attacker.brain.takeout_target == victim:
+		elif ball_dead or attacker.human != null or attacker.brain.takeout_target == victim:
 			# Bystanders only get flattened by the person's dives, by late hits
 			# and by a defender who set out to take his receiver out. Other CPU
 			# dives during the play go for the ball carrier alone.
@@ -3034,9 +3046,9 @@ func _throws_as_hit(tackler: Player, carrier: Player, big_hit: bool) -> bool:
 	var target: Player = null
 	var power: float = 0.5
 	var chance: float = tuning.ai_qb_hit_throw_chance
-	if carrier == human.controlled and not human.assist:
-		target = human.winding_up()
-		power = human.wind_up_power()
+	if carrier.human != null and not carrier.human.assist:
+		target = carrier.human.winding_up()
+		power = carrier.human.wind_up_power()
 		chance = tuning.hit_throw_chance
 	else:
 		target = carrier.brain.hit_throw_target(self)
@@ -3169,19 +3181,20 @@ func _ball_out(carrier: Player, forcer: Player) -> void:
 	# For the tests: which team lost it.
 	game.add_stat(StringName("fumbles_lost_" + carrier.team.short_name.to_lower()))
 	game.audio.play(&"crowd_gasp")
-	game.rumble.play(&"fumble", 1.0 if game.rumble.involves(carrier, fumble_forcer) else 0.5)
+	game.rumble.play_for(&"fumble", carrier, fumble_forcer, 1.0, 0.5)
 	game.hud.show_banner("FUMBLE!")
 	for player: Player in players:
 		# Anyone in the middle of a dive or a shove (the tackler, mostly) has his
 		# hands full for a moment: the ball gets away from the pile first.
 		player.ball_grab_cooldown = 0.0 if player.can_act() else tuning.fumble_retry_time * 1.5
 		player.brain.on_fumble(self)
-	human.on_fumble()
+	for person: HumanController in game.humans:
+		person.on_fumble()
 
 
 ## Whether `player` knows the ball is out. The person's own player always does.
 func sees_loose_ball(player: Player) -> bool:
-	return player == human.controlled or player.brain.sees_ball
+	return player.human != null or player.brain.sees_ball
 
 
 ## The ball is on the loose: it can go over the wall, and anyone who has seen it
@@ -3262,7 +3275,8 @@ func _grab_loose_ball(player: Player) -> void:
 	if player.team != fumbler.team:
 		was_fumble = true
 		game.add_stat(&"fumbles_lost")
-	human.on_carrier_changed(player)
+	for person: HumanController in game.humans:
+		person.on_carrier_changed(player)
 
 
 ## Broken tackle: the defender bounces off and eats turf.
@@ -3331,7 +3345,7 @@ func _stuff_dive(diver: Player, blocker: Player, dir: Vector3) -> void:
 	game.add_stat(&"dive_stuffs")
 	game.audio.play(&"pads_clash", 0.6)
 	game.audio.play(&"body_fall", 0.6)
-	if diver == human.controlled or blocker == human.controlled:
+	if diver.human != null or blocker.human != null:
 		game.impact(tuning.shove_shake * 0.6, 0.4)
 	game.rumble.play_mine(&"stuffed", diver, blocker)
 
@@ -3343,21 +3357,21 @@ func _knock_over(attacker: Player, victim: Player, dir: Vector3) -> void:
 	game.add_stat(&"knockdowns")
 	if ball_dead and attacker.team != victim.team:
 		game.stat_book.add_late_hit(attacker.team)
-	game.audio.hit(attacker, victim, attacker == human.controlled)
+	game.audio.hit(attacker, victim, attacker.human != null)
 	var cheap_shot: bool = attacker.brain.cheap_shot_delay >= 0.0 and is_celebrating(victim)
 	if cheap_shot:
 		# Counted once, however many he takes out on the way through.
 		attacker.brain.cheap_shot_delay = -1.0
 		game.add_stat(&"cheap_shots")
 		game.audio.crowd_react(attacker.team, 0.6)
-	if cheap_shot or attacker == human.controlled or victim == human.controlled:
+	if cheap_shot or attacker.human != null or victim.human != null:
 		game.audio.remark(&"announcer_hit", AudioDirector.REMARK_HIT)
 	game.field.fx.blood_burst(victim.position, dir, tuning.blood_drops_knockdown, false)
 	# Full shake and hit-stop only when the person's player is involved;
 	# CPU-on-CPU scuffles just rattle the camera a little.
-	if attacker == human.controlled or victim == human.controlled:
+	if attacker.human != null or victim.human != null:
 		game.impact(tuning.shove_shake, 0.5)
-		game.rumble.play(&"knockdown")
+		game.rumble.play_mine(&"knockdown", attacker, victim)
 	else:
 		game.impact(tuning.shove_shake * 0.3, 0.0)
 
@@ -3452,7 +3466,7 @@ func _roll_drive(blocker: Player, rusher: Player) -> void:
 		rusher.block_drive = lerpf(tuning.hole_drive_min, tuning.hole_drive_speed, won)
 	else:
 		rusher.block_drive = tuning.hole_drive_lost
-	if rusher == human.controlled:
+	if rusher.human != null:
 		rusher.block_drive *= tuning.hole_drive_human_scale
 
 
@@ -3588,7 +3602,7 @@ func nearest_opponent_distance(player: Player) -> float:
 
 
 func _update_markers() -> void:
-	var show: bool = human.is_active() and human.controlled == qb and qb != null and (not off_play.is_run or hot_picking)
+	var show: bool = qb != null and qb.human != null and (not off_play.is_run or hot_picking)
 	show = show and (ball_dead and result == Result.NONE or can_pass())
 	for player: Player in players:
 		var slot: int = eligible.find(player) if show else -1

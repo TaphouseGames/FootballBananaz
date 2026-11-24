@@ -16,6 +16,9 @@ catch, a timing window, a new move, a score), give it rumble as part of the same
    - `play_for(preset, a, b)` when others' hits should come through faintly,
    - `play_team(preset, team)` for something that happens to their team,
    - `play(preset)` for the whole game (a score, a buzzer).
+
+   With two people playing each has their own pad: `play_mine` and `play_for` go by whose
+   player it is, `play_team` by whose team, and `play` shakes both.
 3. Run `tests/rumble_check.gd`: it fails on a preset nobody plays and on a name that is
    no preset.
 

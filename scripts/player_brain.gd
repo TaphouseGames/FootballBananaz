@@ -1082,7 +1082,7 @@ func _juke_at_cut(pc: PlayController, target: Vector3) -> void:
 func on_route(pc: PlayController) -> bool:
 	return is_offense and off_assign != null and pc.phase == PlayController.Phase.POCKET \
 			and _is_receiver(pc) and route_index < route.size() \
-			and player != pc.human.controlled and not chipping(pc)
+			and player.human == null and not chipping(pc)
 
 
 ## A chip and release: he is still in his block and has not gone out on his
@@ -2269,7 +2269,7 @@ func _go_for_ball(pc: PlayController) -> void:
 		return
 	_contest_decided = true
 	var effort: float = _sharp(tuning.ai_catch_effort_chance, tuning.ai_edge_catch_effort_chance) * PlayerRatings.blend(player.ratings.catching, tuning.catch_scale_low, tuning.catch_scale_high)
-	if pc.human.team == player.team:
+	if player.team.human != null:
 		effort *= tuning.ai_catch_effort_human_scale
 	if randf() >= effort:
 		return

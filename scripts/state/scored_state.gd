@@ -9,7 +9,8 @@ func enter() -> void:
 	_scorer = pc.final_team
 	game.award_touchdown(_scorer)
 	game.impact(game.tuning.tackle_shake, 1.0)
-	game.rumble.play(&"touchdown" if _scorer == game.human.team else &"touchdown_against")
+	game.rumble.play_team(&"touchdown", _scorer)
+	game.rumble.play_team(&"touchdown_against", _scorer.opponent)
 	game.hud.show_banner("TOUCHDOWN!", _scorer.team_name)
 	game.hud.set_hint("")
 

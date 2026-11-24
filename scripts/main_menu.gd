@@ -84,6 +84,8 @@ static var _visited: bool = false
 func _ready() -> void:
 	# A match left paused or in a hit-stop must not carry over.
 	get_tree().paused = false
+	# From the first button on: whose gamepad is whose.
+	Controllers.of(get_tree())
 	_build_field()
 	# The camera moves every frame, not every physics tick.
 	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
@@ -319,15 +321,16 @@ func _start_match(team: int) -> void:
 	if _starting:
 		return
 	Game.season_match = false
-	_launch(team, PackedInt32Array(team_select.picks))
+	_launch(team, PackedInt32Array(team_select.picks), team_select.versus)
 
 
 ## Fades to the match between the league's teams `picks` (home, away), the
-## person on side `team`.
-func _launch(team: int, picks: PackedInt32Array) -> void:
+## person on side `team`; with `versus` a second person on the other side.
+func _launch(team: int, picks: PackedInt32Array, versus: bool = false) -> void:
 	_starting = true
 	_play(CONFIRM_SOUND)
 	Game.human_side = team
+	Game.two_players = versus
 	Game.team_picks = picks
 	# The match opens with the broadcast's intro, which comes up out of black.
 	Game.show_intro = true

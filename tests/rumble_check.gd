@@ -97,7 +97,7 @@ func _check_names() -> void:
 	var any_name: RegEx = RegEx.new()
 	any_name.compile("&\"(\\w+)\"")
 	var own_play: RegEx = RegEx.new()
-	own_play.compile("\\bplay\\(&\"(\\w+)\"")
+	own_play.compile("\\bplay\\w*\\(&\"(\\w+)\"")
 	var used: Dictionary[StringName, bool] = {}
 	for dir: String in SCRIPT_DIRS:
 		for file: String in DirAccess.get_files_at(dir):

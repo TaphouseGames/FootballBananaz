@@ -201,9 +201,16 @@ func close(to_menu: bool = false) -> void:
 	_preview_view.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 
+## The game is stopped on this menu's account: it is open, or on its way out.
+func holds_pause() -> bool:
+	return _open or _closing
+
+
 func _finish_close() -> void:
 	_closing = false
-	get_tree().paused = false
+	# A gamepad that was pulled out keeps the game stopped (see Controllers).
+	if _to_menu or not Controllers.of(get_tree()).blocked():
+		get_tree().paused = false
 	if _to_menu:
 		ScreenFade.of(get_tree()).change_scene(MENU_SCENE)
 

@@ -53,6 +53,11 @@ class Arrow extends Control:
 		]), AudibleMenu.LIT_COLOR)
 
 
+## In the bottom right corner instead: the menu of the person on the right,
+## with two playing.
+var on_right: bool = false
+
+
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	anchor_top = 1.0
@@ -162,11 +167,23 @@ func show_plays(plays: Array[Resource], flipped: bool, called: Resource) -> void
 			_names[i].text = (play as DefensePlay).play_name
 			_diagrams[i].show_defense(play as DefensePlay)
 		_diagrams[i].set_flipped(flipped)
-	var needed: Vector2 = get_combined_minimum_size()
-	offset_left = MENU_CORNER.x
-	offset_right = MENU_CORNER.x + needed.x
-	offset_bottom = -MENU_CORNER.y
-	offset_top = -MENU_CORNER.y - needed.y
+	to_corner(self, on_right)
+
+
+## Sits `panel` in a bottom corner of the screen at the size it needs: the left
+## one, or with `right` the right one (the second person's, with two playing).
+static func to_corner(panel: Control, right: bool) -> void:
+	var needed: Vector2 = panel.get_combined_minimum_size()
+	panel.anchor_left = 1.0 if right else 0.0
+	panel.anchor_right = panel.anchor_left
+	if right:
+		panel.offset_right = -MENU_CORNER.x
+		panel.offset_left = -MENU_CORNER.x - needed.x
+	else:
+		panel.offset_left = MENU_CORNER.x
+		panel.offset_right = MENU_CORNER.x + needed.x
+	panel.offset_bottom = -MENU_CORNER.y
+	panel.offset_top = -MENU_CORNER.y - needed.y
 
 
 ## A gamepad button: its letter on a disc of its colour.

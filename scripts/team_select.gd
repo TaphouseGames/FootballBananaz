@@ -1,12 +1,20 @@
 class_name TeamSelect
 extends Control
 ## The screen between START GAME and the match: a team on the left, a team on
-## the right and the controllers between them. Left and right slide player
-## one's controller under a team, up and down go through the league's teams on
-## that side, (A) starts the match as that team and (B) goes back. The second
-## controller only sits there: the CPU plays the other team.
+## the right and the controllers between them. Left and right slide a
+## controller under a team, up and down go through the league's teams on that
+## side, (A) starts the match as that team and (B) goes back.
+##
+## Player one's controller is the first gamepad that pressed anything (and the
+## keyboard and the mouse). The second one reads CPU until another gamepad
+## presses a button: that is player two, who takes the other team. Never the
+## same one: a controller does not go under the team the other is under. With
+## player two in, both have to be under a team before (A) starts, and player
+## two's (B) takes them out again. Left in the middle as CPU, the CPU plays
+## the other team. Which gamepad is whose is kept by Controllers.
 
-## The person starts as this team: 0 the left one (home), 1 the right one (away).
+## Player one starts as this team: 0 the left one (home), 1 the right one
+## (away). With `versus` set player two has the other one.
 signal chosen(team: int)
 signal cancelled
 ## The controller went from one place to another, or a side got another team.
@@ -19,6 +27,8 @@ const SCRIM_COLOR: Color = Color(0.02, 0.04, 0.1, 0.72)
 const PANEL_COLOR: Color = Color(0.04, 0.08, 0.2, 0.94)
 const SLOT_COLOR: Color = Color(1.0, 1.0, 1.0, 0.07)
 const CPU_COLOR: Color = Color(0.5, 0.54, 0.62)
+## Player two's controller in the middle, once somebody holds it.
+const P2_COLOR: Color = Color(1.0, 0.72, 0.35)
 const BAR_BACK: Color = Color(1.0, 1.0, 1.0, 0.12)
 const BOARD_SIZE: Vector2 = Vector2(1000.0, 400.0)
 const PANEL_SIZE: Vector2 = Vector2(360.0, 400.0)
@@ -69,6 +79,11 @@ const MASCOT_WIDE: float = 2.7
 
 ## Where player one's controller is: -1 the left team, 0 the middle, 1 the right team.
 var side: int = 0
+## Where player two's is, and whether there is a player two.
+var side2: int = 0
+var joined: bool = false
+## Two people start the match, one team each. Set as it starts.
+var versus: bool = false
 ## The team on the left and the one on the right, as places in the league's
 ## teams. Never the same one twice.
 var picks: Array[int] = [0, 1]
@@ -102,11 +117,15 @@ var _mascot_players: Array[AnimationPlayer] = []
 ## Per panel: where its team's players go, and whose they are.
 var _cast_stands: Array[Node3D] = []
 var _cast_teams: Array[TeamData] = []
-var _icon: ControllerIcon
+## Player one's controller and player two's.
+var _icons: Array[ControllerIcon] = []
 var _choose_hint: Label
 var _start_hint: Label
-var _slide: Tween
+var _join_hint: Label
+var _slides: Array[Tween] = [null, null]
 var _nudge: Tween
+## The sticks held over right now, by gamepad and way (see _pressed()).
+var _held: Dictionary[String, bool] = {}
 ## A team is chosen and the match is on its way: nothing more to press.
 var _done: bool = false
 
@@ -146,12 +165,17 @@ func setup(font: SystemFont, teams: Array[TeamData]) -> void:
 	# The mascots are only drawn while the screen is up.
 	visibility_changed.connect(_on_visibility_changed)
 	_on_visibility_changed()
+	Controllers.of(Engine.get_main_loop() as SceneTree).pad_lost.connect(_on_pad_lost)
 
 
-## Shows the screen with the controller back in the middle.
+## Shows the screen with the controllers back in the middle and no player two.
 func open() -> void:
 	_done = false
 	side = 0
+	side2 = 0
+	joined = false
+	versus = false
+	_held.clear()
 	visible = true
 	_refresh(false)
 
@@ -174,52 +198,120 @@ func close() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible or _done:
 		return
+	var seat: int = _seat_of(event)
+	if seat < 0:
+		return
 	if _pressed(event, &"ui_left"):
-		_step(-1)
+		_step(seat, -1)
 	elif _pressed(event, &"ui_right"):
-		_step(1)
+		_step(seat, 1)
 	elif _pressed(event, &"ui_up"):
-		_cycle(-1)
+		_cycle(seat, -1)
 	elif _pressed(event, &"ui_down"):
-		_cycle(1)
+		_cycle(seat, 1)
 	elif event.is_action_pressed(&"confirm") or event.is_action_pressed(&"ui_accept"):
-		_confirm()
+		_confirm(seat)
 	elif event.is_action_pressed(&"back") or event.is_action_pressed(&"ui_cancel"):
-		cancelled.emit()
+		if seat == 0:
+			cancelled.emit()
+		else:
+			_leave()
 	else:
 		return
 	get_viewport().set_input_as_handled()
 
 
-## A stick held over sends one event after another: only the first one counts.
+## Whose press this is: 0 player one's, 1 player two's, -1 nobody's (it is not
+## acted on). A gamepad that is neither's yet becomes player two's with its
+## first button, and that press only brings player two in.
+func _seat_of(event: InputEvent) -> int:
+	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion):
+		return 0
+	var controllers: Controllers = Controllers.of(get_tree())
+	var seat: int = controllers.seat_of(event.device)
+	var button: InputEventJoypadButton = event as InputEventJoypadButton
+	if seat < 0 and button != null and button.pressed:
+		seat = controllers.claim(event.device)
+	if seat != 1 or joined:
+		return seat
+	if button != null and button.pressed:
+		_join()
+		get_viewport().set_input_as_handled()
+	return -1
+
+
+## A stick held over sends one event after another: only the first one of each
+## gamepad counts.
 func _pressed(event: InputEvent, action: StringName) -> bool:
-	if not event.is_action_pressed(action):
+	if not event is InputEventJoypadMotion:
+		return event.is_action_pressed(action)
+	if not event.is_action(action):
 		return false
-	return not event is InputEventJoypadMotion or Input.is_action_just_pressed(action)
+	var key: String = "%d/%s" % [event.device, action]
+	var down: bool = event.is_action_pressed(action)
+	var was: bool = _held.get(key, false)
+	_held[key] = down
+	return down and not was
 
 
-func _step(by: int) -> void:
-	_move_to(clampi(side + by, -1, 1))
+## Where the controller of `seat` is.
+func _place(seat: int) -> int:
+	return side if seat == 0 else side2
 
 
-func _move_to(to: int) -> void:
-	if to == side:
+## A second gamepad pressed a button: there is a player two.
+func _join() -> void:
+	joined = true
+	side2 = 0
+	_refresh(false)
+	moved.emit()
+
+
+## Player two is out again: the CPU plays the other team.
+func _leave() -> void:
+	if not joined:
 		return
-	side = to
+	joined = false
+	side2 = 0
+	Controllers.of(get_tree()).release(1)
+	_refresh(true)
+	moved.emit()
+
+
+func _on_pad_lost(seat: int) -> void:
+	if seat == 1 and visible and not _done:
+		_leave()
+
+
+func _step(seat: int, by: int) -> void:
+	_move_to(seat, clampi(_place(seat) + by, -1, 1))
+
+
+func _move_to(seat: int, to: int) -> void:
+	if to == _place(seat):
+		return
+	# Not under the team the other one has: nobody plays together.
+	if to != 0 and to == _place(1 - seat) and (seat == 1 or joined):
+		return
+	if seat == 0:
+		side = to
+	else:
+		side2 = to
 	_refresh(true)
 	moved.emit()
 	side_changed.emit()
 
 
 ## The next team (`by` +1) or the one before (-1) on the side the controller
-## is under, passing over the one the other side has.
-func _cycle(by: int) -> void:
-	if side == 0:
+## of `seat` is under, passing over the one the other side has.
+func _cycle(seat: int, by: int) -> void:
+	var place: int = _place(seat)
+	if place == 0:
 		_flash_choose_hint()
 		return
 	if _teams.size() < 3:
 		return
-	var index: int = 0 if side < 0 else 1
+	var index: int = 0 if place < 0 else 1
 	var to: int = posmod(picks[index] + by, _teams.size())
 	if to == picks[1 - index]:
 		to = posmod(to + by, _teams.size())
@@ -238,11 +330,17 @@ func _flash_choose_hint() -> void:
 	_nudge.tween_property(_choose_hint, ^"modulate", Color.WHITE, 0.4)
 
 
-func _confirm() -> void:
-	if side == 0:
+## Everybody who is in is under a team.
+func _ready_to_start() -> bool:
+	return side != 0 and (not joined or side2 != 0)
+
+
+func _confirm(_seat: int) -> void:
+	if not _ready_to_start():
 		_flash_choose_hint()
 		return
 	_done = true
+	versus = joined
 	chosen.emit(0 if side < 0 else 1)
 
 
@@ -254,26 +352,28 @@ func _on_panel_input(event: InputEvent, to: int) -> void:
 		return
 	if click.button_index == MOUSE_BUTTON_WHEEL_UP or click.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		if side == to:
-			_cycle(-1 if click.button_index == MOUSE_BUTTON_WHEEL_UP else 1)
+			_cycle(0, -1 if click.button_index == MOUSE_BUTTON_WHEEL_UP else 1)
 		return
 	if click.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if side == to:
-		_confirm()
+		_confirm(0)
 	else:
-		_move_to(to)
+		_move_to(0, to)
 
 
 func _refresh(animated: bool) -> void:
 	for i: int in _panels.size():
-		var mine: bool = side == (-1 if i == 0 else 1)
+		var place: int = -1 if i == 0 else 1
+		# Somebody's controller is under it.
+		var mine: bool = side == place or (joined and side2 == place)
 		var team: TeamData = _teams[picks[i]]
 		var color: Color = team.team_color
 		_fills[i].bg_color = color
 		_short_labels[i].text = team.short_name
 		_name_labels[i].text = team.team_name.to_upper()
 		# A dark team colour would not show against the panel.
-		_bar_fills[i].bg_color = color.lightened(0.4) if color.get_luminance() < 0.3 else color
+		_bar_fills[i].bg_color = Team.marker_of(color)
 		var ratings: Array[Array] = team.roster.team_ratings() if team.roster != null else []
 		for row: int in RATING_COUNT:
 			var value: int = ratings[row][1] if row < ratings.size() else 0
@@ -285,22 +385,36 @@ func _refresh(animated: bool) -> void:
 			number_label.text = str(value)
 		_styles[i].border_color = Color.WHITE if mine else color
 		_styles[i].set_border_width_all(5 if mine else 3)
-		_panels[i].modulate = Color.WHITE if mine or side == 0 else Color(0.5, 0.5, 0.5)
+		var anybody: bool = side != 0 or (joined and side2 != 0)
+		_panels[i].modulate = Color.WHITE if mine or not anybody else Color(0.5, 0.5, 0.5)
 		_show_mascot(i, team.short_name, mine)
 		_show_cast(i, team)
 		# The players cheer with their mascot on the side the controller is under.
 		for model: PlayerModel in _cast_stands[i].get_children():
 			ModelStage.motion_of(model).cheering = mine
-	_start_hint.modulate.a = 0.35 if side == 0 else 1.0
+	_start_hint.modulate.a = 1.0 if _ready_to_start() else 0.35
+	_join_hint.text = "P2:  (B) LEAVE" if joined else "SECOND CONTROLLER:  PRESS ANY BUTTON TO JOIN"
 
-	var x: float = SLOT_X[side + 1] - ICON_SIZE.x * 0.5
-	if _slide != null:
-		_slide.kill()
-	if animated:
-		_slide = create_tween()
-		_slide.tween_property(_icon, ^"position:x", x, SLIDE_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	else:
-		_icon.position.x = x
+	# Each controller under its team, in that team's colour.
+	for seat: int in _icons.size():
+		var icon: ControllerIcon = _icons[seat]
+		var at: int = _place(seat)
+		var tint: Color = MainMenu.BUTTON_BORDER if seat == 0 else (P2_COLOR if joined else CPU_COLOR)
+		if at != 0:
+			tint = Team.marker_of(_teams[picks[0 if at < 0 else 1]].team_color)
+		var tag: String = "P1" if seat == 0 else ("P2" if joined else "CPU")
+		if icon.tint != tint or icon.tag != tag:
+			icon.tint = tint
+			icon.tag = tag
+			icon.queue_redraw()
+		var x: float = SLOT_X[at + 1] - ICON_SIZE.x * 0.5
+		if _slides[seat] != null:
+			_slides[seat].kill()
+		if animated:
+			_slides[seat] = create_tween()
+			_slides[seat].tween_property(icon, ^"position:x", x, SLIDE_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		else:
+			icon.position.x = x
 
 
 # --- Building blocks -----------------------------------------------------------------
@@ -332,10 +446,10 @@ func _build_board() -> Control:
 			slot.position = Vector2(x, y) - slot.size * 0.5
 			board.add_child(slot)
 
-	_icon = _controller("P1", MainMenu.BUTTON_BORDER, 0)
-	board.add_child(_icon)
-	# Player two stays in the middle for now: the CPU plays the other team.
-	board.add_child(_controller("CPU", CPU_COLOR, 1))
+	# Player two's is the CPU's until a second gamepad joins.
+	_icons = [_controller("P1", MainMenu.BUTTON_BORDER, 0), _controller("CPU", CPU_COLOR, 1)]
+	for icon: ControllerIcon in _icons:
+		board.add_child(icon)
 	return board
 
 
@@ -562,7 +676,13 @@ func _build_hints() -> Control:
 	row.add_child(_label("UP / DOWN  CHANGE TEAM", 22, Color.WHITE, 6))
 	row.add_child(_start_hint)
 	row.add_child(_label("(B)  BACK", 22, Color.WHITE, 6))
-	return row
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override(&"separation", 8)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(row)
+	_join_hint = _label("", 20, P2_COLOR, 6)
+	column.add_child(_join_hint)
+	return column
 
 
 func _label(text: String, font_size: int, color: Color, outline: int) -> Label:
