@@ -268,6 +268,8 @@ func set_hint(text: String) -> void:
 ## `notes`, when given, has a line for each card to show small under its name.
 ## `slot` is whose panel: 0, or with two playing 0 the left one and 1 the right.
 func show_play_select(title: String, tabs: PackedStringArray, tab: int, plays: Array[Resource], notes: PackedStringArray = PackedStringArray(), slot: int = 0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"show_play_select", [title, tabs, tab, plays, notes, 0], &"", slot)
 	var panel: PlayPanel = _play_panels[slot]
 	_show_tabs(panel, tabs, tab)
 	for card: PanelContainer in panel.cards:
@@ -364,11 +366,15 @@ func _show_tabs(panel: PlayPanel, tabs: PackedStringArray, tab: int) -> void:
 
 ## Draws every play of panel `slot` mirrored left to right, or as designed.
 func set_play_flipped(flipped: bool, slot: int = 0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"set_play_flipped", [flipped, 0], &"", slot)
 	for diagram: PlayDiagram in _play_panels[slot].diagrams:
 		diagram.set_flipped(flipped)
 
 
 func set_play_cursor(index: int, slot: int = 0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"set_play_cursor", [index, 0], &"", slot)
 	var panel: PlayPanel = _play_panels[slot]
 	for i: int in panel.cards.size():
 		var selected: bool = i == index
@@ -379,6 +385,8 @@ func set_play_cursor(index: int, slot: int = 0) -> void:
 ## The buttons under the cards of panel `slot`: on the panel itself when it is
 ## half a screen, otherwise the HUD's hint.
 func set_play_hint(text: String, slot: int = 0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"set_play_hint", [text, 0], &"", slot)
 	var panel: PlayPanel = _play_panels[slot]
 	if panel.hint == null:
 		set_hint(text)
@@ -389,6 +397,8 @@ func set_play_hint(text: String, slot: int = 0) -> void:
 
 ## The person of panel `slot` has picked and waits for the other: its cards dim.
 func set_play_ready(ready: bool, slot: int = 0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"set_play_ready", [ready, 0], &"", slot)
 	_play_panels[slot].grid.modulate.a = 0.35 if ready else 1.0
 
 
@@ -425,6 +435,8 @@ func hide_countdown() -> void:
 ## or not, and the play that is `called` now. `slot` 1 is the second person's,
 ## in the right corner.
 func show_audible(plays: Array[Resource], flipped: bool, called: Resource, slot: int = 0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"show_audible", [plays, flipped, called, 0], &"", slot)
 	if _audibles[slot] == null:
 		_audibles[slot] = AudibleMenu.new()
 		_audibles[slot].on_right = slot == 1
@@ -436,6 +448,8 @@ func show_audible(plays: Array[Resource], flipped: bool, called: Resource, slot:
 
 
 func hide_audible(slot: int = 0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"hide_audible", [0], &"", slot)
 	if _audibles[slot] != null:
 		_audibles[slot].visible = false
 
@@ -445,6 +459,8 @@ func hide_audible(slot: int = 0) -> void:
 ## `inside`: the side of the screen the ball is on from him (-1 left, 1 right).
 ## `slot` 1 puts it in the right corner, the second person's.
 func show_hot_routes(receiver: String, inside: float = 1.0, slot: int = 0) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"show_hot_routes", [receiver, inside, 0], &"", slot)
 	if _hot_routes == null:
 		_hot_routes = HotRouteMenu.new()
 		add_child(_hot_routes)
@@ -457,11 +473,15 @@ func show_hot_routes(receiver: String, inside: float = 1.0, slot: int = 0) -> vo
 
 ## Lights the box of the route shown on the field (see HotRouteMenu.light).
 func light_hot_route(kind: int, way: int) -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"light_hot_route", [kind, way])
 	if _hot_routes != null:
 		_hot_routes.light(kind, way)
 
 
 func hide_hot_routes() -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"hide_hot_routes", [])
 	if _hot_routes != null:
 		_hot_routes.visible = false
 
@@ -475,5 +495,7 @@ func audible_shown() -> bool:
 
 
 func hide_play_select() -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"hide_play_select", [])
 	for panel: PlayPanel in _play_panels:
 		ScreenFade.pop(panel.root, false, 0.0)

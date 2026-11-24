@@ -6,6 +6,9 @@ extends SceneTree
 ##  - the stick arrives as a move on the field as each person's camera has it,
 ##  - with random buttons on both ends the server's game gets every press once,
 ##    and the match goes on to snap the ball,
+##  - each is sent the cards and the line of their own side of the ball and
+##    never the other's: not the other's play select, not the name of the
+##    other's play, not the other's drawing on the field,
 ##  - when one leaves, the other is told they won.
 ##
 ## Run:  godot --headless --fixed-fps 60 --path . --script res://tests/net_input_check.gd
@@ -33,6 +36,12 @@ var _sent_presses: int = 0
 var _got_presses: int = 0
 var _was_down: bool = false
 var _failures: PackedStringArray = PackedStringArray()
+## What each end was sent of its own side: play selects, banners that name a
+## play, drawings. And how often something of the other side's came with it.
+var _own_cards: PackedInt32Array = PackedInt32Array([0, 0])
+var _own_banners: PackedInt32Array = PackedInt32Array([0, 0])
+var _own_art: PackedInt32Array = PackedInt32Array([0, 0])
+var _leaks: PackedStringArray = PackedStringArray()
 
 
 func _initialize() -> void:
@@ -59,6 +68,7 @@ func _make_client(i: int) -> NetClient:
 		client.welcomed.connect(func(seat: int) -> void: _welcomed[i] = seat)
 		client.started.connect(func(_home: int, _away: int) -> void: _started += 1)
 		client.ended.connect(func(result: Dictionary) -> void: _ended.append(result))
+		client.events.connect(func(_tick_of: int, notes: Array) -> void: _read_notes(i, notes))
 	else:
 		_pads.append(pad)
 	return client
@@ -137,7 +147,12 @@ func _on_tick() -> void:
 				var snaps: int = _server.game.get_stat(&"snaps")
 				var line: NetInputQueue = _server.queue(0)
 				print("presses of '%s': %d sent, %d arrived; ticks held %d, stepped over %d; snaps %d" % [WATCHED, _sent_presses, _got_presses, line.held, line.skipped, snaps])
-				if _sent_presses < 50 or _got_presses != _sent_presses:
+				print("own cards %s, banners naming a play %s, drawings %s; leaks %d" % [_own_cards, _own_banners, _own_art, _leaks.size()])
+				if not _leaks.is_empty():
+					_fail("the other side's was sent: %s" % ", ".join(_leaks.slice(0, 5)))
+				elif _own_cards[0] == 0 or _own_cards[1] == 0 or _own_banners[0] == 0 or _own_banners[1] == 0:
+					_fail("an end was never sent its own cards or its own play at the line")
+				elif _sent_presses < 50 or _got_presses != _sent_presses:
 					_fail("%d presses were sent and %d arrived" % [_sent_presses, _got_presses])
 				elif snaps <= 0:
 					_fail("the ball was never snapped")
@@ -156,6 +171,38 @@ func _on_tick() -> void:
 					_report()
 			elif since > 900:
 				_fail("the one who stayed was told nothing")
+
+
+## What end `i` was sent that happens once: it has to be of its own side of the ball.
+func _read_notes(i: int, notes: Array) -> void:
+	var game: Game = _server.game
+	if game == null or game.offense == null:
+		return
+	var seat: int = _welcomed[i]
+	var pc: PlayController = game.play_controller
+	var on_offense: bool = game.humans[seat].team == game.offense
+	for note: Variant in notes:
+		var parts: Array = note
+		var method: StringName = StringName(str(parts[2]))
+		var args: Array = parts[3]
+		match method:
+			&"show_play_select":
+				_own_cards[i] += 1
+				if str(args[0]).contains("OFFENSE") != on_offense:
+					_leaks.append("seat %d the cards '%s'" % [seat, args[0]])
+			&"show_banner":
+				# At the line the banner names the person's own play.
+				if str(args[0]) == "" and pc.off_play != null and pc.def_play != null:
+					var mine: String = pc.off_play.play_name if on_offense else pc.def_play.play_name
+					var theirs: String = pc.def_play.play_name if on_offense else pc.off_play.play_name
+					if str(args[1]).contains(mine):
+						_own_banners[i] += 1
+					if theirs != mine and str(args[1]).begins_with(theirs):
+						_leaks.append("seat %d the banner '%s'" % [seat, args[1]])
+			&"net_draw":
+				_own_art[i] += 1
+				if (int(args[0]) == PlayArt.OFFENSE) != on_offense and not (args[1] as Array).is_empty():
+					_leaks.append("seat %d the drawing of side %d" % [seat, args[0]])
 
 
 ## The end that was given `seat`.

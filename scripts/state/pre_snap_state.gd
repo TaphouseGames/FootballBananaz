@@ -168,14 +168,28 @@ func exit() -> void:
 
 
 ## Two people are at the line, looking at one screen.
+## Not online: there each has a screen of their own, and is shown what one
+## person alone is (and nothing of it goes to the other, see _only).
 func _shared() -> bool:
-	return _lines.size() > 1
+	return _lines.size() > 1 and Game.net_mode != Game.NetMode.SERVER
+
+
+## Online, what is shown and heard from here on is this person's alone, until
+## _everyone().
+func _only(line: Line) -> void:
+	NetEvents.audience = line.human.seat
+
+
+func _everyone() -> void:
+	NetEvents.audience = NetEvents.EVERYONE
 
 
 ## A person's play and buttons. The motion is offered for as long as there is
 ## one to call. With two at the line only the buttons, each on their own half:
 ## the play's name would tell the other one.
 func _show_banner(line: Line) -> void:
+	var before: int = NetEvents.audience
+	_only(line)
 	var play: String = ""
 	var buttons: String = ""
 	if line.on_offense:
@@ -196,6 +210,7 @@ func _show_banner(line: Line) -> void:
 		game.hud.show_line_hint(line.slot, buttons)
 	else:
 		game.hud.show_banner("", "%s  -  %s" % [play, buttons])
+	NetEvents.audience = before
 
 
 ## Takes a person's line of buttons away: a menu of theirs is going up there.
@@ -252,13 +267,16 @@ func physics_update(delta: float) -> void:
 	# What a button does goes by the mode this tick began in: the (B) that
 	# closes the menu is not a shout as well.
 	for line: Line in _lines:
+		_only(line)
 		line.was_at_line = line.mode == Mode.LINE
 		if line.was_at_line:
 			line.human.update_pre_snap()
 			_update_reveal(line)
+	_everyone()
 	pc.motion.tick(delta)
 	pc.shift.tick(delta)
 	for line: Line in _lines:
+		_only(line)
 		match line.mode:
 			Mode.LINE:
 				_update_line(line)
@@ -266,6 +284,7 @@ func physics_update(delta: float) -> void:
 				_update_menu(line)
 			Mode.HOT:
 				_update_hot(line)
+	_everyone()
 	var snap_now: bool = false
 	var hint: String = ""
 	if _human_snaps:
@@ -508,9 +527,12 @@ func _call(line: Line, play: Resource, flipped: bool) -> void:
 	_show_banner(line)
 	game.audio.play(&"ui_confirm")
 	if line.on_offense:
-		# The quarterback shouts it down the line.
+		# The quarterback shouts it down the line: everybody hears that.
 		_last_call = time_in_state
+		var heard: int = NetEvents.audience
+		_everyone()
 		game.audio.qb_call()
+		NetEvents.audience = heard
 		# A CPU defense has a new formation to look at.
 		if cpu_defense:
 			_cpu_defense_read_at = time_in_state + game.tuning.ai_audible_time
@@ -518,6 +540,8 @@ func _call(line: Line, play: Resource, flipped: bool) -> void:
 
 ## Back to the line: the menu shut, no receiver being picked.
 func _close(line: Line) -> void:
+	var before: int = NetEvents.audience
+	_only(line)
 	if line.mode == Mode.MENU:
 		game.hud.hide_audible(line.slot)
 		_show_banner(line)
@@ -530,6 +554,7 @@ func _close(line: Line) -> void:
 	line.hot_man = null
 	line.hot_lt = false
 	line.hot_shown = -1
+	NetEvents.audience = before
 
 
 # --- The audible menu ------------------------------------------------------------

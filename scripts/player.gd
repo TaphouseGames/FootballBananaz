@@ -334,6 +334,12 @@ func net_reset() -> void:
 	reset_physics_interpolation()
 
 
+## The seat of the person who plays his team, for what only they are shown;
+## everyone, with nobody on it.
+func _own_seat() -> int:
+	return team.human.seat if team != null and team.human != null else NetEvents.EVERYONE
+
+
 ## Starts a fall (PlayerFall's `method`), and notes it for an online match's picture.
 func _fall(method: StringName, args: Array) -> void:
 	fall.callv(method, args)
@@ -515,7 +521,7 @@ func _make_name_tag() -> Label3D:
 func set_pass_icon(text: String, color: Color) -> void:
 	# Asked for every tick; told only when it changes.
 	if NetEvents.recording and (pass_icon.text != text or pass_icon.modulate != color or pass_icon.visible != (text != "")):
-		NetEvents.note(self, NetEvents.Part.PLAYER, &"set_pass_icon", [text, color])
+		NetEvents.note(self, NetEvents.Part.PLAYER, &"set_pass_icon", [text, color], _own_seat())
 	pass_icon.visible = text != ""
 	pass_icon.text = text
 	pass_icon.modulate = color
@@ -527,7 +533,7 @@ func set_pass_icon(text: String, color: Color) -> void:
 func set_dance_prompt(shown: bool, chosen: int = -1) -> void:
 	# Asked for every tick; told only when it changes.
 	if NetEvents.recording and shown != (_dance_prompt != null and _dance_prompt.visible):
-		NetEvents.note(self, NetEvents.Part.PLAYER, &"set_dance_prompt", [shown, chosen])
+		NetEvents.note(self, NetEvents.Part.PLAYER, &"set_dance_prompt", [shown, chosen], _own_seat())
 	if _dance_prompt == null:
 		if not shown:
 			return

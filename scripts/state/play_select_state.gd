@@ -103,7 +103,7 @@ func exit() -> void:
 ## Under the cards: the buttons that pick a play and mirror it.
 func _show_hint(picker: Picker) -> void:
 	var text: String = "(LB/RB) Category      (A) Pick play      (X) Flip play"
-	if _pickers.size() > 1:
+	if _split():
 		text = "(LB/RB) Category   (A) Pick   (X) Flip"
 	if picker.flipped:
 		text += "  -  FLIPPED"
@@ -118,7 +118,7 @@ func _show_group(picker: Picker) -> void:
 	picker.count = picker.plays.size()
 	picker.cursor = 0
 	var title: String = "%s  -  %s" % ["OFFENSE" if picker.on_offense else "DEFENSE", game.down_text()]
-	if _pickers.size() > 1:
+	if _split():
 		title = "%s  %s" % [picker.human.team.short_name, title]
 	# The coach's plays are from all over the book: each card says where from.
 	var notes: PackedStringArray = PackedStringArray()
@@ -147,7 +147,10 @@ func physics_update(delta: float) -> void:
 	var waiting: bool = false
 	for picker: Picker in _pickers:
 		if picker.choice == null:
+			# The sounds of their own cards are theirs alone, online.
+			NetEvents.audience = picker.human.seat
 			_update(picker)
+			NetEvents.audience = NetEvents.EVERYONE
 		waiting = waiting or picker.choice == null
 	if not waiting:
 		_confirm()
@@ -190,6 +193,12 @@ func _update(picker: Picker) -> void:
 		# Their half says so while the other person is still choosing.
 		game.hud.set_play_ready(true, picker.slot)
 		_show_hint(picker)
+
+
+## Two people have a half of one screen each. Not online: there each has a
+## screen of their own, and it looks as it does for one person.
+func _split() -> bool:
+	return _pickers.size() > 1 and Game.net_mode != Game.NetMode.SERVER
 
 
 ## The tab of the book `play` is on.

@@ -19,9 +19,12 @@ var _peer: ENetMultiplayerPeer
 var _patience: float = LOADING_PATIENCE
 
 ## While a match is being loaded a machine says nothing for seconds on end; in
-## a match, silence that long means it is gone.
+## a match, silence that long means it is gone. Not much shorter than this: a
+## machine that hangs for a second or two (a window dragged, a file saved)
+## loses what came in meanwhile, and what has to arrive is slow to be sent
+## again after that.
 const LOADING_PATIENCE: float = 45.0
-const PLAYING_PATIENCE: float = 6.0
+const PLAYING_PATIENCE: float = 10.0
 ## Ticks of a match that pass before the patience is cut down to that.
 const SETTLE_TICKS: int = 180
 

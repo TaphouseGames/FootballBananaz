@@ -52,6 +52,8 @@ func _ready() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("port="):
 			port = int(arg.trim_prefix("port="))
+	# No picture to draw: no need for more frames than ticks.
+	Engine.max_fps = Engine.physics_ticks_per_second
 	# Loaded before anyone is here: nobody waits for it.
 	_scene = load("res://scenes/main.tscn")
 	_socket = NetSocket.host(port, SEATS + 2)
@@ -92,9 +94,10 @@ func _physics_process(_delta: float) -> void:
 		_socket.set_patience(NetSocket.PLAYING_PATIENCE)
 	for body: Array in NetProtocol.cut_state(_tick, NetState.pack(game)):
 		_socket.send(0, NetProtocol.Kind.STATE, body, false)
-	var notes: Array = NetEvents.take()
-	if not notes.is_empty():
-		_socket.send(0, NetProtocol.Kind.EVENTS, [_tick, notes])
+	var notes: Array[Array] = NetEvents.take(SEATS)
+	for seat: int in SEATS:
+		if not notes[seat].is_empty() and _peers[seat] != 0:
+			_socket.send(_peers[seat], NetProtocol.Kind.EVENTS, [_tick, notes[seat]])
 
 
 ## How many of the two are here.

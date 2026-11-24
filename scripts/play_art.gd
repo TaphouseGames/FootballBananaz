@@ -10,6 +10,11 @@ extends Node3D
 ##
 ## There is a drawing for each side of the ball, so with two people playing
 ## both can have one up at once.
+##
+## A drawing is first a list of shapes (lines, arrows, zones) and then the
+## triangles of those. In an online match the server makes the lists and sends
+## each side's to the person who plays that side (net_draw): what a play is
+## drawn from is not on their machine, and the other side's play must not be.
 
 ## Above the turf's paint and the marks players leave on it.
 const HEIGHT: float = 0.07
@@ -48,6 +53,22 @@ var _defense_flipped: bool = false
 var _mesh: ImmediateMesh = ImmediateMesh.new()
 var _points: PackedVector3Array = PackedVector3Array()
 var _colors: PackedColorArray = PackedColorArray()
+## The shapes of each side's drawing as last built: [offense, defense]. One
+## shape is the name of the function that draws it and what it was called with.
+var _shapes: Array[Array] = [[], []]
+## The list being added to, and how deep in a shape made of other shapes.
+var _side: int = 0
+var _nest: int = 0
+## On the server: what each side's person was last sent, and on which tick.
+var _sent: Array[Array] = [[], []]
+var _sent_tick: PackedInt64Array = PackedInt64Array([-1000, -1000])
+
+const OFFENSE: int = 0
+const DEFENSE: int = 1
+## The shapes a drawing can be made of.
+const SHAPES: Array[StringName] = [&"_polyline", &"_dashed", &"_arrow_head", &"_end_bar", &"_ring", &"_zone"]
+## A drawing that changes every tick (a man in motion) is sent this often, in ticks.
+const SEND_EVERY: int = 4
 
 
 func setup(game: Game) -> void:
@@ -128,12 +149,60 @@ func _process(_delta: float) -> void:
 func _rebuild() -> void:
 	_points.clear()
 	_colors.clear()
+	_shapes = [[], []]
 	var pc: PlayController = _game.play_controller
 	if pc.offense != null and pc.defense != null:
+		_side = OFFENSE
 		if _offense != null:
 			_draw_offense(pc, _offense)
+		_side = DEFENSE
 		if _defense != null:
 			_draw_defense(pc, _defense)
+	_build_mesh()
+	if NetEvents.recording:
+		_send(OFFENSE, pc.offense)
+		_send(DEFENSE, pc.defense)
+
+
+## On the server: the person who plays `team` is sent their side's drawing when
+## it has changed. One that keeps changing, not every tick.
+func _send(side: int, team: Team) -> void:
+	if team == null or team.human == null or _shapes[side] == _sent[side]:
+		return
+	var tick: int = Engine.get_physics_frames()
+	if not _shapes[side].is_empty() and not _sent[side].is_empty() and tick - _sent_tick[side] < SEND_EVERY:
+		return
+	_sent[side] = _shapes[side].duplicate(true)
+	_sent_tick[side] = tick
+	NetEvents.tell(NetEvents.Part.ART, &"net_draw", [side, _shapes[side]], &"", team.human.seat)
+
+
+## On a person's machine in an online match: their side's drawing, as the
+## server made it (nothing for none).
+func net_draw(side: int, shapes: Array) -> void:
+	if side != OFFENSE and side != DEFENSE:
+		return
+	_shapes[side] = shapes
+	_points.clear()
+	_colors.clear()
+	# Drawn again from the lists: nothing is added to them meanwhile.
+	_nest = 1
+	for list: Array in _shapes:
+		for shape: Variant in list:
+			if typeof(shape) == TYPE_ARRAY and (shape as Array).size() == 2 and SHAPES.has(StringName(str(shape[0]))) and typeof(shape[1]) == TYPE_ARRAY:
+				callv(StringName(str(shape[0])), shape[1])
+	_nest = 0
+	_build_mesh()
+
+
+## A shape is being drawn with `args`: noted, unless it is a part of another.
+func _begin(shape: StringName, args: Array) -> void:
+	if _nest == 0:
+		_shapes[_side].append([shape, args])
+	_nest += 1
+
+
+func _build_mesh() -> void:
 	_mesh.clear_surfaces()
 	triangles = _points.size() / 3
 	if _points.is_empty():
@@ -254,7 +323,7 @@ func _draw_motion(pc: PlayController, play: OffensePlay, flip: float) -> void:
 # --- Defense ---------------------------------------------------------------------
 
 func _draw_defense(pc: PlayController, play: DefensePlay) -> void:
-	var flip: float = -1.0 if _flipped else 1.0
+	var flip: float = -1.0 if _defense_flipped else 1.0
 	var players: Array[Player] = pc.defense.players
 	var qb_spot: Vector3 = _flat(pc.qb.position) if pc.qb != null else _flat(pc.to_world(Vector2(-4.5, 0.0)))
 	for i: int in players.size():
@@ -306,8 +375,13 @@ func _segment(a: Vector3, b: Vector3, color: Color, width: float, alpha: float =
 	_polyline(PackedVector3Array([a, b]), color, width, alpha)
 
 
+# Each shape below begins with _begin() and ends by stepping _nest back: that
+# is what makes a drawing a list that can be sent (see net_draw).
+
+
 ## A ribbon through `path`, with its corners joined.
 func _polyline(path: PackedVector3Array, color: Color, width: float, alpha: float = ALPHA) -> void:
+	_begin(&"_polyline", [path, color, width, alpha])
 	var ink: Color = Color(color, alpha)
 	var left: PackedVector3Array = PackedVector3Array()
 	var right: PackedVector3Array = PackedVector3Array()
@@ -328,45 +402,55 @@ func _polyline(path: PackedVector3Array, color: Color, width: float, alpha: floa
 	for i: int in path.size() - 1:
 		_triangle(left[i], left[i + 1], right[i + 1], ink)
 		_triangle(left[i], right[i + 1], right[i], ink)
+	_nest -= 1
 
 
 func _dashed(a: Vector3, b: Vector3, color: Color, width: float) -> void:
 	var length: float = a.distance_to(b)
 	if length < 0.05:
 		return
+	_begin(&"_dashed", [a, b, color, width])
 	var along: Vector3 = (b - a) / length
 	var at: float = 0.0
 	while at < length:
 		_segment(a + along * at, a + along * minf(at + DASH, length), color, width)
 		at += DASH + GAP
+	_nest -= 1
 
 
 func _arrow_head(from: Vector3, tip: Vector3, color: Color, alpha: float = ALPHA) -> void:
 	var side: Vector3 = _across(from, tip)
 	if side == Vector3.ZERO:
 		return
+	_begin(&"_arrow_head", [from, tip, color, alpha])
 	var along: Vector3 = (tip - from).normalized()
 	var back: Vector3 = tip - along * ARROW * 0.4
 	_triangle(tip + along * ARROW * 0.6, back + side * ARROW * 0.5, back - side * ARROW * 0.5, Color(color, alpha))
+	_nest -= 1
 
 
 ## A route that stops: a short bar across its end.
 func _end_bar(from: Vector3, tip: Vector3, color: Color, width: float, alpha: float = ALPHA) -> void:
 	var side: Vector3 = _across(from, tip) * ARROW * 0.5
 	if side != Vector3.ZERO:
+		_begin(&"_end_bar", [from, tip, color, width, alpha])
 		_segment(tip - side, tip + side, color, width, alpha)
+		_nest -= 1
 
 
 func _ring(center: Vector3, radius: float, color: Color, width: float, alpha: float = ALPHA) -> void:
+	_begin(&"_ring", [center, radius, color, width, alpha])
 	var path: PackedVector3Array = PackedVector3Array()
 	for i: int in ZONE_STEPS + 1:
 		var angle: float = TAU * float(i % ZONE_STEPS) / float(ZONE_STEPS)
 		path.append(center + Vector3(cos(angle), 0.0, sin(angle)) * radius)
 	_polyline(path, color, width, alpha)
+	_nest -= 1
 
 
 ## The area a zone defender guards: a faint disc with an edge.
 func _zone(center: Vector3, radius: float, color: Color) -> void:
+	_begin(&"_zone", [center, radius, color])
 	var fill: Color = Color(color, ZONE_FILL)
 	# A little lower than the lines, which are drawn over it.
 	var middle: Vector3 = center - Vector3(0.0, 0.02, 0.0)
@@ -375,3 +459,4 @@ func _zone(center: Vector3, radius: float, color: Color) -> void:
 		var b: float = TAU * float(i + 1) / float(ZONE_STEPS)
 		_triangle(middle, middle + Vector3(cos(a), 0.0, sin(a)) * radius, middle + Vector3(cos(b), 0.0, sin(b)) * radius, fill)
 	_ring(center, radius, color, THIN, 0.7)
+	_nest -= 1

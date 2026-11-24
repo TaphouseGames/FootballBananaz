@@ -7,6 +7,8 @@ extends SceneTree
 ##  - players and the ball move, and a person's own player is marked as theirs,
 ##  - things that happen once (falls, resets) are done here too, and sounds,
 ##    banners, shakes of the gamepad and the markers on the field among them,
+##  - the person's own play-select cards come up while plays are picked, and
+##    their own play is drawn on the field at the line,
 ##  - the clock runs.
 ##
 ## In real time, so no --fixed-fps. About a minute.
@@ -30,6 +32,12 @@ var _ball_moved: float = 0.0
 var _first_ball: Vector3 = Vector3.INF
 var _first_clock: float = -1.0
 var _own_seen: bool = false
+## Ticks in play select with the cards up, and without; ticks with a drawing
+## on the field; a picture was saved of the cards.
+var _cards_up: int = 0
+var _cards_down: int = 0
+var _art_up: int = 0
+var _cards_shot: bool = false
 var _done: bool = false
 var _failures: PackedStringArray = PackedStringArray()
 
@@ -100,6 +108,16 @@ func _watch() -> void:
 		if pc.players[i].position.distance_to(_first_places[i]) > 3.0:
 			_moved += 1
 	_ball_moved = maxf(_ball_moved, game.ball.position.distance_to(_first_ball))
+	if pc.state_machine.current_name() == &"PlaySelect":
+		if game.hud.play_select.visible and not game.hud._play_panels[0].cards.is_empty():
+			_cards_up += 1
+			if _out != "" and not _cards_shot and _cards_up > 20:
+				_cards_shot = true
+				root.get_texture().get_image().save_png("%s/net_view_cards.png" % _out)
+		else:
+			_cards_down += 1
+	if game.play_art.triangles > 0:
+		_art_up += 1
 	var mine: Player = game.human.controlled
 	if mine != null and mine.control_ring.visible and mine.team == game.human.team:
 		_own_seen = true
@@ -130,6 +148,12 @@ func _judge(seconds: float) -> void:
 	for part: int in [NetEvents.Part.PLAYER, NetEvents.Part.AUDIO, NetEvents.Part.HUD, NetEvents.Part.RUMBLE, NetEvents.Part.FIELD]:
 		if view.replayed_on.get(part, 0) <= 0:
 			_failures.append("nothing was done here on %s" % NetEvents.Part.keys()[part])
+	print("play select: cards up on %d frames, not up on %d; a drawing on the field on %d" % [_cards_up, _cards_down, _art_up])
+	# Saving a picture holds this program up, and the cards come late after that.
+	if _out == "" and (_cards_up < 30 or _cards_up < _cards_down):
+		_failures.append("the cards were up on %d frames of play select and not on %d" % [_cards_up, _cards_down])
+	if _art_up <= 0:
+		_failures.append("no play was ever drawn on the field")
 	if not _own_seen:
 		_failures.append("the person's own player was never marked as theirs")
 	if game.clock >= _first_clock:
