@@ -92,7 +92,10 @@ func _physics_process(_delta: float) -> void:
 	# once: making the match kept this machine itself silent for a while.
 	if _tick == NetSocket.SETTLE_TICKS:
 		_socket.set_patience(NetSocket.PLAYING_PATIENCE)
-	for body: Array in NetProtocol.cut_state(_tick, NetState.pack(game)):
+	var acks: PackedInt32Array = PackedInt32Array()
+	for line: NetInputQueue in _queues:
+		acks.append(line.taken)
+	for body: Array in NetProtocol.cut_state(_tick, NetState.pack(game, acks)):
 		_socket.send(0, NetProtocol.Kind.STATE, body, false)
 	var notes: Array[Array] = NetEvents.take(SEATS)
 	for seat: int in SEATS:

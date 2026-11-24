@@ -30,6 +30,8 @@ var view: Basis = Basis.IDENTITY
 ## Says the match is loaded as soon as the server says start. Off when there
 ## is a match to load here first: loaded() then says it.
 var auto_ready: bool = true
+## For trying things out: milliseconds added to the line each way (NetSocket.lag_ms).
+var lag_ms: int = 0
 ## What is said to the server about this build. Only the tests change it.
 var version: int = NetProtocol.VERSION
 
@@ -43,6 +45,10 @@ var _said_hello: bool = false
 var _over: bool = false
 ## The last few ticks of buttons, newest first.
 var _sent: Array[PackedFloat32Array] = []
+## What the stick and the turbo were on each tick sent that the server has not
+## answered for yet: [the move on the field, turbo held]. NetView moves the
+## person's own player by them ahead of the server's word.
+var moves: Dictionary[int, Array] = {}
 var _joiner: NetProtocol.StateJoiner = NetProtocol.StateJoiner.new()
 
 
@@ -63,6 +69,7 @@ func join(address: String, port: int = NetProtocol.DEFAULT_PORT) -> bool:
 	if _socket == null:
 		return false
 	_socket.message.connect(_on_message)
+	_socket.lag_ms = lag_ms
 	_said_hello = false
 	_over = false
 	return true
@@ -90,6 +97,14 @@ func leave() -> void:
 	seat = -1
 	tick = -1
 	_sent.clear()
+	moves.clear()
+
+
+## The server has played the buttons up to `ack`: the moves before that are done with.
+func forget_moves(ack: int) -> void:
+	for sent: int in moves.keys():
+		if sent <= ack:
+			moves.erase(sent)
 
 
 func _before_tick() -> void:
@@ -117,6 +132,7 @@ func _send_buttons() -> void:
 	tick += 1
 	var stick: Vector2 = pad.vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	var move: Vector3 = view.x * stick.x + view.z * stick.y
+	moves[tick] = [Vector3(move.x, 0.0, move.z).limit_length(1.0), pad.pressed(&"turbo")]
 	_sent.push_front(NetProtocol.pack_frame(pad.frame(), Vector3(move.x, 0.0, move.z), view.x))
 	if _sent.size() > NetProtocol.INPUT_REPEATS:
 		_sent.pop_back()

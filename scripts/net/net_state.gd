@@ -24,11 +24,15 @@ const PLAYER: Array[Array] = [
 	[&"is_blocking", "b"], [&"calling_for_ball", "b"], [&"block_slow_timer", "f"], [&"block_partner", "p"],
 	[&"secure_timer", "f"], [&"jump_strength", "f"], [&"dive_reach_timer", "f"], [&"dazed_timer", "f"],
 	[&"catch_timer", "f"], [&"move_side", "f"], [&"drag_partner", "p"], [&"injured", "b"],
+	# What his next step goes by (Player.net_predict).
+	[&"speed_scale", "f"], [&"turbo_locked", "b"], [&"burst_timer", "f"], [&"secure_strength", "f"],
+	[&"dive_get_up_timer", "f"], [&"_feet_set_time", "f"],
 ]
 ## After a player's own: the seat of the person playing him (-1 nobody), his job
 ## on offense (-1 none) and how long he blocks first, his job on defense (-1
-## none), and whether he has seen a loose ball.
-const PLAYER_EXTRA: int = 5
+## none), whether he has seen a loose ball, and whether a person's stick alone
+## moved him this tick.
+const PLAYER_EXTRA: int = 6
 
 const BALL: Array[Array] = [
 	[&"position", "v"], [&"visible", "b"], [&"state", "i"],
@@ -60,7 +64,9 @@ const GAME: Array[Array] = [
 
 
 ## The match right now: [players, ball, play, game, the rest].
-static func pack(game: Game) -> Array:
+## `acks`: for each seat, the tick of that person's buttons this state was
+## played with (NetInputQueue.taken).
+static func pack(game: Game, acks: PackedInt32Array = PackedInt32Array()) -> Array:
 	var pc: PlayController = game.play_controller
 	var players: PackedFloat32Array = PackedFloat32Array()
 	for player: Player in pc.players:
@@ -71,6 +77,7 @@ static func pack(game: Game) -> Array:
 		players.append(brain.off_assign.block_time if brain.off_assign != null else 0.0)
 		players.append(float(brain.def_assign.job) if brain.def_assign != null else -1.0)
 		players.append(1.0 if brain.sees_ball else 0.0)
+		players.append(1.0 if player.human != null and player.human.moved_freely() else 0.0)
 	var ball: PackedFloat32Array = PackedFloat32Array()
 	_write(game.ball, BALL, ball, game)
 	var mark: Node3D = game.ball.landing_marker
@@ -94,6 +101,7 @@ static func pack(game: Game) -> Array:
 		game.home.score, game.away.score, game.banner_text,
 		# What the levels of the crowd, the huddle, the music and the chant go by.
 		[game.audio.excitement, game.audio._huddle_on, game.audio._music_stopping, game.audio._chant_fading],
+		acks,
 	]
 	return [players, ball, play, match_now, rest]
 
@@ -103,7 +111,7 @@ static func fits(game: Game, state: Variant) -> bool:
 	if typeof(state) != TYPE_ARRAY:
 		return false
 	var parts: Array = state
-	if parts.size() != 5 or typeof(parts[4]) != TYPE_ARRAY or (parts[4] as Array).size() != 10:
+	if parts.size() != 5 or typeof(parts[4]) != TYPE_ARRAY or (parts[4] as Array).size() != 11:
 		return false
 	for at: int in 4:
 		if typeof(parts[at]) != TYPE_PACKED_FLOAT32_ARRAY:
@@ -128,6 +136,7 @@ static func unpack(game: Game, state: Array, seat: int) -> void:
 			mine = player
 		_give_job(player.brain, int(players[at + 1]), players[at + 2], int(players[at + 3]))
 		player.brain.sees_ball = players[at + 4] > 0.5
+		player.net_free = players[at + 5] > 0.5
 		at += PLAYER_EXTRA
 	if game.human.is_active() and game.human.controlled != mine:
 		game.human.set_controlled(mine)
@@ -162,6 +171,7 @@ static func unpack(game: Game, state: Array, seat: int) -> void:
 		game.audio._huddle_on = bool(sound[1])
 		game.audio._music_stopping = bool(sound[2])
 		game.audio._chant_fading = bool(sound[3])
+	game.net_acks = rest[10] if typeof(rest[10]) == TYPE_PACKED_INT32_ARRAY else PackedInt32Array()
 	# Last, with everything else in place: whoever listens for a new state of
 	# the match (the rumble, for one) hears of it here too.
 	if state_name != was:

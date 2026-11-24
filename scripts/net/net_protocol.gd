@@ -21,7 +21,7 @@ enum Kind { HELLO, WELCOME, REJECT, START, INPUT, END, STATE, EVENTS, READY }
 
 ## Goes up with every change to the messages or to what the game does with them:
 ## two machines only play each other on the same one.
-const VERSION: int = 3
+const VERSION: int = 4
 const DEFAULT_PORT: int = 24642
 ## The ticks of buttons in every INPUT message: one gets through as long as
 ## that many packets in a row are not all lost.

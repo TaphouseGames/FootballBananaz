@@ -14,11 +14,16 @@ extends SceneTree
 ## In real time, so no --fixed-fps. About a minute.
 ## Run:  godot --headless --path . --script res://tests/net_view_check.gd [-- seconds=40]
 ## With a window (no --headless) and out=<dir> it saves a picture every few seconds.
+## lag=<ms> makes this end's line that much slower each way; nopredict draws the
+## person's own player where the server has him. The numbers it prints for the
+## person's own player tell what running him ahead of the server does.
 
 const PORT: int = 24741
 
 var _seconds: float = 40.0
 var _out: String = ""
+var _lag: int = 0
+var _predict: bool = true
 var _shots: int = 0
 var _server_pid: int = -1
 var _bot_pid: int = -1
@@ -48,6 +53,10 @@ func _initialize() -> void:
 			_seconds = float(arg.trim_prefix("seconds="))
 		elif arg.begins_with("out="):
 			_out = arg.trim_prefix("out=")
+		elif arg.begins_with("lag="):
+			_lag = int(arg.trim_prefix("lag="))
+		elif arg == "nopredict":
+			_predict = false
 	var godot: String = OS.get_executable_path()
 	var server_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/server.tscn"]
 	var bot_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/online_dev.tscn"]
@@ -63,6 +72,8 @@ func _initialize() -> void:
 	_play = NetPlay.new()
 	_play.port = PORT
 	_play.bot = true
+	_play.lag_ms = _lag
+	_play.predict = _predict
 	_play.leave_when_over = false
 	root.add_child(_play)
 
@@ -154,6 +165,10 @@ func _judge(seconds: float) -> void:
 		_failures.append("the cards were up on %d frames of play select and not on %d" % [_cards_up, _cards_down])
 	if _art_up <= 0:
 		_failures.append("no play was ever drawn on the field")
+	if view.predicted > 0:
+		print("own player: run ahead of the server on %d ticks, %.2f yd ahead on average; moved %.3f yd by the server's word on average, %.2f at the most" % [view.predicted, view.lead_sum / view.predicted, view.correction_sum / view.predicted, view.correction_max])
+	if _predict and view.predicted < 100:
+		_failures.append("the person's own player was run ahead of the server on %d ticks only" % view.predicted)
 	if not _own_seen:
 		_failures.append("the person's own player was never marked as theirs")
 	if game.clock >= _first_clock:

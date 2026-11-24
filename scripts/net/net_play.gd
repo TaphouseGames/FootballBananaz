@@ -7,7 +7,11 @@ extends Node
 ##
 ## Until there is a way in from the main menu, run it as scenes/online_dev.tscn:
 ##   godot --path . res://scenes/online_dev.tscn -- join=127.0.0.1 [port=24642] [team=<n>] [bot]
+##         [lag=<ms>] [nopredict]
 ## `bot` plays with random buttons: someone to play against on one machine.
+## `lag` makes the line that much slower each way (lag=50 is 100 ms more there
+## and back); `nopredict` draws the person's own player where the server has
+## him, to compare.
 
 ## The match is over, or never came about: NetProtocol's END body, or
 ## { "reason": "rejected: ..." | "lost" | "no line" }.
@@ -22,6 +26,10 @@ var port: int = NetProtocol.DEFAULT_PORT
 var team_pick: int = -1
 ## Random buttons in place of the gamepad.
 var bot: bool = false
+## For trying things out: milliseconds added to the line each way, and the
+## person's own player drawn where the server has him (no running ahead).
+var lag_ms: int = 0
+var predict: bool = true
 ## Back to the main menu when it is over (quits, for a bot). Off in the tests.
 var leave_when_over: bool = true
 
@@ -45,10 +53,15 @@ func _ready() -> void:
 			team_pick = int(arg.trim_prefix("team="))
 		elif arg == "bot":
 			bot = true
+		elif arg.begins_with("lag="):
+			lag_ms = int(arg.trim_prefix("lag="))
+		elif arg == "nopredict":
+			predict = false
 	# Loaded before the server is looked for: the other person does not wait for it.
 	_scene = load("res://scenes/main.tscn")
 	client = NetClient.new()
 	client.team_pick = team_pick
+	client.lag_ms = lag_ms
 	client.auto_ready = false
 	if bot:
 		_bot_pad = PadInput.new()
@@ -95,7 +108,8 @@ func _on_started(home_pick: int, away_pick: int) -> void:
 	add_child(game)
 	view = NetView.new()
 	add_child(view)
-	view.setup(game, client.seat)
+	view.setup(game, client.seat, client)
+	view.predict = predict
 	client.loaded()
 	print("NetPlay: match on, seat %d" % client.seat)
 

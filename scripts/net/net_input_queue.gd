@@ -21,6 +21,8 @@ var _last: PackedFloat32Array = PackedFloat32Array()
 ## Ticks handed out twice for want of a new one, and ticks stepped over.
 var held: int = 0
 var skipped: int = 0
+## The tick of the buttons handed out last, -1 before the first.
+var taken: int = -1
 
 
 func add(tick: int, frame: PackedFloat32Array) -> void:
@@ -49,6 +51,7 @@ func take() -> PackedFloat32Array:
 		for at: int in frame.size() - NetProtocol.VIEW_FLOATS:
 			frame[at] = maxf(frame[at], over[at])
 	_last = frame
+	taken = _next - 1
 	return frame
 
 

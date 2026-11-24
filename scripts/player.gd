@@ -80,6 +80,9 @@ var index: int = 0
 var velocity: Vector3 = Vector3.ZERO
 ## Desired direction, length 0..1, on the XZ plane.
 var move_input: Vector3 = Vector3.ZERO
+## In an online match's picture: the server moved him by a person's stick alone
+## on the tick shown (HumanController.moved_freely).
+var net_free: bool = false
 var wants_turbo: bool = false
 var facing: Vector3 = Vector3.RIGHT
 ## When set, the player faces this way instead of the way he is moving
@@ -338,6 +341,23 @@ func net_reset() -> void:
 ## everyone, with nobody on it.
 func _own_seat() -> int:
 	return team.human.seat if team != null and team.human != null else NetEvents.EVERYONE
+
+
+## One tick of running as the stick says, with nothing else of the game: what
+## an online match's picture does for the person's own player until the server
+## says where he really is (NetView). The same step as integrate() takes for a
+## man on his feet.
+func net_predict(input: Vector3, turbo_held: bool, delta: float) -> void:
+	move_input = input
+	wants_turbo = turbo_held
+	ai_speed_scale = 1.0
+	_move_normal(delta)
+	position += velocity * delta
+	keep_on_field()
+	if look_dir.length_squared() > 0.01:
+		facing = look_dir.normalized()
+	elif velocity.length_squared() > 0.6:
+		facing = velocity.normalized()
 
 
 ## Starts a fall (PlayerFall's `method`), and notes it for an online match's picture.

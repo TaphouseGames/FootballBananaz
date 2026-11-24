@@ -93,6 +93,9 @@ var rumble: Rumble = Rumble.new()
 var humans: Array[HumanController] = []
 ## Draws a play on the turf before the snap (LT and the stick).
 var play_art: PlayArt
+## On a person's machine in an online match: for each seat, the tick of that
+## person's buttons the state on show was played with.
+var net_acks: PackedInt32Array = PackedInt32Array()
 ## Debug builds: tries out a network delay offline (F9, F10). Null otherwise.
 var net_feel: NetFeel
 

@@ -15,6 +15,13 @@ const SERVER: int = 1
 const MAX_BYTES: int = 16384
 
 var _peer: ENetMultiplayerPeer
+## For trying things out: milliseconds added to every message on its way out
+## and again on its way in, at this end. 50 here is a line with 100 ms more
+## there and back.
+var lag_ms: int = 0
+## Messages held back by lag_ms: [when it may go on, ...what it is].
+var _held_in: Array[Array] = []
+var _held_out: Array[Array] = []
 ## Seconds of silence after which the other end counts as gone.
 var _patience: float = LOADING_PATIENCE
 
@@ -69,12 +76,29 @@ func poll() -> void:
 			continue
 		var parts: Array = data
 		if parts.size() == 2 and typeof(parts[0]) == TYPE_INT:
-			message.emit(from, parts[0], parts[1])
+			if lag_ms > 0:
+				_held_in.append([Time.get_ticks_msec() + lag_ms, from, parts[0], parts[1]])
+			else:
+				message.emit(from, parts[0], parts[1])
+	var now: int = Time.get_ticks_msec()
+	while not _held_out.is_empty() and int(_held_out[0][0]) <= now:
+		var out: Array = _held_out.pop_front()
+		_put(out[1], out[2], out[3], out[4])
+	while not _held_in.is_empty() and int(_held_in[0][0]) <= now:
+		var held: Array = _held_in.pop_front()
+		message.emit(held[1], held[2], held[3])
 
 
 ## `to` 0 is everyone. `reliable` messages arrive, and in order; the others may
 ## be lost, and are not waited for.
 func send(to: int, kind: int, body: Variant, reliable: bool = true) -> void:
+	if lag_ms > 0:
+		_held_out.append([Time.get_ticks_msec() + lag_ms, to, kind, body, reliable])
+	else:
+		_put(to, kind, body, reliable)
+
+
+func _put(to: int, kind: int, body: Variant, reliable: bool) -> void:
 	if _peer == null or _peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
 		return
 	_peer.set_target_peer(to)

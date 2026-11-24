@@ -29,6 +29,11 @@ var seat: int = 0
 ## True on ticks where the controlled player should run on AI instead
 ## (a targeted receiver with the stick at rest runs to the ball by himself).
 var assist: bool = false
+## The physics tick on which the stick last moved the controlled player just as
+## it was pushed: not held still for a fake or a handoff, not run by the AI.
+## An online match's picture moves him ahead of the server's word on such ticks
+## only (see moved_freely and NetView).
+var _free_tick: int = -1
 ## Pass button being held while the QB winds up (-1 = none), and when it went down.
 var _pass_slot: int = -1
 var _pass_press_time: float = 0.0
@@ -51,6 +56,11 @@ func setup(p_game: Game, p_team: Team, p_pad: PadInput, p_seat: int = 0) -> void
 
 func is_active() -> bool:
 	return team != null
+
+
+## On this tick the stick moved the controlled player just as it was pushed.
+func moved_freely() -> bool:
+	return _free_tick == Engine.get_physics_frames() and controlled != null and controlled.can_act()
 
 
 func set_controlled(player: Player) -> void:
@@ -189,6 +199,8 @@ func update_live() -> void:
 
 	if pc.phase == PlayController.Phase.AIR and pc.ball.intended == player and not moving:
 		assist = true
+	if not assist:
+		_free_tick = Engine.get_physics_frames()
 
 	# A back behind the line on a run at a hole, stick pushed upfield: he is
 	# eased toward the middle of the lane his blockers have opened. Leaning the
@@ -395,6 +407,7 @@ func update_dead() -> void:
 	player.ai_speed_scale = 1.0
 	player.move_input = move
 	player.wants_turbo = pad.pressed(&"turbo")
+	_free_tick = Engine.get_physics_frames()
 	# He has scored and holds the ball up, or has made a first down or a long
 	# gain: the face buttons pick his dance, and do nothing else while they can.
 	if pc.celebration_pick_open and player == pc.celebrant:
