@@ -4,6 +4,9 @@ extends Node
 ## with their buttons as they come in over the network, and ends when the game
 ## does or when one of them is gone (the one who stayed wins).
 ##
+## Both are told to start as soon as the second is here; the match itself
+## begins when both have said that it is loaded on their machine.
+##
 ## The match is the same Game as offline, with both teams played by people
 ## whose PadInput is fed from here (Game.net_mode, Game.remote_pads).
 ##
@@ -16,6 +19,8 @@ signal finished(result: Dictionary)
 const SEATS: int = 2
 ## Ticks the line is kept up after the match, for END to get out.
 const LINGER: int = 60
+## Ticks to wait for both to have the match loaded before it begins anyway.
+const READY_WAIT: int = 2700
 
 var port: int = NetProtocol.DEFAULT_PORT
 ## Quits the program after the match. Off in the tests, which run it beside
@@ -33,12 +38,22 @@ var _picks: PackedInt32Array = PackedInt32Array([-1, -1])
 var _queues: Array[NetInputQueue] = []
 var _pads: Array[PadInput] = []
 var _linger: int = -1
+## Both are here and were told to start; who has the match loaded, and how many
+## ticks they have had.
+var _told_to_start: bool = false
+var _loaded: Array[bool] = [false, false]
+var _ready_wait: int = 0
+var _scene: PackedScene
+## Ticks of the match played.
+var _tick: int = 0
 
 
 func _ready() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("port="):
 			port = int(arg.trim_prefix("port="))
+	# Loaded before anyone is here: nobody waits for it.
+	_scene = load("res://scenes/main.tscn")
 	_socket = NetSocket.host(port, SEATS + 2)
 	if _socket == null:
 		push_error("NetServer: cannot listen on port %d" % port)
@@ -48,6 +63,8 @@ func _ready() -> void:
 	_socket.message.connect(_on_message)
 	# Before any node's own tick: the buttons are in when the game asks for them.
 	get_tree().physics_frame.connect(_before_tick)
+	# And after every one of them: the tick is played, and can be sent.
+	process_physics_priority = 1000
 	print("NetServer: listening on port %d" % port)
 
 
@@ -55,9 +72,28 @@ func _exit_tree() -> void:
 	if _socket != null:
 		_socket.close()
 	if Game.net_mode == Game.NetMode.SERVER:
+		NetEvents.recording = false
+		NetEvents.take()
 		Game.net_mode = Game.NetMode.OFFLINE
 		Game.remote_pads.clear()
 		Game.two_players = false
+
+
+## The tick is played: everyone is sent how the match stands, and what
+## happened in it that the picture has to hear of.
+func _physics_process(_delta: float) -> void:
+	if game == null or _socket == null or not result.is_empty():
+		return
+	_tick += 1
+	# From here on someone who says nothing for a few seconds is gone. Not at
+	# once: making the match kept this machine itself silent for a while.
+	if _tick == NetSocket.SETTLE_TICKS:
+		_socket.set_patience(NetSocket.PLAYING_PATIENCE)
+	for body: Array in NetProtocol.cut_state(_tick, NetState.pack(game)):
+		_socket.send(0, NetProtocol.Kind.STATE, body, false)
+	var notes: Array = NetEvents.take()
+	if not notes.is_empty():
+		_socket.send(0, NetProtocol.Kind.EVENTS, [_tick, notes])
 
 
 ## How many of the two are here.
@@ -88,6 +124,10 @@ func _before_tick() -> void:
 				get_tree().quit()
 		return
 	if game == null:
+		if _told_to_start and result.is_empty():
+			_ready_wait += 1
+			if not _loaded.has(false) or _ready_wait > READY_WAIT:
+				_start()
 		return
 	for seat: int in SEATS:
 		var frame: PackedFloat32Array = _queues[seat].take()
@@ -112,6 +152,10 @@ func _on_message(from: int, kind: int, body: Variant) -> void:
 			_on_hello(from, body)
 		NetProtocol.Kind.INPUT:
 			_on_input(from, body)
+		NetProtocol.Kind.READY:
+			var seat: int = _peers.find(from)
+			if seat >= 0:
+				_loaded[seat] = true
 
 
 func _on_hello(from: int, body: Variant) -> void:
@@ -123,7 +167,7 @@ func _on_hello(from: int, body: Variant) -> void:
 		reason = "bad hello"
 	elif hello[0] != NetProtocol.VERSION or hello[1] != NetProtocol.input_signature():
 		reason = "version"
-	elif game != null or not result.is_empty() or seated() >= SEATS:
+	elif _told_to_start or not result.is_empty() or seated() >= SEATS:
 		reason = "full"
 	if reason != "":
 		_socket.send(from, NetProtocol.Kind.REJECT, [reason])
@@ -135,7 +179,9 @@ func _on_hello(from: int, body: Variant) -> void:
 	_socket.send(from, NetProtocol.Kind.WELCOME, [seat])
 	print("NetServer: seat %d taken" % seat)
 	if seated() == SEATS:
-		_start()
+		_told_to_start = true
+		_ready_wait = 0
+		_socket.send(0, NetProtocol.Kind.START, [_picks[0], _picks[1]])
 
 
 ## One tick's buttons and the ticks before it, newest first.
@@ -161,8 +207,9 @@ func _on_left(id: int) -> void:
 		return
 	_peers[seat] = 0
 	print("NetServer: seat %d left" % seat)
-	if game != null and result.is_empty():
-		_finish({"reason": "left", "winner": 1 - seat, "score": [game.home.score, game.away.score]})
+	if _told_to_start and result.is_empty():
+		var score: Array = [game.home.score, game.away.score] if game != null else [0, 0]
+		_finish({"reason": "left", "winner": 1 - seat, "score": score})
 
 
 func _start() -> void:
@@ -180,10 +227,10 @@ func _start() -> void:
 	Game.show_intro = false
 	Game.season_match = false
 	Game.team_picks = _picks.duplicate()
-	var scene: PackedScene = load("res://scenes/main.tscn")
-	game = scene.instantiate() as Game
+	NetEvents.take()
+	NetEvents.recording = true
+	game = _scene.instantiate() as Game
 	add_child(game)
-	_socket.send(0, NetProtocol.Kind.START, [_picks[0], _picks[1]])
 	print("NetServer: match on")
 
 

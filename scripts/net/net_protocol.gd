@@ -8,22 +8,95 @@ extends RefCounted
 ##   WELCOME  to one person   [seat]
 ##   REJECT   to one person   [reason]
 ##   START    to everyone     [home's team pick, away's]
+##   READY    to the server   []   the match is loaded on that machine
 ##   INPUT    to the server   [newest tick, [that tick's buttons, the tick before's, ...]]
+##   STATE    to everyone     [tick, piece, pieces, size, bytes]   (may be lost)
+##            NetState.pack() squeezed and cut into pieces that each fit one
+##            packet: see cut_state() and StateJoiner
+##   EVENTS   to everyone     [tick, NetEvents' notes of that tick]
 ##   END      to everyone     { "reason": "final" | "left", "winner": seat or -1,
 ##                              "score": [home, away] }
 
-enum Kind { HELLO, WELCOME, REJECT, START, INPUT, END }
+enum Kind { HELLO, WELCOME, REJECT, START, INPUT, END, STATE, EVENTS, READY }
 
 ## Goes up with every change to the messages or to what the game does with them:
 ## two machines only play each other on the same one.
-const VERSION: int = 1
+const VERSION: int = 2
 const DEFAULT_PORT: int = 24642
 ## The ticks of buttons in every INPUT message: one gets through as long as
 ## that many packets in a row are not all lost.
 const INPUT_REPEATS: int = 3
+## The most bytes of a state in one message: with the rest of the message it
+## stays under what one packet carries. A message that has to be split on the
+## way is lost whole when any part of it is.
+const PIECE_BYTES: int = 1100
+## No state is anywhere near this big; one that says it is, is not looked at.
+const MAX_STATE_BYTES: int = 65536
 ## Floats after the actions' own in a tick's buttons: the stick as a move on
 ## the field (x, z) and the camera's right (x, z).
 const VIEW_FLOATS: int = 4
+
+
+## The bodies of the STATE messages that carry `state` (NetState.pack()) for `tick`.
+static func cut_state(tick: int, state: Array) -> Array[Array]:
+	var plain: PackedByteArray = var_to_bytes(state)
+	var squeezed: PackedByteArray = plain.compress(FileAccess.COMPRESSION_ZSTD)
+	var pieces: int = maxi(ceili(float(squeezed.size()) / PIECE_BYTES), 1)
+	var bodies: Array[Array] = []
+	for piece: int in pieces:
+		bodies.append([tick, piece, pieces, plain.size(), squeezed.slice(piece * PIECE_BYTES, (piece + 1) * PIECE_BYTES)])
+	return bodies
+
+
+## Puts the pieces of states back together as they come in.
+class StateJoiner:
+	extends RefCounted
+	## The tick being put together, and its pieces so far.
+	var _tick: int = -1
+	var _pieces: Array[PackedByteArray] = []
+	var _have: int = 0
+	var _size: int = 0
+
+	## Takes the body of one STATE message. Returns [tick, state] when that was
+	## the last piece of a state, and nothing otherwise. Pieces of an older tick
+	## than the one being put together are too late.
+	func add(body: Variant) -> Array:
+		if typeof(body) != TYPE_ARRAY:
+			return []
+		var parts: Array = body
+		if parts.size() != 5 or typeof(parts[4]) != TYPE_PACKED_BYTE_ARRAY:
+			return []
+		for at: int in 4:
+			if typeof(parts[at]) != TYPE_INT:
+				return []
+		var tick: int = parts[0]
+		var piece: int = parts[1]
+		var pieces: int = parts[2]
+		var size: int = parts[3]
+		if pieces < 1 or pieces > 64 or piece < 0 or piece >= pieces or size <= 0 or size > NetProtocol.MAX_STATE_BYTES or tick < _tick:
+			return []
+		if tick != _tick or pieces != _pieces.size() or size != _size:
+			_tick = tick
+			_size = size
+			_have = 0
+			_pieces.clear()
+			_pieces.resize(pieces)
+		if _pieces[piece].is_empty():
+			_pieces[piece] = parts[4]
+			_have += 1
+		if _have < pieces:
+			return []
+		var squeezed: PackedByteArray = PackedByteArray()
+		for part: PackedByteArray in _pieces:
+			squeezed.append_array(part)
+		_tick = tick + 1
+		_have = 0
+		_pieces.clear()
+		var plain: PackedByteArray = squeezed.decompress(size, FileAccess.COMPRESSION_ZSTD)
+		if plain.size() != size:
+			return []
+		var state: Variant = bytes_to_var(plain)
+		return [tick, state] if typeof(state) == TYPE_ARRAY else []
 
 
 ## A number that differs when two builds do not have the same actions.

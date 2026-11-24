@@ -15,6 +15,11 @@ signal started(home_pick: int, away_pick: int)
 signal ended(result: Dictionary)
 ## The line to the server is gone with no END.
 signal lost
+## How the match stood on the server's `tick`: what NetState.pack() made.
+signal state(tick: int, state: Variant)
+## What happened on the server's `tick` that the picture has to hear of
+## (NetEvents' notes).
+signal events(tick: int, notes: Array)
 
 ## The buttons that are sent. Every pad's unless something else is put here.
 var pad: PadInput
@@ -22,6 +27,9 @@ var pad: PadInput
 var team_pick: int = -1
 ## The person's camera: the stick is sent as a move on the field as they see it.
 var view: Basis = Basis.IDENTITY
+## Says the match is loaded as soon as the server says start. Off when there
+## is a match to load here first: loaded() then says it.
+var auto_ready: bool = true
 ## What is said to the server about this build. Only the tests change it.
 var version: int = NetProtocol.VERSION
 
@@ -35,6 +43,7 @@ var _said_hello: bool = false
 var _over: bool = false
 ## The last few ticks of buttons, newest first.
 var _sent: Array[PackedFloat32Array] = []
+var _joiner: NetProtocol.StateJoiner = NetProtocol.StateJoiner.new()
 
 
 func _ready() -> void:
@@ -57,6 +66,19 @@ func join(address: String, port: int = NetProtocol.DEFAULT_PORT) -> bool:
 	_said_hello = false
 	_over = false
 	return true
+
+
+## The match is loaded on this machine: the server may begin it.
+func loaded() -> void:
+	if _socket != null:
+		_socket.send(NetSocket.SERVER, NetProtocol.Kind.READY, [])
+
+
+## Once the match has been running a little: a server that says nothing for a
+## few seconds is gone.
+func be_strict() -> void:
+	if _socket != null:
+		_socket.set_patience(NetSocket.PLAYING_PATIENCE)
 
 
 ## Off the line. In a match that is giving it up.
@@ -121,6 +143,16 @@ func _on_message(from: int, kind: int, body: Variant) -> void:
 				tick = -1
 				_sent.clear()
 				started.emit(start[0], start[1])
+				if auto_ready:
+					loaded()
+		NetProtocol.Kind.STATE:
+			var whole: Array = _joiner.add(body) if playing else []
+			if not whole.is_empty():
+				state.emit(whole[0], whole[1])
+		NetProtocol.Kind.EVENTS:
+			var parts: Array = body if typeof(body) == TYPE_ARRAY else []
+			if playing and parts.size() == 2 and typeof(parts[0]) == TYPE_INT and typeof(parts[1]) == TYPE_ARRAY:
+				events.emit(parts[0], parts[1])
 		NetProtocol.Kind.END:
 			if typeof(body) == TYPE_DICTIONARY:
 				playing = false

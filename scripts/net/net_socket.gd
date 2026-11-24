@@ -15,6 +15,15 @@ const SERVER: int = 1
 const MAX_BYTES: int = 16384
 
 var _peer: ENetMultiplayerPeer
+## Seconds of silence after which the other end counts as gone.
+var _patience: float = LOADING_PATIENCE
+
+## While a match is being loaded a machine says nothing for seconds on end; in
+## a match, silence that long means it is gone.
+const LOADING_PATIENCE: float = 45.0
+const PLAYING_PATIENCE: float = 6.0
+## Ticks of a match that pass before the patience is cut down to that.
+const SETTLE_TICKS: int = 180
 
 
 ## Listens on `port` for up to `seats` machines. Null when the port cannot be had.
@@ -36,7 +45,9 @@ static func join(address: String, port: int) -> NetSocket:
 
 func _init(peer: ENetMultiplayerPeer) -> void:
 	_peer = peer
-	_peer.peer_connected.connect(func(id: int) -> void: peer_joined.emit(id))
+	_peer.peer_connected.connect(func(id: int) -> void:
+		_be_patient(id)
+		peer_joined.emit(id))
 	_peer.peer_disconnected.connect(func(id: int) -> void: peer_left.emit(id))
 
 
@@ -66,6 +77,26 @@ func send(to: int, kind: int, body: Variant, reliable: bool = true) -> void:
 	_peer.set_target_peer(to)
 	_peer.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE if reliable else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE
 	_peer.put_packet(var_to_bytes([kind, body]))
+
+
+## How long the other ends may be silent before they count as gone, from now on.
+func set_patience(seconds: float) -> void:
+	_patience = seconds
+	if _peer == null:
+		return
+	for line: ENetPacketPeer in _peer.host.get_peers():
+		if line.get_state() == ENetPacketPeer.STATE_CONNECTED:
+			line.set_timeout(0, roundi(seconds * 1000.0), roundi(seconds * 2000.0))
+
+
+func _be_patient(id: int) -> void:
+	var line: ENetPacketPeer = _peer.get_peer(id)
+	if line != null:
+		line.set_timeout(0, roundi(_patience * 1000.0), roundi(_patience * 2000.0))
+		# ENet throws away messages that may be lost when the line has been slow
+		# (after a machine was busy loading, for one), and is slow to stop doing
+		# so. Every state and every tick of buttons is wanted: never throttle.
+		line.throttle_configure(1000, ENetPacketPeer.PACKET_THROTTLE_SCALE, 0)
 
 
 ## The server takes `id` off the line, once what was sent to it has gone out.

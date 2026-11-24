@@ -226,7 +226,7 @@ func setup(p_game: Game) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if game != null:
+	if game != null and Game.net_mode != Game.NetMode.CLIENT:
 		state_machine.physics_update(delta)
 
 

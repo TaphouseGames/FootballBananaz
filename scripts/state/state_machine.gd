@@ -11,6 +11,9 @@ const FADE_INTO: Array[StringName] = [&"PlaySelect", &"PreSnap", &"Kickoff"]
 const FADE_WAIT: float = 1.0
 
 var current: GameState
+## On a person's machine in an online match no state runs here: the name of the
+## one the server is in (see NetState).
+var shown: StringName = &""
 var states: Dictionary[StringName, GameState] = {}
 ## The state waiting for the screen to go black, or empty, and how long it has.
 var _pending: StringName = &""
@@ -28,7 +31,7 @@ func setup(pc: PlayController) -> void:
 
 
 func current_name() -> StringName:
-	return StringName(current.name) if current != null else &""
+	return StringName(current.name) if current != null else shown
 
 
 ## Into a FADE_INTO state the switch waits for the screen to go black.

@@ -946,6 +946,8 @@ func _track_momentum(delta: float) -> void:
 ## A hit along `world_dir` that the body has to absorb: the torso is shoved and
 ## the head and limbs lag behind, then swing back.
 func jolt(world_dir: Vector3, strength: float) -> void:
+	if NetEvents.recording:
+		NetEvents.note(player, NetEvents.Part.ANIMATOR, &"jolt", [world_dir, strength])
 	var local: Vector3 = skeleton.global_basis.inverse() * world_dir
 	local.y = 0.0
 	if local.length_squared() < 0.000001:
@@ -1424,6 +1426,8 @@ func _qb_cocked() -> void:
 
 ## His feet have just come set: plays the stamp down into the stance.
 func plant() -> void:
+	if NetEvents.recording:
+		NetEvents.note(player, NetEvents.Part.ANIMATOR, &"plant", [])
 	_plant_timer = PLANT_TIME
 
 
@@ -1514,6 +1518,8 @@ func _flair_throw() -> void:
 ## The quarterback sends a receiver in motion: a leg kick toward `side` (+1 his
 ## right, -1 his left), far bigger than the heel tap it is on a real field.
 func motion_kick(side: float) -> void:
+	if NetEvents.recording:
+		NetEvents.note(player, NetEvents.Part.ANIMATOR, &"motion_kick", [side])
 	_kick_timer = MOTION_KICK_TIME
 	_kick_side = 1.0 if side >= 0.0 else -1.0
 
@@ -1549,6 +1555,8 @@ func _motion_kick() -> void:
 ## The quarterback changes the play at the line (`side` 0) or gives a receiver
 ## on his right (+1) or his left (-1) a hot route: he makes sure nobody misses it.
 func audible_call(side: float) -> void:
+	if NetEvents.recording:
+		NetEvents.note(player, NetEvents.Part.ANIMATOR, &"audible_call", [side])
 	_call_timer = AUDIBLE_CALL_TIME
 	_call_side = signf(side)
 
@@ -1597,6 +1605,8 @@ func _audible_call() -> void:
 ## A receiver sells a cut in his route: `side` is the way he is about to go
 ## (+1 his right, -1 his left).
 func route_juke(side: float) -> void:
+	if NetEvents.recording:
+		NetEvents.note(player, NetEvents.Part.ANIMATOR, &"route_juke", [side])
 	_juke_timer = ROUTE_JUKE_TIME
 	_juke_side = 1.0 if side >= 0.0 else -1.0
 
@@ -1627,6 +1637,8 @@ func _route_juke() -> void:
 ## A coverage defender has bitten on a receiver's cut: he lunges to `side` (+1
 ## his right, -1 his left), the way his man is not going.
 func faked_out(side: float) -> void:
+	if NetEvents.recording:
+		NetEvents.note(player, NetEvents.Part.ANIMATOR, &"faked_out", [side])
 	_faked_timer = FAKED_OUT_TIME
 	_faked_side = 1.0 if side >= 0.0 else -1.0
 
@@ -1656,11 +1668,15 @@ func _faked_out() -> void:
 
 ## Plays the arm coming down as the scorer spikes the ball.
 func spike() -> void:
+	if NetEvents.recording:
+		NetEvents.note(player, NetEvents.Part.ANIMATOR, &"spike", [])
 	_spike_timer = SPIKE_TIME
 
 
 ## Plays the throwing motion for a toss to the running back.
 func toss() -> void:
+	if NetEvents.recording:
+		NetEvents.note(player, NetEvents.Part.ANIMATOR, &"toss", [])
 	_throw_timer = TOSS_TIME
 	_toss = true
 

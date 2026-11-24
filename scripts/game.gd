@@ -7,8 +7,10 @@ const DOWN_NAMES: Array[String] = ["1ST", "2ND", "3RD", "4TH"]
 
 ## OFFLINE: the match is played on this machine, as ever. SERVER: this is the
 ## server of an online match, and both teams are played by people whose buttons
-## come in over the network (see NetServer).
-enum NetMode { OFFLINE, SERVER }
+## come in over the network (see NetServer). CLIENT: this is a person's machine
+## in an online match; nothing is decided here, the match is drawn as the
+## server tells it (see NetView).
+enum NetMode { OFFLINE, SERVER, CLIENT }
 
 ## Normal Engine.time_scale. Hit-stop returns to this (tests raise it).
 static var base_time_scale: float = 1.0
@@ -158,7 +160,8 @@ func _ready() -> void:
 	opening_kickoff = true
 	var opening: StringName = &"Intro" if show_intro and tuning.intro_enabled and not autoplay else &"Kickoff"
 	show_intro = false
-	play_controller.state_machine.transition(opening)
+	if net_mode != NetMode.CLIENT:
+		play_controller.state_machine.transition(opening)
 	camera_rig.snap_to(_camera_target(), _camera_facing())
 	# Up out of black, if the way in left it there.
 	ScreenFade.of(get_tree()).reveal()
@@ -233,7 +236,8 @@ func snap_camera() -> void:
 func impact(shake: float, stop_scale: float) -> void:
 	camera_rig.add_trauma(shake)
 	var duration: float = tuning.hit_stop_time * stop_scale
-	if duration <= 0.0:
+	# The server's clock is both people's: it does not stop for a hit.
+	if duration <= 0.0 or net_mode == NetMode.SERVER:
 		return
 	_hit_stop_left = maxf(_hit_stop_left, duration)
 	Engine.time_scale = base_time_scale * tuning.hit_stop_time_scale

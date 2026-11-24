@@ -84,7 +84,9 @@ func _on_tick() -> void:
 			_next()
 		1:
 			_push_held()
-			if _started == 2:
+			# Told to start, and the server has made the match (it does once both
+			# have said theirs is loaded).
+			if _started == 2 and _server.game != null:
 				var seats: Array = Array(_welcomed)
 				seats.sort()
 				if seats != [0, 1]:

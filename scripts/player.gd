@@ -319,15 +319,33 @@ func reset_for_play(spot: Vector3, face_dir: Vector3) -> void:
 	catch_timer = 0.0
 	ball_grab_cooldown = 0.0
 	drag_partner = null
+	net_reset()
+	if NetEvents.recording:
+		NetEvents.note(self, NetEvents.Part.PLAYER, &"net_reset", [])
+
+
+## Stands him up as he is now, at once: no easing from the pose and the place he
+## had. What reset_for_play does to the picture, and all an online match's
+## picture needs of it (see NetEvents).
+func net_reset() -> void:
 	set_pass_icon("", Color.WHITE)
 	set_dance_prompt(false)
 	_update_visual(0.0, true)
 	reset_physics_interpolation()
 
 
+## Starts a fall (PlayerFall's `method`), and notes it for an online match's picture.
+func _fall(method: StringName, args: Array) -> void:
+	fall.callv(method, args)
+	if NetEvents.recording:
+		NetEvents.note(self, NetEvents.Part.FALL, method, args)
+
+
 ## Tints the whole model `color` for a moment, fading out. `strength` is how
 ## much of the tint shows at the start, 0..1.
 func flash(color: Color, strength: float) -> void:
+	if NetEvents.recording:
+		NetEvents.note(self, NetEvents.Part.PLAYER, &"flash", [color, strength])
 	if _flash_material == null:
 		_flash_material = StandardMaterial3D.new()
 		_flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -922,7 +940,7 @@ func knock_down(impulse: Vector3, duration: float, kind: PlayerFall.Kind = Playe
 	# Running into the hit makes it harder.
 	var closing: float = maxf(-before.dot(hit_dir), 0.0)
 	var power: float = clampf((strength + closing) / 16.0, 0.15, 1.0)
-	fall.start(_to_local(hit_dir), power, kind, was_airborne, _to_local(before), duration)
+	_fall(&"start", [_to_local(hit_dir), power, kind, was_airborne, _to_local(before), duration])
 	if animator != null:
 		animator.jolt(hit_dir, 0.6 + power)
 
@@ -968,7 +986,7 @@ func integrate(delta: float) -> void:
 #				else:
 				state_timer = tuning.dive_recover_time
 				dive_get_up_timer = tuning.dive_get_up_time
-				fall.start_dive_landing(state_timer)
+				_fall(&"start_dive_landing", [state_timer])
 		State.SPINNING:
 			state_timer -= delta
 			if state_timer <= 0.0:
@@ -1188,7 +1206,7 @@ func splat(normal: Vector3, speed: float) -> void:
 	turbo_active = false
 	velocity = Vector3.ZERO
 	wall_hit = speed
-	fall.start_splat(_to_local(normal), clampf(speed / 12.0, 0.3, 1.0), tuning.wall_splat_stick_time, state_timer)
+	_fall(&"start_splat", [_to_local(normal), clampf(speed / 12.0, 0.3, 1.0), tuning.wall_splat_stick_time, state_timer])
 	# Right up against it, as soon as he is turned flat to it.
 	position += normal * (Stadium.wall_distance(tuning, position.x, position.z) + PlayerFall.SPLAT_GAP)
 	keep_on_field()
