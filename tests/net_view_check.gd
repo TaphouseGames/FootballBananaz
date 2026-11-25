@@ -168,6 +168,7 @@ func _judge(seconds: float) -> void:
 	if view.predicted > 0:
 		print("own player: run ahead of the server on %d ticks, %.2f yd ahead on average; moved %.3f yd by the server's word on average, %.2f at the most" % [view.predicted, view.lead_sum / view.predicted, view.correction_sum / view.predicted, view.correction_max])
 		print("own player: %d moves started at the press, %d landings; %d things from the server not done twice" % [view.moves_started, view.landings, view.swallowed])
+		print("own player: %d passes let go at the press, %d touchdowns called here (%d of them not the server's); play-select: %d shown at the press; everybody ran on with no new state on %d ticks" % [view.throws_started, view.scores_called, view.scores_wrong, view.cards.shown_ahead, view.coasted])
 		print("own player: the server %.1f ticks behind the buttons on average, a different number from the tick before on %d ticks" % [float(view.behind_sum) / view.predicted, view.behind_changes])
 	if _predict and view.predicted < 100:
 		_failures.append("the person's own player was run ahead of the server on %d ticks only" % view.predicted)

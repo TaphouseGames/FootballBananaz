@@ -198,6 +198,10 @@ var _pushes: PackedVector3Array = PackedVector3Array()
 var _thinking: bool = false
 ## pass_open() as the server had it, in an online match's picture.
 var net_pass_open: bool = false
+## Passes the person let go of in an online match's picture, and how hard the
+## last one.
+var net_throws: int = 0
+var net_throw_power: float = 0.5
 var _queued_actions: Array[Callable] = []
 ## Motion before the snap: who may be sent, and what the defense does about it.
 var motion: PreSnapMotion
@@ -2169,6 +2173,10 @@ func placement_shift(target: Player, point: Vector3, speed: float, placement: Pl
 ## where he aimed. Either way he goes down as it leaves, and it is no sack.
 func throw_ball(target: Player, power: float = 0.5, placement: Placement = Placement.NORMAL, hit: bool = false) -> void:
 	if _picture():
+		# The ball is the server's. That he let go is shown at once (NetView).
+		if target != null and can_pass():
+			net_throws += 1
+			net_throw_power = power
 		return
 	if _thinking:
 		_queued_actions.append(throw_ball.bind(target, power, placement, hit))

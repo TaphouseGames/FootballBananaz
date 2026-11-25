@@ -24,6 +24,16 @@ extends Node
 ## it says. Only while his buttons are his alone (Player.net_free): held still
 ## for a handoff, wrapped up, knocked down or run by the AI, he is where the
 ## server says. Where the two disagree he is eased across, not jumped.
+##
+## Three more things are shown ahead of the server's word. A pass: his arm, its
+## sound and the shake of the gamepad go when the person lets go, the ball when
+## the server says. A touchdown with nobody near him: whistle, banner and shake
+## as he crosses the line (the points are the server's, and with no word of it
+## from there the banner comes down again). And the person's own play-select
+## cards (NetCards).
+##
+## On a tick with no new state everybody else runs on as he was going, so a
+## state that is late does not show as a stop and a jump.
 
 ## States that wait before the first is shown.
 const START_WITH: int = 2
@@ -59,6 +69,17 @@ const MOVE_SOUNDS: Dictionary[Player.State, StringName] = {
 ## waited for, and ticks before another landing can be one of its own.
 const SWALLOW_TICKS: int = 90
 const LANDING_GAP: int = 20
+## Ticks in a row everybody runs on with no new state.
+const COAST_TICKS: int = 6
+## Ticks before another pass let go here can be one of its own.
+const THROW_GAP: int = 30
+## No opponent on his feet within this of the person's own carrier, where the
+## server has him and where he is run to: his touchdown is called here.
+const SCORE_CLEAR: float = 5.0
+## States the server has to call a touchdown called here, and states before
+## another can be.
+const SCORE_WAIT: int = 45
+const SCORE_GAP: int = 240
 
 var game: Game
 var seat: int = -1
@@ -127,6 +148,21 @@ var _swallows: Array[Array] = []
 var moves_started: int = 0
 var landings: int = 0
 var swallowed: int = 0
+## Passes let go here, touchdowns called here (and those the server did not
+## call), and ticks everybody ran on with no new state.
+var throws_started: int = 0
+var scores_called: int = 0
+var scores_wrong: int = 0
+var coasted: int = 0
+var cards: NetCards = NetCards.new()
+var _thrown_through: int = -1000
+## What HumanController.net_pass_state() gave after each tick run here.
+var _pass_after: Dictionary[int, Array] = {}
+## The state by which the server must have called the touchdown called here
+## (-1: none waited for), and the state before which no other is called.
+var _score_wait: int = -1
+var _score_gap: int = -1
+var _coasting: int = 0
 var _drawn_at: Vector3 = Vector3.INF
 var _ran_to: Vector3 = Vector3.INF
 var _ran_velocity: Vector3 = Vector3.ZERO
@@ -136,6 +172,7 @@ func setup(p_game: Game, p_seat: int, p_client: NetClient = null) -> void:
 	game = p_game
 	seat = p_seat
 	client = p_client
+	cards.view = self
 	# Before any node's own tick, and when the tree is paused too: the server
 	# does not wait for a menu here.
 	get_tree().physics_frame.connect(_before_tick)
@@ -156,11 +193,14 @@ func add_events(tick: int, notes: Array) -> void:
 func _before_tick() -> void:
 	if game == null or game.play_controller == null or game.play_controller.players.is_empty():
 		return
+	cards.tick(game, client)
 	if not _show_next():
 		if shown > 0:
 			held += 1
+			_coast()
 		_spare = 0
 	else:
+		_coasting = 0
 		_spare = mini(_spare, _waiting.size())
 		_spare_ticks += 1
 		var one_over: bool = false
@@ -174,6 +214,36 @@ func _before_tick() -> void:
 	if shown > 0:
 		_run_own()
 		_draw()
+	if _score_wait >= 0 and shown > _score_wait:
+		# The server never called it: he did not get in after all.
+		_score_wait = -1
+		scores_wrong += 1
+		game.hud.hide_banner()
+
+
+## No new state this tick: everybody runs on as he was going, and the ball
+## flies on. The next state puts them where they are.
+func _coast() -> void:
+	_coasting += 1
+	if _coasting > COAST_TICKS:
+		return
+	coasted += 1
+	var delta: float = 1.0 / Engine.physics_ticks_per_second
+	for player: Player in game.play_controller.players:
+		if not player.frozen:
+			player.position += Vector3(player.velocity.x, 0.0, player.velocity.z) * delta
+	var ball: Ball = game.ball
+	if ball.state == Ball.State.FLIGHT:
+		ball.flight_elapsed += delta
+		ball.position = ball._flight_position(ball.flight_elapsed)
+	elif ball.state == Ball.State.HELD and ball.carrier != null:
+		ball._follow_carrier()
+
+
+## `method` on `part` is done here now, ahead of the server: its word of it,
+## told apart by `key`, is not done again.
+func swallow(part: NetEvents.Part, method: StringName, key: Variant) -> void:
+	_swallows.append([shown + SWALLOW_TICKS, part, method, key])
 
 
 ## Puts the next state on the match here, and does what happened once up to
@@ -265,7 +335,13 @@ func _run_own() -> void:
 		if client.moves.has(ack):
 			held = client.moves[ack][1]
 		_pad.push(held)
-		human.net_rewind()
+		human.net_rewind(_pass_after.get(ack, []))
+		for sent: int in _pass_after.keys():
+			if sent < ack:
+				_pass_after.erase(sent)
+		var pc: PlayController = game.play_controller
+		# The play's clock runs on with him: how long a pass button is held goes by it.
+		var live_time: float = pc.live_time
 		var ticks: Array = client.moves.keys()
 		ticks.sort()
 		var behind: int = 0
@@ -281,18 +357,28 @@ func _run_own() -> void:
 				_pad.world_move = move[0]
 				_pad.view_right = move[2]
 				var was: Player.State = _own.state
+				var throws: int = pc.net_throws
+				if not dead:
+					pc.live_time += delta
 				human.net_predict(_pad, dead)
+				_pass_after[sent] = human.net_pass_state()
+				if pc.net_throws != throws and sent > _thrown_through + THROW_GAP:
+					_thrown_through = sent
+					_start_throw(pc.net_throw_power)
 				if _own.state != was and sent > _started_through:
 					_started_through = sent
 					_start_move()
 				was = _own.state
 				_own.net_predict(delta)
+				_keep_off_bodies()
 				if was == Player.State.DIVING and _own.state == Player.State.DOWN and sent > _landed_through + LANDING_GAP:
 					_landed_through = sent
 					_land()
 				behind += 1
+		pc.live_time = live_time
 		for field: StringName in SERVERS_OWN:
 			_own.set(field, _own_base[field])
+		_call_score(server_place)
 		predicted += 1
 		lead_sum += _own.position.distance_to(server_place)
 		behind_sum += behind
@@ -326,10 +412,77 @@ func _start_move() -> void:
 	if sound == &"":
 		return
 	game.audio.action(_own, sound)
-	_swallows.append([shown + SWALLOW_TICKS, NetEvents.Part.AUDIO, &"net_start", sound])
+	swallow(NetEvents.Part.AUDIO, &"net_start", sound)
 	if _own.state == Player.State.SHOVING:
 		game.rumble.play_mine(&"shove", _own)
-		_swallows.append([shown + SWALLOW_TICKS, NetEvents.Part.RUMBLE, &"play_mine", &"shove"])
+		swallow(NetEvents.Part.RUMBLE, &"play_mine", &"shove")
+
+
+## The person has let go of a pass: the arm, the sound and the gamepad now, as
+## PlayController.throw_ball does them, and not again when the server tells of
+## it. The ball leaves when the server says.
+func _start_throw(power: float) -> void:
+	throws_started += 1
+	if _own.animator != null:
+		_own.animator.net_throw()
+	game.audio.play(&"throw", 0.45, lerpf(0.9, 1.15, power))
+	swallow(NetEvents.Part.AUDIO, &"net_start", &"throw")
+	game.rumble.play_mine(&"throw", _own, null, lerpf(0.4, 1.0, power))
+	swallow(NetEvents.Part.RUMBLE, &"play_mine", &"throw")
+
+
+## The server moves two bodies that overlap apart, half the way each a tick.
+## He is run through everybody else as the last state has them, the same way.
+func _keep_off_bodies() -> void:
+	var pc: PlayController = game.play_controller
+	for other: Player in pc.players:
+		if other == _own or not other.visible:
+			continue
+		var least: float = pc._body_distance(_own, other)
+		if least <= 0.0:
+			continue
+		var offset: Vector3 = _own.position - other.position
+		offset.y = 0.0
+		var dist: float = offset.length()
+		if dist >= least:
+			continue
+		var normal: Vector3 = offset / dist if dist > 0.001 else Vector3(0.0, 0.0, -1.0)
+		_own.position += normal * (least - dist) * 0.5
+
+
+## The person's own carrier is over the goal line here and nobody is near
+## enough to have stopped him on the way: the touchdown is called now, as
+## ScoredState does on the server, and not again when it tells of it. The
+## points and what follows are the server's.
+func _call_score(server_place: Vector3) -> void:
+	var pc: PlayController = game.play_controller
+	var ball: Ball = game.ball
+	if shown < _score_gap or pc.ball_dead or game.conversion or pc.state_machine.shown != &"Live":
+		return
+	if ball.state != Ball.State.HELD or ball.carrier != _own or not _own.has_ball:
+		return
+	var dir: int = _own.team.attack_dir
+	var x: float = _own.position.x
+	if not ((dir > 0 and x >= game.tuning.field_length) or (dir < 0 and x <= 0.0)):
+		return
+	for opponent: Player in _own.team.opponent.players:
+		if opponent.is_down() or not opponent.visible:
+			continue
+		var at: Vector3 = opponent.position
+		if Vector2(at.x - x, at.z - _own.position.z).length() < SCORE_CLEAR \
+				or Vector2(at.x - server_place.x, at.z - server_place.z).length() < SCORE_CLEAR:
+			return
+	scores_called += 1
+	_score_gap = shown + SCORE_GAP
+	_score_wait = shown + SCORE_WAIT
+	game.audio.play(&"whistle", 0.8)
+	swallow(NetEvents.Part.AUDIO, &"net_start", &"whistle")
+	game.impact(game.tuning.tackle_shake, 1.0)
+	swallow(NetEvents.Part.GAME, &"impact", null)
+	game.rumble.play_team(&"touchdown", _own.team)
+	swallow(NetEvents.Part.RUMBLE, &"play_team", &"touchdown")
+	game.hud.show_banner("TOUCHDOWN!", _own.team.team_name)
+	swallow(NetEvents.Part.HUD, &"show_banner", "TOUCHDOWN!")
 
 
 ## His dive has come down ahead of the server: he tumbles now, and not again
@@ -338,7 +491,7 @@ func _land() -> void:
 	landings += 1
 	_own_landing = true
 	_own.fall.start_dive_landing(_own.state_timer)
-	_swallows.append([shown + SWALLOW_TICKS, NetEvents.Part.FALL, &"start_dive_landing", null])
+	swallow(NetEvents.Part.FALL, &"start_dive_landing", null)
 
 
 ## Whether `note` tells of something that was done here already (and is not to
@@ -352,6 +505,8 @@ func _swallowed(note: Variant) -> bool:
 	var method: StringName = StringName(str(note[2]))
 	var args: Array = note[3]
 	var mine: bool = _own != null and who == game.play_controller.players.find(_own)
+	if part == NetEvents.Part.HUD and cards.heard(game, method, args):
+		return true
 	# Knocked down by somebody: this is not the landing of his own dive.
 	if mine and part == NetEvents.Part.FALL and method != &"start_dive_landing":
 		_own_landing = false
@@ -372,6 +527,11 @@ func _swallowed(note: Variant) -> bool:
 			NetEvents.Part.RUMBLE:
 				if args.is_empty() or StringName(str(args[0])) != wait[3]:
 					continue
+			NetEvents.Part.HUD:
+				if args.is_empty() or str(args[0]) != str(wait[3]):
+					continue
+				# The server has called the touchdown called here.
+				_score_wait = -1
 		_swallows.remove_at(at)
 		return true
 	return false

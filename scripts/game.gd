@@ -241,8 +241,10 @@ func impact(shake: float, stop_scale: float) -> void:
 		NetEvents.tell(NetEvents.Part.GAME, &"impact", [shake, stop_scale])
 	camera_rig.add_trauma(shake)
 	var duration: float = tuning.hit_stop_time * stop_scale
-	# The server's clock is both people's: it does not stop for a hit.
-	if duration <= 0.0 or net_mode == NetMode.SERVER:
+	# The server's clock is both people's: it does not stop for a hit. Nor does
+	# a person's machine online: its ticks are what sends their buttons and shows
+	# the server's states, and a stop left both behind for seconds afterwards.
+	if duration <= 0.0 or net_mode != NetMode.OFFLINE:
 		return
 	_hit_stop_left = maxf(_hit_stop_left, duration)
 	Engine.time_scale = base_time_scale * tuning.hit_stop_time_scale

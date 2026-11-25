@@ -200,6 +200,9 @@ var _juke_side: float = 1.0
 var _faked_timer: float = 0.0
 var _faked_side: float = 1.0
 var _was_thrower: bool = false
+## Seconds left in which the ball leaving his hand is the throw his arm has
+## made already (net_throw).
+var _threw_ahead: float = 0.0
 ## The throwing motion being played is a toss to the back, not a pass.
 var _toss: bool = false
 var _ball_hand: int = B.HAND_L
@@ -464,9 +467,18 @@ func ball_axis() -> Vector3:
 	return dir.slerp(fore.normalized(), _tuck_now)
 
 
+## In an online match's picture the person has let go of a pass: the arm goes
+## now, and the ball when the server says.
+func net_throw() -> void:
+	_throw_timer = THROW_TIME
+	_toss = false
+	_threw_ahead = 1.0
+
+
 func update(delta: float, instant: bool) -> void:
 	_clock += delta
 	_throw_timer = maxf(_throw_timer - delta, 0.0)
+	_threw_ahead = maxf(_threw_ahead - delta, 0.0)
 	_spike_timer = maxf(_spike_timer - delta, 0.0)
 	_plant_timer = maxf(_plant_timer - delta, 0.0)
 	_kick_timer = maxf(_kick_timer - delta, 0.0)
@@ -1090,8 +1102,12 @@ func _build_pose(delta: float) -> void:
 	# The throw is noticed here, on the tick the ball leaves the hand.
 	var is_thrower: bool = ball.state == Ball.State.FLIGHT and ball.thrower == player
 	if is_thrower and not _was_thrower:
-		_throw_timer = THROW_TIME
-		_toss = false
+		if _threw_ahead > 0.0:
+			# His arm went when the person let go (net_throw): not again.
+			_threw_ahead = 0.0
+		else:
+			_throw_timer = THROW_TIME
+			_toss = false
 	_was_thrower = is_thrower
 
 	if pc.ball_dead and pc.result == PlayController.Result.TOUCHDOWN and pc.final_team != null:

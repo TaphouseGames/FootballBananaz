@@ -79,9 +79,21 @@ func net_predict(buttons: PadInput, dead: bool) -> void:
 	pad = own
 
 
-func net_rewind() -> void:
+## `pass_state`: what net_pass_state() gave after the last tick the server has
+## played, or nothing.
+func net_rewind(pass_state: Array = []) -> void:
 	_pass_slot = -1
 	_fake_armed = false
+	if pass_state.size() == 4:
+		_pass_slot = pass_state[0]
+		_pass_press_time = pass_state[1]
+		_fake_armed = pass_state[2]
+		_fake_press_time = pass_state[3]
+
+
+## The pass button held and the fake armed, as they stand now.
+func net_pass_state() -> Array:
+	return [_pass_slot, _pass_press_time, _fake_armed, _fake_press_time]
 
 
 func set_controlled(player: Player) -> void:
