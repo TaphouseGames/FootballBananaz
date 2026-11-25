@@ -7,10 +7,11 @@ extends Node
 ##
 ## Until there is a way in from the main menu, run it as scenes/online_dev.tscn:
 ##   godot --path . res://scenes/online_dev.tscn -- join=127.0.0.1 [port=24642] [team=<n>] [bot]
-##         [lag=<ms>] [nopredict]
+##         [lag=<ms>] [jitter=<ms>] [loss=<percent>] [nopredict]
 ## `bot` plays with random buttons: someone to play against on one machine.
 ## `lag` makes the line that much slower each way (lag=50 is 100 ms more there
-## and back); `nopredict` draws the person's own player where the server has
+## and back), `jitter` adds up to that much more to each message, `loss` loses
+## that many in a hundred; `nopredict` draws the person's own player where the server has
 ## him, to compare.
 
 ## The match is over, or never came about: NetProtocol's END body, or
@@ -29,6 +30,8 @@ var bot: bool = false
 ## For trying things out: milliseconds added to the line each way, and the
 ## person's own player drawn where the server has him (no running ahead).
 var lag_ms: int = 0
+var jitter_ms: int = 0
+var loss: float = 0.0
 var predict: bool = true
 ## Back to the main menu when it is over (quits, for a bot). Off in the tests.
 var leave_when_over: bool = true
@@ -60,6 +63,10 @@ func _ready() -> void:
 			bot = true
 		elif arg.begins_with("lag="):
 			lag_ms = int(arg.trim_prefix("lag="))
+		elif arg.begins_with("jitter="):
+			jitter_ms = int(arg.trim_prefix("jitter="))
+		elif arg.begins_with("loss="):
+			loss = clampf(float(arg.trim_prefix("loss=")) / 100.0, 0.0, 0.9)
 		elif arg == "nopredict":
 			predict = false
 	# Loaded before the server is looked for: the other person does not wait for it.
@@ -67,6 +74,8 @@ func _ready() -> void:
 	client = NetClient.new()
 	client.team_pick = team_pick
 	client.lag_ms = lag_ms
+	client.jitter_ms = jitter_ms
+	client.loss = loss
 	client.auto_ready = false
 	if bot:
 		_bot_pad = PadInput.new()

@@ -36,6 +36,8 @@ var auto_ready: bool = true
 var muted: bool = false
 ## For trying things out: milliseconds added to the line each way (NetSocket.lag_ms).
 var lag_ms: int = 0
+var jitter_ms: int = 0
+var loss: float = 0.0
 ## What is said to the server about this build. Only the tests change it.
 var version: int = NetProtocol.VERSION
 
@@ -55,6 +57,11 @@ var _sent: Array[PackedFloat32Array] = []
 ## of the server's word.
 var moves: Dictionary[int, Array] = {}
 var _joiner: NetProtocol.StateJoiner = NetProtocol.StateJoiner.new()
+## The newest state that came in whole (-1: none yet), which the server is told
+## with the buttons; and the tables of the last states, by tick: the server
+## sends a state as what differs from one of them.
+var have: int = -1
+var _bases: Dictionary[int, Array] = {}
 
 
 func _ready() -> void:
@@ -75,6 +82,8 @@ func join(address: String, port: int = NetProtocol.DEFAULT_PORT) -> bool:
 		return false
 	_socket.message.connect(_on_message)
 	_socket.lag_ms = lag_ms
+	_socket.jitter_ms = jitter_ms
+	_socket.loss = loss
 	_said_hello = false
 	_over = false
 	return true
@@ -93,11 +102,48 @@ func be_strict() -> void:
 		_socket.set_patience(NetSocket.PLAYING_PATIENCE)
 
 
+## What NetState.pack() made on the server for `tick`, from what was sent of
+## it: the tables whole, or what differs from a state this machine has. Empty
+## when it cannot be that.
+func _rebuild(of_tick: int, sent: Variant) -> Array:
+	if typeof(sent) != TYPE_ARRAY or (sent as Array).size() != 3:
+		return []
+	if typeof(sent[0]) != TYPE_ARRAY or (sent[0] as Array).size() != 4 or typeof(sent[2]) != TYPE_INT:
+		return []
+	var tables: Array[PackedInt32Array] = []
+	for table: Variant in sent[0] as Array:
+		if typeof(table) != TYPE_PACKED_INT32_ARRAY or (table as PackedInt32Array).size() * 4 > NetProtocol.MAX_STATE_BYTES:
+			return []
+		tables.append(table)
+	var base: int = sent[2]
+	if base >= 0:
+		if not _bases.has(base):
+			return []
+		var of_base: Array[PackedInt32Array] = []
+		of_base.assign(_bases[base])
+		tables = NetProtocol.cross(tables, of_base)
+	_bases[of_tick] = tables
+	have = maxi(have, of_tick)
+	for old: int in _bases.keys():
+		if old < of_tick - 2 * NetProtocol.BASE_TICKS:
+			_bases.erase(old)
+	var rebuilt: Array = []
+	for table: PackedInt32Array in tables:
+		rebuilt.append(NetProtocol.table_floats(table))
+	rebuilt.append(sent[1])
+	return rebuilt
+
+
 ## Asks the server to hold the match (the pause menu is open here), or says it
 ## need not any longer. It holds it for as long as this person has pause time.
 func want_pause(on: bool) -> void:
 	if _socket != null and playing:
 		_socket.send(NetSocket.SERVER, NetProtocol.Kind.PAUSE, [on])
+
+
+## Bytes on the wire so far: [sent, received].
+func traffic() -> PackedInt64Array:
+	return PackedInt64Array([_socket.bytes_out, _socket.bytes_in]) if _socket != null else PackedInt64Array([0, 0])
 
 
 ## Off the line. In a match that is giving it up.
@@ -110,6 +156,8 @@ func leave() -> void:
 	tick = -1
 	_sent.clear()
 	moves.clear()
+	have = -1
+	_bases.clear()
 
 
 ## The server has played the buttons up to `ack`: the moves before that one are
@@ -155,7 +203,10 @@ func _send_buttons() -> void:
 	_sent.push_front(NetProtocol.pack_frame(buttons, Vector3(move.x, 0.0, move.z), view.x))
 	if _sent.size() > NetProtocol.INPUT_REPEATS:
 		_sent.pop_back()
-	_socket.send(NetSocket.SERVER, NetProtocol.Kind.INPUT, [tick, _sent], false)
+	# Mostly noughts, and three ticks that are nearly the same: squeezed it is a
+	# tenth of the size.
+	var plain: PackedByteArray = var_to_bytes([tick, _sent, have])
+	_socket.send(NetSocket.SERVER, NetProtocol.Kind.INPUT, [plain.size(), plain.compress(FileAccess.COMPRESSION_ZSTD)], false)
 
 
 func _on_message(from: int, kind: int, body: Variant) -> void:
@@ -183,7 +234,9 @@ func _on_message(from: int, kind: int, body: Variant) -> void:
 		NetProtocol.Kind.STATE:
 			var whole: Array = _joiner.add(body) if playing else []
 			if not whole.is_empty():
-				state.emit(whole[0], whole[1])
+				var rebuilt: Array = _rebuild(whole[0], whole[1])
+				if not rebuilt.is_empty():
+					state.emit(whole[0], rebuilt)
 		NetProtocol.Kind.EVENTS:
 			var parts: Array = body if typeof(body) == TYPE_ARRAY else []
 			if playing and parts.size() == 2 and typeof(parts[0]) == TYPE_INT and typeof(parts[1]) == TYPE_ARRAY:

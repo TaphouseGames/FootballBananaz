@@ -21,9 +21,21 @@ var _peer: ENetMultiplayerPeer
 ## and again on its way in, at this end. 50 here is a line with 100 ms more
 ## there and back.
 var lag_ms: int = 0
-## Messages held back by lag_ms: [when it may go on, ...what it is].
+## And a line that is uneven and loses things: up to this many milliseconds
+## more for each message, each way; and this share (0 to 1) of the messages
+## lost, each way. One that has to arrive is not lost but comes late by
+## RESEND_MS and the way there and back, as when it is sent again, and those
+## stay in order.
+var jitter_ms: int = 0
+var loss: float = 0.0
+## Messages held back by those: [when it may go on, ...what it is].
 var _held_in: Array[Array] = []
 var _held_out: Array[Array] = []
+var _sure_in: int = 0
+var _sure_out: int = 0
+## Bytes on the wire so far, with all that ENet adds: out and in.
+var bytes_out: int = 0
+var bytes_in: int = 0
 ## Seconds of silence after which the other end counts as gone.
 var _patience: float = LOADING_PATIENCE
 
@@ -36,6 +48,7 @@ const LOADING_PATIENCE: float = 45.0
 const PLAYING_PATIENCE: float = 10.0
 ## Ticks of a match that pass before the patience is cut down to that.
 const SETTLE_TICKS: int = 180
+const RESEND_MS: int = 100
 
 
 ## Listens on `port` for up to `seats` machines. Null when the port cannot be had.
@@ -69,6 +82,7 @@ func poll() -> void:
 	_peer.poll()
 	while _peer != null and _peer.get_available_packet_count() > 0:
 		var from: int = _peer.get_packet_peer()
+		var sure: bool = _peer.get_packet_mode() == MultiplayerPeer.TRANSFER_MODE_RELIABLE
 		var bytes: PackedByteArray = _peer.get_packet()
 		if bytes.size() > MAX_BYTES:
 			continue
@@ -78,23 +92,57 @@ func poll() -> void:
 			continue
 		var parts: Array = data
 		if parts.size() == 2 and typeof(parts[0]) == TYPE_INT:
-			if lag_ms > 0:
-				_held_in.append([Time.get_ticks_msec() + lag_ms, from, parts[0], parts[1]])
+			if _slowed():
+				var due: int = _due(sure, _sure_in)
+				if due >= 0:
+					if sure:
+						_sure_in = due
+					_held_in.append([due, from, parts[0], parts[1]])
 			else:
 				message.emit(from, parts[0], parts[1])
+	if _peer != null and _peer.host != null:
+		bytes_out += roundi(_peer.host.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA))
+		bytes_in += roundi(_peer.host.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA))
 	# This is looked at once a tick: what is due within half a tick goes now, so
 	# that the wait comes to lag_ms on average, not to lag_ms and half a tick.
 	var now: int = Time.get_ticks_msec() + roundi(500.0 / Engine.physics_ticks_per_second)
 	var sent: bool = false
-	while not _held_out.is_empty() and int(_held_out[0][0]) <= now:
-		var out: Array = _held_out.pop_front()
-		_put(out[1], out[2], out[3], out[4])
-		sent = true
+	var waiting: Array[Array] = []
+	for out: Array in _held_out:
+		if int(out[0]) <= now:
+			_put(out[1], out[2], out[3], out[4])
+			sent = true
+		else:
+			waiting.append(out)
+	_held_out = waiting
 	if sent:
 		flush()
-	while not _held_in.is_empty() and int(_held_in[0][0]) <= now:
-		var held: Array = _held_in.pop_front()
+	var due_in: Array[Array] = []
+	waiting = []
+	for held: Array in _held_in:
+		if int(held[0]) <= now:
+			due_in.append(held)
+		else:
+			waiting.append(held)
+	_held_in = waiting
+	for held: Array in due_in:
 		message.emit(held[1], held[2], held[3])
+
+
+## The line is made slower, uneven or lossy at this end.
+func _slowed() -> bool:
+	return lag_ms > 0 or jitter_ms > 0 or loss > 0.0
+
+
+## When a message taken now may go on, or -1 when it is lost. `sure`: it has
+## to arrive, and after the last such one, which is due at `after`.
+func _due(sure: bool, after: int) -> int:
+	var due: int = Time.get_ticks_msec() + lag_ms + (randi() % (jitter_ms + 1) if jitter_ms > 0 else 0)
+	if loss > 0.0 and randf() < loss:
+		if not sure:
+			return -1
+		due += RESEND_MS + 2 * lag_ms
+	return maxi(due, after) if sure else due
 
 
 ## Puts what has been sent on the wire now, not at the next poll().
@@ -106,8 +154,12 @@ func flush() -> void:
 ## `to` 0 is everyone. `reliable` messages arrive, and in order; the others may
 ## be lost, and are not waited for.
 func send(to: int, kind: int, body: Variant, reliable: bool = true) -> void:
-	if lag_ms > 0:
-		_held_out.append([Time.get_ticks_msec() + lag_ms, to, kind, body, reliable])
+	if _slowed():
+		var due: int = _due(reliable, _sure_out)
+		if due >= 0:
+			if reliable:
+				_sure_out = due
+			_held_out.append([due, to, kind, body, reliable])
 	else:
 		_put(to, kind, body, reliable)
 

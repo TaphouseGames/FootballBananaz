@@ -9,10 +9,16 @@ extends RefCounted
 ##   REJECT   to one person   [reason]
 ##   START    to everyone     [home's team pick, away's]
 ##   READY    to the server   []   the match is loaded on that machine
-##   INPUT    to the server   [newest tick, [that tick's buttons, the tick before's, ...]]
-##   STATE    to everyone     [tick, piece, pieces, size, bytes]   (may be lost)
-##            NetState.pack() squeezed and cut into pieces that each fit one
-##            packet: see cut_state() and StateJoiner
+##   INPUT    to the server   [size, bytes]: [newest tick, [that tick's buttons, the
+##            tick before's, ...], the newest state this machine has whole]
+##            squeezed   (may be lost)
+##   STATE    to one person   [tick, piece, pieces, size, bytes]   (may be lost)
+##            [the state's tables, the rest of it, base tick] squeezed and cut
+##            into pieces that each fit one packet: see cut_state() and
+##            StateJoiner. The tables are NetState.pack()'s numbers as bits; with
+##            a base tick (not -1) only what differs from the state of that tick,
+##            which that person's machine has said it has: see state_tables()
+##            and cross(). A state like that is half the size.
 ##   EVENTS   to one person   [tick, NetEvents' notes of that tick for them]
 ##   END      to everyone     { "reason": "final" | "left", "winner": seat or -1,
 ##                              "score": [home, away] }
@@ -25,7 +31,7 @@ enum Kind { HELLO, WELCOME, REJECT, START, INPUT, END, STATE, EVENTS, READY, PAU
 
 ## Goes up with every change to the messages or to what the game does with them:
 ## two machines only play each other on the same one.
-const VERSION: int = 7
+const VERSION: int = 9
 const DEFAULT_PORT: int = 24642
 ## The ticks of buttons in every INPUT message: one gets through as long as
 ## that many packets in a row are not all lost.
@@ -36,6 +42,11 @@ const INPUT_REPEATS: int = 3
 const PIECE_BYTES: int = 1100
 ## No state is anywhere near this big; one that says it is, is not looked at.
 const MAX_STATE_BYTES: int = 65536
+## The same for a message of buttons.
+const MAX_INPUT_BYTES: int = 8192
+## Ticks the server keeps a state to send later ones against. A person's
+## machine keeps them twice as long.
+const BASE_TICKS: int = 120
 ## Floats after the actions' own in a tick's buttons: the stick as a move on
 ## the field (x, z) and the camera's right (x, z).
 const VIEW_FLOATS: int = 4
@@ -52,18 +63,48 @@ static func cut_state(tick: int, state: Array) -> Array[Array]:
 	return bodies
 
 
-## Puts the pieces of states back together as they come in.
+## The four tables of numbers in `state` (NetState.pack()), each as its bits.
+static func state_tables(state: Array) -> Array[PackedInt32Array]:
+	var tables: Array[PackedInt32Array] = []
+	for at: int in 4:
+		tables.append((state[at] as PackedFloat32Array).to_byte_array().to_int32_array())
+	return tables
+
+
+## `tables` with every bit turned that is set in `base`: what differs from it,
+## and done again to that, the tables themselves. A table that is not the size
+## of its base (a player more or fewer) is left as it is, both ways.
+static func cross(tables: Array[PackedInt32Array], base: Array[PackedInt32Array]) -> Array[PackedInt32Array]:
+	var out: Array[PackedInt32Array] = []
+	for at: int in tables.size():
+		var table: PackedInt32Array = tables[at].duplicate()
+		if at < base.size() and base[at].size() == table.size():
+			var other: PackedInt32Array = base[at]
+			for i: int in table.size():
+				table[i] ^= other[i]
+		out.append(table)
+	return out
+
+
+## The tables back as the numbers NetState.unpack() takes.
+static func table_floats(table: PackedInt32Array) -> PackedFloat32Array:
+	return table.to_byte_array().to_float32_array()
+
+
+## Puts the pieces of states back together as they come in. On an uneven line
+## a state can come in after a later one: it is put together all the same, as
+## long as it is not older than LATE_TICKS ticks behind the newest seen.
 class StateJoiner:
 	extends RefCounted
-	## The tick being put together, and its pieces so far.
-	var _tick: int = -1
-	var _pieces: Array[PackedByteArray] = []
-	var _have: int = 0
-	var _size: int = 0
+	const LATE_TICKS: int = 30
+	## The states being put together, by tick: [pieces, how many are here, size].
+	var _parts: Dictionary[int, Array] = {}
+	## The ticks whose state is whole already (a piece may come twice).
+	var _done: Dictionary[int, bool] = {}
+	var _newest: int = -1
 
 	## Takes the body of one STATE message. Returns [tick, state] when that was
-	## the last piece of a state, and nothing otherwise. Pieces of an older tick
-	## than the one being put together are too late.
+	## the last piece of a state, and nothing otherwise.
 	func add(body: Variant) -> Array:
 		if typeof(body) != TYPE_ARRAY:
 			return []
@@ -77,25 +118,34 @@ class StateJoiner:
 		var piece: int = parts[1]
 		var pieces: int = parts[2]
 		var size: int = parts[3]
-		if pieces < 1 or pieces > 64 or piece < 0 or piece >= pieces or size <= 0 or size > NetProtocol.MAX_STATE_BYTES or tick < _tick:
+		if pieces < 1 or pieces > 64 or piece < 0 or piece >= pieces or size <= 0 or size > NetProtocol.MAX_STATE_BYTES:
 			return []
-		if tick != _tick or pieces != _pieces.size() or size != _size:
-			_tick = tick
-			_size = size
-			_have = 0
-			_pieces.clear()
-			_pieces.resize(pieces)
-		if _pieces[piece].is_empty():
-			_pieces[piece] = parts[4]
-			_have += 1
-		if _have < pieces:
+		if tick < _newest - LATE_TICKS or _done.has(tick):
+			return []
+		if tick > _newest:
+			_newest = tick
+			for old: int in _parts.keys():
+				if old < _newest - LATE_TICKS:
+					_parts.erase(old)
+			for old: int in _done.keys():
+				if old < _newest - LATE_TICKS:
+					_done.erase(old)
+		if not _parts.has(tick) or (_parts[tick][0] as Array).size() != pieces or _parts[tick][2] != size:
+			var empty: Array[PackedByteArray] = []
+			empty.resize(pieces)
+			_parts[tick] = [empty, 0, size]
+		var entry: Array = _parts[tick]
+		var held: Array[PackedByteArray] = entry[0]
+		if held[piece].is_empty():
+			held[piece] = parts[4]
+			entry[1] += 1
+		if entry[1] < pieces:
 			return []
 		var squeezed: PackedByteArray = PackedByteArray()
-		for part: PackedByteArray in _pieces:
+		for part: PackedByteArray in held:
 			squeezed.append_array(part)
-		_tick = tick + 1
-		_have = 0
-		_pieces.clear()
+		_parts.erase(tick)
+		_done[tick] = true
 		var plain: PackedByteArray = squeezed.decompress(size, FileAccess.COMPRESSION_ZSTD)
 		if plain.size() != size:
 			return []

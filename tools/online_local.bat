@@ -2,8 +2,10 @@
 rem An online match on this one machine: a server, a second person who plays
 rem with random buttons, and a window for you. Close the window to end it.
 rem
-rem Usage: tools\online_local.bat [lag=<ms>] [nopredict]
+rem Usage: tools\online_local.bat [lag=<ms>] [jitter=<ms>] [loss=<percent>] [nopredict]
 rem   lag=50      makes your line 50 ms slower each way (100 ms there and back)
+rem   jitter=30   makes it uneven: up to 30 ms more for each message
+rem   loss=3      loses 3 messages in a hundred
 rem   nopredict   draws your own player where the server has him, to compare
 rem Set GODOT to the Godot console exe if it is not where this file expects it.
 setlocal

@@ -18,6 +18,10 @@ extends RefCounted
 const MAX_WAITING: int = 4
 ## Ticks in a row with one to spare before one is stepped over.
 const SPARE_TICKS: int = 90
+## A tick with none to hand out soon after that was done says the line is too
+## uneven for it: the wait before the next time doubles, up to this, and comes
+## down again once it has gone well.
+const SPARE_TICKS_MAX: int = 1440
 
 ## The ticks that have come in and not been handed out.
 var _waiting: Dictionary[int, PackedFloat32Array] = {}
@@ -33,6 +37,8 @@ var taken: int = -1
 ## that has been counted.
 var _spare: int = MAX_WAITING
 var _spare_ticks: int = 0
+var _spare_window: int = SPARE_TICKS
+var _since_spared: int = 1 << 30
 
 
 func add(tick: int, frame: PackedFloat32Array) -> void:
@@ -46,6 +52,9 @@ func take() -> PackedFloat32Array:
 		if not _last.is_empty():
 			held += 1
 		_spare = 0
+		if _since_spared < _spare_window:
+			_spare_window = mini(_spare_window * 2, SPARE_TICKS_MAX)
+			_since_spared = 1 << 30
 		return _last
 	var oldest: int = _waiting.keys().min()
 	var newest: int = _waiting.keys().max()
@@ -55,10 +64,15 @@ func take() -> PackedFloat32Array:
 	_spare = mini(_spare, _waiting.size())
 	_spare_ticks += 1
 	var one_over: bool = false
-	if _spare_ticks >= SPARE_TICKS:
+	_since_spared = mini(_since_spared + 1, 1 << 30)
+	if _spare_ticks >= _spare_window:
 		one_over = _spare >= 1
 		_spare = MAX_WAITING
 		_spare_ticks = 0
+		if one_over:
+			if _since_spared < (1 << 30):
+				_spare_window = maxi(_spare_window / 2, SPARE_TICKS)
+			_since_spared = 0
 	while not _waiting.is_empty() and (newest - _next >= MAX_WAITING or one_over):
 		one_over = false
 		var over: PackedFloat32Array = frame

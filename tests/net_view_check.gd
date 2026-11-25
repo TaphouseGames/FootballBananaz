@@ -17,6 +17,8 @@ extends SceneTree
 ## lag=<ms> makes this end's line that much slower each way; nopredict draws the
 ## person's own player where the server has him. The numbers it prints for the
 ## person's own player tell what running him ahead of the server does.
+## full plays a whole match of 40 seconds on the clock to the final whistle
+## (some minutes), halftime report and all.
 ## touchdown has the server put a carrier over the goal line a few seconds in:
 ## the picture must go on through the celebration (the mascot joins the players).
 
@@ -26,7 +28,11 @@ var _seconds: float = 40.0
 var _out: String = ""
 var _lag: int = 0
 var _predict: bool = true
+var _jitter: int = 0
+var _loss: float = 0.0
 var _touchdown: bool = false
+## A whole (short) match, to the final whistle.
+var _full: bool = false
 ## Frames with a mascot among the players, and states shown when it first was.
 var _mascot_frames: int = 0
 var _shown_at_mascot: int = -1
@@ -61,10 +67,17 @@ func _initialize() -> void:
 			_out = arg.trim_prefix("out=")
 		elif arg.begins_with("lag="):
 			_lag = int(arg.trim_prefix("lag="))
+		elif arg.begins_with("jitter="):
+			_jitter = int(arg.trim_prefix("jitter="))
+		elif arg.begins_with("loss="):
+			_loss = float(arg.trim_prefix("loss=")) / 100.0
 		elif arg == "nopredict":
 			_predict = false
 		elif arg == "touchdown":
 			_touchdown = true
+		elif arg == "full":
+			_full = true
+			_seconds = 900.0
 	var godot: String = OS.get_executable_path()
 	var server_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/server.tscn"]
 	var bot_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/online_dev.tscn"]
@@ -75,6 +88,8 @@ func _initialize() -> void:
 	server_args.append_array(["--", "port=%d" % PORT])
 	if _touchdown:
 		server_args.append("touchdown=400")
+	if _full:
+		server_args.append("length=40")
 	bot_args.append_array(["--", "join=127.0.0.1", "port=%d" % PORT, "bot"])
 	_server_pid = OS.create_process(godot, server_args)
 	_bot_pid = OS.create_process(godot, bot_args)
@@ -83,6 +98,8 @@ func _initialize() -> void:
 	_play.port = PORT
 	_play.bot = true
 	_play.lag_ms = _lag
+	_play.jitter_ms = _jitter
+	_play.loss = _loss
 	_play.predict = _predict
 	_play.leave_when_over = false
 	root.add_child(_play)
@@ -101,7 +118,10 @@ func _process(_delta: float) -> bool:
 	if _started_at < 0:
 		_started_at = now
 	if not _play.result.is_empty():
-		_fail("the match ended early: %s" % _play.result)
+		if _full:
+			_judge((now - _started_at) / 1000.0)
+		else:
+			_fail("the match ended early: %s" % _play.result)
 		return true
 	_watch()
 	if _out != "" and now - _started_at > 4000 + _shots * 4000:
@@ -153,6 +173,8 @@ func _judge(seconds: float) -> void:
 	var view: NetView = _play.view
 	var names: Array = _states_seen.keys()
 	print("this end: %.0f frames a second, states received %d, refused %d" % [Engine.get_frames_per_second(), view.received, view.refused])
+	var traffic: PackedInt64Array = _play.client.traffic()
+	print("the line: %.1f kB a second in, %.1f out (%.2f and %.2f Mbit/s)" % [traffic[1] / seconds / 1000.0, traffic[0] / seconds / 1000.0, traffic[1] * 8.0 / seconds / 1e6, traffic[0] * 8.0 / seconds / 1e6])
 	print("states shown %d in %.0f s (%.0f a second), held %d, stepped over %d; things done once %d" % [view.shown, seconds, view.shown / seconds, view.held, view.skipped, view.replayed])
 	print("states of the match seen: %s; players moved %d of %d; ball moved %.1f yd; clock %.1f -> %.1f" % [names, _moved, game.play_controller.players.size(), _ball_moved, _first_clock, game.clock])
 	# Saving a picture holds this program up for a moment each time.
@@ -164,6 +186,12 @@ func _judge(seconds: float) -> void:
 		_failures.append("only %d players moved" % _moved)
 	if _ball_moved < 5.0:
 		_failures.append("the ball moved %.1f yd" % _ball_moved)
+	if _full:
+		print("whole match: over after %.0f s with %s; halftime seen %s, game over seen %s" % [seconds, _play.result, _states_seen.has(&"Halftime"), _states_seen.has(&"GameOver")])
+		if _play.result.get("reason") != "final":
+			_failures.append("the match did not get to its end: %s" % _play.result)
+		if not _states_seen.has(&"Halftime"):
+			_failures.append("halftime was never shown here")
 	if _touchdown:
 		print("touchdown: Scored seen %s, score %d - %d, a mascot among the players on %d frames, %d states shown since it came on" % [_states_seen.has(&"Scored"), game.home.score, game.away.score, _mascot_frames, view.shown - _shown_at_mascot if _shown_at_mascot >= 0 else 0])
 		if not _states_seen.has(&"Scored") or game.home.score + game.away.score <= 0:

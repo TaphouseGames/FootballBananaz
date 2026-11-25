@@ -43,6 +43,10 @@ const CATCH_UP_FROM: int = 3
 const MAX_WAITING: int = 30
 ## Ticks in a row with a state to spare before two are shown in one.
 const SPARE_TICKS: int = 90
+## A tick with nothing to show soon after that was done says the line is too
+## uneven for it: the wait before the next time doubles, up to this, and comes
+## down again once it has gone well.
+const SPARE_TICKS_MAX: int = 1440
 ## A node that moved further than this in a tick was put there: it is drawn
 ## there at once, not slid over.
 const JUMP: float = 4.0
@@ -71,6 +75,10 @@ const SWALLOW_TICKS: int = 90
 const LANDING_GAP: int = 20
 ## Ticks in a row everybody runs on with no new state.
 const COAST_TICKS: int = 6
+## The state due has not come and fewer than this many later ones are here: it
+## may be on its way behind them, and is waited for, this many ticks at most.
+const LATE_BEHIND: int = 2
+const LATE_TICKS: int = 2
 ## Ticks before another pass let go here can be one of its own.
 const THROW_GAP: int = 30
 ## No opponent on his feet within this of the person's own carrier, where the
@@ -123,6 +131,10 @@ var _waiting: Dictionary[int, Array] = {}
 ## ticks that has been counted.
 var _spare: int = MAX_WAITING
 var _spare_ticks: int = 0
+## The ticks with a state to spare it takes now, and the ticks since two were
+## last shown in one for that.
+var _spare_window: int = SPARE_TICKS
+var _since_spared: int = 1 << 30
 var _next: int = -1
 ## What happened once, by the tick it happened on, oldest first.
 var _events: Array[Array] = []
@@ -163,6 +175,7 @@ var _pass_after: Dictionary[int, Array] = {}
 var _score_wait: int = -1
 var _score_gap: int = -1
 var _coasting: int = 0
+var _late: int = 0
 var _drawn_at: Vector3 = Vector3.INF
 var _ran_to: Vector3 = Vector3.INF
 var _ran_velocity: Vector3 = Vector3.ZERO
@@ -200,15 +213,23 @@ func _before_tick() -> void:
 			held += 1
 			_coast()
 		_spare = 0
+		if _since_spared < _spare_window:
+			_spare_window = mini(_spare_window * 2, SPARE_TICKS_MAX)
+			_since_spared = 1 << 30
 	else:
+		_since_spared = mini(_since_spared + 1, 1 << 30)
 		_coasting = 0
 		_spare = mini(_spare, _waiting.size())
 		_spare_ticks += 1
 		var one_over: bool = false
-		if _spare_ticks >= SPARE_TICKS:
+		if _spare_ticks >= _spare_window:
 			one_over = _spare >= 1
 			_spare = MAX_WAITING
 			_spare_ticks = 0
+			if one_over:
+				if _since_spared < (1 << 30):
+					_spare_window = maxi(_spare_window / 2, SPARE_TICKS)
+				_since_spared = 0
 		if _waiting.size() > CATCH_UP_FROM or one_over:
 			_show_next()
 			caught_up += 1
@@ -295,6 +316,12 @@ func _take() -> Array:
 		return []
 	var oldest: int = _waiting.keys().min()
 	var newest: int = _waiting.keys().max()
+	# The one due is not here, but later ones are. On an uneven line it is often
+	# just behind them: shown now, they would leave it too late to show at all.
+	if _next >= 0 and _next < oldest and _waiting.size() < LATE_BEHIND and _late < LATE_TICKS:
+		_late += 1
+		return []
+	_late = 0
 	# One that never came, with later ones here: it will not come now.
 	_next = maxi(_next, oldest)
 	if newest - _next >= MAX_WAITING:

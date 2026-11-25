@@ -19,7 +19,7 @@ extends Node
 ##
 ## Run as the scene scenes/server.tscn:
 ##   godot --headless --path . res://scenes/server.tscn -- port=24642
-##         [pause=<seconds each, 0 for none>] [rubber=0] [intro=0]
+##         [pause=<seconds each, 0 for none>] [rubber=0] [intro=0] [length=<seconds>]
 ## What a queue of matches wants of its matches goes there: how much pausing,
 ## whether the team behind is helped (RubberBand), the pregame intro.
 
@@ -43,6 +43,8 @@ var quit_when_done: bool = true
 var pause_seconds: float = 120.0
 var rubber_band: bool = true
 var intro: bool = true
+## Seconds on the clock for the whole match, 0 for the game's own.
+var game_length: float = 0.0
 ## The match is held for a pause right now.
 var paused: bool = false
 ## The match, once both people are here.
@@ -74,6 +76,10 @@ var _wants: Array[bool] = [false, false]
 var _pause_left: PackedFloat32Array = PackedFloat32Array([0.0, 0.0])
 var _holder: int = -1
 var _resume: int = 0
+## The tables of the last states by tick, and the newest state each seat's
+## machine has said it has: a state goes out as what differs from that one.
+var _history: Dictionary[int, Array] = {}
+var _have: PackedInt32Array = PackedInt32Array([-1, -1])
 ## The box score as it was sent last.
 var _stats_sent: PackedByteArray = PackedByteArray()
 
@@ -88,6 +94,8 @@ func _ready() -> void:
 			rubber_band = int(arg.trim_prefix("rubber=")) != 0
 		elif arg.begins_with("intro="):
 			intro = int(arg.trim_prefix("intro=")) != 0
+		elif arg.begins_with("length="):
+			game_length = maxf(float(arg.trim_prefix("length=")), 0.0)
 		elif arg.begins_with("touchdown=") and OS.is_debug_build():
 			_test_touchdown = int(arg.trim_prefix("touchdown="))
 	# No picture to draw: no need for more frames than ticks.
@@ -133,8 +141,7 @@ func _physics_process(_delta: float) -> void:
 	var acks: PackedInt32Array = PackedInt32Array()
 	for line: NetInputQueue in _queues:
 		acks.append(line.taken)
-	for body: Array in NetProtocol.cut_state(_tick, NetState.pack(game, acks)):
-		_socket.send(0, NetProtocol.Kind.STATE, body, false)
+	_send_state(NetState.pack(game, acks))
 	var notes: Array[Array] = NetEvents.take(SEATS)
 	for seat: int in SEATS:
 		if not notes[seat].is_empty() and _peers[seat] != 0:
@@ -248,9 +255,17 @@ func _on_input(from: int, body: Variant) -> void:
 	var seat: int = _peers.find(from)
 	if seat < 0 or game == null or typeof(body) != TYPE_ARRAY:
 		return
-	var input: Array = body
-	if input.size() != 2 or typeof(input[0]) != TYPE_INT or typeof(input[1]) != TYPE_ARRAY:
+	var packed: Array = body
+	if packed.size() != 2 or typeof(packed[0]) != TYPE_INT or typeof(packed[1]) != TYPE_PACKED_BYTE_ARRAY or packed[0] <= 0 or packed[0] > NetProtocol.MAX_INPUT_BYTES:
 		return
+	var plain: PackedByteArray = (packed[1] as PackedByteArray).decompress(packed[0], FileAccess.COMPRESSION_ZSTD)
+	var unpacked: Variant = bytes_to_var(plain) if plain.size() == packed[0] else null
+	if typeof(unpacked) != TYPE_ARRAY:
+		return
+	var input: Array = unpacked
+	if input.size() != 3 or typeof(input[0]) != TYPE_INT or typeof(input[1]) != TYPE_ARRAY or typeof(input[2]) != TYPE_INT:
+		return
+	_have[seat] = maxi(_have[seat], input[2])
 	var newest: int = input[0]
 	var frames: Array = input[1]
 	if newest < 0 or frames.size() > NetProtocol.INPUT_REPEATS:
@@ -288,15 +303,20 @@ func _start() -> void:
 	Game.team_picks = _picks.duplicate()
 	NetEvents.clear()
 	NetEvents.recording = true
+	_history.clear()
+	_have = PackedInt32Array([-1, -1])
 	_wants = [false, false]
 	_pause_left = PackedFloat32Array([pause_seconds, pause_seconds])
 	_holder = -1
 	paused = false
 	game = _scene.instantiate() as Game
 	NetEvents.game = game
-	add_child(game)
+	# Before the match sets itself up by them.
 	if not rubber_band:
 		game.tuning.comeback_enabled = false
+	if game_length > 0.0:
+		game.tuning.game_length = game_length
+	add_child(game)
 	# The box score goes out whenever the match moves on to something else.
 	game.play_controller.state_machine.state_changed.connect(func(_from: StringName, _to: StringName) -> void: _send_stats())
 	print("NetServer: match on")
@@ -329,6 +349,28 @@ func _update_pause() -> void:
 ## Seconds of pausing `seat` has left.
 func pause_left(seat: int) -> float:
 	return _pause_left[seat]
+
+
+## Each person is sent this tick's state as what differs from the newest one
+## their machine has said it has, or whole when that one is not kept any more.
+func _send_state(state: Array) -> void:
+	var tables: Array[PackedInt32Array] = NetProtocol.state_tables(state)
+	_history[_tick] = tables
+	_history.erase(_tick - NetProtocol.BASE_TICKS)
+	var cut: Dictionary[int, Array] = {}
+	for seat: int in SEATS:
+		if _peers[seat] == 0:
+			continue
+		var base: int = _have[seat] if _history.has(_have[seat]) and _have[seat] < _tick else -1
+		if not cut.has(base):
+			var sent: Array[PackedInt32Array] = tables
+			if base >= 0:
+				var of_base: Array[PackedInt32Array] = []
+				of_base.assign(_history[base])
+				sent = NetProtocol.cross(tables, of_base)
+			cut[base] = NetProtocol.cut_state(_tick, [sent, state[4], base])
+		for body: Array in cut[base]:
+			_socket.send(_peers[seat], NetProtocol.Kind.STATE, body, false)
 
 
 func _send_stats() -> void:
