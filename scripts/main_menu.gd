@@ -91,6 +91,11 @@ static var _visited: bool = false
 func _ready() -> void:
 	# A match left paused or in a hit-stop must not carry over.
 	get_tree().paused = false
+	# Started as a bot (`-- find bot`, see NetPlay): straight on to its match.
+	# An exported game cannot be started on another scene than this one.
+	if OS.get_cmdline_user_args().has("bot"):
+		get_tree().change_scene_to_file.call_deferred(ONLINE_SCENE)
+		return
 	# From the first button on: whose gamepad is whose.
 	Controllers.of(get_tree())
 	_build_field()
