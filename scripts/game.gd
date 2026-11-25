@@ -96,6 +96,10 @@ var play_art: PlayArt
 ## On a person's machine in an online match: for each seat, the tick of that
 ## person's buttons the state on show was played with.
 var net_acks: PackedInt32Array = PackedInt32Array()
+## An online match held for a pause, as the server has it (NetServer): [held (1)
+## or not, ticks until it goes on once nobody holds it any more, seat 0 wants it
+## held (1), seat 1 does, the seconds of pausing seat 0 has left, seat 1 has].
+var net_pause: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0])
 ## Debug builds: tries out a network delay offline (F9, F10). Null otherwise.
 var net_feel: NetFeel
 
@@ -309,8 +313,7 @@ func start_kickoff(receiving: Team) -> void:
 
 ## Halftime is the full report, not just the banner.
 func has_halftime_show() -> bool:
-	# Not online yet: it waits for a person to skip it.
-	return tuning.halftime_show_enabled and not autoplay and net_mode == NetMode.OFFLINE
+	return tuning.halftime_show_enabled and not autoplay
 
 
 ## The second half's kickoff goes to the team that kicked off the first.

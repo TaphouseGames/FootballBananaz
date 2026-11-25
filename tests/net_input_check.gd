@@ -48,6 +48,7 @@ func _initialize() -> void:
 	_server = NetServer.new()
 	_server.port = PORT
 	_server.quit_when_done = false
+	_server.intro = false
 	root.add_child(_server)
 	for i: int in 2:
 		_clients.append(_make_client(i))

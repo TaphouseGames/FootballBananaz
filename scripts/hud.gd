@@ -213,6 +213,8 @@ func show_banner(text: String, sub_text: String = "") -> void:
 ## The television graphics of the pregame intro, in place of the scoreboard.
 func show_intro() -> void:
 	hide_intro()
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"show_intro", [])
 	scoreboard.visible = false
 	_intro_card = IntroCard.new()
 	add_child(_intro_card)
@@ -222,6 +224,8 @@ func show_intro() -> void:
 
 
 func hide_intro() -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"hide_intro", [])
 	scoreboard.visible = true
 	if _intro_card != null:
 		_intro_card.finish()
@@ -231,6 +235,8 @@ func hide_intro() -> void:
 ## The halftime report, in place of the scoreboard.
 func show_halftime() -> HalftimeCard:
 	hide_halftime()
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"show_halftime", [])
 	scoreboard.visible = false
 	_halftime_card = HalftimeCard.new()
 	add_child(_halftime_card)
@@ -241,10 +247,25 @@ func show_halftime() -> HalftimeCard:
 
 
 func hide_halftime() -> void:
+	if NetEvents.recording:
+		NetEvents.tell(NetEvents.Part.HUD, &"hide_halftime", [])
 	if _halftime_card != null:
 		scoreboard.visible = true
 		_halftime_card.finish()
 		_halftime_card = null
+
+
+## In an online match: what stands where "(A) SKIP" does on the intro or the
+## halftime report of the person on `seat` (GameState.skip_asked).
+func set_skip_note(text: String, seat: int = 0) -> void:
+	if NetEvents.recording:
+		# Nobody looks at the server's own screen.
+		NetEvents.tell(NetEvents.Part.HUD, &"set_skip_note", [text, 0], &"", seat)
+		return
+	if _intro_card != null:
+		_intro_card.set_skip(text)
+	if _halftime_card != null:
+		_halftime_card.set_skip(text)
 
 
 func hide_banner() -> void:

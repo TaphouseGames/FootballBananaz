@@ -31,6 +31,60 @@ func setup(home: Team, away: Team) -> void:
 		players[team.mascot] = PlayerLine.new()
 
 
+## Every number in the book, for a person's machine in an online match:
+## [each team's, each player's], in the order the book keeps them.
+func net_pack() -> Array:
+	var team_rows_out: Array[PackedFloat32Array] = []
+	for team: Team in teams:
+		var row: PackedFloat32Array = PackedFloat32Array()
+		for field: StringName in PlayerLine.fields(teams[team]):
+			row.append(float(teams[team].get(field)))
+		team_rows_out.append(row)
+	var player_rows: Array[PackedInt32Array] = []
+	for player: Player in players:
+		var row: PackedInt32Array = PackedInt32Array()
+		for field: StringName in PlayerLine.fields(players[player]):
+			row.append(int(players[player].get(field)))
+		player_rows.append(row)
+	return [team_rows_out, player_rows]
+
+
+## Takes what net_pack() made on the server. False if it is not that.
+func net_unpack(data: Variant) -> bool:
+	if typeof(data) != TYPE_ARRAY or (data as Array).size() != 2:
+		return false
+	if typeof(data[0]) != TYPE_ARRAY or typeof(data[1]) != TYPE_ARRAY:
+		return false
+	var team_rows_in: Array = data[0]
+	var player_rows: Array = data[1]
+	if team_rows_in.size() != teams.size() or player_rows.size() != players.size():
+		return false
+	var at: int = 0
+	for team: Team in teams:
+		var line: TeamLine = teams[team]
+		var fields: Array[StringName] = PlayerLine.fields(line)
+		if typeof(team_rows_in[at]) != TYPE_PACKED_FLOAT32_ARRAY or (team_rows_in[at] as PackedFloat32Array).size() != fields.size():
+			return false
+		var row: PackedFloat32Array = team_rows_in[at]
+		for i: int in fields.size():
+			if line.get(fields[i]) is float:
+				line.set(fields[i], row[i])
+			else:
+				line.set(fields[i], roundi(row[i]))
+		at += 1
+	at = 0
+	for player: Player in players:
+		var line: PlayerLine = players[player]
+		var fields: Array[StringName] = PlayerLine.fields(line)
+		if typeof(player_rows[at]) != TYPE_PACKED_INT32_ARRAY or (player_rows[at] as PackedInt32Array).size() != fields.size():
+			return false
+		var row: PackedInt32Array = player_rows[at]
+		for i: int in fields.size():
+			line.set(fields[i], row[i])
+		at += 1
+	return true
+
+
 func team_line(team: Team) -> TeamLine:
 	return teams[team]
 

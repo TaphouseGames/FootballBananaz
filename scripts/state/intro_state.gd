@@ -2,7 +2,7 @@ extends GameState
 ## The opening of the broadcast, before the first kickoff of a match started
 ## from the main menu: the teams stand ready for the kick, the camera comes
 ## down over the field, and Jim and Tony say how much they are looking forward
-## to it. (A) skips it.
+## to it. (A) skips it (online: once both people have pressed it).
 
 ## Seconds before a press of (A) counts: the one that started the match is
 ## still on its way up.
@@ -26,6 +26,7 @@ func enter() -> void:
 	_asked = false
 	_talking = false
 	_quiet = 0.0
+	skip_reset()
 	game.start_kickoff(game.opening_receiver)
 	pc.line_up_kickoff()
 	_place_camera(true)
@@ -54,7 +55,7 @@ func physics_update(delta: float) -> void:
 		done = done or (_quiet >= tuning.intro_tail and time_in_state >= tuning.intro_min_time)
 	elif _asked:
 		done = done or time_in_state >= tuning.intro_silent_time
-	if time_in_state >= SKIP_AFTER and Input.is_action_just_pressed(&"confirm"):
+	if skip_asked(time_in_state >= SKIP_AFTER):
 		game.audio.hush()
 		done = true
 	if done:

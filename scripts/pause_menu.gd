@@ -180,7 +180,10 @@ func open() -> void:
 	_to_menu = false
 	_confirm_quit = false
 	_cursor = 0
-	get_tree().paused = true
+	# Online the match is the server's to hold (NetPlay asks it to), and the
+	# picture here goes on showing what it sends.
+	if Game.net_mode != Game.NetMode.CLIENT:
+		get_tree().paused = true
 	ScreenFade.pop(self, true, ScreenFade.MENU_FADE, true)
 	# The game's own prompt would show through under the panel.
 	game.hud.hint.modulate.a = 0.0

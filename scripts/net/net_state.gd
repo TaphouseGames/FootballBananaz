@@ -109,6 +109,7 @@ static func pack(game: Game, acks: PackedInt32Array = PackedInt32Array()) -> Arr
 		acks,
 		# The scoring team's mascot is one of the players while it celebrates.
 		-1 if pc.mascot_team() == null else (0 if pc.mascot_team() == game.home else 1),
+		game.net_pause,
 	]
 	return [players, ball, play, match_now, rest]
 
@@ -118,9 +119,11 @@ static func fits(game: Game, state: Variant) -> bool:
 	if typeof(state) != TYPE_ARRAY:
 		return false
 	var parts: Array = state
-	if parts.size() != 5 or typeof(parts[4]) != TYPE_ARRAY or (parts[4] as Array).size() != 12:
+	if parts.size() != 5 or typeof(parts[4]) != TYPE_ARRAY or (parts[4] as Array).size() != 13:
 		return false
 	if typeof(parts[4][11]) != TYPE_INT:
+		return false
+	if typeof(parts[4][12]) != TYPE_PACKED_INT32_ARRAY or (parts[4][12] as PackedInt32Array).size() != 6:
 		return false
 	for at: int in 4:
 		if typeof(parts[at]) != TYPE_PACKED_FLOAT32_ARRAY:
@@ -188,6 +191,7 @@ static func unpack(game: Game, state: Array, seat: int) -> void:
 		game.audio._music_stopping = bool(sound[2])
 		game.audio._chant_fading = bool(sound[3])
 	game.net_acks = rest[10] if typeof(rest[10]) == TYPE_PACKED_INT32_ARRAY else PackedInt32Array()
+	game.net_pause = rest[12]
 	# Last, with everything else in place: whoever listens for a new state of
 	# the match (the rumble, for one) hears of it here too.
 	if state_name != was:

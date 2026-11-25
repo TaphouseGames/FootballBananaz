@@ -16,12 +16,16 @@ extends RefCounted
 ##   EVENTS   to one person   [tick, NetEvents' notes of that tick for them]
 ##   END      to everyone     { "reason": "final" | "left", "winner": seat or -1,
 ##                              "score": [home, away] }
+##   PAUSE    to the server   [yes or no]   that person wants the match held
+##            (their pause menu is open): see NetServer
+##   STATS    to everyone     [size, bytes]   StatBook.net_pack() squeezed: the
+##            numbers of the box score and the halftime report
 
-enum Kind { HELLO, WELCOME, REJECT, START, INPUT, END, STATE, EVENTS, READY }
+enum Kind { HELLO, WELCOME, REJECT, START, INPUT, END, STATE, EVENTS, READY, PAUSE, STATS }
 
 ## Goes up with every change to the messages or to what the game does with them:
 ## two machines only play each other on the same one.
-const VERSION: int = 6
+const VERSION: int = 7
 const DEFAULT_PORT: int = 24642
 ## The ticks of buttons in every INPUT message: one gets through as long as
 ## that many packets in a row are not all lost.

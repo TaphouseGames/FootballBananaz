@@ -193,7 +193,8 @@ func add_events(tick: int, notes: Array) -> void:
 func _before_tick() -> void:
 	if game == null or game.play_controller == null or game.play_controller.players.is_empty():
 		return
-	cards.tick(game, client)
+	if not paused():
+		cards.tick(game, client)
 	if not _show_next():
 		if shown > 0:
 			held += 1
@@ -244,6 +245,12 @@ func _coast() -> void:
 ## told apart by `key`, is not done again.
 func swallow(part: NetEvents.Part, method: StringName, key: Variant) -> void:
 	_swallows.append([shown + SWALLOW_TICKS, part, method, key])
+
+
+## The server holds the match for a pause: nobody's buttons do anything there,
+## so nothing is shown ahead of it here.
+func paused() -> bool:
+	return game.net_pause.size() == 6 and game.net_pause[0] != 0
 
 
 ## Puts the next state on the match here, and does what happened once up to
@@ -317,7 +324,7 @@ func _run_own() -> void:
 	if _base_state == Player.State.DOWN and _own.state != Player.State.DOWN:
 		_own_landing = false
 	_base_state = _own.state
-	var running: bool = predict and client != null and client.playing and _own.net_free and not _own.frozen \
+	var running: bool = predict and client != null and client.playing and _own.net_free and not _own.frozen and not paused() \
 			and (OWN_STATES.has(_own.state) or (_own.state == Player.State.DOWN and _own_landing)) \
 			and seat >= 0 and seat < game.net_acks.size()
 	if running:

@@ -286,7 +286,8 @@ func _refresh() -> void:
 		_line.text = "Press (A) on it to play on"
 	_panel.visible = true
 	_resuming = false
-	if is_inside_tree():
+	# Online the match is the server's to hold (NetPlay asks it to).
+	if is_inside_tree() and Game.net_mode != Game.NetMode.CLIENT:
 		get_tree().paused = true
 
 

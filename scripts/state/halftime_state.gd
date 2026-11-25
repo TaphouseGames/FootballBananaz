@@ -2,7 +2,7 @@ extends GameState
 ## The first half's clock has run out and its last play is over. The halftime
 ## report comes up: the score, the teams' numbers and a word from Jim and Tony
 ## about the half (see HalftimeExchanges). After Tuning.halftime_show_time, or
-## when (A) is pressed, the second half starts with a kickoff to the team that
+## when (A) is pressed (online: by both people), the second half starts with a kickoff to the team that
 ## kicked off the first.
 ## With the report off, or the CPU playing both teams, it is just a banner.
 
@@ -21,6 +21,7 @@ func enter() -> void:
 	_card = null
 	_exchange = {}
 	_asked = false
+	skip_reset()
 	game.add_stat(&"halftimes")
 	game.audio.play_music(&"music_halftime")
 	game.hud.set_hint("")
@@ -53,7 +54,7 @@ func physics_update(delta: float) -> void:
 		# Lets the booth finish the sentence, within reason.
 		var talking: bool = _asked and game.audio.booth_busy()
 		done = time_in_state >= tuning.halftime_show_max or (time_in_state >= tuning.halftime_show_time and not talking)
-		if time_in_state >= SKIP_AFTER and Input.is_action_just_pressed(&"confirm"):
+		if skip_asked(time_in_state >= SKIP_AFTER):
 			done = true
 		if done:
 			game.audio.hush()

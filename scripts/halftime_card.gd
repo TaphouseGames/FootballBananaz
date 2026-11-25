@@ -18,6 +18,7 @@ var game: Game
 var _font: SystemFont
 var _tween: Tween
 var _finishing: bool = false
+var _skip: Label
 
 
 func setup(p_game: Game) -> void:
@@ -159,6 +160,7 @@ func _value(text: String, color: Color) -> Label:
 ## Bottom right, out of the way.
 func _build_skip() -> void:
 	var skip: Label = _label("(A)  SKIP", 18, Color(1.0, 1.0, 1.0, 0.55))
+	_skip = skip
 	skip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	skip.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	skip.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -176,6 +178,12 @@ func _clock(seconds: float) -> String:
 	var whole: int = roundi(seconds)
 	@warning_ignore("integer_division")
 	return "%d:%02d" % [whole / 60, whole % 60]
+
+
+## What stands in place of "(A) SKIP" (online, where both people have to).
+func set_skip(text: String) -> void:
+	if _skip != null:
+		_skip.text = text
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:

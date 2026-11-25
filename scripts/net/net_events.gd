@@ -32,7 +32,7 @@ const ALLOWED: Dictionary[int, Array] = {
 		&"show_banner", &"hide_banner", &"set_hint", &"set_countdown", &"hide_countdown",
 		&"show_play_select", &"set_play_flipped", &"set_play_cursor", &"set_play_hint", &"set_play_ready",
 		&"hide_play_select", &"show_audible", &"hide_audible", &"show_hot_routes", &"light_hot_route",
-		&"hide_hot_routes",
+		&"hide_hot_routes", &"show_intro", &"hide_intro", &"show_halftime", &"hide_halftime", &"set_skip_note",
 	],
 	Part.RUMBLE: [&"play", &"play_mine", &"play_for", &"play_team", &"hold_drag"],
 	Part.GAME: [&"impact"],

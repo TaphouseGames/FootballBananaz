@@ -10,8 +10,18 @@ extends Node
 ## The match is the same Game as offline, with both teams played by people
 ## whose PadInput is fed from here (Game.net_mode, Game.remote_pads).
 ##
+## Either of them can have the match held: with their pause menu open (or
+## their gamepad gone) their machine asks for it, and the game here stands
+## still for as long as that person has pause time left (`pause_seconds` for
+## the whole match each). Both are told who holds it and for how long yet.
+## When nobody holds it any more it goes on after RESUME_TICKS, so the other
+## one is not caught out. Out of pause time, the match just goes on.
+##
 ## Run as the scene scenes/server.tscn:
 ##   godot --headless --path . res://scenes/server.tscn -- port=24642
+##         [pause=<seconds each, 0 for none>] [rubber=0] [intro=0]
+## What a queue of matches wants of its matches goes there: how much pausing,
+## whether the team behind is helped (RubberBand), the pregame intro.
 
 ## The match is over: NetProtocol's END body.
 signal finished(result: Dictionary)
@@ -21,11 +31,20 @@ const SEATS: int = 2
 const LINGER: int = 60
 ## Ticks to wait for both to have the match loaded before it begins anyway.
 const READY_WAIT: int = 2700
+## Ticks from the last person letting go of a pause until the match goes on.
+const RESUME_TICKS: int = 90
 
 var port: int = NetProtocol.DEFAULT_PORT
 ## Quits the program after the match. Off in the tests, which run it beside
 ## other things.
 var quit_when_done: bool = true
+## Seconds of pausing each person has for the whole match; the team behind is
+## helped as offline; the match opens with the pregame intro.
+var pause_seconds: float = 120.0
+var rubber_band: bool = true
+var intro: bool = true
+## The match is held for a pause right now.
+var paused: bool = false
 ## The match, once both people are here.
 var game: Game
 ## What was sent as END, or empty while the match is on or not yet begun.
@@ -49,12 +68,26 @@ var _tick: int = 0
 ## For the tests, in a debug build only (`-- touchdown=<tick>`): from that tick
 ## on, whoever first carries a live ball is put over the goal line.
 var _test_touchdown: int = 0
+## Who wants the match held, the seconds of it each has left, the one whose
+## time is running (-1 nobody), and the ticks until it goes on.
+var _wants: Array[bool] = [false, false]
+var _pause_left: PackedFloat32Array = PackedFloat32Array([0.0, 0.0])
+var _holder: int = -1
+var _resume: int = 0
+## The box score as it was sent last.
+var _stats_sent: PackedByteArray = PackedByteArray()
 
 
 func _ready() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("port="):
 			port = int(arg.trim_prefix("port="))
+		elif arg.begins_with("pause="):
+			pause_seconds = maxf(float(arg.trim_prefix("pause=")), 0.0)
+		elif arg.begins_with("rubber="):
+			rubber_band = int(arg.trim_prefix("rubber=")) != 0
+		elif arg.begins_with("intro="):
+			intro = int(arg.trim_prefix("intro=")) != 0
 		elif arg.begins_with("touchdown=") and OS.is_debug_build():
 			_test_touchdown = int(arg.trim_prefix("touchdown="))
 	# No picture to draw: no need for more frames than ticks.
@@ -145,13 +178,15 @@ func _before_tick() -> void:
 	for seat: int in SEATS:
 		var frame: PackedFloat32Array = _queues[seat].take()
 		var pad: PadInput = _pads[seat]
-		if frame.is_empty():
+		# Held for a pause: nobody's buttons do anything.
+		if frame.is_empty() or paused:
 			pad.push({})
 			continue
 		pad.push(NetProtocol.frame_buttons(frame))
 		pad.world_move = NetProtocol.frame_move(frame)
 		pad.view_right = NetProtocol.frame_right(frame)
 		pad.has_view = true
+	_update_pause()
 	if _test_touchdown > 0 and _tick >= _test_touchdown:
 		var pc: PlayController = game.play_controller
 		var carrier: Player = pc.ball.carrier
@@ -175,6 +210,11 @@ func _on_message(from: int, kind: int, body: Variant) -> void:
 			var seat: int = _peers.find(from)
 			if seat >= 0:
 				_loaded[seat] = true
+		NetProtocol.Kind.PAUSE:
+			var pauser: int = _peers.find(from)
+			var want: Array = body if typeof(body) == TYPE_ARRAY else []
+			if pauser >= 0 and want.size() == 1 and typeof(want[0]) == TYPE_BOOL:
+				_wants[pauser] = want[0]
 
 
 func _on_hello(from: int, body: Variant) -> void:
@@ -243,15 +283,62 @@ func _start() -> void:
 	Game.remote_pads = _pads
 	Game.two_players = true
 	Game.human_side = 0
-	Game.show_intro = false
+	Game.show_intro = intro
 	Game.season_match = false
 	Game.team_picks = _picks.duplicate()
 	NetEvents.clear()
 	NetEvents.recording = true
+	_wants = [false, false]
+	_pause_left = PackedFloat32Array([pause_seconds, pause_seconds])
+	_holder = -1
+	paused = false
 	game = _scene.instantiate() as Game
 	NetEvents.game = game
 	add_child(game)
+	if not rubber_band:
+		game.tuning.comeback_enabled = false
+	# The box score goes out whenever the match moves on to something else.
+	game.play_controller.state_machine.state_changed.connect(func(_from: StringName, _to: StringName) -> void: _send_stats())
 	print("NetServer: match on")
+
+
+## Holds the match while somebody with pause time left wants it held, and lets
+## it go on a moment after the last of them lets go.
+func _update_pause() -> void:
+	if _holder >= 0 and not (_wants[_holder] and _pause_left[_holder] > 0.0 and _peers[_holder] != 0):
+		_holder = -1
+	if _holder < 0:
+		for seat: int in SEATS:
+			if _wants[seat] and _pause_left[seat] > 0.0 and _peers[seat] != 0:
+				_holder = seat
+				break
+	if _holder >= 0:
+		_pause_left[_holder] = maxf(_pause_left[_holder] - 1.0 / Engine.physics_ticks_per_second, 0.0)
+		_resume = RESUME_TICKS
+		paused = true
+	elif paused:
+		_resume -= 1
+		paused = _resume > 0
+	game.process_mode = Node.PROCESS_MODE_DISABLED if paused else Node.PROCESS_MODE_INHERIT
+	game.net_pause = PackedInt32Array([
+		1 if paused else 0, _resume if paused and _holder < 0 else 0,
+		1 if _wants[0] else 0, 1 if _wants[1] else 0, ceili(_pause_left[0]), ceili(_pause_left[1]),
+	])
+
+
+## Seconds of pausing `seat` has left.
+func pause_left(seat: int) -> float:
+	return _pause_left[seat]
+
+
+func _send_stats() -> void:
+	if _socket == null or game == null:
+		return
+	var plain: PackedByteArray = var_to_bytes(game.stat_book.net_pack())
+	if plain == _stats_sent:
+		return
+	_stats_sent = plain
+	_socket.send(0, NetProtocol.Kind.STATS, [plain.size(), plain.compress(FileAccess.COMPRESSION_ZSTD)])
 
 
 func _finish(p_result: Dictionary) -> void:

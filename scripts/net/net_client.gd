@@ -20,6 +20,8 @@ signal state(tick: int, state: Variant)
 ## What happened on the server's `tick` that the picture has to hear of
 ## (NetEvents' notes).
 signal events(tick: int, notes: Array)
+## The numbers of the box score as the server has them: StatBook.net_pack().
+signal stats(book: Array)
 
 ## The buttons that are sent. Every pad's unless something else is put here.
 var pad: PadInput
@@ -30,6 +32,8 @@ var view: Basis = Basis.IDENTITY
 ## Says the match is loaded as soon as the server says start. Off when there
 ## is a match to load here first: loaded() then says it.
 var auto_ready: bool = true
+## No buttons are sent, only that none are held: a menu is open here.
+var muted: bool = false
 ## For trying things out: milliseconds added to the line each way (NetSocket.lag_ms).
 var lag_ms: int = 0
 ## What is said to the server about this build. Only the tests change it.
@@ -89,6 +93,13 @@ func be_strict() -> void:
 		_socket.set_patience(NetSocket.PLAYING_PATIENCE)
 
 
+## Asks the server to hold the match (the pause menu is open here), or says it
+## need not any longer. It holds it for as long as this person has pause time.
+func want_pause(on: bool) -> void:
+	if _socket != null and playing:
+		_socket.send(NetSocket.SERVER, NetProtocol.Kind.PAUSE, [on])
+
+
 ## Off the line. In a match that is giving it up.
 func leave() -> void:
 	if _socket != null:
@@ -134,8 +145,11 @@ func _before_tick() -> void:
 func _send_buttons() -> void:
 	tick += 1
 	var stick: Vector2 = pad.vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	var move: Vector3 = view.x * stick.x + view.z * stick.y
 	var buttons: Dictionary[StringName, Vector2] = pad.frame()
+	if muted:
+		stick = Vector2.ZERO
+		buttons = {}
+	var move: Vector3 = view.x * stick.x + view.z * stick.y
 	var right: Vector3 = Vector3(view.x.x, 0.0, view.x.z)
 	moves[tick] = [Vector3(move.x, 0.0, move.z).limit_length(1.0), buttons, right.normalized() if right.length_squared() > 0.0001 else Vector3.RIGHT]
 	_sent.push_front(NetProtocol.pack_frame(buttons, Vector3(move.x, 0.0, move.z), view.x))
@@ -174,6 +188,14 @@ func _on_message(from: int, kind: int, body: Variant) -> void:
 			var parts: Array = body if typeof(body) == TYPE_ARRAY else []
 			if playing and parts.size() == 2 and typeof(parts[0]) == TYPE_INT and typeof(parts[1]) == TYPE_ARRAY:
 				events.emit(parts[0], parts[1])
+		NetProtocol.Kind.STATS:
+			var packed: Array = body if typeof(body) == TYPE_ARRAY else []
+			if playing and packed.size() == 2 and typeof(packed[0]) == TYPE_INT and typeof(packed[1]) == TYPE_PACKED_BYTE_ARRAY \
+					and packed[0] > 0 and packed[0] <= NetProtocol.MAX_STATE_BYTES:
+				var plain: PackedByteArray = (packed[1] as PackedByteArray).decompress(packed[0], FileAccess.COMPRESSION_ZSTD)
+				var book: Variant = bytes_to_var(plain) if plain.size() == packed[0] else null
+				if typeof(book) == TYPE_ARRAY:
+					stats.emit(book)
 		NetProtocol.Kind.END:
 			if typeof(body) == TYPE_DICTIONARY:
 				playing = false

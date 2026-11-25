@@ -53,6 +53,7 @@ var _live_dot: Panel
 var _tween: Tween
 var _time: float = 0.0
 var _finishing: bool = false
+var _skip: Label
 
 
 func setup(p_game: Game) -> void:
@@ -223,11 +224,18 @@ func _team(team: Team) -> Control:
 ## In the bottom bar, out of the way.
 func _build_skip() -> void:
 	var skip: Label = _label("(A)  SKIP", 18, Color(1.0, 1.0, 1.0, 0.55))
+	_skip = skip
 	skip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	skip.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_bottom.add_child(skip)
 	skip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	skip.offset_right = -MARGIN
+
+
+## What stands in place of "(A) SKIP" (online, where both people have to).
+func set_skip(text: String) -> void:
+	if _skip != null:
+		_skip.text = text
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:

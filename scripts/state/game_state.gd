@@ -8,6 +8,8 @@ var pc: PlayController
 var game: Game
 ## Seconds since enter(), in game time.
 var time_in_state: float = 0.0
+## The seats that have asked to skip the scene this state shows (skip_asked).
+var _skips: Dictionary[int, bool] = {}
 
 
 func enter() -> void:
@@ -33,6 +35,33 @@ func count_down(limit: float, delta: float) -> bool:
 	if warn and left > 0.0 and ceili(left) != ceili(left + delta):
 		game.audio.play(&"ui_tick")
 	return left <= 0.0
+
+
+## Nobody has asked to skip yet: for enter().
+func skip_reset() -> void:
+	_skips.clear()
+
+
+## (A) was pressed to skip the scene this state shows. `open`: a press counts
+## by now. In an online match each person has to have pressed it: the one who
+## has is told they are waiting, the other that they are waited for. (The
+## scene's own longest time ends it for both all the same.)
+func skip_asked(open: bool) -> bool:
+	if Game.net_mode != Game.NetMode.SERVER:
+		return open and Input.is_action_just_pressed(&"confirm")
+	var people: int = 0
+	for person: HumanController in game.humans:
+		if person.is_active():
+			people += 1
+	for person: HumanController in game.humans:
+		if not person.is_active():
+			continue
+		if open and not _skips.has(person.seat) and person.pad.just_pressed(&"confirm"):
+			_skips[person.seat] = true
+			for other: HumanController in game.humans:
+				if other.is_active() and _skips.size() < people:
+					game.hud.set_skip_note("WAITING FOR THE OTHER PLAYER TO SKIP" if other == person else "THE OTHER PLAYER WANTS TO SKIP      (A)  SKIP", other.seat)
+	return people > 0 and _skips.size() >= people
 
 
 ## In place of physics_update while the screen dips to black on the way to the
