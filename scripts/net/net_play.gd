@@ -10,9 +10,11 @@ extends Node
 ## made, the screen says that it is being got ready.
 ##
 ## To try things out it can be run by itself:
-##   godot --path . res://scenes/online.tscn -- join=127.0.0.1 [port=24642] [team=<n>] [pass=<ticket>] [bot]
+##   godot --path . res://scenes/online.tscn -- join=127.0.0.1 [port=24642] [team=<n>] [pass=<ticket>] [bot] [find]
 ##         [lag=<ms>] [jitter=<ms>] [loss=<percent>] [nopredict]
 ## `bot` plays with random buttons: someone to play against on one machine.
+## `find` has it look for its match through the matchmaker this machine is set
+## up for (in place of join=): with `bot`, an opponent for whoever presses ONLINE.
 ## `lag` makes the line that much slower each way (lag=50 is 100 ms more there
 ## and back), `jitter` adds up to that much more to each message, `loss` loses
 ## that many in a hundred; `nopredict` draws the person's own player where the server has
@@ -43,6 +45,8 @@ var team_pick: int = -1
 var match_pass: String = ""
 ## Random buttons in place of the gamepad.
 var bot: bool = false
+## Looks for the match through the matchmaker first (see Matchmaker.make()).
+var find: bool = false
 ## For trying things out: milliseconds added to the line each way, and the
 ## person's own player drawn where the server has him (no running ahead).
 var lag_ms: int = 0
@@ -79,6 +83,8 @@ func _ready() -> void:
 			team_pick = int(arg.trim_prefix("team="))
 		elif arg.begins_with("pass="):
 			match_pass = arg.trim_prefix("pass=")
+		elif arg == "find":
+			find = true
 		elif arg == "bot":
 			bot = true
 		elif arg.begins_with("lag="):
@@ -122,6 +128,31 @@ func _ready() -> void:
 	client.ended.connect(_finish)
 	client.rejected.connect(func(reason: String) -> void: _finish({"reason": "rejected: %s" % reason}))
 	client.lost.connect(func() -> void: _finish({"reason": "lost"}))
+	if find:
+		_find()
+	else:
+		_join()
+
+
+## Asks the matchmaker for a match, and goes to the server it names.
+func _find() -> void:
+	var finder: Matchmaker = Matchmaker.make()
+	if finder == null:
+		_finish({"reason": "no matchmaker"})
+		return
+	add_child(finder)
+	finder.failed.connect(func(reason: String) -> void: _finish({"reason": reason}))
+	finder.found.connect(func(to: String, at: int, ticket: String) -> void:
+		address = to
+		port = at
+		match_pass = ticket
+		client.match_pass = ticket
+		_join())
+	print("NetPlay: asking the matchmaker for a match")
+	finder.search()
+
+
+func _join() -> void:
 	if not client.join(address, port):
 		_finish({"reason": "no line"})
 	else:
