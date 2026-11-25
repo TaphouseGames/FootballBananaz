@@ -101,6 +101,7 @@ func _physics_process(_delta: float) -> void:
 	for seat: int in SEATS:
 		if not notes[seat].is_empty() and _peers[seat] != 0:
 			_socket.send(_peers[seat], NetProtocol.Kind.EVENTS, [_tick, notes[seat]])
+	_socket.flush()
 
 
 ## How many of the two are here.

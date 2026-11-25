@@ -45,9 +45,10 @@ var _said_hello: bool = false
 var _over: bool = false
 ## The last few ticks of buttons, newest first.
 var _sent: Array[PackedFloat32Array] = []
-## What the stick and the turbo were on each tick sent that the server has not
-## answered for yet: [the move on the field, turbo held]. NetView moves the
-## person's own player by them ahead of the server's word.
+## The buttons of each tick sent that the server has not answered for yet, and
+## of the last one it has: [the move on the field, the buttons (PadInput.frame),
+## the camera's right]. NetView runs the person's own player through them ahead
+## of the server's word.
 var moves: Dictionary[int, Array] = {}
 var _joiner: NetProtocol.StateJoiner = NetProtocol.StateJoiner.new()
 
@@ -100,10 +101,11 @@ func leave() -> void:
 	moves.clear()
 
 
-## The server has played the buttons up to `ack`: the moves before that are done with.
+## The server has played the buttons up to `ack`: the moves before that one are
+## done with. (That one's are what was held going into the next.)
 func forget_moves(ack: int) -> void:
 	for sent: int in moves.keys():
-		if sent <= ack:
+		if sent < ack:
 			moves.erase(sent)
 
 
@@ -126,14 +128,17 @@ func _before_tick() -> void:
 		_socket.send(NetSocket.SERVER, NetProtocol.Kind.HELLO, [version, NetProtocol.input_signature(), team_pick])
 	if playing:
 		_send_buttons()
+	_socket.flush()
 
 
 func _send_buttons() -> void:
 	tick += 1
 	var stick: Vector2 = pad.vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	var move: Vector3 = view.x * stick.x + view.z * stick.y
-	moves[tick] = [Vector3(move.x, 0.0, move.z).limit_length(1.0), pad.pressed(&"turbo")]
-	_sent.push_front(NetProtocol.pack_frame(pad.frame(), Vector3(move.x, 0.0, move.z), view.x))
+	var buttons: Dictionary[StringName, Vector2] = pad.frame()
+	var right: Vector3 = Vector3(view.x.x, 0.0, view.x.z)
+	moves[tick] = [Vector3(move.x, 0.0, move.z).limit_length(1.0), buttons, right.normalized() if right.length_squared() > 0.0001 else Vector3.RIGHT]
+	_sent.push_front(NetProtocol.pack_frame(buttons, Vector3(move.x, 0.0, move.z), view.x))
 	if _sent.size() > NetProtocol.INPUT_REPEATS:
 		_sent.pop_back()
 	_socket.send(NetSocket.SERVER, NetProtocol.Kind.INPUT, [tick, _sent], false)

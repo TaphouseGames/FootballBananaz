@@ -58,9 +58,30 @@ func is_active() -> bool:
 	return team != null
 
 
-## On this tick the stick moved the controlled player just as it was pushed.
+## On this tick the person's buttons were his alone: he was not held still for
+## a fake or a handoff, nor run by the AI. (He may be in a dive of his own, or
+## on the turf.)
 func moved_freely() -> bool:
-	return _free_tick == Engine.get_physics_frames() and controlled != null and controlled.can_act()
+	return _free_tick == Engine.get_physics_frames() and controlled != null
+
+
+## In an online match's picture: one tick of `buttons` for the person's own
+## player, as the server will play it (`dead`: after the whistle). Only what it
+## does to him himself comes of it: PlayController's actions do nothing else
+## there. Before the first tick of a run through them, net_rewind().
+func net_predict(buttons: PadInput, dead: bool) -> void:
+	var own: PadInput = pad
+	pad = buttons
+	if dead:
+		update_dead()
+	else:
+		update_live()
+	pad = own
+
+
+func net_rewind() -> void:
+	_pass_slot = -1
+	_fake_armed = false
 
 
 func set_controlled(player: Player) -> void:
@@ -168,9 +189,13 @@ func update_live() -> void:
 	assist = false
 	if not is_active() or controlled == null:
 		return
+	# An online match's picture runs the person's own player ahead of the server
+	# with this (net_predict). Whether he is held or run by the AI is the
+	# server's to say (moved_freely), and nobody else is touched.
+	var picture: bool = Game.net_mode == Game.NetMode.CLIENT
 	# The receiving team gets under a kickoff by itself; the person takes over
 	# at the catch.
-	if pc.kickoff and pc.phase == PlayController.Phase.AIR and team == pc.offense:
+	if not picture and pc.kickoff and pc.phase == PlayController.Phase.AIR and team == pc.offense:
 		assist = true
 		return
 	var player: Player = controlled
@@ -183,7 +208,7 @@ func update_live() -> void:
 	player.wants_turbo = pad.pressed(&"turbo")
 
 	# Play action: he stays with the back until the fake is over.
-	if player == pc.qb and player.has_ball and pc.faking():
+	if not picture and player == pc.qb and player.has_ball and pc.faking():
 		player.move_input = Vector3.ZERO
 		player.wants_turbo = false
 		return
@@ -191,13 +216,13 @@ func update_live() -> void:
 	# back has it: the quarterback does what the play draws for him (stays put,
 	# or drops on a draw), so the exchange happens where it is meant to. Walked
 	# away from the back, the handoff would turn into a slower toss.
-	if player == pc.qb and pc.phase == PlayController.Phase.POCKET and _in_exchange():
+	if not picture and player == pc.qb and pc.phase == PlayController.Phase.POCKET and _in_exchange():
 		player.move_input = Vector3.ZERO
 		player.wants_turbo = false
 		assist = true
 		return
 
-	if pc.phase == PlayController.Phase.AIR and pc.ball.intended == player and not moving:
+	if not picture and pc.phase == PlayController.Phase.AIR and pc.ball.intended == player and not moving:
 		assist = true
 	if not assist:
 		_free_tick = Engine.get_physics_frames()
@@ -283,7 +308,7 @@ func update_live() -> void:
 		# A tucked quarterback is a runner: the pass buttons do nothing until turbo
 		# is released, and the jump and action buttons below work for him.
 		if not player.has_ball and pad.just_pressed(&"switch_player"):
-			if carrier == null or carrier.team != team:
+			if not picture and (carrier == null or carrier.team != team):
 				_switch_to_nearest()
 			return
 

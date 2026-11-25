@@ -83,6 +83,8 @@ var move_input: Vector3 = Vector3.ZERO
 ## In an online match's picture: the server moved him by a person's stick alone
 ## on the tick shown (HumanController.moved_freely).
 var net_free: bool = false
+## Inside net_predict(): the same tick may be gone through many times over.
+var _predicting: bool = false
 var wants_turbo: bool = false
 var facing: Vector3 = Vector3.RIGHT
 ## When set, the player faces this way instead of the way he is moving
@@ -343,25 +345,20 @@ func _own_seat() -> int:
 	return team.human.seat if team != null and team.human != null else NetEvents.EVERYONE
 
 
-## One tick of running as the stick says, with nothing else of the game: what
-## an online match's picture does for the person's own player until the server
-## says where he really is (NetView). The same step as integrate() takes for a
-## man on his feet.
-func net_predict(input: Vector3, turbo_held: bool, delta: float) -> void:
-	move_input = input
-	wants_turbo = turbo_held
-	ai_speed_scale = 1.0
-	_move_normal(delta)
-	position += velocity * delta
-	keep_on_field()
-	if look_dir.length_squared() > 0.01:
-		facing = look_dir.normalized()
-	elif velocity.length_squared() > 0.6:
-		facing = velocity.normalized()
+## One tick of him alone, with nothing else of the game: what an online
+## match's picture does for the person's own player until the server says
+## where he really is (NetView). The same step as integrate() takes, without
+## what is done once (the tumble of a landing) and without the wall's splat.
+func net_predict(delta: float) -> void:
+	_predicting = true
+	_step(delta)
+	_predicting = false
 
 
 ## Starts a fall (PlayerFall's `method`), and notes it for an online match's picture.
 func _fall(method: StringName, args: Array) -> void:
+	if _predicting:
+		return
 	fall.callv(method, args)
 	if NetEvents.recording:
 		NetEvents.note(self, NetEvents.Part.FALL, method, args)
@@ -989,12 +986,17 @@ func _to_local(dir: Vector3) -> Vector3:
 
 
 func integrate(delta: float) -> void:
+	_step(delta)
+	_update_visual(delta, false)
+	_clear_wall(delta)
+
+
+## What a tick does to him, before he is drawn.
+func _step(delta: float) -> void:
 	_tick_timers(delta)
 	wall_hit = 0.0
 	if frozen:
 		velocity = Vector3.ZERO
-		_update_visual(delta, false)
-		_clear_wall(delta)
 		return
 
 	match state:
@@ -1063,14 +1065,15 @@ func integrate(delta: float) -> void:
 				facing = drag_partner.facing
 
 	position += velocity * delta
-	_meet_wall()
+	if _predicting:
+		keep_on_field()
+	else:
+		_meet_wall()
 	if (state == State.NORMAL or state == State.JUMPING) and look_dir.length_squared() > 0.01:
 		facing = look_dir.normalized()
 	elif state != State.DOWN and state != State.SPINNING and velocity.length_squared() > 0.6:
 		# A spin keeps the facing it started with, sidestep or not.
 		facing = velocity.normalized()
-	_update_visual(delta, false)
-	_clear_wall(delta)
 
 
 func _move_normal(delta: float) -> void:

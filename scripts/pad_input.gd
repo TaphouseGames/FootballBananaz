@@ -118,6 +118,11 @@ func push(now: Dictionary[StringName, Vector2]) -> void:
 		_history.pop_front()
 
 
+## Nothing has been pushed: the record starts again.
+func forget() -> void:
+	_history.clear()
+
+
 func _recorded() -> bool:
 	return remote or delay > 0
 

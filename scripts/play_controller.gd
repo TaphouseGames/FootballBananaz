@@ -196,6 +196,8 @@ var _pushes: PackedVector3Array = PackedVector3Array()
 ## thought, so no brain reacts to another's decision from the same tick.
 ## (Running them immediately gave the team that thinks second an edge.)
 var _thinking: bool = false
+## pass_open() as the server had it, in an online match's picture.
+var net_pass_open: bool = false
 var _queued_actions: Array[Callable] = []
 ## Motion before the snap: who may be sent, and what the defense does about it.
 var motion: PreSnapMotion
@@ -1389,7 +1391,7 @@ func celebration_variant(player: Player, count: int) -> int:
 ## else on the team comes and dives on top of him. Each new dive calls them in
 ## again.
 func start_pile_on(player: Player) -> void:
-	if not is_celebrating(player) or player.state != Player.State.DIVING:
+	if _picture() or not is_celebrating(player) or player.state != Player.State.DIVING:
 		return
 	pile_target = player
 	pile_time = dead_time
@@ -1432,7 +1434,7 @@ func can_pick_celebration(player: Player) -> bool:
 ## face buttons in the order of HumanController.PASS_ACTIONS): he spikes the
 ## ball and goes into it.
 func pick_celebration(style: int) -> void:
-	if not celebration_pick_open or celebrant == null:
+	if _picture() or not celebration_pick_open or celebrant == null:
 		return
 	celebration_style = posmod(style, PlayerAnimator.DANCES)
 	celebration_pick_open = false
@@ -1683,7 +1685,7 @@ func lateral_risk(carrier: Player, target: Player) -> float:
 ## nobody to pitch it to. It can go wrong (lateral_risk): then it is a fumble.
 ## From behind the line the play is a run from here on.
 func do_lateral(carrier: Player) -> bool:
-	if not can_lateral(carrier):
+	if _picture() or not can_lateral(carrier):
 		return false
 	var target: Player = lateral_target(carrier)
 	if target == null:
@@ -1943,7 +1945,15 @@ func result_text() -> String:
 
 ## The quarterback has to let go of turbo (untuck the ball) before he can throw.
 func can_pass() -> bool:
-	return not ball_dead and phase == Phase.POCKET and ball.carrier == qb and not off_play.is_run and not faking() and (qb.can_act() or qb.is_airborne()) and not qb.is_tucked()
+	return pass_open() and qb != null and (qb.can_act() or qb.is_airborne()) and not qb.is_tucked()
+
+
+## The play is one the quarterback may still throw on. In an online match's
+## picture that is the server's word (NetState).
+func pass_open() -> bool:
+	if Game.net_mode == Game.NetMode.CLIENT:
+		return net_pass_open
+	return not ball_dead and phase == Phase.POCKET and ball.carrier == qb and not off_play.is_run and not faking()
 
 
 ## Wrapped up in the pocket with the ball still in his hands: he cannot throw
@@ -1979,6 +1989,8 @@ func on_body_landed(player: Player, impact: float) -> void:
 ## the throw that never comes; a rusher close enough to bat it may jump at it.
 ## Better coverage men bite less, and every further fake on a play fools fewer.
 func pump_fake() -> void:
+	if _picture():
+		return
 	if _thinking:
 		_queued_actions.append(pump_fake)
 		return
@@ -2156,6 +2168,8 @@ func placement_shift(target: Player, point: Vector3, speed: float, placement: Pl
 ## quarterback); mostly it floats, comes up well short and goes nowhere near
 ## where he aimed. Either way he goes down as it leaves, and it is no sack.
 func throw_ball(target: Player, power: float = 0.5, placement: Placement = Placement.NORMAL, hit: bool = false) -> void:
+	if _picture():
+		return
 	if _thinking:
 		_queued_actions.append(throw_ball.bind(target, power, placement, hit))
 		return
@@ -2337,6 +2351,8 @@ func _check_line_tip() -> void:
 ## (+1 or -1 along z), a little downfield. Nobody can catch it; it is incomplete
 ## when it lands.
 func throw_away(side: float) -> void:
+	if _picture():
+		return
 	if _thinking:
 		_queued_actions.append(throw_away.bind(side))
 		return
@@ -2762,6 +2778,13 @@ func _add_placement_stat(what: String) -> void:
 
 # --- Actions ---------------------------------------------------------------------
 
+## This is an online match's picture: an action only starts the move of the
+## person's own player (HumanController.net_predict). Its sound, what it does to
+## anybody else and the book are the server's.
+func _picture() -> bool:
+	return Game.net_mode == Game.NetMode.CLIENT
+
+
 ## `speed` below 0 means the usual one: full, or what gets him to a pass.
 func do_dive(player: Player, dir: Vector3, speed: float = -1.0) -> void:
 	if _thinking:
@@ -2771,6 +2794,8 @@ func do_dive(player: Player, dir: Vector3, speed: float = -1.0) -> void:
 		return
 	# After the whistle (the party, a pile-on) a dive costs no stamina.
 	player.start_dive(dir, speed if speed >= 0.0 else _ball_dive_speed(player, dir), ball_dead or is_celebrating(player))
+	if _picture():
+		return
 	# A dive into the party is not one for the book.
 	if not is_celebrating(player):
 		game.stat_book.add_dive(player.team)
@@ -2804,7 +2829,8 @@ func do_jump(player: Player) -> void:
 		return
 	if not player.start_jump():
 		return
-	game.audio.action(player, &"jump")
+	if not _picture():
+		game.audio.action(player, &"jump")
 	# Going up for a pass that comes down nearby: the jump carries him to it.
 	var gap: Vector3 = _gap_to_pass(player)
 	var left: float = ball.air_time_left()
@@ -2877,7 +2903,7 @@ func do_spin(player: Player, side: float, juke: bool = false) -> void:
 	if _thinking:
 		_queued_actions.append(do_spin.bind(player, side, juke))
 		return
-	if player.start_spin(side, juke):
+	if player.start_spin(side, juke) and not _picture():
 		game.audio.action(player, &"spin")
 
 
@@ -2885,7 +2911,7 @@ func do_secure(player: Player) -> void:
 	if _thinking:
 		_queued_actions.append(do_secure.bind(player))
 		return
-	if player.start_secure():
+	if player.start_secure() and not _picture():
 		game.audio.action(player, &"spin")
 
 
@@ -2893,7 +2919,7 @@ func do_stiff_arm(player: Player, side: float) -> void:
 	if _thinking:
 		_queued_actions.append(do_stiff_arm.bind(player, side))
 		return
-	if player.start_stiff_arm(side):
+	if player.start_stiff_arm(side) and not _picture():
 		game.audio.action(player, &"spin")
 
 
@@ -2905,6 +2931,8 @@ func do_shove(player: Player, dir: Vector3) -> void:
 	if not player.can_act():
 		return
 	player.start_shove(dir)
+	if _picture():
+		return
 	game.audio.action(player, &"shove")
 	game.rumble.play_mine(&"shove", player)
 	for opponent: Player in player.team.opponent.players:

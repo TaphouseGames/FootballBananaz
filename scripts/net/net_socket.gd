@@ -3,6 +3,8 @@ extends RefCounted
 ## The line between the server and the people's machines: messages of
 ## [kind, body] (see NetProtocol) over ENet. poll() once a tick takes in what
 ## has arrived. The server's id is 1; everyone else gets one when they join.
+## What is sent only leaves at the next poll() unless flush() is called: call
+## it once a tick's messages are all sent, or they wait a tick for nothing.
 ##
 ## Nothing but this class knows that it is ENet underneath.
 
@@ -80,13 +82,25 @@ func poll() -> void:
 				_held_in.append([Time.get_ticks_msec() + lag_ms, from, parts[0], parts[1]])
 			else:
 				message.emit(from, parts[0], parts[1])
-	var now: int = Time.get_ticks_msec()
+	# This is looked at once a tick: what is due within half a tick goes now, so
+	# that the wait comes to lag_ms on average, not to lag_ms and half a tick.
+	var now: int = Time.get_ticks_msec() + roundi(500.0 / Engine.physics_ticks_per_second)
+	var sent: bool = false
 	while not _held_out.is_empty() and int(_held_out[0][0]) <= now:
 		var out: Array = _held_out.pop_front()
 		_put(out[1], out[2], out[3], out[4])
+		sent = true
+	if sent:
+		flush()
 	while not _held_in.is_empty() and int(_held_in[0][0]) <= now:
 		var held: Array = _held_in.pop_front()
 		message.emit(held[1], held[2], held[3])
+
+
+## Puts what has been sent on the wire now, not at the next poll().
+func flush() -> void:
+	if _peer != null and _peer.host != null and _peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED:
+		_peer.host.flush()
 
 
 ## `to` 0 is everyone. `reliable` messages arrive, and in order; the others may

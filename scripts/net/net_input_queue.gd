@@ -8,10 +8,16 @@ extends RefCounted
 ## last one stands (what was held stays held, and nothing is pressed again);
 ## with too many waiting, the oldest are stepped over, and what was pressed in
 ## them is pressed in the next.
+##
+## Every tick that waits here is a tick the person's buttons are late. So when
+## there has been one to spare on every tick for a while, one is stepped over:
+## on a steady line none wait, and on an uneven one as many as it takes.
 
 ## Ticks that may wait. More than this and the person would be playing that far
 ## behind for the rest of the match.
 const MAX_WAITING: int = 4
+## Ticks in a row with one to spare before one is stepped over.
+const SPARE_TICKS: int = 90
 
 ## The ticks that have come in and not been handed out.
 var _waiting: Dictionary[int, PackedFloat32Array] = {}
@@ -23,6 +29,10 @@ var held: int = 0
 var skipped: int = 0
 ## The tick of the buttons handed out last, -1 before the first.
 var taken: int = -1
+## The fewest that were left waiting on a tick lately, and for how many ticks
+## that has been counted.
+var _spare: int = MAX_WAITING
+var _spare_ticks: int = 0
 
 
 func add(tick: int, frame: PackedFloat32Array) -> void:
@@ -35,13 +45,22 @@ func take() -> PackedFloat32Array:
 	if _waiting.is_empty():
 		if not _last.is_empty():
 			held += 1
+		_spare = 0
 		return _last
 	var oldest: int = _waiting.keys().min()
 	var newest: int = _waiting.keys().max()
 	# A tick that never came, with later ones here: it will not come now.
 	_next = maxi(_next, oldest)
 	var frame: PackedFloat32Array = _take_next()
-	while newest - _next >= MAX_WAITING:
+	_spare = mini(_spare, _waiting.size())
+	_spare_ticks += 1
+	var one_over: bool = false
+	if _spare_ticks >= SPARE_TICKS:
+		one_over = _spare >= 1
+		_spare = MAX_WAITING
+		_spare_ticks = 0
+	while not _waiting.is_empty() and (newest - _next >= MAX_WAITING or one_over):
+		one_over = false
 		var over: PackedFloat32Array = frame
 		_next = _first_waiting()
 		frame = _take_next()

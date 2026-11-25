@@ -337,6 +337,14 @@ func net_start(voice: StringName, path: String, volume: float, pitch: float, bus
 	_start(voice, stream, clampf(volume, 0.0, 2.0), clampf(pitch, 0.25, 4.0), bus)
 
 
+## Whether the file at `path` is one of the takes of `sound`.
+func is_take_of(sound: StringName, path: String) -> bool:
+	for stream: AudioStream in _streams.get(sound, []):
+		if stream != null and stream.resource_path == path:
+			return true
+	return false
+
+
 ## On a person's machine in an online match: the booth was cut off.
 func net_hush() -> void:
 	_announcer.stop()

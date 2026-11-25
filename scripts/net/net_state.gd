@@ -27,11 +27,14 @@ const PLAYER: Array[Array] = [
 	# What his next step goes by (Player.net_predict).
 	[&"speed_scale", "f"], [&"turbo_locked", "b"], [&"burst_timer", "f"], [&"secure_strength", "f"],
 	[&"dive_get_up_timer", "f"], [&"_feet_set_time", "f"],
+	# And what a move of his own goes by (HumanController.net_predict).
+	[&"move_cooldown", "f"], [&"jump_cooldown", "f"], [&"secure_cooldown", "f"],
+	[&"dive_strength", "f"], [&"spin_strength", "f"], [&"stiff_arm_strength", "f"],
 ]
 ## After a player's own: the seat of the person playing him (-1 nobody), his job
 ## on offense (-1 none) and how long he blocks first, his job on defense (-1
-## none), whether he has seen a loose ball, and whether a person's stick alone
-## moved him this tick.
+## none), whether he has seen a loose ball, and whether a person's buttons alone
+## were his this tick.
 const PLAYER_EXTRA: int = 6
 
 const BALL: Array[Array] = [
@@ -54,6 +57,7 @@ const PLAY: Array[Array] = [
 	[&"gain_dance", "b"], [&"gain_dance_time", "f"], [&"celebration_pick_open", "b"],
 	[&"offense", "t"], [&"defense", "t"], [&"final_team", "t"],
 	[&"qb", "p"], [&"runner", "p"], [&"returner", "p"], [&"scorer", "p"], [&"celebrant", "p"], [&"passer", "p"],
+	[&"net_pass_open", "b"],
 ]
 
 const GAME: Array[Array] = [
@@ -86,6 +90,7 @@ static func pack(game: Game, acks: PackedInt32Array = PackedInt32Array()) -> Arr
 	ball.append(mark.global_position.y)
 	ball.append(mark.global_position.z)
 	var play: PackedFloat32Array = PackedFloat32Array()
+	pc.net_pass_open = pc.pass_open()
 	_write(pc, PLAY, play, game)
 	var match_now: PackedFloat32Array = PackedFloat32Array()
 	_write(game, GAME, match_now, game)
