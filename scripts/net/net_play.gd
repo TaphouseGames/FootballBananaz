@@ -10,7 +10,7 @@ extends Node
 ## made, the screen says that it is being got ready.
 ##
 ## To try things out it can be run by itself:
-##   godot --path . res://scenes/online.tscn -- join=127.0.0.1 [port=24642] [team=<n>] [bot]
+##   godot --path . res://scenes/online.tscn -- join=127.0.0.1 [port=24642] [team=<n>] [pass=<ticket>] [bot]
 ##         [lag=<ms>] [jitter=<ms>] [loss=<percent>] [nopredict]
 ## `bot` plays with random buttons: someone to play against on one machine.
 ## `lag` makes the line that much slower each way (lag=50 is 100 ms more there
@@ -77,6 +77,8 @@ func _ready() -> void:
 			port = int(arg.trim_prefix("port="))
 		elif arg.begins_with("team="):
 			team_pick = int(arg.trim_prefix("team="))
+		elif arg.begins_with("pass="):
+			match_pass = arg.trim_prefix("pass=")
 		elif arg == "bot":
 			bot = true
 		elif arg.begins_with("lag="):
