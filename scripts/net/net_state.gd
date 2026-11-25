@@ -107,6 +107,8 @@ static func pack(game: Game, acks: PackedInt32Array = PackedInt32Array()) -> Arr
 		# What the levels of the crowd, the huddle, the music and the chant go by.
 		[game.audio.excitement, game.audio._huddle_on, game.audio._music_stopping, game.audio._chant_fading],
 		acks,
+		# The scoring team's mascot is one of the players while it celebrates.
+		-1 if pc.mascot_team() == null else (0 if pc.mascot_team() == game.home else 1),
 	]
 	return [players, ball, play, match_now, rest]
 
@@ -116,12 +118,19 @@ static func fits(game: Game, state: Variant) -> bool:
 	if typeof(state) != TYPE_ARRAY:
 		return false
 	var parts: Array = state
-	if parts.size() != 5 or typeof(parts[4]) != TYPE_ARRAY or (parts[4] as Array).size() != 11:
+	if parts.size() != 5 or typeof(parts[4]) != TYPE_ARRAY or (parts[4] as Array).size() != 12:
+		return false
+	if typeof(parts[4][11]) != TYPE_INT:
 		return false
 	for at: int in 4:
 		if typeof(parts[at]) != TYPE_PACKED_FLOAT32_ARRAY:
 			return false
+	# With a mascot at a party there is one player more (PlayController.net_set_mascot).
 	var count: int = game.play_controller.players.size()
+	if game.play_controller.mascot_team() != null:
+		count -= 1
+	if int(parts[4][11]) >= 0:
+		count += 1
 	return (parts[0] as PackedFloat32Array).size() == count * (_width(PLAYER) + PLAYER_EXTRA) \
 			and (parts[1] as PackedFloat32Array).size() == _width(BALL) + BALL_EXTRA \
 			and (parts[2] as PackedFloat32Array).size() == _width(PLAY) \
@@ -132,6 +141,8 @@ static func fits(game: Game, state: Variant) -> bool:
 ## they have is theirs here too.
 static func unpack(game: Game, state: Array, seat: int) -> void:
 	var pc: PlayController = game.play_controller
+	var guest: int = int((state[4] as Array)[11])
+	pc.net_set_mascot(null if guest < 0 else (game.home if guest == 0 else game.away))
 	var players: PackedFloat32Array = state[0]
 	var at: int = 0
 	var mine: Player = null

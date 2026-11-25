@@ -1339,6 +1339,31 @@ func _mascot_entry_spot() -> Vector3:
 	return spot
 
 
+## The team whose mascot is on the field for its party, or null.
+func mascot_team() -> Team:
+	return _mascot_guest.team if _mascot_guest != null else null
+
+
+## In an online match's picture: the mascot is on the field with `team` (null:
+## with nobody), as the server has it. It is one of the players there, so it has
+## to be one here for the server's states to fit (NetState).
+func net_set_mascot(team: Team) -> void:
+	if _mascot_guest != null and _mascot_guest.team != team:
+		_dismiss_mascot()
+	if team == null or _mascot_guest != null:
+		return
+	var guest: Mascot = team.mascot
+	if guest == null or team.players.has(guest):
+		return
+	guest.frozen = false
+	guest.play = self
+	guest.visible = true
+	guest.reset_physics_interpolation()
+	team.players.append(guest)
+	players.append(guest)
+	_mascot_guest = guest
+
+
 ## The mascot that joined a celebration leaves the field again.
 func _dismiss_mascot() -> void:
 	if _mascot_guest == null:

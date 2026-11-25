@@ -46,12 +46,17 @@ var _ready_wait: int = 0
 var _scene: PackedScene
 ## Ticks of the match played.
 var _tick: int = 0
+## For the tests, in a debug build only (`-- touchdown=<tick>`): from that tick
+## on, whoever first carries a live ball is put over the goal line.
+var _test_touchdown: int = 0
 
 
 func _ready() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("port="):
 			port = int(arg.trim_prefix("port="))
+		elif arg.begins_with("touchdown=") and OS.is_debug_build():
+			_test_touchdown = int(arg.trim_prefix("touchdown="))
 	# No picture to draw: no need for more frames than ticks.
 	Engine.max_fps = Engine.physics_ticks_per_second
 	# Loaded before anyone is here: nobody waits for it.
@@ -147,6 +152,12 @@ func _before_tick() -> void:
 		pad.world_move = NetProtocol.frame_move(frame)
 		pad.view_right = NetProtocol.frame_right(frame)
 		pad.has_view = true
+	if _test_touchdown > 0 and _tick >= _test_touchdown:
+		var pc: PlayController = game.play_controller
+		var carrier: Player = pc.ball.carrier
+		if pc.state_machine.current_name() == &"Live" and not pc.ball_dead and carrier != null and not game.conversion:
+			carrier.position.x = game.tuning.field_length + 0.5 if carrier.team.attack_dir > 0 else -0.5
+			_test_touchdown = 0
 	if game.play_controller.state_machine.current_name() == &"GameOver":
 		var winner: int = -1
 		if game.home.score != game.away.score:

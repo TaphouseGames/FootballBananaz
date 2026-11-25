@@ -17,6 +17,8 @@ extends SceneTree
 ## lag=<ms> makes this end's line that much slower each way; nopredict draws the
 ## person's own player where the server has him. The numbers it prints for the
 ## person's own player tell what running him ahead of the server does.
+## touchdown has the server put a carrier over the goal line a few seconds in:
+## the picture must go on through the celebration (the mascot joins the players).
 
 const PORT: int = 24741
 
@@ -24,6 +26,10 @@ var _seconds: float = 40.0
 var _out: String = ""
 var _lag: int = 0
 var _predict: bool = true
+var _touchdown: bool = false
+## Frames with a mascot among the players, and states shown when it first was.
+var _mascot_frames: int = 0
+var _shown_at_mascot: int = -1
 var _shots: int = 0
 var _server_pid: int = -1
 var _bot_pid: int = -1
@@ -57,6 +63,8 @@ func _initialize() -> void:
 			_lag = int(arg.trim_prefix("lag="))
 		elif arg == "nopredict":
 			_predict = false
+		elif arg == "touchdown":
+			_touchdown = true
 	var godot: String = OS.get_executable_path()
 	var server_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/server.tscn"]
 	var bot_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/online_dev.tscn"]
@@ -65,6 +73,8 @@ func _initialize() -> void:
 		server_args.append_array(["--log-file", "%s/server.log" % _out])
 		bot_args.append_array(["--log-file", "%s/bot.log" % _out])
 	server_args.append_array(["--", "port=%d" % PORT])
+	if _touchdown:
+		server_args.append("touchdown=400")
 	bot_args.append_array(["--", "join=127.0.0.1", "port=%d" % PORT, "bot"])
 	_server_pid = OS.create_process(godot, server_args)
 	_bot_pid = OS.create_process(godot, bot_args)
@@ -109,13 +119,17 @@ func _watch() -> void:
 		return
 	var pc: PlayController = game.play_controller
 	_states_seen[pc.state_machine.current_name()] = true
+	if pc.mascot_team() != null:
+		_mascot_frames += 1
+		if _shown_at_mascot < 0:
+			_shown_at_mascot = view.shown
 	if _first_places.is_empty():
 		for player: Player in pc.players:
 			_first_places.append(player.position)
 		_first_ball = game.ball.position
 		_first_clock = game.clock
 	_moved = 0
-	for i: int in pc.players.size():
+	for i: int in mini(pc.players.size(), _first_places.size()):
 		if pc.players[i].position.distance_to(_first_places[i]) > 3.0:
 			_moved += 1
 	_ball_moved = maxf(_ball_moved, game.ball.position.distance_to(_first_ball))
@@ -150,6 +164,14 @@ func _judge(seconds: float) -> void:
 		_failures.append("only %d players moved" % _moved)
 	if _ball_moved < 5.0:
 		_failures.append("the ball moved %.1f yd" % _ball_moved)
+	if _touchdown:
+		print("touchdown: Scored seen %s, score %d - %d, a mascot among the players on %d frames, %d states shown since it came on" % [_states_seen.has(&"Scored"), game.home.score, game.away.score, _mascot_frames, view.shown - _shown_at_mascot if _shown_at_mascot >= 0 else 0])
+		if not _states_seen.has(&"Scored") or game.home.score + game.away.score <= 0:
+			_failures.append("no touchdown was shown here")
+		if _mascot_frames <= 0:
+			_failures.append("the mascot never joined the players here")
+		elif view.shown - _shown_at_mascot < 200:
+			_failures.append("only %d states were shown after the mascot came on" % (view.shown - _shown_at_mascot))
 	if view.refused > 0:
 		_failures.append("%d states were not what a state should be" % view.refused)
 	var by_part: PackedStringArray = PackedStringArray()
