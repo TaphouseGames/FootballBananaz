@@ -28,7 +28,10 @@ func setup(home: Team, away: Team) -> void:
 			players[player] = PlayerLine.new()
 		# The mascot is one of the team during a touchdown party: it has a
 		# line to write to, which no table shows.
-		players[team.mascot] = PlayerLine.new()
+		# (Said to be a Player here: when the online scene is the first thing
+		# loaded, this script is read before Mascot is known to be one.)
+		var mascot: Player = team.mascot
+		players[mascot] = PlayerLine.new()
 
 
 ## Every number in the book, for a person's machine in an online match:

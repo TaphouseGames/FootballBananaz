@@ -13,6 +13,6 @@ if "%GODOT%"=="" set GODOT=C:\Users\Andre\Downloads\Godot_v4.7.2-stable_win64.ex
 cd /d "%~dp0.."
 start "bananaz server" /min "%GODOT%" --headless --path . res://scenes/server.tscn -- port=24642
 timeout /t 6 /nobreak >nul
-start "bananaz bot" /min "%GODOT%" --headless --path . res://scenes/online_dev.tscn -- join=127.0.0.1 port=24642 bot
-"%GODOT%" --path . res://scenes/online_dev.tscn -- join=127.0.0.1 port=24642 %*
+start "bananaz bot" /min "%GODOT%" --headless --path . res://scenes/online.tscn -- join=127.0.0.1 port=24642 bot
+"%GODOT%" --path . res://scenes/online.tscn -- join=127.0.0.1 port=24642 %*
 endlocal

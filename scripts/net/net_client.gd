@@ -27,6 +27,8 @@ signal stats(book: Array)
 var pad: PadInput
 ## The league team asked for, -1 for whichever.
 var team_pick: int = -1
+## What the matchmaker gave this person for the match (see NetProtocol's HELLO).
+var match_pass: String = ""
 ## The person's camera: the stick is sent as a move on the field as they see it.
 var view: Basis = Basis.IDENTITY
 ## Says the match is loaded as soon as the server says start. Off when there
@@ -184,7 +186,7 @@ func _before_tick() -> void:
 		return
 	if not _said_hello:
 		_said_hello = true
-		_socket.send(NetSocket.SERVER, NetProtocol.Kind.HELLO, [version, NetProtocol.input_signature(), team_pick])
+		_socket.send(NetSocket.SERVER, NetProtocol.Kind.HELLO, [version, NetProtocol.input_signature(), team_pick, match_pass])
 	if playing:
 		_send_buttons()
 	_socket.flush()

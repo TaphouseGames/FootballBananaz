@@ -80,7 +80,7 @@ func _initialize() -> void:
 			_seconds = 900.0
 	var godot: String = OS.get_executable_path()
 	var server_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/server.tscn"]
-	var bot_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/online_dev.tscn"]
+	var bot_args: PackedStringArray = ["--headless", "--path", ".", "res://scenes/online.tscn"]
 	if _out != "":
 		# What the other two programs print, beside the pictures.
 		server_args.append_array(["--log-file", "%s/server.log" % _out])

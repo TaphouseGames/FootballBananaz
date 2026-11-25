@@ -1,7 +1,9 @@
 class_name MainMenu
 extends Node3D
 ## The title screen the game opens on: the field under a blue sky, the title on the
-## jumbotron over the far end and four buttons. Season brings up the season's screen (SeasonHub): the table,
+## jumbotron over the far end and five buttons. Online brings up the online
+## screen (OnlineLobby): the person's team, then the search for an opponent,
+## and on to a match on a server (NetPlay). Season brings up the season's screen (SeasonHub): the table,
 ## the stats and the way into the person's next game. Exhibition brings up the
 ## team select, where the person picks the two teams of the league and their
 ## own side, and which fades to a match that counts for nothing and its intro;
@@ -12,6 +14,7 @@ extends Node3D
 ## the mouse, all through Godot's own ui_* actions.
 
 const GAME_SCENE: String = "res://scenes/main.tscn"
+const ONLINE_SCENE: String = "res://scenes/online.tscn"
 const MOVE_SOUND: AudioStream = preload("res://assets/audio/ui_move_1.wav")
 const CONFIRM_SOUND: AudioStream = preload("res://assets/audio/ui_confirm_1.wav")
 ## The broadcast theme, looped under the title. Silence when the file is missing.
@@ -45,6 +48,8 @@ const JUMBOTRON_SCALE: float = 1.5
 var season_button: Button
 ## EXHIBITION: a one-off match.
 var start_button: Button
+## ONLINE: a match against whoever else is looking for one.
+var online_button: Button
 var options_button: Button
 var exit_button: Button
 ## Made the first time EXHIBITION is pressed.
@@ -54,6 +59,8 @@ var team_select: TeamSelect
 var _warm_stage: int = 0
 ## Made the first time SEASON is pressed.
 var season_hub: SeasonHub
+## Made the first time ONLINE is pressed.
+var online_lobby: OnlineLobby
 
 var _buttons: Control
 ## Held so the match does not have to be loaded a second time.
@@ -178,6 +185,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(&"confirm") or event.is_action(&"ui_accept"):
 		return
 	if (team_select != null and team_select.visible) or (season_hub != null and season_hub.visible):
+		return
+	if online_lobby != null and online_lobby.visible:
 		return
 	var focused: Button = get_viewport().gui_get_focus_owner() as Button
 	if focused != null:
@@ -341,6 +350,44 @@ func _launch(team: int, picks: PackedInt32Array, versus: bool = false) -> void:
 	ScreenFade.of(get_tree()).change_scene(GAME_SCENE)
 
 
+## On to the online screen, in place of the buttons.
+func _on_online() -> void:
+	if _starting or _leaving:
+		return
+	_play(CONFIRM_SOUND)
+	if online_lobby == null:
+		online_lobby = OnlineLobby.new()
+		online_lobby.setup(_font, league.teams, Matchmaker.make())
+		online_lobby.cancelled.connect(_on_online_cancelled)
+		online_lobby.moved.connect(_play.bind(MOVE_SOUND))
+		online_lobby.picked.connect(_play.bind(CONFIRM_SOUND))
+		online_lobby.ready_to_play.connect(_start_online)
+		ui.add_child(online_lobby)
+	ScreenFade.pop(_buttons, false)
+	online_lobby.open()
+	ScreenFade.pop(online_lobby, true)
+
+
+## Back to the buttons. ONLINE taking the focus makes the sound.
+func _on_online_cancelled() -> void:
+	booth.react(&"back")
+	online_lobby.close()
+	ScreenFade.pop(_buttons, true)
+	online_button.grab_focus()
+
+
+## An opponent is found: fades to the match on the server at `address`.
+func _start_online(address: String, port: int, match_pass: String, team: int) -> void:
+	if _starting:
+		return
+	_starting = true
+	_play(CONFIRM_SOUND)
+	Game.season_match = false
+	NetPlay.next = {"address": address, "port": port, "pass": match_pass, "team": team}
+	_fade_music()
+	ScreenFade.of(get_tree()).change_scene(ONLINE_SCENE)
+
+
 ## Nothing to set yet.
 func _on_options() -> void:
 	if _leaving:
@@ -377,7 +424,7 @@ func _on_button_focused(button: Button) -> void:
 		booth.consider(&"season", tuning.menu_voice_highlight_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
 	elif button == start_button:
 		booth.consider(&"start", tuning.menu_voice_highlight_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
-	else:
+	elif button == options_button:
 		booth.consider(&"options", tuning.menu_voice_highlight_chance, tuning.menu_voice_dwell, tuning.menu_voice_repeat_gap)
 
 
@@ -453,9 +500,10 @@ func _build_buttons() -> void:
 	_buttons = column
 	season_button = _button(_season_text(), _on_season)
 	start_button = _button("EXHIBITION", _on_start)
+	online_button = _button("ONLINE", _on_online)
 	options_button = _button("OPTIONS", _on_options)
 	exit_button = _button("EXIT", _on_exit)
-	for button: Button in [season_button, start_button, options_button, exit_button]:
+	for button: Button in [season_button, start_button, online_button, options_button, exit_button]:
 		column.add_child(button)
 	# Up from the first one goes round to the last, and back.
 	season_button.focus_neighbor_top = season_button.get_path_to(exit_button)

@@ -4,7 +4,10 @@ extends RefCounted
 ## tick's buttons are packed.
 ##
 ## Every message is [kind, body]:
-##   HELLO    to the server   [VERSION, input_signature(), team pick]
+##   HELLO    to the server   [VERSION, input_signature(), team pick, pass]
+##            the pass is what the matchmaker gave that person for this match
+##            ("" without one): a server started for a match lets in only
+##            those it was started for, each once
 ##   WELCOME  to one person   [seat]
 ##   REJECT   to one person   [reason]
 ##   START    to everyone     [home's team pick, away's]
@@ -31,7 +34,9 @@ enum Kind { HELLO, WELCOME, REJECT, START, INPUT, END, STATE, EVENTS, READY, PAU
 
 ## Goes up with every change to the messages or to what the game does with them:
 ## two machines only play each other on the same one.
-const VERSION: int = 9
+const VERSION: int = 10
+## The longest pass a HELLO may carry.
+const MAX_PASS: int = 128
 const DEFAULT_PORT: int = 24642
 ## The ticks of buttons in every INPUT message: one gets through as long as
 ## that many packets in a row are not all lost.

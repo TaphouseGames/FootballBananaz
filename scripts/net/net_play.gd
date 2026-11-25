@@ -5,8 +5,12 @@ extends Node
 ## Game.NetMode.CLIENT) with a NetView to draw it. When it is over it says so
 ## and goes back to the main menu.
 ##
-## Until there is a way in from the main menu, run it as scenes/online_dev.tscn:
-##   godot --path . res://scenes/online_dev.tscn -- join=127.0.0.1 [port=24642] [team=<n>] [bot]
+## The main menu comes here (scenes/online.tscn) with an opponent found, having
+## left where the match is in `next`. Until both people are in and the match is
+## made, the screen says that it is being got ready.
+##
+## To try things out it can be run by itself:
+##   godot --path . res://scenes/online.tscn -- join=127.0.0.1 [port=24642] [team=<n>] [bot]
 ##         [lag=<ms>] [jitter=<ms>] [loss=<percent>] [nopredict]
 ## `bot` plays with random buttons: someone to play against on one machine.
 ## `lag` makes the line that much slower each way (lag=50 is 100 ms more there
@@ -21,10 +25,22 @@ signal over(result: Dictionary)
 const MENU: String = "res://scenes/main_menu.tscn"
 ## Seconds the result stays up before the main menu.
 const RESULT_TIME: float = 5.0
+## Seconds a match that never came about is explained before the main menu.
+const SORRY_TIME: float = 4.0
+## The waiting line's font and colour: the main menu's, written out here so
+## that this scene does not need the menu's script to run by itself.
+const WAITING_FONTS: PackedStringArray = ["Impact", "Haettenschweiler", "Arial Black"]
+const WAITING_COLOR: Color = Color(0.93, 0.76, 0.3)
+
+## Where the main menu found a match: { "address", "port", "pass", "team" }.
+## Taken (and emptied) as this scene comes up.
+static var next: Dictionary = {}
 
 var address: String = "127.0.0.1"
 var port: int = NetProtocol.DEFAULT_PORT
 var team_pick: int = -1
+## What the matchmaker gave this person for the match (NetProtocol's HELLO).
+var match_pass: String = ""
 ## Random buttons in place of the gamepad.
 var bot: bool = false
 ## For trying things out: milliseconds added to the line each way, and the
@@ -47,6 +63,8 @@ var _bot_pad: PadInput
 var _wants_pause: bool = false
 var _notice: PanelContainer
 var _notice_text: Label
+## Up until the match is made: that it is being got ready, or why it will not be.
+var _waiting: Label
 var _scene: PackedScene
 var _bot_held: Dictionary[StringName, bool] = {}
 
@@ -69,10 +87,19 @@ func _ready() -> void:
 			loss = clampf(float(arg.trim_prefix("loss=")) / 100.0, 0.0, 0.9)
 		elif arg == "nopredict":
 			predict = false
+	if not next.is_empty():
+		address = next.get("address", address)
+		port = next.get("port", port)
+		match_pass = next.get("pass", "")
+		team_pick = next.get("team", -1)
+		next = {}
+	if not bot and DisplayServer.get_name() != "headless":
+		_build_waiting()
 	# Loaded before the server is looked for: the other person does not wait for it.
 	_scene = load("res://scenes/main.tscn")
 	client = NetClient.new()
 	client.team_pick = team_pick
+	client.match_pass = match_pass
 	client.lag_ms = lag_ms
 	client.jitter_ms = jitter_ms
 	client.loss = loss
@@ -182,6 +209,9 @@ func _on_started(home_pick: int, away_pick: int) -> void:
 	Game.show_intro = false
 	Game.season_match = false
 	Game.team_picks = PackedInt32Array([home_pick, away_pick])
+	if _waiting != null:
+		_waiting.get_parent().queue_free()
+		_waiting = null
 	game = _scene.instantiate() as Game
 	add_child(game)
 	view = NetView.new()
@@ -200,14 +230,48 @@ func _finish(p_result: Dictionary) -> void:
 	over.emit(result)
 	if game != null and not bot:
 		game.hud.show_banner(_headline(), _line())
+	elif _waiting != null:
+		_waiting.text = _sorry()
 	if not leave_when_over:
 		return
-	await get_tree().create_timer(0.5 if bot or game == null else RESULT_TIME, true, false, true).timeout
+	var stay: float = RESULT_TIME if game != null else (SORRY_TIME if _waiting != null else 0.5)
+	await get_tree().create_timer(0.5 if bot else stay, true, false, true).timeout
 	if bot:
 		get_tree().quit()
 	elif is_inside_tree():
 		get_tree().paused = false
 		get_tree().change_scene_to_file(MENU)
+
+
+## Why there is no match, for the person to read.
+func _sorry() -> String:
+	var reason: String = result.get("reason", "")
+	if reason == "rejected: version":
+		return "THIS VERSION OF THE GAME IS OUT OF DATE\nUpdate it to play online."
+	if reason == "nobody" or reason == "left":
+		return "THE OTHER PLAYER DID NOT SHOW UP"
+	return "COULD NOT GET TO THE MATCH\n(%s)" % reason
+
+
+## The line in the middle of the screen until the match is made.
+func _build_waiting() -> void:
+	var layer: CanvasLayer = CanvasLayer.new()
+	add_child(layer)
+	var back: ColorRect = ColorRect.new()
+	back.color = Color(0.02, 0.04, 0.1)
+	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(back)
+	_waiting = Label.new()
+	_waiting.text = "GETTING THE MATCH READY"
+	_waiting.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_waiting.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_waiting.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var font: SystemFont = SystemFont.new()
+	font.font_names = WAITING_FONTS
+	_waiting.add_theme_font_override(&"font", font)
+	_waiting.add_theme_font_size_override(&"font_size", 44)
+	_waiting.add_theme_color_override(&"font_color", WAITING_COLOR)
+	layer.add_child(_waiting)
 
 
 func _headline() -> String:

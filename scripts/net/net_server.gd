@@ -20,6 +20,7 @@ extends Node
 ## Run as the scene scenes/server.tscn:
 ##   godot --headless --path . res://scenes/server.tscn -- port=24642
 ##         [pause=<seconds each, 0 for none>] [rubber=0] [intro=0] [length=<seconds>]
+##         [wait=<seconds to wait for both people, 0 for ever>]
 ## What a queue of matches wants of its matches goes there: how much pausing,
 ## whether the team behind is helped (RubberBand), the pregame intro.
 
@@ -45,6 +46,13 @@ var rubber_band: bool = true
 var intro: bool = true
 ## Seconds on the clock for the whole match, 0 for the game's own.
 var game_length: float = 0.0
+## Whom the match is for: the passes of the people the matchmaker put together
+## (NetProtocol's HELLO). Empty lets anyone in. On the host they come from what
+## it tells a server it starts (see NetHost).
+var passes: PackedStringArray = PackedStringArray()
+## Seconds to wait for both people before giving up, 0 for ever. A server the
+## host started must not stay up (and cost) for a match that never begins.
+var wait_seconds: float = 0.0
 ## The match is held for a pause right now.
 var paused: bool = false
 ## The match, once both people are here.
@@ -82,6 +90,13 @@ var _history: Dictionary[int, Array] = {}
 var _have: PackedInt32Array = PackedInt32Array([-1, -1])
 ## The box score as it was sent last.
 var _stats_sent: PackedByteArray = PackedByteArray()
+## The passes that are on a seat, the pass of each seat, and the ticks waited
+## for both people.
+var _passes_used: Dictionary[String, bool] = {}
+var _seat_pass: PackedStringArray = PackedStringArray(["", ""])
+var _waited: int = 0
+## Tells the host when this server is done (null anywhere else).
+var _host: NetHost
 
 
 func _ready() -> void:
@@ -96,8 +111,19 @@ func _ready() -> void:
 			intro = int(arg.trim_prefix("intro=")) != 0
 		elif arg.begins_with("length="):
 			game_length = maxf(float(arg.trim_prefix("length=")), 0.0)
+		elif arg.begins_with("wait="):
+			wait_seconds = maxf(float(arg.trim_prefix("wait=")), 0.0)
 		elif arg.begins_with("touchdown=") and OS.is_debug_build():
 			_test_touchdown = int(arg.trim_prefix("touchdown="))
+	_host = NetHost.from_environment()
+	if _host != null:
+		add_child(_host)
+		passes = _host.passes
+		if _host.port > 0:
+			port = _host.port
+		if wait_seconds <= 0.0:
+			wait_seconds = NetHost.WAIT_SECONDS
+		print("NetServer: started by the host for %d people" % passes.size())
 	# No picture to draw: no need for more frames than ticks.
 	Engine.max_fps = Engine.physics_ticks_per_second
 	# Loaded before anyone is here: nobody waits for it.
@@ -174,13 +200,17 @@ func _before_tick() -> void:
 			_socket.close()
 			_socket = null
 			if quit_when_done:
-				get_tree().quit()
+				_quit(0)
 		return
 	if game == null:
 		if _told_to_start and result.is_empty():
 			_ready_wait += 1
 			if not _loaded.has(false) or _ready_wait > READY_WAIT:
 				_start()
+		elif result.is_empty() and wait_seconds > 0.0:
+			_waited += 1
+			if _waited > wait_seconds * Engine.physics_ticks_per_second:
+				_finish({"reason": "nobody", "winner": -1, "score": [0, 0]})
 		return
 	for seat: int in SEATS:
 		var frame: PackedFloat32Array = _queues[seat].take()
@@ -229,12 +259,16 @@ func _on_hello(from: int, body: Variant) -> void:
 		return
 	var reason: String = ""
 	var hello: Array = body if typeof(body) == TYPE_ARRAY else []
-	if hello.size() != 3 or typeof(hello[0]) != TYPE_INT or typeof(hello[1]) != TYPE_INT or typeof(hello[2]) != TYPE_INT:
+	if hello.size() != 4 or typeof(hello[0]) != TYPE_INT or typeof(hello[1]) != TYPE_INT or typeof(hello[2]) != TYPE_INT:
+		reason = "bad hello"
+	elif typeof(hello[3]) != TYPE_STRING or (hello[3] as String).length() > NetProtocol.MAX_PASS:
 		reason = "bad hello"
 	elif hello[0] != NetProtocol.VERSION or hello[1] != NetProtocol.input_signature():
 		reason = "version"
 	elif _told_to_start or not result.is_empty() or seated() >= SEATS:
 		reason = "full"
+	elif not passes.is_empty() and (not passes.has(hello[3]) or _passes_used.has(hello[3])):
+		reason = "not in this match"
 	if reason != "":
 		_socket.send(from, NetProtocol.Kind.REJECT, [reason])
 		_socket.drop(from)
@@ -242,6 +276,8 @@ func _on_hello(from: int, body: Variant) -> void:
 	var seat: int = _peers.find(0)
 	_peers[seat] = from
 	_picks[seat] = hello[2]
+	_seat_pass[seat] = hello[3]
+	_passes_used[hello[3]] = true
 	_socket.send(from, NetProtocol.Kind.WELCOME, [seat])
 	print("NetServer: seat %d taken" % seat)
 	if seated() == SEATS:
@@ -280,6 +316,9 @@ func _on_left(id: int) -> void:
 	if seat < 0:
 		return
 	_peers[seat] = 0
+	# Not yet a match: that person may come back (their line broke on the way in).
+	if not _told_to_start:
+		_passes_used.erase(_seat_pass[seat])
 	print("NetServer: seat %d left" % seat)
 	if _told_to_start and result.is_empty():
 		var score: Array = [game.home.score, game.away.score] if game != null else [0, 0]
@@ -393,4 +432,11 @@ func _finish(p_result: Dictionary) -> void:
 	_linger = LINGER
 	finished.emit(result)
 	if _socket == null and quit_when_done:
-		get_tree().quit(1)
+		_quit(1)
+
+
+## The program ends; on the host, that is told first that this server is done.
+func _quit(code: int) -> void:
+	if _host != null:
+		await _host.stop()
+	get_tree().quit(code)

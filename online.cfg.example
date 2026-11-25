@@ -1,0 +1,13 @@
+; Where this machine finds online matches (see scripts/online/matchmaker.gd).
+; Copy to online.cfg (beside project.godot, not in git) and fill in.
+
+[matchmaker]
+; The matchmaker's "API URL" and "Auth Token" from its page on Edgegap.
+url = ""
+token = ""
+profile = "quick-1v1"
+
+[direct]
+; With no matchmaker url: a server that is up already, e.g. on the home network.
+address = ""
+port = 24642

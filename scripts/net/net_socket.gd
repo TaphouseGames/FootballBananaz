@@ -100,7 +100,7 @@ func poll() -> void:
 					_held_in.append([due, from, parts[0], parts[1]])
 			else:
 				message.emit(from, parts[0], parts[1])
-	if _peer != null and _peer.host != null:
+	if _peer != null and _peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED and _peer.host != null:
 		bytes_out += roundi(_peer.host.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA))
 		bytes_in += roundi(_peer.host.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA))
 	# This is looked at once a tick: what is due within half a tick goes now, so
