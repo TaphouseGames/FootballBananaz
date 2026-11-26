@@ -148,6 +148,11 @@ func traffic() -> PackedInt64Array:
 	return PackedInt64Array([_socket.bytes_out, _socket.bytes_in]) if _socket != null else PackedInt64Array([0, 0])
 
 
+## See NetSocket.quality().
+func quality() -> PackedFloat32Array:
+	return _socket.quality() if _socket != null else PackedFloat32Array()
+
+
 ## Off the line. In a match that is giving it up.
 func leave() -> void:
 	if _socket != null:

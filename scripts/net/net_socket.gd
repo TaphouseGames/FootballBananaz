@@ -45,7 +45,10 @@ var _patience: float = LOADING_PATIENCE
 ## loses what came in meanwhile, and what has to arrive is slow to be sent
 ## again after that.
 const LOADING_PATIENCE: float = 45.0
-const PLAYING_PATIENCE: float = 10.0
+# Long enough for a machine that stands still a while in its first match
+# (drawing things for the first time): somebody who quits says so, and is
+# gone at once; this is only for a machine that crashed or lost its line.
+const PLAYING_PATIENCE: float = 20.0
 ## Ticks of a match that pass before the patience is cut down to that.
 const SETTLE_TICKS: int = 180
 const RESEND_MS: int = 100
@@ -170,6 +173,18 @@ func _put(to: int, kind: int, body: Variant, reliable: bool) -> void:
 	_peer.set_target_peer(to)
 	_peer.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE if reliable else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE
 	_peer.put_packet(var_to_bytes([kind, body]))
+
+
+## The line to the server as ENet measures it: [milliseconds there and back,
+## the share of messages lost of late (0..1)]. Empty when there is none.
+func quality() -> PackedFloat32Array:
+	if _peer == null or _peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+		return PackedFloat32Array()
+	var line: ENetPacketPeer = _peer.get_peer(SERVER)
+	if line == null:
+		return PackedFloat32Array()
+	return PackedFloat32Array([line.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME),
+			line.get_statistic(ENetPacketPeer.PEER_PACKET_LOSS) / float(ENetPacketPeer.PACKET_LOSS_SCALE)])
 
 
 ## How long the other ends may be silent before they count as gone, from now on.

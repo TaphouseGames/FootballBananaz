@@ -29,6 +29,8 @@ const MENU: String = "res://scenes/main_menu.tscn"
 const RESULT_TIME: float = 5.0
 ## Seconds a match that never came about is explained before the main menu.
 const SORRY_TIME: float = 4.0
+## Seconds between the lines in the log that say how the match is going here.
+const NOTE_TIME: float = 30.0
 ## The waiting line's font and colour: the main menu's, written out here so
 ## that this scene does not need the menu's script to run by itself.
 const WAITING_FONTS: PackedStringArray = ["Impact", "Haettenschweiler", "Arial Black"]
@@ -69,6 +71,12 @@ var _notice: PanelContainer
 var _notice_text: Label
 ## Up until the match is made: that it is being got ready, or why it will not be.
 var _waiting: Label
+## For the log: when the last line was written, what the counters were then,
+## and the longest a frame has taken since (a machine that stood still).
+var _noted_at: int = 0
+var _noted: PackedInt64Array = PackedInt64Array()
+var _last_frame: int = 0
+var _longest_frame: int = 0
 var _scene: PackedScene
 var _bot_held: Dictionary[StringName, bool] = {}
 
@@ -157,6 +165,39 @@ func _join() -> void:
 		_finish({"reason": "no line"})
 	else:
 		print("NetPlay: looking for the server at %s:%d" % [address, port])
+
+
+func _process(_delta: float) -> void:
+	var now: int = Time.get_ticks_msec()
+	if _last_frame > 0:
+		_longest_frame = maxi(_longest_frame, now - _last_frame)
+	_last_frame = now
+	if view != null and result.is_empty() and now - _noted_at > NOTE_TIME * 1000.0:
+		_note()
+
+
+## A line in the log on how the match went here since the last one: for
+## looking into what somebody felt afterwards.
+func _note() -> void:
+	var now: int = Time.get_ticks_msec()
+	var traffic: PackedInt64Array = client.traffic()
+	var counts: PackedInt64Array = PackedInt64Array([view.shown, view.held, view.coasted, view.skipped, view.refused,
+			view.predicted, view.behind_sum, view.scores_wrong, traffic[1], traffic[0]])
+	var since: PackedInt64Array = counts.duplicate()
+	if _noted.size() == counts.size():
+		for i: int in counts.size():
+			since[i] -= _noted[i]
+	var seconds: float = maxf((now - _noted_at) / 1000.0, 0.001)
+	var quality: PackedFloat32Array = client.quality()
+	print("NetPlay %s: %s, ping %s ms, lost %s%%; %.0f s: shown %d, held %d, coasted %d, stepped over %d, refused %d; server %.1f ticks behind; wrong calls %d; %.0f kB/s in, %.0f out; %.0f fps, longest frame %d ms" % [
+			Time.get_time_string_from_system(), game.play_controller.state_machine.current_name(),
+			"%.0f" % quality[0] if quality.size() == 2 else "?", "%.1f" % (quality[1] * 100.0) if quality.size() == 2 else "?",
+			seconds, since[0], since[1], since[2], since[3], since[4],
+			float(since[6]) / maxf(float(since[5]), 1.0), since[7],
+			since[8] / seconds / 1000.0, since[9] / seconds / 1000.0, Engine.get_frames_per_second(), _longest_frame])
+	_noted_at = now
+	_noted = counts
+	_longest_frame = 0
 
 
 func _exit_tree() -> void:
@@ -252,6 +293,7 @@ func _on_started(home_pick: int, away_pick: int) -> void:
 	view.setup(game, client.seat, client)
 	view.predict = predict
 	client.loaded()
+	_noted_at = Time.get_ticks_msec()
 	print("NetPlay: match on, seat %d" % client.seat)
 
 
@@ -259,6 +301,8 @@ func _finish(p_result: Dictionary) -> void:
 	if not result.is_empty():
 		return
 	result = p_result
+	if view != null:
+		_note()
 	print("NetPlay: over, %s" % result)
 	over.emit(result)
 	if game != null and not bot:

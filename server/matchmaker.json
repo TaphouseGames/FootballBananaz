@@ -9,7 +9,7 @@
       "group_inactivity_removal_period": "5m",
       "application": {
         "name": "football-bananaz",
-        "version": "1"
+        "version": "2"
       },
       "rules": {
         "initial": {
