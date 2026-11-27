@@ -232,7 +232,16 @@ extends Resource
 @export var pass_gravity: float = 22.0
 @export var pass_release_height: float = 1.9
 @export var pass_catch_height: float = 1.3
-@export var pass_max_lead_time: float = 2.6
+## A receiver is never led by more than this long a flight: about what the
+## longest lob in anyone's range takes.
+@export var pass_max_lead_time: float = 4.0
+## A pass in the air longer than `from` seconds is put further along the
+## receiver's run than his pace takes him, so that he catches it on the run and
+## does not wait for it: by this share of the ground sprinting gains him while
+## it is in the air, in full from `full` seconds. A lead pass goes on from there.
+@export var pass_deep_lead_share: float = 0.6
+@export var pass_deep_lead_from: float = 1.0
+@export var pass_deep_lead_full: float = 2.0
 ## Throwing it away: flat speed of the ball, how many yards past the sideline it
 ## comes down (over the wall, in the stands), and how many yards downfield of
 ## the quarterback.
@@ -1251,6 +1260,10 @@ extends Resource
 @export var ai_catch_effort_human_scale: float = 0.6
 ## Shorter than dive_time, so a dive is still in the air when the ball gets there.
 @export var ai_catch_effort_time: float = 0.26
+## The man a pass is thrown to times his run to be there as the ball is, easing
+## off to no less than this share of his pace. Needing less than that he would
+## be far too early: he runs to the spot and waits.
+@export var ai_catch_pace_min: float = 0.7
 ## Max seconds ahead of the carrier a pursuer aims.
 @export var ai_pursuit_max_lead: float = 1.5
 @export var ai_turbo_range: float = 9.0

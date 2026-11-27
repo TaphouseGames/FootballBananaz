@@ -189,6 +189,9 @@ var pass_short: float = 0.0
 ## would get there, and which way he is then heading (zero if stopped).
 var aim_cuts: bool = false
 var aim_dir: Vector3 = Vector3.ZERO
+## Set by pass_aim(): yards the spot was put further along his run because the
+## ball is in the air a long time (see _deep_lead).
+var aim_deep: float = 0.0
 ## Who each team has thrown to lately, newest last. Lasts the whole game.
 var _recent_targets: Dictionary[Team, Array] = {}
 var _pushes: PackedVector3Array = PackedVector3Array()
@@ -2106,6 +2109,7 @@ func pass_spot(target: Player, speed: float, placement: Placement = Placement.NO
 ## The two parts of pass_spot(): the spot the placement starts from, and how far
 ## the placement moves it. Also sets `aim_cuts` and `aim_dir`.
 func pass_aim(target: Player, speed: float, placement: Placement) -> PackedVector3Array:
+	aim_deep = 0.0
 	if placement == Placement.UNDER:
 		aim_cuts = false
 		aim_dir = Vector3(target.velocity.x, 0.0, target.velocity.z).normalized()
@@ -2121,8 +2125,54 @@ func pass_aim(target: Player, speed: float, placement: Placement) -> PackedVecto
 	var on_route: Vector3 = _route_spot(target, speed)
 	if aim_cuts and placement == Placement.NORMAL:
 		return PackedVector3Array([on_route, Vector3.ZERO])
-	var base: Vector3 = on_route if placement == Placement.NORMAL else _run_spot(target, speed)
+	var base: Vector3 = on_route
+	var dir: Vector3 = aim_dir
+	if placement == Placement.LEAD:
+		base = _run_spot(target, speed)
+		dir = Vector3(target.velocity.x, 0.0, target.velocity.z).normalized()
+	base += dir * _deep_lead(target, base, speed, dir)
 	return PackedVector3Array([base, placement_shift(target, base, speed, placement)])
+
+
+## A ball that is in the air for a while is put further along the receiver's
+## run than his pace takes him, whatever the placement: he sprints once it is
+## up, and is to catch it on the run, not wait for it. Returns the yards along
+## `dir` to add to `base`, and sets `aim_deep` to the part of it he has to make
+## up by sprinting: a share of the ground sprinting gains him while the ball is
+## in the air. (The rest is his own pace over the longer flight.)
+## Nothing for a short throw, a man standing about or one coming back to the
+## quarterback.
+func _deep_lead(target: Player, base: Vector3, speed: float, dir: Vector3) -> float:
+	aim_deep = 0.0
+	if dir == Vector3.ZERO or target.turbo_locked:
+		return 0.0
+	var flight: float = _flat_distance(qb.position, base) / speed
+	if flight <= tuning.pass_deep_lead_from:
+		return 0.0
+	var pace: float = Vector3(target.velocity.x, 0.0, target.velocity.z).length()
+	var moving: float = 1.0
+	if target.brain.on_route(self):
+		pace = maxf(pace, target.max_speed())
+	else:
+		moving = clampf(pace / tuning.run_speed, 0.0, 1.0)
+	var home: Vector3 = qb.position - base
+	home.y = 0.0
+	if home.length_squared() > 0.01:
+		moving *= clampf(1.0 - dir.dot(home.normalized()) / 0.5, 0.0, 1.0)
+	if moving <= 0.0:
+		return 0.0
+	var gain: float = target.max_speed() * (tuning.turbo_speed_multiplier - 1.0) * tuning.pass_deep_lead_share * moving
+	# No further than his turbo lasts.
+	var turbo_time: float = target.turbo / maxf(tuning.turbo_drain, 0.01)
+	# The further ahead it goes the longer it is in the air, and the further his
+	# pace alone takes him meanwhile.
+	var ahead: float = 0.0
+	var time: float = flight
+	for i: int in 5:
+		aim_deep = gain * minf(time, turbo_time) * smoothstep(tuning.pass_deep_lead_from, tuning.pass_deep_lead_full, time)
+		ahead = pace * (time - flight) + aim_deep
+		time = minf(_flat_distance(qb.position, base + dir * ahead) / speed, tuning.pass_max_lead_time)
+	return ahead
 
 
 ## Where the receiver's run, kept up as it is now, meets a pass at `speed`.
@@ -2183,7 +2233,9 @@ func placement_shift(target: Player, point: Vector3, speed: float, placement: Pl
 			nearest = dist
 			cover = offset.dot(dir) / dist * (1.0 - dist / tuning.pass_place_cover_range)
 	var flight: float = _flat_distance(qb.position, point) / speed
-	var headroom: float = maxf(target.max_speed() * tuning.turbo_speed_multiplier - pace, 0.0) * flight
+	# What a deep ball has already been put ahead of him is ground he no longer
+	# has to spare.
+	var headroom: float = maxf(maxf(target.max_speed() * tuning.turbo_speed_multiplier - pace, 0.0) * flight - aim_deep, 0.0)
 	var ahead: float = (headroom * tuning.pass_lead_share + tuning.pass_lead_base) * moving * steady
 	ahead *= 1.0 - tuning.pass_place_cover_scale * cover
 	return dir * minf(ahead, tuning.pass_lead_max)
@@ -2223,6 +2275,13 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 		game.add_stat(&"bullets")
 	var run: Vector3 = Vector3(target.velocity.x, 0.0, target.velocity.z)
 	var aim: PackedVector3Array = pass_aim(target, speed, placement)
+	# Too soft a ball to get as far as he will have run: the quarterback puts as
+	# much more on it as it takes.
+	var reach: float = pass_range()
+	while not bad and power < 1.0 and _flat_distance(qb.position, aim[0] + aim[1]) > reach:
+		power = minf(power + 0.125, 1.0)
+		speed = pass_speed(power)
+		aim = pass_aim(target, speed, placement)
 	var normal: Vector3 = aim[0]
 	var shift: Vector3 = aim[1]
 	var point: Vector3 = normal + shift
@@ -2239,7 +2298,6 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	# Out of his range: the ball comes up short.
 	var throw: Vector3 = point - qb.position
 	throw.y = 0.0
-	var reach: float = pass_range()
 	if throw.length() > reach:
 		point = qb.position + throw.normalized() * reach
 		game.add_stat(&"underthrows")
@@ -2253,7 +2311,7 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 			# Measured from as far as he could get by sprinting flat out, so it
 			# cannot simply be run down.
 			var flight: float = _flat_distance(qb.position, normal) / speed
-			var catch_up: float = maxf(target.max_speed() * tuning.turbo_speed_multiplier - arriving.length(), 0.0) * flight
+			var catch_up: float = maxf(maxf(target.max_speed() * tuning.turbo_speed_multiplier - arriving.length(), 0.0) * flight - aim_deep, 0.0)
 			point = normal + arriving.normalized() * (catch_up + randf_range(tuning.pass_overlead_min, tuning.pass_overlead_max))
 			game.add_stat(&"overthrows")
 		elif placement == Placement.LEAD:
@@ -2321,8 +2379,6 @@ func throw_ball(target: Player, power: float = 0.5, placement: Placement = Place
 	game.rumble.play_mine(&"throw", qb, null, lerpf(0.4, 1.0, power))
 	if hit:
 		_flatten_passer()
-	for person: HumanController in game.humans:
-		person.on_throw(target)
 
 
 ## The quarterback has got the ball away with a tackler on him: he goes down

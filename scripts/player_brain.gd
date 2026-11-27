@@ -2117,8 +2117,7 @@ func _think_air(pc: PlayController) -> void:
 	var landing: Vector3 = pc.ball.target_point
 	if is_offense:
 		if pc.ball.intended == player:
-			_seek(landing)
-			player.wants_turbo = _flat_distance(player.position, landing) > 1.5
+			_run_under(pc, landing)
 			_go_for_ball(pc)
 		elif off_assign.job == OffenseAssignment.Job.BLOCK:
 			_block(pc, pc.qb.position)
@@ -2250,6 +2249,24 @@ func _hits_receiver(pc: PlayController, landing: Vector3, time_left: float) -> b
 	pc.game.add_stat(&"air_hit_tries")
 	pc.do_dive(player, _direction_to(target.position + target.velocity * 0.12))
 	return true
+
+
+## The pass is his: he gets to where it comes down as it does, to catch it on
+## the run. He sprints only if his own pace is not enough, and eases off a
+## little for one he would be early for. One he would be very early for (thrown
+## short of him, or behind him) he simply goes to and waits.
+func _run_under(pc: PlayController, landing: Vector3) -> void:
+	var dist: float = _flat_distance(player.position, landing)
+	var time_left: float = maxf(pc.ball.flight_time - pc.ball.flight_elapsed, 0.05)
+	var pace: float = dist / time_left / maxf(player.max_speed(), 0.01)
+	if pace < tuning.ai_catch_pace_min:
+		_seek(landing)
+		return
+	player.wants_turbo = pace > 1.0 and dist > 1.5 and not player.turbo_locked and player.turbo > 0.0
+	if player.wants_turbo:
+		# No faster on turbo than it takes, either.
+		pace /= tuning.turbo_speed_multiplier
+	player.move_input = _direction_to(landing) * minf(pace, 1.0)
 
 
 ## The ball is coming down out of his reach: sometimes he leaves his feet for

@@ -167,11 +167,9 @@ func on_line_up() -> void:
 		set_controlled(_default_defender())
 
 
-func on_throw(target: Player) -> void:
-	if is_active() and target.team == team:
-		set_controlled(target)
-
-
+## A catch, a handoff, a pick: the person gets the man with the ball. A pass in
+## the air does not do it: until it is caught they keep the quarterback, unless
+## they ask for the receiver with the switch button.
 func on_carrier_changed(carrier: Player) -> void:
 	if is_active() and carrier.team == team:
 		set_controlled(carrier)
@@ -494,6 +492,11 @@ func _pass_placement() -> PlayController.Placement:
 func _switch_to_nearest() -> void:
 	var in_air: bool = pc.phase == PlayController.Phase.AIR or pc.phase == PlayController.Phase.TIPPED
 	var point: Vector3 = pc.ball.target_point if in_air else pc.ball.flat_position()
+	# Their own pass in the air: the man it was thrown to.
+	var intended: Player = pc.ball.intended
+	if pc.phase == PlayController.Phase.AIR and intended != null and intended.team == team and intended != controlled and not intended.is_down():
+		set_controlled(intended)
+		return
 	var best: Player = null
 	var best_dist: float = INF
 	for candidate: Player in team.players:
