@@ -222,6 +222,7 @@ def load(player_id, entry):
     bm.from_mesh(body.data)
     before = len(bm.verts)
     bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-6)
+    joined = join_pieces(bm)
     bm.normal_update()
     bm.to_mesh(body.data)
     bm.free()
@@ -241,7 +242,87 @@ def load(player_id, entry):
     armature.name = player_id + "_rig"
     print("CLEANED %s: %d vertices (%d welded away), faces by corners %s, %d without a bone, %.3f tall" % (
         player_id, len(body.data.vertices), before - len(body.data.vertices), sides, loose, points[:, 2].max() - points[:, 2].min()))
+    if joined:
+        print("JOINED %s: the body came in %d pieces with a gap between them, closed with %d faces" % (player_id, joined[0], joined[1]))
     return armature, body
+
+
+def join_pieces(bm):
+    """A body that came as separate pieces (a torso that ends at the hem of
+    the jersey, legs that begin at the waistband, nothing between) is closed:
+    the open rim of each smaller piece is joined to the rim of the main piece
+    nearest to it. The new faces take the colour at the smaller piece's rim.
+    Returns (pieces, new faces), or None for a body in one piece.
+    (Small pieces are not the body: a lace, a lens, a strand of hair.)"""
+    piece = {}
+    sizes = []
+    for start in bm.verts:
+        if start in piece:
+            continue
+        piece[start] = len(sizes)
+        stack, count = [start], 0
+        while stack:
+            vert = stack.pop()
+            count += 1
+            for edge in vert.link_edges:
+                other = edge.other_vert(vert)
+                if other not in piece:
+                    piece[other] = len(sizes)
+                    stack.append(other)
+        sizes.append(count)
+    main = int(np.argmax(sizes))
+    parts = [index for index, size in enumerate(sizes) if index != main and size > 0.1 * len(bm.verts)]
+    if not parts:
+        return None
+
+    # The rims: closed rings of edges with a face on one side only.
+    rims = []
+    left = {edge for edge in bm.edges if len(edge.link_faces) == 1}
+    while left:
+        ring = [left.pop()]
+        stack = [ring[0]]
+        while stack:
+            for vert in stack.pop().verts:
+                for edge in vert.link_edges:
+                    if edge in left:
+                        left.discard(edge)
+                        ring.append(edge)
+                        stack.append(edge)
+        inside = set(ring)
+        verts = {vert for edge in ring for vert in edge.verts}
+        if len(ring) < 12 or any(sum(1 for edge in vert.link_edges if edge in inside) != 2 for vert in verts):
+            continue
+        at = np.array([vert.co[:] for vert in verts])
+        centre = at.mean(0)
+        rims.append({"edges": ring, "verts": verts, "piece": piece[ring[0].verts[0]], "centre": centre,
+                     "radius": float(np.linalg.norm(at - centre, axis=1).mean())})
+
+    uv_layer = bm.loops.layers.uv.active
+    made = 0
+    for part in parts:
+        own = [rim for rim in rims if rim["piece"] == part]
+        if not own:
+            continue
+        rim = max(own, key=lambda r: len(r["edges"]))
+        # Of the main piece's rims that lie against it, the outermost: a
+        # jersey has a rim inside and one outside, and the inside one is hidden.
+        near = [r for r in rims if r["piece"] == main and np.linalg.norm(r["centre"] - rim["centre"]) < rim["radius"]]
+        if not near:
+            continue
+        other = max(near, key=lambda r: r["radius"])
+        faces = bmesh.ops.bridge_loops(bm, edges=rim["edges"] + other["edges"])["faces"]
+        # (One colour for the whole band, from the rim's rearmost point: a
+        # colour a face would show as stripes when the player bends.)
+        new = set(faces)
+        back = max(rim["verts"], key=lambda v: v.co.y)
+        source = next((loop for loop in back.link_loops if loop.face not in new), None)
+        for face in faces:
+            if uv_layer is not None and source is not None:
+                for loop in face.loops:
+                    loop[uv_layer].uv = source[uv_layer].uv
+            face.smooth = True
+        made += len(faces)
+    return (len(parts) + 1, made) if made else None
 
 
 def textures_of(body):

@@ -132,6 +132,9 @@ at 0 % or far off means the mask went wrong: look at `<id>_kit_front.png` and
 `socks_from` (share of the height below which nothing is a sock: for high boots), `chroma`
 (0.5: lower if skin is being painted, higher if kit is left out).
 
+A `JOINED` line means the model came as separate torso and legs with a see-through gap at
+the waist (Fuji Stem did), which the script closed: look at the waist in the preview pictures.
+
 Small flaws at collars, cuffs and where socks meet shoes are expected and are fixed by
 painting `assets/player/source/people/<id>_mask_paint.png` (red jersey, green pants, blue
 socks), which the script uses instead of its own mask when it exists.
