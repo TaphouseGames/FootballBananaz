@@ -126,7 +126,8 @@ from the project root) into the player's `source` in `players.json`.
 ```
 
 Writes `assets/player/people/<id>.glb`, `<id>_mask.png` and the `.blend`. It prints how much
-of the texture each garment takes: jersey about 25-33 %, pants 5-12 %, socks 2-3 %. A garment
+of the texture each garment takes: jersey about 25-33 %, pants 5-12 %, socks 2-3 % (and how much of the jersey is its second
+colour, about 10-25 %). A garment
 at 0 % or far off means the mask went wrong: look at `<id>_kit_front.png` and
 `<id>_kit_back.png` in the preview folder. Per player `options` in `players.json` that help:
 `socks_from` (share of the height below which nothing is a sock: for high boots), `chroma`
@@ -136,8 +137,20 @@ A `JOINED` line means the model came as separate torso and legs with a see-throu
 the waist (Fuji Stem did), which the script closed: look at the waist in the preview pictures.
 
 Small flaws at collars, cuffs and where socks meet shoes are expected and are fixed by
-painting `assets/player/source/people/<id>_mask_paint.png` (red jersey, green pants, blue
-socks), which the script uses instead of its own mask when it exists.
+painting the mask by hand in the kit painter (`tools\kit_painter.bat player=<id>`, or
+`tools/kit_painter.tscn` with F6): it brushes jersey, pants and socks straight onto the
+model, erases kit back to the texture the model came with, paints skin over places the
+model itself has wrong, and paints where the jersey has its second colour (Trim: the
+sleeves and collar of the home kit, which the script takes from the arm, head and neck
+bones). Saving there writes the game's mask and colour texture, so the
+script need not be run again, and `assets/player/source/people/<id>_mask_paint.png` and
+`<id>_skin_paint.png`, which the script uses when they exist.
+
+For more than that (repainting a face, a shoe), the texture is painted in a texture painter
+such as 3DCoat Textura, which does not read `.glb`: the script with `only=<id> obj=<dir>`
+writes the model as an `.obj` with its texture. The painted colour texture goes back as
+`assets/player/source/people/<id>_colour_paint.png` and is the player's texture from then
+on; run the script for the player again afterwards.
 
 ### 5. The character sheet
 

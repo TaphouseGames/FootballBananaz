@@ -2,7 +2,7 @@
 
 Run from the project root:
 
-    blender -b --factory-startup --python tools/prep_player.py -- [only=<id>] [preview=<dir>]
+    blender -b --factory-startup --python tools/prep_player.py -- [only=<id>] [preview=<dir>] [textures=1] [obj=<dir>] [trim=1]
 
 It reads tools/players.json (every player with a `source`, or the one named)
 and writes, per player:
@@ -10,6 +10,19 @@ and writes, per player:
     assets/player/people/<id>.glb          the rigged model with its textures at 1024
     assets/player/people/<id>_mask.png     what the kit shader repaints
     assets/player/source/people/<id>.blend the cleaned model, to touch up by hand
+    assets/player/source/people/<id>_colour.jpg  the colour texture as the model came
+                                           with it, before any kit was found in it:
+                                           what the kit painter (tools/kit_painter.gd)
+                                           shows where the kit is taken away
+With `textures=1` only that last file is written, and nothing else is touched.
+
+To paint a player's texture in a texture painter (3DCoat Textura and others
+do not read .glb): `obj=<dir>` writes <dir>/<id>.obj with <id>.mtl and
+<id>_colour.png, the cleaned model and its colour texture at full size, and
+nothing else. Paint it there and save the colour texture as
+assets/player/source/people/<id>_colour_paint.png: from then on that is the
+player's texture, here and in the kit painter, in place of the one in the FBX
+(and it is what `obj` writes the next time).
 
 What happens to a player:
 
@@ -25,9 +38,16 @@ What happens to a player:
    it is kit, the colour texture is reduced to its shading and the mask says
    what it is:
        mask R  jersey      mask G  pants      mask B  socks
+   and R and B together the jersey's second colour (the sleeves and the
+   collar of the home kit), which goes by the bones: the arms, the head and
+   the neck. `trim=1` gives that to masks made before there was one (the
+   game's and the one painted by hand) and touches nothing else.
    Skin, hair, shoes and whatever else the player wears stay as painted.
 3. A mask that was painted by hand wins: if assets/player/source/people/
-   <id>_mask_paint.png exists it is used as it is (see `paint` below).
+   <id>_mask_paint.png exists it is used as it is. Both that and
+   <id>_skin_paint.png come from the kit painter: the second is skin painted
+   over the texture (where its alpha is set), which is put on before anything
+   else is looked at.
 
 Per player in players.json, all optional:
     source    the rigged FBX, from the project root
@@ -58,6 +78,10 @@ LUMA = np.array([0.3, 0.59, 0.11])
 JERSEY, PANTS, SOCKS = 1, 2, 4
 # Darker than this a texel is in deep shadow.
 DEEP = 0.13
+# The jersey's second colour is where more than this much of a texel hangs on
+# the head and neck (the collar), or on the arms (the sleeves).
+TRIM_COLLAR = 0.575
+TRIM_SLEEVE = 0.5
 # Darker than this a plain texel on a leg is a sock, not the pants.
 SOCK_DARK = 0.2
 # How many ways round the body the hem of the jersey is looked for.
@@ -81,9 +105,9 @@ NEEDED = [
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 options = dict(arg.split("=", 1) for arg in argv)
-unknown = [key for key in options if key not in ("only", "preview")]
+unknown = [key for key in options if key not in ("only", "preview", "textures", "obj", "trim")]
 if unknown:
-    raise SystemExit("usage: prep_player.py -- [only=<id>] [preview=<dir>]  (unknown: %s)" % ", ".join(unknown))
+    raise SystemExit("usage: prep_player.py -- [only=<id>] [preview=<dir>] [textures=1] [obj=<dir>] [trim=1]  (unknown: %s)" % ", ".join(unknown))
 preview_dir = options.get("preview")
 
 with open(os.path.join(ROOT, "tools", "players.json"), encoding="utf-8") as handle:
@@ -571,6 +595,70 @@ def find_kit(player_id, entry, armature, body, texture):
     return mask, colour
 
 
+def find_trim(body):
+    """Where the jersey has its second colour until somebody paints it
+    otherwise: a map (SIZE, SIZE) of the texels that hang on the arms (the
+    sleeves) or on the head and neck (the collar)."""
+    mesh = body.data
+    names = [group.name for group in body.vertex_groups]
+    # Per bone: collar, sleeve.
+    worth = np.zeros((len(names), 2))
+    for index, name in enumerate(names):
+        if kind_of(name) == "hand":
+            continue
+        if any(word in name for word in ("Head", "Facial", "Eye", "Neck")):
+            worth[index, 0] = 1.0
+        elif any(word in name for word in ("Upperarm", "Forearm", "Elbow")):
+            worth[index, 1] = 1.0
+    shares = np.zeros((len(mesh.vertices), 2))
+    totals = np.zeros(len(mesh.vertices))
+    for vertex in mesh.vertices:
+        for element in vertex.groups:
+            shares[vertex.index] += worth[element.group] * element.weight
+            totals[vertex.index] += element.weight
+    shares /= np.maximum(totals, 1e-6)[:, None]
+    mesh.calc_loop_triangles()
+    tris = np.array([tri.vertices[:] for tri in mesh.loop_triangles])
+    loops = np.array([tri.loops[:] for tri in mesh.loop_triangles])
+    uv_all = np.empty(len(mesh.loops) * 2)
+    mesh.uv_layers.active.data.foreach_get("uv", uv_all)
+    uvs = uv_all.reshape(-1, 2)[loops]
+    face_map = raster(uvs, np.arange(len(tris)), SIZE)
+    on_model = face_map >= 0
+    face_map = np.maximum(face_map, 0)
+    # How much of each corner of its triangle a texel is.
+    corners = (np.mod(uvs, 1.0) * SIZE)[face_map]
+    a, b, c = corners[:, :, 0], corners[:, :, 1], corners[:, :, 2]
+    gy, gx = np.mgrid[0:SIZE, 0:SIZE] + 0.5
+    d = (b[..., 1] - c[..., 1]) * (a[..., 0] - c[..., 0]) + (c[..., 0] - b[..., 0]) * (a[..., 1] - c[..., 1])
+    d = np.where(np.abs(d) < 1e-12, 1e-12, d)
+    w0 = ((b[..., 1] - c[..., 1]) * (gx - c[..., 0]) + (c[..., 0] - b[..., 0]) * (gy - c[..., 1])) / d
+    w1 = ((c[..., 1] - a[..., 1]) * (gx - c[..., 0]) + (a[..., 0] - c[..., 0]) * (gy - c[..., 1])) / d
+    weights = np.clip(np.stack([w0, w1, 1.0 - w0 - w1], -1), 0.0, 1.0)
+    weights /= np.maximum(weights.sum(-1, keepdims=True), 1e-6)
+    share = (shares[tris[face_map]] * weights[..., None]).sum(2)
+    return on_model & ((share[:, :, 0] > TRIM_COLLAR) | (share[:, :, 1] > TRIM_SLEEVE))
+
+
+def add_trim(player_id, body):
+    """Gives the masks of a player that say nothing of the jersey's second
+    colour the one of find_trim(): the game's and the one painted by hand."""
+    trim = find_trim(body)
+    for path in (os.path.join(OUT_DIR, "%s_mask.png" % player_id), os.path.join(BLEND_DIR, "%s_mask_paint.png" % player_id)):
+        if not os.path.exists(path):
+            continue
+        image = bpy.data.images.load(path)
+        mask = (pixels_of(image, SIZE) > 0.5).astype(float)
+        bpy.data.images.remove(image)
+        jersey = mask[:, :, 0] > 0.5
+        if (jersey & (mask[:, :, 2] > 0.5)).any():
+            print("TRIM %s: already there (%s)" % (player_id, path))
+            continue
+        mask[:, :, 2][jersey & trim] = 1.0
+        bpy.data.images.remove(new_image("Mask_" + player_id, mask, path, colour=False))
+        print("TRIM %s: %.1f %% of the jersey (%s)" % (player_id, (jersey & trim).sum() * 100.0 / max(jersey.sum(), 1), path))
+
+
 def shoot_previews(player_id, armature, body, colour_image, mask, shading):
     """Pictures of the model as painted and in a test kit, from four sides."""
     scene = bpy.context.scene
@@ -609,23 +697,79 @@ def shoot_previews(player_id, armature, body, colour_image, mask, shading):
     bpy.data.objects.remove(cam)
 
 
+def export_obj(player_id, body, image, folder):
+    """The model as an .obj with its colour texture beside it, for a texture painter."""
+    os.makedirs(folder, exist_ok=True)
+    picture = image.copy()
+    picture.filepath_raw = os.path.join(folder, "%s_colour.png" % player_id)
+    picture.file_format = "PNG"
+    picture.save()
+    path = os.path.join(folder, "%s.obj" % player_id)
+    bpy.ops.object.select_all(action="DESELECT")
+    body.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.wm.obj_export(filepath=path, export_selected_objects=True, export_materials=False,
+                          export_uv=True, export_normals=True, apply_modifiers=False)
+    with open(path, encoding="utf-8") as handle:
+        lines = handle.read()
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("mtllib %s.mtl\nusemtl %s\n%s" % (player_id, player_id, lines))
+    with open(os.path.join(folder, "%s.mtl" % player_id), "w", encoding="utf-8") as handle:
+        handle.write("newmtl %s\nKa 1 1 1\nKd 1 1 1\nKs 0 0 0\nmap_Kd %s_colour.png\n" % (player_id, player_id))
+    print("OBJ %s (%d x %d texture)" % (path, image.size[0], image.size[1]))
+
+
 def build(player_id, entry):
     armature, body = load(player_id, entry)
+    if options.get("trim"):
+        add_trim(player_id, body)
+        return
     found = textures_of(body)
     if found["colour"] is None:
         raise SystemExit("%s: the model has no colour texture" % player_id)
+    os.makedirs(BLEND_DIR, exist_ok=True)
+    # A texture painted by hand in a texture painter is the player's from then on.
+    hand = os.path.join(BLEND_DIR, "%s_colour_paint.png" % player_id)
+    by_hand = bpy.data.images.load(hand) if os.path.exists(hand) else None
+    if options.get("obj"):
+        export_obj(player_id, body, by_hand or found["colour"], options["obj"])
+        return
     texture = pixels_of(found["colour"], SIZE)
+    # The texture as it came, for the kit painter.
+    original = new_image(player_id + "_original", np.clip(texture, 0.0, 1.0))
+    original.filepath_raw = os.path.join(BLEND_DIR, "%s_colour.jpg" % player_id)
+    original.file_format = "JPEG"
+    original.save(quality=95)
+    bpy.data.images.remove(original)
+    if options.get("textures"):
+        print("TEXTURE %s" % player_id)
+        return
+    if by_hand is not None:
+        texture = pixels_of(by_hand, SIZE)
+        print("TEXTURE %s: painted by hand (%s)" % (player_id, hand))
+    skin_paint = os.path.join(BLEND_DIR, "%s_skin_paint.png" % player_id)
+    if os.path.exists(skin_paint):
+        paint = pixels_of(bpy.data.images.load(skin_paint), SIZE, 4)
+        on = paint[:, :, 3] > 0.5
+        texture[on] = paint[on][:, :3]
+        print("SKIN %s: %.2f %% of the texture painted by hand (%s)" % (player_id, on.mean() * 100.0, skin_paint))
     painted = os.path.join(BLEND_DIR, "%s_mask_paint.png" % player_id)
     mask, colour = find_kit(player_id, entry, armature, body, texture)
+    # The jersey's second colour: jersey and blue both.
+    trim = (mask[:, :, 0] > 0.5) & find_trim(body)
+    mask[:, :, 2][trim] = 1.0
+    print("PAINTED %s: %.1f %% of the jersey is its second colour" % (player_id, trim.sum() * 100.0 / max((mask[:, :, 0] > 0.5).sum(), 1)))
     if os.path.exists(painted):
         mask = (pixels_of(bpy.data.images.load(painted), SIZE) > 0.5).astype(float)
-        # A texel is one garment only.
+        # A texel is one garment only (blue on the jersey is its second colour).
         mask[:, :, 1] *= 1.0 - mask[:, :, 0]
-        mask[:, :, 2] *= 1.0 - np.maximum(mask[:, :, 0], mask[:, :, 1])
+        mask[:, :, 2] *= 1.0 - mask[:, :, 1]
         luma = texture @ LUMA
         colour = texture.copy()
         for channel in range(3):
             on = mask[:, :, channel] > 0.5
+            if channel == 2:
+                on &= mask[:, :, 0] < 0.5
             if on.any():
                 colour[on] = np.clip(luma[on] / max(float(np.median(luma[on])), 0.02) * 0.8, 0.0, 1.0)[:, None]
         print("MASK %s: painted by hand (%s)" % (player_id, painted))
